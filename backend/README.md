@@ -28,6 +28,10 @@
 ## Project setup
 
 ```bash
+$ npm install -g @nestjs/cli
+```
+
+```bash
 $ npm install
 ```
 
@@ -42,6 +46,19 @@ $ npm run start:dev
 
 # production mode
 $ npm run start:prod
+```
+
+## Run database container
+
+```bash
+# start docker container
+$ npm run db:up
+
+# stop docker container
+$ npm run db:down
+
+# start docker container and development server concurrently
+$ npm run dev:all
 ```
 
 ## Run tests
