@@ -50,7 +50,7 @@ const SignUpCard: React.FC = () => {
 
       <p className="mt-11 text-xs text-center text-zinc-600">
         Already have an account?{" "}
-        <Link href={"/auth/signup"}>
+        <Link href={"/auth/login"}>
             <button
             className="font-semibold text-purple-500 cursor-pointer"
             >

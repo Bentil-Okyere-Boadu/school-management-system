@@ -2,21 +2,22 @@ import React, { useState } from 'react'
 import InputField from '../InputField';
 import Link from 'next/link';
 import ActionButton from '../ActionButton';
+import { useRouter } from 'next/navigation';
 
 const ForgotPasswordCard = () => {
+    const router = useRouter();
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
   
     const handleSignIn = () => {
       // Handle sign in logic here
-      console.log("Signing in with:", email);
+      router.push('/auth/forgotPassword/resetRequest');
     };
   
     return (
-      <section className="relative px-10 py-12 rounded-3xl border border-white border-solid shadow-sm bg-zinc-100 w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
-        <h1 className="mb-3.5 text-2xl font-bold text-neutral-800">Log in</h1>
+      <section className="relative px-10 py-12 rounded-3xl border border-white border-solid bg-zinc-100 shadow-sm w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
+        <h1 className="mb-3.5 text-2xl font-bold text-neutral-800">Forgot Password?</h1>
         <p className="mb-10 text-xs text-zinc-600">
-          Enter your SMS account details
+          Enter the email you used to sign up
         </p>
   
         <InputField
@@ -26,33 +27,16 @@ const ForgotPasswordCard = () => {
           type="email"
         />
   
-        <InputField
-          label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          isPasswordField={true}
-        />
-  
-        <Link href={"/auth/forgotPassword"}>
-          <button
-            className="mt-3.5 text-xs text-right underline text-zinc-600 block ml-auto"
-          >
-            Forgot Password?
-          </button>
-        </Link>
-  
         <div className="relative mt-9 max-sm:mt-6">
-          <ActionButton onClick={handleSignIn} text="Sign In" />
+          <ActionButton onClick={handleSignIn} text="Request Password Reset" />
         </div>
   
         <p className="mt-11 text-xs text-center text-zinc-600">
-          Need an account?{" "}
-          <Link href={"/auth/signup"}>
+          <Link href={"/auth/login"}>
             <button
               className="font-semibold text-purple-500 cursor-pointer"
             >
-              Sign up
+              Back to Sign In
             </button>
           </Link>
         </p>
