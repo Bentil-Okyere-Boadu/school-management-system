@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy:dev": "docker-compose up dev",
+    "deploy:test": "docker-compose up test",
+    "deploy:dev-stop": "docker-compose down dev",
+    "deploy:test-stop": "docker-compose down test"
   },
   "dependencies": {
     "react": "^19.0.0",
