@@ -5,22 +5,24 @@ import ActionButton from "../ActionButton";
 import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter()
+  const router = useRouter();
 
   const { mutate } = useLogin({email, password})
 
   const handleSignIn = () => {
     // Handle sign in logic here
-    mutate({email, password} as unknown as void, {
+    mutate(null as unknown as void, {
       onError: (error: Error) => {
         console.log(error.message)
       },
-      onSuccess: () => {
-        router.push('/admin/dashboard')
+      onSuccess: (data) => {
+        Cookies.set("authToken", data.data.access_token);
+        router.push('/admin/dashboard');
       }
     })
   };
