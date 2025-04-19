@@ -5,7 +5,7 @@ import { AuthCredentials } from "@/@types"
 export const useLogin = (userDetails: AuthCredentials) => {
     return useMutation({ 
         mutationFn: () => {
-            return customAPI.post(`/admin/login`, userDetails)
+            return customAPI.post(`/auth/login`, userDetails)
         }
     })
 }
