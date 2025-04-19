@@ -3,14 +3,26 @@ import React, { useState } from "react";
 import InputField from "../InputField";
 import ActionButton from "../ActionButton";
 import Link from "next/link";
+import { useLogin } from "@/hooks/auth";
+import { useRouter } from "next/navigation";
 
 const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter()
+
+  const { mutate } = useLogin({email, password})
 
   const handleSignIn = () => {
     // Handle sign in logic here
-    console.log("Signing in with:", email);
+    mutate({email, password} as unknown as void, {
+      onError: (error: Error) => {
+        console.log(error.message)
+      },
+      onSuccess: () => {
+        router.push('/admin/dashboard')
+      }
+    })
   };
 
   return (
@@ -35,12 +47,12 @@ const LoginCard: React.FC = () => {
         isPasswordField={true}
       />
 
-      <Link href={"/auth/forgotPassword"}>
-        <button
-          className="mt-3.5 text-xs text-right underline text-zinc-600 block ml-auto"
+      <Link href={"/auth/forgotPassword"} className="w-[100px]">
+        <p
+          className="mt-3.5 text-xs text-right underline text-zinc-600 block "
         >
           Forgot Password?
-        </button>
+        </p>
       </Link>
 
       <div className="relative mt-9 max-sm:mt-6">
