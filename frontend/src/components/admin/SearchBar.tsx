@@ -23,7 +23,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
     <div
-      className={`flex items-center px-4 py-2 rounded-lg bg-neutral-50 ${className} ${
+      className={`flex items-center px-4 py-2 rounded-lg bg-[#fff] ${className} ${
         isFocused
           ? "ring-2 ring-purple-500 ring-opacity-50"
           : "border border-transparent"
