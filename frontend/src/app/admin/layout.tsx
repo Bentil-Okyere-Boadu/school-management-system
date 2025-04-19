@@ -7,18 +7,22 @@ import { usePathname } from "next/navigation";
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [activeMenuItem, setActiveMenuItem] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isOverviewPage, setIsOverviewPage] = useState(true);
 
   const pathname = usePathname();
 
   useEffect(() => {
     if(pathname.includes("/admin/users")) {
       setActiveMenuItem("Users");
+      setIsOverviewPage(true);
     } else if (pathname.includes("/admin/schools")) {
       setActiveMenuItem("Schools");
+      setIsOverviewPage(true);
     } else if (pathname.includes("/admin/dashboard")) {
       setActiveMenuItem("Dashboard");
+      setIsOverviewPage(true);
     } else {
-      setActiveMenuItem("Dashboard");
+      setIsOverviewPage(false);
     }
 }, [pathname]);
 
@@ -50,7 +54,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         )}
 
         <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden">
-          <UserHeader onToggleSidebar={() => setIsSidebarOpen(true)} />
+          <UserHeader isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} onToggleSidebar={() => setIsSidebarOpen(true)} />
           <main className="flex-1 pt-8 overflow-auto">
             {children}
           </main>
