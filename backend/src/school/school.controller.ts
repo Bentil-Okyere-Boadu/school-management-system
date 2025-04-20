@@ -51,4 +51,4 @@ export class SchoolController {
   remove(@Param('id') id: string): Promise<void> {
     return this.schoolService.remove(id);
   }
-} 
+}

@@ -93,7 +93,8 @@ export class UserService {
 
     // Super admin can see any user
     if (currentUser.role.name === 'super_admin') {
-      return user;
+      const { password, ...safeUser } = user;
+      return safeUser;
     }
     // School admin can only see users from their school
     else if (
@@ -102,11 +103,13 @@ export class UserService {
       user.school &&
       user.school.id === currentUser.school.id
     ) {
-      return user;
+      const { password: _password, ...safeUser } = user;
+      return safeUser;
     }
     // User can see their own details
     else if (user.id === currentUser.id) {
-      return user;
+      const { password: _password, ...safeUser } = user;
+      return safeUser;
     } else {
       throw new UnauthorizedException(
         'You do not have permission to access this user',

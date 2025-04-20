@@ -1,17 +1,11 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/roles.decorator';
+import { CurrentUser } from './current-user.decorator';
+import { User } from './user.entity';
+import { UserService } from './user.service';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,19 +14,19 @@ export class UserController {
 
   @Post()
   @Roles('super_admin', 'admin')
-  create(@Body() createUserDto: CreateUserDto, @Request() req) {
-    return this.userService.create(createUserDto, req.user);
+  create(@Body() createUserDto: CreateUserDto, @CurrentUser() user: User) {
+    return this.userService.create(createUserDto, user);
   }
 
   @Get()
   @Roles('super_admin', 'admin')
-  findAll(@Request() req) {
-    return this.userService.findAll(req.user);
+  findAll(@CurrentUser() user: User) {
+    return this.userService.findAll(user);
   }
 
   @Get(':id')
   @Roles('super_admin', 'admin')
-  findOne(@Param('id') id: string, @Request() req) {
-    return this.userService.findOne(id, req.user);
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.userService.findOne(id, user);
   }
 }

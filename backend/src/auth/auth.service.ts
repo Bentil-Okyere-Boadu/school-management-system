@@ -55,13 +55,21 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     const user = await this.userRepository.findOne({
       where: { email },
-      relations: ['role'],
+      relations: ['role', 'school'],
     });
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const { password: _password, ...result } = user;
-      return result;
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
-    return null;
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const { password: _password, ...result } = user;
+    return result;
   }
 
   login(user: User) {
@@ -141,14 +149,14 @@ export class AuthService {
       'FRONTEND_URL',
       'http://localhost:3000',
     );
-    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+    const resetLink = `${frontendUrl}/auth/forgotPassword/resetPassword?token=${token}`;
 
     // Send email with reset link
     try {
       if (!this.transporter) {
         this.initializeTransporter();
       }
-
+      //TODO: rebuild template to match ui mockup
       await this.transporter.sendMail({
         from: this.configService.get<string>(
           'MAIL_FROM',
