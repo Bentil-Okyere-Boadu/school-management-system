@@ -12,19 +12,32 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    if(pathname.includes("/admin/users")) {
-      setActiveMenuItem("Users");
-      setIsOverviewPage(true);
-    } else if (pathname.includes("/admin/schools")) {
-      setActiveMenuItem("Schools");
-      setIsOverviewPage(true);
-    } else if (pathname.includes("/admin/dashboard")) {
+    // Overview Pages
+    if (pathname === "/admin/dashboard") {
       setActiveMenuItem("Dashboard");
       setIsOverviewPage(true);
-    } else {
+    } else if (pathname === "/admin/users") {
+      setActiveMenuItem("Users");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/schools") {
+      setActiveMenuItem("Schools");
+      setIsOverviewPage(true);
+    } 
+    
+    // Detail Pages
+    else if (pathname.startsWith("/admin/schools/")) {
+      setActiveMenuItem("Schools");
+      setIsOverviewPage(false);
+    } else if (pathname.startsWith("/admin/users/")) {
+      setActiveMenuItem("Users");
+      setIsOverviewPage(false);
+    } 
+    
+    // Default
+    else {
       setIsOverviewPage(false);
     }
-}, [pathname]);
+  }, [pathname]);
 
   return (
     <>

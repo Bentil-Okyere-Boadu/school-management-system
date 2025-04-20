@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 interface UserHeaderProps {
   activeMenuItem: string;
@@ -8,6 +9,12 @@ interface UserHeaderProps {
 }
 
 export const UserHeader: React.FC<UserHeaderProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar }) => {
+  const router = useRouter();
+  
+  const onHandleBreadCrumbPress = () => {
+    router.push(`/admin/${activeMenuItem?.toLowerCase()}`);
+  };
+
   return (
     <header className="flex flex-col mb-2 w-full relative">
       {/* Top row: greeting + user info */}
@@ -39,7 +46,7 @@ export const UserHeader: React.FC<UserHeaderProps> = ({ activeMenuItem, isOvervi
             ) : (
               <div className="flex flex-col">
                 <div className="text-xs text-zinc-600">
-                  <span>{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">Bay Christian International School</span>
+                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">Bay Christian International School</span>
                 </div>
                 <h2 className="text-2xl text-neutral-800 mt-2">Bay Christian International School</h2>
               </div>
