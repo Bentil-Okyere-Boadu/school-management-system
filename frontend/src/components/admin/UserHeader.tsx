@@ -1,11 +1,20 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 interface UserHeaderProps {
+  activeMenuItem: string;
+  isOverviewPage?: boolean;
   onToggleSidebar?: () => void;
 }
 
-export const UserHeader: React.FC<UserHeaderProps> = ({ onToggleSidebar }) => {
+export const UserHeader: React.FC<UserHeaderProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar }) => {
+  const router = useRouter();
+  
+  const onHandleBreadCrumbPress = () => {
+    router.push(`/admin/${activeMenuItem?.toLowerCase()}`);
+  };
+
   return (
     <header className="flex flex-col mb-2 w-full relative">
       {/* Top row: greeting + user info */}
@@ -27,11 +36,22 @@ export const UserHeader: React.FC<UserHeaderProps> = ({ onToggleSidebar }) => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-
-          <div className="flex flex-col">
-            <h1 className="text-2xl text-neutral-800">Hello, Admin</h1>
-            <p className="text-base text-zinc-600">Welcome to your User Overview</p>
-          </div>
+          {/* Conditionally render Overview Left Header Section or Detail view Left Header Section */}
+          { isOverviewPage ? 
+            (
+              <div className="flex flex-col">
+                <h1 className="text-2xl text-neutral-800">Hello, Admin</h1>
+                <p className="text-base text-zinc-600">Welcome to your {activeMenuItem} Overview</p>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                <div className="text-xs text-zinc-600">
+                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">Bay Christian International School</span>
+                </div>
+                <h2 className="text-2xl text-neutral-800 mt-2">Bay Christian International School</h2>
+              </div>
+            ) 
+          }
         </div>
 
         <div className="flex items-center flex-wrap gap-3">

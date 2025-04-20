@@ -7,6 +7,7 @@ interface InputFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
   isPasswordField?: boolean;
+  isTransulent?: boolean;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -15,6 +16,7 @@ const InputField: React.FC<InputFieldProps> = ({
   onChange,
   type = "text",
   isPasswordField = false,
+  isTransulent = false,
 }) => {
   return (
     <div className="mb-4">
@@ -23,9 +25,9 @@ const InputField: React.FC<InputFieldProps> = ({
         type={type}
         value={value}
         onChange={onChange}
-        className={`px-3 py-2.5 h-10 rounded border-solid border-[0.5px] border-zinc-500 text-zinc-800 w-full ${
-          isPasswordField ? "text-2xl font-bold" : "text-base"
-        }`}
+        className={`px-3 py-2.5 h-10 rounded border-solid border-[0.5px] border-zinc-500 text-zinc-800 w-full 
+          ${ isPasswordField ? "text-2xl font-bold" : "text-base"}
+          ${isTransulent ? "bg-[#8787871A] bg-opacity-10 !border-none outline-none" : ""}`}
       />
     </div>
   );

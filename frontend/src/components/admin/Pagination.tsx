@@ -44,7 +44,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   return (
     <nav className="flex justify-between items-center px-0 py-5 max-md:flex-col max-md:items-start max-sm:flex-col max-sm:items-start">
       <button
-        className="flex items-center px-3.5 py-2 text-sm bg-white rounded-lg border border-gray-300 border-solid shadow-[0px_1px_2px_rgba(16,24,40,0.05)] text-slate-700"
+        className="flex items-center px-3.5 py-2 text-sm bg-white rounded-lg border border-gray-300 border-solid shadow-[0px_1px_2px_rgba(16,24,40,0.05)] text-slate-700 cursor-pointer"
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
         aria-label="Previous page"
@@ -71,7 +71,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           ) : (
             <button
               key={pageNumber}
-              className={`w-10 h-10 text-sm rounded-lg flex items-center justify-center ${
+              className={`w-10 h-10 text-sm rounded-lg flex items-center justify-center cursor-pointer ${
                 pageNumber === currentPage
                   ? 'bg-[#E8DEF8] text-[#6941C6]'
                   : 'text-gray-500'
@@ -87,7 +87,7 @@ export const Pagination: React.FC<PaginationProps> = ({
       </div>
 
       <button
-        className="flex items-center px-3.5 py-2 text-sm bg-white rounded-lg border border-gray-300 border-solid shadow-[0px_1px_2px_rgba(16,24,40,0.05)] text-slate-700"
+        className="flex items-center px-3.5 py-2 text-sm bg-white rounded-lg border border-gray-300 border-solid shadow-[0px_1px_2px_rgba(16,24,40,0.05)] text-slate-700 cursor-pointer"
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         disabled={currentPage === totalPages}
         aria-label="Next page"
