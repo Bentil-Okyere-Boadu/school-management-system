@@ -8,10 +8,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Role } from 'src/role/role.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Role]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -21,8 +22,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         signOptions: { expiresIn: '1d' },
       }),
     }),
+    ConfigModule,
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy, ConfigService],
   controllers: [AuthController],
 })
 export class AuthModule {}
