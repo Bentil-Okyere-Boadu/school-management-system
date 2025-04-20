@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -11,14 +19,20 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Roles('super_admin') //Only Super Admin can create users
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  @Roles('super_admin', 'admin')
+  create(@Body() createUserDto: CreateUserDto, @Request() req) {
+    return this.userService.create(createUserDto, req.user);
   }
 
   @Get()
-  @Roles('super_admin')
-  findAll() {
-    return this.userService.findAll();
+  @Roles('super_admin', 'admin')
+  findAll(@Request() req) {
+    return this.userService.findAll(req.user);
+  }
+
+  @Get(':id')
+  @Roles('super_admin', 'admin')
+  findOne(@Param('id') id: string, @Request() req) {
+    return this.userService.findOne(id, req.user);
   }
 }

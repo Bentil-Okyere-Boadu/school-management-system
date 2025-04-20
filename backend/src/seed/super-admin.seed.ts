@@ -17,10 +17,33 @@ async function bootstrap() {
   const superAdminRole = await roleRepository.findOne({
     where: { name: 'super_admin' },
   });
-  if (!superAdminRole) {
-    logger.log('Super Admin Role not found, creating...');
-    await roleRepository.save(roleRepository.create({ name: 'super_admin' }));
+
+  if (superAdminRole) {
+    const usersWithSuperAdminRole = await userRepository.find({
+      where: { role: { id: superAdminRole.id } },
+      relations: ['role'],
+    });
+
+    if (usersWithSuperAdminRole.length > 0) {
+      logger.log(
+        `Deleting ${usersWithSuperAdminRole.length} user(s) with Super Admin role...`,
+      );
+      await userRepository.remove(usersWithSuperAdminRole);
+      logger.log('Deleted users with Super Admin role ✅');
+    }
+
+    logger.log('Deleting existing Super Admin role...');
+    await roleRepository.remove(superAdminRole);
+    logger.log('Deleted Super Admin role ✅');
   }
+
+  logger.log('Creating roles...');
+  await roleRepository.save(roleRepository.create({ name: 'super_admin' }));
+  await roleRepository.save(roleRepository.create({ name: 'school admin' }));
+  await roleRepository.save(roleRepository.create({ name: 'teacher' }));
+  await roleRepository.save(roleRepository.create({ name: 'student' }));
+  await roleRepository.save(roleRepository.create({ name: 'parent' }));
+  logger.log('Roles created successfully ✅');
 
   const finalRole = await roleRepository.findOne({
     where: { name: 'super_admin' },
@@ -29,25 +52,18 @@ async function bootstrap() {
   if (!finalRole) {
     throw new Error('Super Admin role not found');
   }
-  const existingSuperAdmin = await userRepository.findOne({
-    where: { email: 'superadmin@example.com' },
+
+  const password = await bcrypt.hash('superadmin123', 10);
+
+  const superAdmin = userRepository.create({
+    name: 'Super Admin',
+    email: 'superadmin@example.com',
+    password,
+    role: finalRole,
   });
 
-  if (!existingSuperAdmin) {
-    const password = await bcrypt.hash('superadmin123', 10);
-
-    const superAdmin = userRepository.create({
-      name: 'Super Admin',
-      email: 'superadmin@example.com',
-      password,
-      role: finalRole,
-    });
-
-    await userRepository.save(superAdmin);
-    logger.log('Super Admin created successfully ✅');
-  } else {
-    logger.log('Super Admin already exists ✅');
-  }
+  await userRepository.save(superAdmin);
+  logger.log('Super Admin created successfully ✅');
 
   await app.close();
 }

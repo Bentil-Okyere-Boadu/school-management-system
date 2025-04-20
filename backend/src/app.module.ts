@@ -7,6 +7,7 @@ import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
+import { SchoolModule } from './school/school.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuthModule } from './auth/auth.module';
     RoleModule,
     PermissionModule,
     AuthModule,
+    SchoolModule,
   ],
   controllers: [AppController],
   providers: [AppService],
