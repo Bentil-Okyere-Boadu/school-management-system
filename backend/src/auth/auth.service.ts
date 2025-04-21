@@ -130,7 +130,6 @@ export class AuthService {
     });
 
     if (!user) {
-      console.log('hello');
       // Don't reveal that the user doesn't exist
       return successResponse;
     }

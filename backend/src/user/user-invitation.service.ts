@@ -64,7 +64,6 @@ export class UserInvitationService {
     inviteUserDto: InviteUserDto,
     currentUser: User,
   ): Promise<User> {
-    console.log('Invite User DTO:', currentUser);
     if (currentUser.role.name !== 'super_admin') {
       throw new UnauthorizedException('Only super admins can invite users');
     }
