@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -6,6 +6,7 @@ import { Role } from 'src/role/role.entity';
 import { School } from 'src/school/school.entity';
 import * as bcrypt from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto';
+import { sanitize } from '../common/utils/sanitizer.util';
 
 @Injectable()
 export class UserService {
@@ -115,5 +116,23 @@ export class UserService {
         'You do not have permission to access this user',
       );
     }
+  }
+
+  /**
+   * Get a user by ID with sensitive information removed
+   * @param id The user ID to find
+   * @returns Sanitized user object
+   */
+  async getUserSanitized(id: string): Promise<Partial<User>> {
+    const user = await this.userRepo.findOne({
+      where: { id },
+      relations: ['role', 'school'],
+    });
+    
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    
+    return sanitize(user);
   }
 }
