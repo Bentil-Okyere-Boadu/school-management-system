@@ -1,6 +1,12 @@
 import { Role } from 'src/role/role.entity';
 import { School } from 'src/school/school.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity()
 export class User {
@@ -13,7 +19,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   password: string;
 
   @ManyToOne(() => Role, (role) => role.users)
@@ -22,6 +28,18 @@ export class User {
   @ManyToOne(() => School, (school) => school.users, { nullable: true })
   school: School;
 
-  @Column({ default: 'active' })
+  @Column({ default: 'pending' })
   status: string;
+
+  @Column({ nullable: true })
+  invitationToken: string;
+
+  @Column({ nullable: true })
+  invitationExpires: Date;
+
+  @Column({ default: false })
+  isInvitationAccepted: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }
