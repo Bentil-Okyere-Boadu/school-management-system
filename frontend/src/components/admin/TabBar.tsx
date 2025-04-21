@@ -1,31 +1,31 @@
 "use client";
 
 import React from "react";
-import NavigationItem from "./NavigationItem";
+import TabItem from "./TabItem";
 
-export type NavItem = {
+export type TabListItem = {
   tabLabel: string;
   tabKey: string;
 };
 
-interface NavigationBarProps {
-  items: NavItem[];
+interface TabBarProps {
+  items: TabListItem[];
   activeTabKey?: string;
-  onItemClick: (item: NavItem) => void;
+  onItemClick: (item: TabListItem) => void;
 }
 
-const NavigationBar: React.FC<NavigationBarProps> = ({
+const TabBar: React.FC<TabBarProps> = ({
   items,
   activeTabKey,
   onItemClick,
 }) => {
 
   return (
-    <nav className="flex gap-9 items-center max-md:gap-8 max-sm:justify-center mb-4">
+    <nav className="flex gap-9 items-center max-md:gap-8 mb-4">
       <div className="relative">
         <ul className="flex space-x-8">
-          {items.map((item, index) => (
-            <NavigationItem
+          {items.map((item) => (
+            <TabItem
               key={item.tabKey}
               item={item}
               isActive={activeTabKey === item.tabKey}
@@ -38,4 +38,4 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   );
 };
 
-export default NavigationBar;
+export default TabBar;

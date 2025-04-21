@@ -1,11 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import NavigationBar from "@/components/admin/NavigationBar";
+import TabBar from "@/components/admin/TabBar";
 import { SchoolSettingsTabSection } from "@/components/admin/schools/SchoolSettingsTabSection";
 import { ConfigurationTabSection } from "@/components/admin/schools/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/admin/schools/ProfileTabSection";
 
-export type NavItem = {
+export type TabListItem = {
   tabLabel: string;
   tabKey: string;
 };
@@ -15,11 +15,11 @@ const SingleSchoolPage: React.FC = () => {
 
   const [activeTabKey, setActiveTabKey] = useState('school-settings');
 
-  const handleItemClick = (item: NavItem) => {
+  const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
   };
 
-  const defaultNavItems: NavItem[] = [
+  const defaultNavItems: TabListItem[] = [
     { tabLabel: "School Settings", tabKey: "school-settings" },
     { tabLabel: "Configuration", tabKey: "configuration" },
     { tabLabel: "Profile", tabKey: "profile" },
@@ -28,7 +28,7 @@ const SingleSchoolPage: React.FC = () => {
 
   return (
     <div className="px-0.5">
-        <NavigationBar 
+        <TabBar 
           items={defaultNavItems} 
           activeTabKey={activeTabKey} 
           onItemClick={handleItemClick} // triggered from the child, it will in return trigger handleItemClick function
