@@ -1,13 +1,17 @@
 import React from "react";
-import { NavItem } from "./NavigationBar";
 
-interface NavigationItemProps {
-  item: NavItem;
+export type TabListItem = {
+  tabLabel: string;
+  tabKey: string;
+};
+
+interface TabItemProps {
+  item: TabListItem;
   isActive: boolean;
   onClick: () => void;
 }
 
-const NavigationItem: React.FC<NavigationItemProps> = ({
+const TabItem: React.FC<TabItemProps> = ({
   item,
   isActive,
   onClick,
@@ -32,4 +36,4 @@ const NavigationItem: React.FC<NavigationItemProps> = ({
   );
 };
 
-export default NavigationItem;
+export default TabItem;

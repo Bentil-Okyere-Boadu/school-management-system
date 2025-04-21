@@ -3,6 +3,10 @@ import React, { useState } from "react";
 import { Pagination } from "@/components/admin/Pagination";
 import { UserTable } from "@/components/admin/UserTable";
 import { SearchBar } from "@/components/admin/SearchBar";
+import FilterButton from "@/components/admin/FilterButton";
+import { CustomSelectTag } from "@/components/admin/CustomSelectTag";
+import CustomButton from "@/components/Button";
+import { Dialog } from "@/components/admin/Dialog";
 
 interface User {
   id: string;
@@ -20,6 +24,8 @@ const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const mockUsers: User[] = [
     {
@@ -132,6 +138,19 @@ const UsersPage: React.FC = () => {
       user.role.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const roleOptions = [
+    { value: "admin", label: "Admin" },
+    { value: "projectManager", label: "Project Manager" },
+  ];
+  const statusOptions = [
+    { value: "active", label: "Active" },
+    { value: "in-active", label: "Inactive" },
+  ];
+  const premissionOptions = [
+    { value: "manager-users", label: "Manage Users" },
+    { value: "manage-schools", label: "Manage Schools" },
+  ];
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1); // Reset to first page when searching
@@ -141,14 +160,27 @@ const UsersPage: React.FC = () => {
     setCurrentPage(page);
   };
 
+  const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = event.target.value;
+    console.log("Selected:", selectedValue);
+  };
+
 
   return (
     <div>
-      <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-6 px-0.5">
+      <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
         <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
-        <button className="px-5 py-2.5 font-bold text-white bg-purple-500 rounded-md cursor-pointer">
-          Invite New User
-        </button>
+        <CustomButton text="Invite New User" onClick={() => setIsDialogOpen(true)} />
+      </div>
+      <div className="flex flex-col items-end mb-4 px-1">
+        <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
+        {showFilterOptions && (
+          <div className="flex gap-3 mt-3">
+            <CustomSelectTag defaultValue="" optionLabel="Role" options={roleOptions} onOptionItemClick={handleRoleChange} />
+            <CustomSelectTag defaultValue="" optionLabel="Status" options={statusOptions} onOptionItemClick={handleRoleChange} />
+            <CustomSelectTag defaultValue="" optionLabel="Permissions" options={premissionOptions} onOptionItemClick={handleRoleChange} />
+          </div>
+        )}
       </div>
       <UserTable
         users={filteredUsers}
@@ -160,6 +192,18 @@ const UsersPage: React.FC = () => {
         totalPages={10}
         onPageChange={handlePageChange}
       />
+      <Dialog 
+        isOpen={isDialogOpen}
+        dialogTitle="Dialog Title"
+        onClose={() => setIsDialogOpen(false)} 
+        onSave={() => setIsDialogOpen(false)}
+      >
+        <div className="my-3">
+          Sure! Here’s a simple example of how to create a Dialog component in React with TypeScript, 
+          where the backdrop is transparent (or semi-transparent if you prefer a subtle overlay). 
+          The dialog will be centered on the screen.
+        </div>
+      </Dialog>
     </div>
   );
 };

@@ -9,19 +9,22 @@ export type OptionItem = {
 interface SelectTagProps {
   options: OptionItem[];
   defaultValue?: string;
+  optionLabel?: string;
   onOptionItemClick: (event: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
 
-export const CustomSelectTag: React.FC<SelectTagProps> = ({options, defaultValue, onOptionItemClick}) => {
+export const CustomSelectTag: React.FC<SelectTagProps> = ({options, defaultValue, optionLabel, onOptionItemClick}) => {
   return (
     <section className="flex gap-2 items-center text-sm text-zinc-700">
       <select
         className="appearance-none flex overflow-hidden gap-3 self-stretch px-2 py-1 my-auto bg-white rounded min-w-[159px] text-zinc-700 cursor-pointer"
-        defaultValue={defaultValue || options[0]?.value}
+        defaultValue={defaultValue || optionLabel || options[0]?.value}
         onChange={onOptionItemClick}
         aria-label="Filter by category"
       >
+        {/* If selected value is optionLabel, no filtering will be applied */}
+        {optionLabel && <option value={optionLabel}>{optionLabel}</option>} 
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
