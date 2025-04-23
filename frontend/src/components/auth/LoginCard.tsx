@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import { toast } from 'react-toastify';
 
 const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -18,9 +19,11 @@ const LoginCard: React.FC = () => {
     // Handle sign in logic here
     mutate(null as unknown as void, {
       onError: (error: Error) => {
+        toast.error(error.message)
         console.log(error.message)
       },
       onSuccess: (data) => {
+        toast.success("Login successfully.")
         Cookies.set("authToken", data.data.access_token);
         router.push('/admin/dashboard');
       }
