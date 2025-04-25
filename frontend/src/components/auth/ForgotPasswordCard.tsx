@@ -2,15 +2,30 @@ import React, { useState } from 'react'
 import InputField from '../InputField';
 import Link from 'next/link';
 import ActionButton from '../ActionButton';
-import { useRouter } from 'next/navigation';
+import { useRequestPasswordReset } from '@/hooks/auth';
+import { toast } from 'react-toastify';
 
 const ForgotPasswordCard = () => {
-    const router = useRouter();
     const [email, setEmail] = useState("");
+
+    const { mutate, isPending } = useRequestPasswordReset(email)
   
-    const handleSignIn = () => {
+    const requestPwdReset = () => {
+      if(email) {
+        mutate(null as unknown as void, {
+          onSuccess: (data) => {
+            toast.success(data.data.message);
+          }, 
+          onError: (error) => {
+            toast.error(error.message);
+            console.log(error.message);
+          }
+        })
+      } else {
+        toast.error('Please enter email')
+      }
       // Handle sign in logic here
-      router.push('/auth/forgotPassword/resetRequest');
+      //router.push('/auth/forgotPassword/resetRequest');
     };
   
     return (
@@ -28,7 +43,7 @@ const ForgotPasswordCard = () => {
         />
   
         <div className="relative mt-9 max-sm:mt-6">
-          <ActionButton onClick={handleSignIn} text="Request Password Reset" />
+          <ActionButton onClick={requestPwdReset} text="Request Password Reset" loading={isPending} />
         </div>
   
         <p className="mt-11 text-xs text-center text-zinc-600">

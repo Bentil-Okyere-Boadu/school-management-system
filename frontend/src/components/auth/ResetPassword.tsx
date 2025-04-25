@@ -1,14 +1,34 @@
 import React, { useState } from 'react'
 import ActionButton from '../ActionButton';
 import InputField from '../InputField';
+import { usePasswordReset } from '@/hooks/auth';
+import { toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
 
-const ResetPassword = () => {
+interface ResetPwdProps {
+  token: string
+}
+
+const ResetPassword: React.FC<ResetPwdProps> = ({token}) => {
     const [password, setPassword] = useState("");
     const [password2, setPassword2] = useState("");
 
-  const handleSignIn = () => {
+    const {mutate, isPending} = usePasswordReset({ token: token, password: password });
+    const router = useRouter();
+
+  const handlePwdReset = () => {
     // Handle sign in logic here
-    console.log("Signing in with:", password2);
+    if(password === password2) {
+      mutate(null as unknown as void, {
+        onSuccess: (data) => {
+          toast.success(data.data.message);
+          router.push("/auth/resetSuccess")
+        },
+        onError: (error) => {
+          toast.error(error.response.data.message);
+        }
+      })
+    }
   };
 
   return (
@@ -35,7 +55,7 @@ const ResetPassword = () => {
       />
 
       <div className="relative mt-9 max-sm:mt-6">
-        <ActionButton onClick={handleSignIn} text="Save new password" />
+        <ActionButton onClick={handlePwdReset} text="Save new password" loading={isPending} />
       </div>
 
     </section>
