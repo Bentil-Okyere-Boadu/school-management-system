@@ -1,12 +1,14 @@
 "use client";
 import React, { useState } from "react";
 import { Pagination } from "@/components/admin/Pagination";
-import { UserTable } from "@/components/admin/UserTable";
+import { UserTable } from "@/components/admin/users/UsersTable";
 import { SearchBar } from "@/components/admin/SearchBar";
 import FilterButton from "@/components/admin/FilterButton";
 import { CustomSelectTag } from "@/components/admin/CustomSelectTag";
 import CustomButton from "@/components/Button";
 import { Dialog } from "@/components/admin/Dialog";
+import MultiSelectDropdown from "@/components/admin/users/MultiSelectDropdown";
+import SelectDropdown from "@/components/admin/users/SelectDropdown";
 
 interface User {
   id: string;
@@ -23,9 +25,9 @@ interface User {
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedDataRole, setSelectedDataRole] = useState<string>("school-admin");
 
   const mockUsers: User[] = [
     {
@@ -150,6 +152,19 @@ const UsersPage: React.FC = () => {
     { value: "manager-users", label: "Manage Users" },
     { value: "manage-schools", label: "Manage Schools" },
   ];
+  const permissions = [
+    { id: "manage-users", label: "Manage Users" },
+    { id: "assign-grades", label: "Assign Grades" },
+    { id: "view-reports", label: "View Reports" },
+    { id: "data-reports", label: "Data Reports" }
+  ];
+  const roles = [
+    { value: "school-admin", label: "School Admin" },
+    { value: "teacher", label: "Teacher" },
+    { value: "principal", label: "Principal" },
+    { value: "district-admin", label: "District Admin" },
+    { value: "student", label: "Student" },
+  ];
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -165,6 +180,17 @@ const UsersPage: React.FC = () => {
     console.log("Selected:", selectedValue);
   };
 
+  const handleUserRowClick = (userId: string) => {
+    console.log(userId)
+  }
+  const handlePermissionChange = (selectedIds: string[]) => {
+    console.log("Selected permissions:", selectedIds);
+  };
+
+  const handleRoleDataChange = (value: string) => {
+    setSelectedDataRole(value);
+    console.log("Selected role:", value);
+  };
 
   return (
     <div>
@@ -182,10 +208,10 @@ const UsersPage: React.FC = () => {
           </div>
         )}
       </div>
-      <UserTable
-        users={filteredUsers}
-        selectedUserId={selectedUserId}
-        onSelectUser={(id) => setSelectedUserId(id)}
+
+      <UserTable 
+        users={filteredUsers} 
+        onTableRowClick={(id) => handleUserRowClick(id)}
       />
       <Pagination
         currentPage={currentPage}
@@ -198,10 +224,21 @@ const UsersPage: React.FC = () => {
         onClose={() => setIsDialogOpen(false)} 
         onSave={() => setIsDialogOpen(false)}
       >
-        <div className="my-3">
-          Sure! Here’s a simple example of how to create a Dialog component in React with TypeScript, 
-          where the backdrop is transparent (or semi-transparent if you prefer a subtle overlay). 
-          The dialog will be centered on the screen.
+        <div className="my-3 flex flex-col gap-4">
+          <SelectDropdown
+            id="role-select"
+            label="Role"
+            options={roles}
+            selectedItem={selectedDataRole}
+            onChange={handleRoleDataChange}
+          />
+
+          <MultiSelectDropdown
+            items={permissions}
+            selectedItems={["assign-grades"]}
+            onChange={handlePermissionChange}
+            label="Select Permissions"
+          />
         </div>
       </Dialog>
     </div>
