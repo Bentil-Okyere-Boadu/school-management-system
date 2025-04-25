@@ -3,9 +3,7 @@ import {
   Post,
   Body,
   UseGuards,
-  Req,
   Param,
-  Get,
   BadRequestException,
   UseInterceptors,
 } from '@nestjs/common';

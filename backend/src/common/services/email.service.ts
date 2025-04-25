@@ -1,0 +1,391 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
+import { User } from '../../user/user.entity';
+
+/**
+ * Email templates
+ */
+export enum EmailTemplate {
+  INVITATION = 'invitation',
+  REGISTRATION_CONFIRMATION = 'registration_confirmation',
+  PASSWORD_RESET = 'password_reset',
+  GENERAL_NOTIFICATION = 'general_notification',
+  STUDENT_INVITATION = 'student_invitation',
+  TEACHER_INVITATION = 'teacher_invitation',
+}
+
+/**
+ * Email service for sending various types of emails
+ */
+@Injectable()
+export class EmailService {
+  private transporter: nodemailer.Transporter;
+  private readonly logger = new Logger(EmailService.name);
+  private readonly frontendUrl: string;
+  private readonly fromEmail: string;
+
+  constructor(private configService: ConfigService) {
+    this.initializeTransporter();
+    this.frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
+    this.fromEmail = this.configService.get<string>(
+      'MAIL_FROM',
+      'noreply@schoolmanagementsystem.com',
+    );
+  }
+
+  private initializeTransporter(): void {
+    this.transporter = nodemailer.createTransport({
+      host: this.configService.get<string>('MAIL_HOST', 'smtp.example.com'),
+      port: this.configService.get<number>('MAIL_PORT', 587),
+      secure: this.configService.get<boolean>('MAIL_SECURE', false),
+      auth: {
+        user: this.configService.get<string>('MAIL_USER', ''),
+        pass: this.configService.get<string>('MAIL_PASSWORD', ''),
+      },
+    });
+
+    this.transporter.verify((error) => {
+      if (error) {
+        this.logger.error('Email service configuration error:', error);
+      } else {
+        this.logger.log('Email service is ready to send messages');
+      }
+    });
+  }
+
+  /**
+   * Send an invitation email to a new user
+   * @param user The user to send the invitation to
+   * @returns Promise resolving to the mail send info
+   */
+  async sendInvitationEmail(user: User): Promise<void> {
+    const invitationLink = `${this.frontendUrl}/auth/complete-registration?token=${user.invitationToken}`;
+
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Invitation to School Management System',
+        html: this.getEmailTemplate(EmailTemplate.INVITATION, {
+          name: user.name,
+          invitationLink,
+        }),
+      });
+      this.logger.log(`Invitation email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send invitation email to ${user.email}`,
+        error,
+      );
+      throw new Error(`Failed to send invitation email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send an invitation email to a student with their credentials
+   * @param user The student user
+   * @param studentId The generated student ID
+   * @param pin The generated PIN
+   */
+  async sendStudentInvitation(
+    user: User,
+    studentId: string,
+    pin: string,
+  ): Promise<void> {
+    const loginLink = `${this.frontendUrl}/auth/login`;
+
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Your Student Account for School Management System',
+        html: this.getEmailTemplate(EmailTemplate.STUDENT_INVITATION, {
+          name: user.name,
+          studentId,
+          pin,
+          loginLink,
+          school: user.school?.name || 'your school',
+        }),
+      });
+      this.logger.log(`Student invitation email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send student invitation email to ${user.email}`,
+        error,
+      );
+      throw new Error(
+        `Failed to send student invitation email: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Send an invitation email to a teacher with their credentials
+   * @param user The teacher user
+   * @param teacherId The generated teacher ID
+   * @param pin The generated PIN
+   */
+  async sendTeacherInvitation(
+    user: User,
+    teacherId: string,
+    pin: string,
+  ): Promise<void> {
+    const loginLink = `${this.frontendUrl}/auth/login`;
+
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Your Teacher Account for School Management System',
+        html: this.getEmailTemplate(EmailTemplate.TEACHER_INVITATION, {
+          name: user.name,
+          teacherId,
+          pin,
+          loginLink,
+          school: user.school?.name || 'your school',
+        }),
+      });
+      this.logger.log(`Teacher invitation email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send teacher invitation email to ${user.email}`,
+        error,
+      );
+      throw new Error(
+        `Failed to send teacher invitation email: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Send a registration confirmation email
+   * @param user The user to send the confirmation to
+   * @returns Promise resolving to the mail send info
+   */
+  async sendRegistrationConfirmationEmail(user: User): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Registration Confirmed - School Management System',
+        html: this.getEmailTemplate(EmailTemplate.REGISTRATION_CONFIRMATION, {
+          name: user.name,
+          loginLink: `${this.frontendUrl}/auth/login`,
+        }),
+      });
+      this.logger.log(`Registration confirmation email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send registration confirmation email to ${user.email}`,
+        error,
+      );
+      throw new Error(
+        `Failed to send registration confirmation email: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Send a password reset email
+   * @param user The user
+   * @param resetToken The password reset token
+   */
+  async sendPasswordResetEmail(
+    email: string,
+    resetToken: string,
+  ): Promise<void> {
+    const resetLink = `${this.frontendUrl}/auth/forgotPassword/resetPassword?token=${resetToken}`;
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: email,
+        subject: 'Password Reset - School Management System',
+        html: this.getEmailTemplate(EmailTemplate.PASSWORD_RESET, {
+          resetLink,
+        }),
+      });
+      this.logger.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send password reset email to ${email}`,
+        error,
+      );
+      throw new Error(`Failed to send password reset email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send a general notification email
+   * @param to Email address to send to
+   * @param subject Email subject
+   * @param content Email content
+   */
+  async sendNotificationEmail(
+    to: string,
+    subject: string,
+    content: {
+      name: string;
+      message: string;
+      actionLink?: string;
+      actionText?: string;
+    },
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject,
+        html: this.getEmailTemplate(
+          EmailTemplate.GENERAL_NOTIFICATION,
+          content,
+        ),
+      });
+      this.logger.log(`Notification email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(`Failed to send notification email to ${to}`, error);
+      throw new Error(`Failed to send notification email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get the HTML template for a specific email type
+   * @param template The email template to use
+   * @param data Data to populate the template with
+   * @returns The HTML email content
+   */
+  private getEmailTemplate(template: EmailTemplate, data: any): string {
+    switch (template) {
+      case EmailTemplate.INVITATION:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Welcome to the School Management System</h2>
+            <p>Dear ${data.name},</p>
+            <p>You have been invited to join the School Management System as an administrator. 
+              Please click the link below to complete your registration:</p>
+            <p style="margin: 25px 0;">
+              <a href="${data.invitationLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Complete Registration</a>
+            </p>
+            <p>This invitation link will expire in 24 hours.</p>
+            <p>If you did not request this invitation, please ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.STUDENT_INVITATION:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Welcome to the School Management System</h2>
+            <p>Dear ${data.name},</p>
+            <p>You have been registered as a student at ${data.school}. Below are your login credentials:</p>
+            
+            <div style="background-color: #f7f7f7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p><strong>Student ID:</strong> ${data.studentId}</p>
+              <p><strong>PIN:</strong> ${data.pin}</p>
+            </div>
+            
+            <p>To log in to the system, please visit the link below and use your Student ID and PIN:</p>
+            <p style="margin: 25px 0;">
+              <a href="${data.loginLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Login to System</a>
+            </p>
+            <p><strong>Important:</strong> Please keep your credentials secure and do not share them with others.</p>
+            <p>If you have any questions, please contact your school administrator.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.TEACHER_INVITATION:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Welcome to the School Management System</h2>
+            <p>Dear ${data.name},</p>
+            <p>You have been registered as a teacher at ${data.school}. Below are your login credentials:</p>
+            
+            <div style="background-color: #f7f7f7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p><strong>Teacher ID:</strong> ${data.teacherId}</p>
+              <p><strong>PIN:</strong> ${data.pin}</p>
+            </div>
+            
+            <p>To log in to the system, please visit the link below and use your Teacher ID and PIN:</p>
+            <p style="margin: 25px 0;">
+              <a href="${data.loginLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Login to System</a>
+            </p>
+            <p><strong>Important:</strong> Please keep your credentials secure and do not share them with others.</p>
+            <p>If you have any questions, please contact your school administrator.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.REGISTRATION_CONFIRMATION:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Registration Successful!</h2>
+            <p>Dear ${data.name},</p>
+            <p>Congratulations! Your account has been successfully registered with the School Management System.</p>
+            <p>You can now log in to access your account and its features.</p>
+            <p style="margin: 25px 0;">
+              <a href="${data.loginLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Login Now</a>
+            </p>
+            <p>If you have any questions or need assistance, please contact the system administrator.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.PASSWORD_RESET:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Password Reset Request</h2>
+            <p>Dear Sms User,</p>
+            <p>We received a request to reset your password. Click the link below to create a new password:</p>
+            <p style="margin: 25px 0;">
+              <a href="${data.resetLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Password</a>
+            </p>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you did not request a password reset, please ignore this email or contact the administrator if you have concerns.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.GENERAL_NOTIFICATION:
+        let actionButton = '';
+
+        if (data.actionLink && data.actionText) {
+          actionButton = `
+            <p style="margin: 25px 0;">
+              <a href="${data.actionLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">${data.actionText}</a>
+            </p>
+          `;
+        }
+
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">School Management System Notification</h2>
+            <p>Dear ${data.name},</p>
+            <p>${data.message}</p>
+            ${actionButton}
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+
+      default:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">School Management System</h2>
+            <p>Dear ${data.name},</p>
+            <p>${data.message || 'You have a new notification from the School Management System.'}</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+    }
+  }
+}

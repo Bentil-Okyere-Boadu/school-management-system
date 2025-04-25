@@ -7,18 +7,16 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 import * as crypto from 'crypto';
 import { User } from './user.entity';
 import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
 import { InviteUserDto } from './dto/invite-user.dto';
 import * as bcrypt from 'bcryptjs';
+import { EmailService } from '../common/services/email.service';
 
 @Injectable()
 export class UserInvitationService {
-  private transporter: nodemailer.Transporter;
-
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -26,23 +24,8 @@ export class UserInvitationService {
     private roleRepository: Repository<Role>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
-    private configService: ConfigService,
-  ) {
-    this.initializeTransporter();
-  }
-
-  private initializeTransporter() {
-    // Initialize nodemailer transporter for sending invitation emails
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('MAIL_HOST', 'smtp.example.com'),
-      port: this.configService.get<number>('MAIL_PORT', 587),
-      secure: this.configService.get<boolean>('MAIL_SECURE', false),
-      auth: {
-        user: this.configService.get<string>('MAIL_USER', ''),
-        pass: this.configService.get<string>('MAIL_PASSWORD', ''),
-      },
-    });
-  }
+    private emailService: EmailService,
+  ) {}
 
   /**
    * Generate a random invitation token
@@ -111,35 +94,10 @@ export class UserInvitationService {
 
     const savedUser = await this.userRepository.save(newUser);
 
-    await this.sendInvitationEmail(savedUser);
+    // Send invitation email using the EmailService
+    await this.emailService.sendInvitationEmail(savedUser);
 
     return savedUser;
-  }
-
-  private async sendInvitationEmail(user: User): Promise<void> {
-    const frontendUrl = this.configService.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:3000',
-    );
-    const invitationLink = `${frontendUrl}/auth/complete-registration?token=${user.invitationToken}`;
-
-    await this.transporter.sendMail({
-      from: this.configService.get<string>(
-        'MAIL_FROM',
-        'noreply@schoolmanagementsystem.com',
-      ),
-      to: user.email,
-      subject: 'Invitation to School Management System',
-      html: `
-        <h3>Welcome to the School Management System</h3>
-        <p>Dear ${user.name},</p>
-        <p>You have been invited to join the School Management System as an administrator. 
-           Please click the link below to complete your registration:</p>
-        <p><a href="${invitationLink}">Complete Registration</a></p>
-        <p>This invitation link will expire in 24 hours.</p>
-        <p>If you did not request this invitation, please ignore this email.</p>
-      `,
-    });
   }
 
   async verifyInvitationToken(token: string): Promise<User> {
@@ -169,7 +127,12 @@ export class UserInvitationService {
     user.invitationToken = '';
     user.invitationExpires = new Date(0);
 
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // Send registration confirmation email
+    await this.emailService.sendRegistrationConfirmationEmail(savedUser);
+
+    return savedUser;
   }
 
   async resendInvitation(userId: string, currentUser: User): Promise<User> {
@@ -193,7 +156,8 @@ export class UserInvitationService {
 
     const updatedUser = await this.userRepository.save(user);
 
-    await this.sendInvitationEmail(updatedUser);
+    // Send invitation email using the EmailService
+    await this.emailService.sendInvitationEmail(updatedUser);
 
     return updatedUser;
   }
