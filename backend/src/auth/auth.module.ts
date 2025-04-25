@@ -9,10 +9,13 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Role } from 'src/role/role.entity';
+import { School } from 'src/school/school.entity';
+import { InvitationService } from './service/invitation.service';
+import { EmailService } from 'src/common/services/email.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role]),
+    TypeOrmModule.forFeature([User, Role, School]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -24,7 +27,14 @@ import { Role } from 'src/role/role.entity';
     }),
     ConfigModule,
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy, ConfigService],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    ConfigService,
+    InvitationService,
+    EmailService,
+  ],
   controllers: [AuthController],
 })
 export class AuthModule {}

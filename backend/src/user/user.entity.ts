@@ -40,6 +40,18 @@ export class User {
   @Column({ default: false })
   isInvitationAccepted: boolean;
 
+  @Column({ nullable: true })
+  resetPasswordToken: string;
+
+  @Column({ nullable: true })
+  resetPasswordExpires: Date;
+
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ nullable: true, unique: true })
+  studentId: string;
+
+  @Column({ nullable: true, unique: true })
+  teacherId: string;
 }

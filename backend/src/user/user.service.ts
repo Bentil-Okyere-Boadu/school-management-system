@@ -70,11 +70,11 @@ export class UserService {
     }
     // School admin can only see users from their school
     else if (currentUser.role.name === 'admin' && currentUser.school) {
-      return this.userRepo.find({
+    return this.userRepo.find({
         where: { school: { id: currentUser.school.id } },
         relations: ['role', 'school'],
         select: ['id', 'email', 'name', 'role', 'school', 'status'],
-      });
+    });
     } else {
       throw new UnauthorizedException(
         'You do not have permission to access user list',

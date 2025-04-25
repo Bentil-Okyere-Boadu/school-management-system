@@ -39,7 +39,7 @@ async function bootstrap() {
 
   logger.log('Creating roles...');
   await roleRepository.save(roleRepository.create({ name: 'super_admin' }));
-  await roleRepository.save(roleRepository.create({ name: 'school admin' }));
+  await roleRepository.save(roleRepository.create({ name: 'school_admin' }));
   await roleRepository.save(roleRepository.create({ name: 'teacher' }));
   await roleRepository.save(roleRepository.create({ name: 'student' }));
   await roleRepository.save(roleRepository.create({ name: 'parent' }));

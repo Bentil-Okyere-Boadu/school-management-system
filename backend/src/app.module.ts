@@ -8,6 +8,7 @@ import { PermissionModule } from './permission/permission.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { SchoolModule } from './school/school.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SchoolModule } from './school/school.module';
       synchronize: true,
       //logging: true,
     }),
+    CommonModule,
     UserModule,
     RoleModule,
     PermissionModule,

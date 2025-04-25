@@ -6,7 +6,14 @@
  * Utility for sanitizing data to remove sensitive information like passwords
  */
 
-const SENSITIVE_FIELDS = ['password', 'invitationToken', 'invitationExpires'];
+const SENSITIVE_FIELDS = [
+  'password',
+  'invitationToken',
+  'invitationExpires',
+  'isInvitationAccepted',
+  'resetPasswordToken',
+  'resetPasswordExpires',
+];
 
 /**
  * Sanitize a single object by removing sensitive fields
