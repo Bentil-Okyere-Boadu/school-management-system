@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { AuthCredentials, SignUpPayload } from "@/@types"
+import { AuthCredentials } from "@/@types"
 
 export const useLogin = (userDetails: AuthCredentials) => {
     return useMutation({ 
@@ -10,10 +10,10 @@ export const useLogin = (userDetails: AuthCredentials) => {
     })
 }
 
-export const useSignUp = (signUpDetails: SignUpPayload) => {
+export const useAdminSignUp = () => {
     return useMutation({ 
-        mutationFn: () => {
-            return customAPI.post(`/users`, signUpDetails)
+        mutationFn: (signUpDetails: {name: string, email: string, password: string, role: string}) => {
+            return customAPI.post(`/auth/signup/super-admin`, signUpDetails)
         }
     })
 }
