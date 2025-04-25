@@ -42,7 +42,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const pageNumbers = getPageNumbers();
 
   return (
-    <nav className="flex justify-between items-center px-0 py-5 max-md:flex-col max-md:items-start max-sm:flex-col max-sm:items-start">
+    <nav className="flex justify-between items-center px-0 py-5 max-md:items-start max-xs:flex-col max-sm:items-start">
       <button
         className="flex items-center px-3.5 py-2 text-sm bg-white rounded-lg border border-gray-300 border-solid shadow-[0px_1px_2px_rgba(16,24,40,0.05)] text-slate-700 cursor-pointer"
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
