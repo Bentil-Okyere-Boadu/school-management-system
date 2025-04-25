@@ -7,20 +7,21 @@ import { useLogin } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { toast } from 'react-toastify';
+import { AxiosError } from "axios";
 
 const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const { mutate } = useLogin({email, password})
+  const { mutate, isPending } = useLogin({email, password})
 
   const handleSignIn = () => {
     // Handle sign in logic here
     mutate(null as unknown as void, {
-      onError: (error: Error) => {
-        toast.error(error.message)
-        console.log(error.message)
+      onError: (error: AxiosError) => {
+        toast.error(error.response.data.message)
+        console.log(error)
       },
       onSuccess: (data) => {
         toast.success("Login successfully.")
@@ -31,7 +32,7 @@ const LoginCard: React.FC = () => {
   };
 
   return (
-    <section className="relative px-10 py-12 rounded-3xl border border-white border-solid shadow-sm bg-zinc-100 w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
+    <div className="relative px-10 py-12 rounded-3xl border border-white border-solid shadow-sm bg-zinc-100 w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
       <h1 className="mb-3.5 text-2xl font-bold text-neutral-800">Log in</h1>
       <p className="mb-10 text-xs text-zinc-600">
         Enter your SMS account details
@@ -61,7 +62,7 @@ const LoginCard: React.FC = () => {
       </Link>
 
       <div className="relative mt-9 max-sm:mt-6">
-        <ActionButton onClick={handleSignIn} text="Sign In" />
+        <ActionButton onClick={handleSignIn} text="Sign In" loading={isPending} />
       </div>
 
       <p className="mt-11 text-xs text-center text-zinc-600">
@@ -74,7 +75,7 @@ const LoginCard: React.FC = () => {
           </button>
         </Link>
       </p>
-    </section>
+    </div>
   );
 };
 
