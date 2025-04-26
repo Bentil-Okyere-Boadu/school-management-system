@@ -16,14 +16,15 @@ import { CompleteRegistrationDto } from './dto/complete-registration.dto';
 import { User } from './user.entity';
 import { CurrentUser } from './current-user.decorator';
 import { SanitizeResponseInterceptor } from '../common/interceptors/sanitize-response.interceptor';
+import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 
 @Controller('user-invitations')
 @UseInterceptors(SanitizeResponseInterceptor)
 export class UserInvitationController {
   constructor(private userInvitationService: UserInvitationService) {}
 
+  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('super_admin')
   async inviteUser(
     @Body() inviteUserDto: InviteUserDto,
@@ -46,9 +47,9 @@ export class UserInvitationController {
     return { success: true, message: 'Registration completed successfully' };
   }
 
-  @Post('resend/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('super_admin')
+  @Post('resend/:userId')
   async resendInvitation(
     @Param('userId') userId: string,
     @CurrentUser() user: User,

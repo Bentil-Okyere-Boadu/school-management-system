@@ -12,9 +12,9 @@ import { Role } from 'src/role/role.entity';
 import { School } from 'src/school/school.entity';
 import { InviteStudentDto } from '../dto/invite-student.dto';
 import { InviteTeacherDto } from '../dto/invite-teacher.dto';
-import { EmailService } from 'src/common/services/email.service';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { EmailService } from 'src/common/services/email.service';
 
 @Injectable()
 export class InvitationService {
@@ -25,8 +25,6 @@ export class InvitationService {
     private userRepository: Repository<User>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
-    @InjectRepository(School)
-    private schoolRepository: Repository<School>,
     private emailService: EmailService,
   ) {}
 
@@ -88,7 +86,7 @@ export class InvitationService {
     inviteStudentDto: InviteStudentDto,
     adminUser: User,
   ): Promise<User> {
-    if (adminUser.role.name !== 'school admin') {
+    if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite students');
     }
 
@@ -137,7 +135,6 @@ export class InvitationService {
 
     const savedUser = await this.userRepository.save(studentUser);
 
-    // Send invitation email with credentials
     try {
       await this.emailService.sendStudentInvitation(savedUser, studentId, pin);
       this.logger.log(`Invitation sent to student ${inviteStudentDto.email}`);
@@ -146,7 +143,6 @@ export class InvitationService {
         `Failed to send invitation to ${inviteStudentDto.email}`,
         error,
       );
-      // Continue as the user is created but email failed
     }
 
     return savedUser;
@@ -156,7 +152,7 @@ export class InvitationService {
     inviteTeacherDto: InviteTeacherDto,
     adminUser: User,
   ): Promise<User> {
-    if (adminUser.role.name !== 'admin') {
+    if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite teachers');
     }
 
@@ -218,5 +214,183 @@ export class InvitationService {
     }
 
     return savedUser;
+  }
+  // Add these methods to backend/src/auth/service/invitation.service.ts
+
+  /**
+   * Resend invitation to a student
+   * @param email Student's email
+   * @param adminUser Current admin user
+   * @returns Updated user object
+   */
+  async resendStudentInvitation(email: string, adminUser: User): Promise<User> {
+    if (adminUser.role.name !== 'school_admin') {
+      throw new UnauthorizedException(
+        'Only school admins can resend invitations',
+      );
+    }
+
+    if (!adminUser.school) {
+      throw new UnauthorizedException('Admin not associated with any school');
+    }
+
+    // Find the student user
+    const student = await this.userRepository.findOne({
+      where: {
+        email,
+        role: { name: 'student' },
+        school: { id: adminUser.school.id },
+      },
+      relations: ['role', 'school'],
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found in your school');
+    }
+
+    const pin = this.generatePin();
+
+    student.password = await bcrypt.hash(pin, 10);
+    student.invitationToken = uuidv4();
+    student.invitationExpires = new Date(Date.now() + 3600000); // 1 hour from now
+    student.isInvitationAccepted = false;
+
+    if (student.status === 'active') {
+      student.status = 'pending';
+    }
+
+    const updatedStudent = await this.userRepository.save(student);
+
+    try {
+      await this.emailService.sendStudentInvitation(
+        updatedStudent,
+        student.studentId,
+        pin,
+      );
+      this.logger.log(`Invitation resent to student ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to resend invitation to ${email}`, error);
+    }
+
+    return updatedStudent;
+  }
+
+  /**
+   * Resend invitation to a teacher
+   * @param email Teacher's email
+   * @param adminUser Current admin user
+   * @returns Updated user object
+   */
+  async resendTeacherInvitation(email: string, adminUser: User): Promise<User> {
+    if (adminUser.role.name !== 'school_admin') {
+      throw new UnauthorizedException(
+        'Only school admins can resend invitations',
+      );
+    }
+
+    if (!adminUser.school) {
+      throw new UnauthorizedException('Admin not associated with any school');
+    }
+
+    // Find the teacher user
+    const teacher = await this.userRepository.findOne({
+      where: {
+        email,
+        role: { name: 'teacher' },
+        school: { id: adminUser.school.id },
+      },
+      relations: ['role', 'school'],
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found in your school');
+    }
+
+    // Generate new PIN
+    const pin = this.generatePin();
+
+    // Update teacher record
+    teacher.password = await bcrypt.hash(pin, 10);
+    teacher.invitationToken = uuidv4();
+    teacher.invitationExpires = new Date(Date.now() + 3600000); // 1 hour from now
+    teacher.isInvitationAccepted = false;
+
+    if (teacher.status === 'active') {
+      teacher.status = 'pending';
+    }
+
+    const updatedTeacher = await this.userRepository.save(teacher);
+
+    // Send email with new credentials
+    try {
+      await this.emailService.sendTeacherInvitation(
+        updatedTeacher,
+        teacher.teacherId,
+        pin,
+      );
+      this.logger.log(`Invitation resent to teacher ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to resend invitation to ${email}`, error);
+      // Continue as the user is updated but email failed
+    }
+
+    return updatedTeacher;
+  }
+
+  /**
+   * Handle forgot PIN for students and teachers
+   * @param email User's email
+   * @returns Success message
+   */
+  async forgotPin(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    // Always return a generic success message for security
+    const successResponse = {
+      success: true,
+      message:
+        'If your email exists in our system, you will receive your new PIN',
+    };
+
+    // Find user (either student or teacher)
+    const user = await this.userRepository.findOne({
+      where: [
+        { email, role: { name: 'student' } },
+        { email, role: { name: 'teacher' } },
+      ],
+      relations: ['role', 'school'],
+    });
+
+    if (!user) {
+      return successResponse;
+    }
+
+    const pin = this.generatePin();
+
+    user.password = await bcrypt.hash(pin, 10);
+    await this.userRepository.save(user);
+
+    try {
+      if (user.role.name === 'student') {
+        await this.emailService.sendStudentInvitation(
+          user,
+          user.studentId,
+          pin,
+        );
+        this.logger.log(`PIN reset email sent to student ${email}`);
+      } else if (user.role.name === 'teacher') {
+        await this.emailService.sendTeacherInvitation(
+          user,
+          user.teacherId,
+          pin,
+        );
+        this.logger.log(`PIN reset email sent to teacher ${email}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send PIN reset email to ${email}`, error);
+      // Still return success message for security
+    }
+
+    return successResponse;
   }
 }

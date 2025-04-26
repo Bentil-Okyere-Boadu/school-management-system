@@ -13,9 +13,10 @@ import { School } from './school.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/roles.decorator';
+import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 
 @Controller('schools')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}
 
