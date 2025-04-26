@@ -66,7 +66,7 @@ export class UserInvitationService {
       throw new NotFoundException('Role not found');
     }
 
-    if (role.name !== 'school admin') {
+    if (role.name !== 'school_admin') {
       throw new BadRequestException('Super admins can only invite admin users');
     }
 

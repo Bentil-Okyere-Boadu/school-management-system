@@ -11,6 +11,8 @@ import { InviteTeacherDto } from './dto/invite-teacher.dto';
 import { CurrentUser } from '../user/current-user.decorator';
 import { InvitationService } from './service/invitation.service';
 import { CredentialLoginDto } from './dto/credential-login.dto';
+import { ActiveUserGuard } from './guards/active-user.guard';
+import { ForgotPinDto } from './dto/forgot-pin.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -53,8 +55,8 @@ export class AuthController {
     );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles('school_admin')
   @Post('invite/student')
   inviteStudent(
     @Body() inviteStudentDto: InviteStudentDto,
@@ -63,13 +65,43 @@ export class AuthController {
     return this.invitationService.inviteStudent(inviteStudentDto, currentUser);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles('school_admin')
   @Post('invite/teacher')
   inviteTeacher(
     @Body() inviteTeacherDto: InviteTeacherDto,
     @CurrentUser() currentUser: User,
   ) {
     return this.invitationService.inviteTeacher(inviteTeacherDto, currentUser);
+  }
+
+  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles('school_admin')
+  @Post('resend-invitation/student')
+  resendStudentInvitation(
+    @Body() dto: { email: string },
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.invitationService.resendStudentInvitation(
+      dto.email,
+      currentUser,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles('school_admin')
+  @Post('resend-invitation/teacher')
+  resendTeacherInvitation(
+    @Body() dto: { email: string },
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.invitationService.resendTeacherInvitation(
+      dto.email,
+      currentUser,
+    );
+  }
+  @Post('forgot-pin')
+  forgotPin(@Body() forgotPinDto: ForgotPinDto) {
+    return this.invitationService.forgotPin(forgotPinDto.email);
   }
 }

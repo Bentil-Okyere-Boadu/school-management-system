@@ -58,6 +58,7 @@ async function bootstrap() {
   const superAdmin = userRepository.create({
     name: 'Super Admin',
     email: 'superadmin@example.com',
+    status: 'active',
     password,
     role: finalRole,
   });

@@ -35,6 +35,7 @@ import { EmailService } from 'src/common/services/email.service';
     InvitationService,
     EmailService,
   ],
+
   controllers: [AuthController],
 })
 export class AuthModule {}

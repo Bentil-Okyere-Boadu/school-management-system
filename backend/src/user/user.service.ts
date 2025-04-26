@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -39,13 +43,13 @@ export class UserService {
     // If creating user as school admin, assign to admin's school
     if (
       currentUser &&
-      currentUser.role.name === 'admin' &&
+      currentUser.role.name === 'school_admin' &&
       currentUser.school
     ) {
       user.school = currentUser.school;
     }
     // If creating admin as super_admin, check for schoolId in DTO
-    else if (roleName === 'admin' && createUserDto['schoolId']) {
+    else if (roleName === 'school_admin' && createUserDto['schoolId']) {
       const school = await this.schoolRepo.findOne({
         where: { id: createUserDto['schoolId'] },
       });
@@ -69,12 +73,12 @@ export class UserService {
       });
     }
     // School admin can only see users from their school
-    else if (currentUser.role.name === 'admin' && currentUser.school) {
-    return this.userRepo.find({
+    else if (currentUser.role.name === 'school_admin' && currentUser.school) {
+      return this.userRepo.find({
         where: { school: { id: currentUser.school.id } },
         relations: ['role', 'school'],
         select: ['id', 'email', 'name', 'role', 'school', 'status'],
-    });
+      });
     } else {
       throw new UnauthorizedException(
         'You do not have permission to access user list',
@@ -94,12 +98,11 @@ export class UserService {
 
     // Super admin can see any user
     if (currentUser.role.name === 'super_admin') {
-      const { password, ...safeUser } = user;
-      return safeUser;
+      return user;
     }
     // School admin can only see users from their school
     else if (
-      currentUser.role.name === 'admin' &&
+      currentUser.role.name === 'school_admin' &&
       currentUser.school &&
       user.school &&
       user.school.id === currentUser.school.id
@@ -128,11 +131,11 @@ export class UserService {
       where: { id },
       relations: ['role', 'school'],
     });
-    
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    
+
     return sanitize(user);
   }
 }

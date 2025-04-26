@@ -85,12 +85,6 @@ export class EmailService {
     }
   }
 
-  /**
-   * Send an invitation email to a student with their credentials
-   * @param user The student user
-   * @param studentId The generated student ID
-   * @param pin The generated PIN
-   */
   async sendStudentInvitation(
     user: User,
     studentId: string,
