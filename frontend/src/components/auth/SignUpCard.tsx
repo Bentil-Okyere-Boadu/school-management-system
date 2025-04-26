@@ -79,7 +79,7 @@ const SignUpCard: React.FC = () => {
   };
 
   const passwordErrors = getPasswordErrors();
-  const { mutate } = useAdminSignUp()
+  const { mutate, isPending } = useAdminSignUp()
 
   const handleSignUp = (data: FormData) => {
     // Handle sign up logic here
@@ -161,6 +161,7 @@ const SignUpCard: React.FC = () => {
           <ActionButton
             type={ButtonType.submit}
             text="Sign Up"
+            loading={isPending}
             disabled={!Object.values(passwordChecks).every(Boolean) || !email}
           />
         </div>
