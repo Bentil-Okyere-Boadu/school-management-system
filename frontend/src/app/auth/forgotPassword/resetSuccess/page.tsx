@@ -3,6 +3,8 @@ import DoneRafiki from '@/images/Done-rafiki (1) 1.png'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
+import "../../../global.css"
+
 
 const ResetSuccess = () => {
   return (

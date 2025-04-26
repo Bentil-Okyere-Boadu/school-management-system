@@ -36,8 +36,6 @@ const passwordSchema = z.object({
 type FormData = z.infer<typeof passwordSchema>;
 
 const ResetPassword: React.FC<ResetPwdProps> = ({token}) => {
-    // const [password, setPassword] = useState("");
-    // const [password2, setPassword2] = useState("");
 
     const {
         register,
