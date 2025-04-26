@@ -3,12 +3,14 @@ import DoneRafiki from '@/images/Done-rafiki (1) 1.png'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
+import "../../../global.css"
+
 
 const ResetSuccess = () => {
   return (
     <AuthBg>
         <section className='text-center'>
-            <Image src={DoneRafiki} alt='Done rafiki' width={300} height={300} className='m-[auto]'></Image>
+            <Image src={DoneRafiki} alt='Done rafiki' width={300} height={300} className='m-[auto]' priority={true}></Image>
             <h1 className='my-2 font-bold'>Password Reset Successful</h1>
             <p>
                 Your password has been successfully reset!<br/>
