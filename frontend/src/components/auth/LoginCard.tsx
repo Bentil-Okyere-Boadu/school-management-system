@@ -6,29 +6,35 @@ import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 
-const LoginCard: React.FC = () => {
+interface LoginCardProps {
+  user?: string;
+}
+
+const LoginCard: React.FC = ({ user }: LoginCardProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const { mutate, isPending } = useLogin({email, password})
+  console.log(user);
+
+  const { mutate, isPending } = useLogin({ email, password });
 
   const handleSignIn = () => {
     // Handle sign in logic here
     mutate(null as unknown as void, {
       onError: (error: AxiosError) => {
-        toast.error(error.response.data.message)
-        console.log(error)
+        toast.error(error.response.data.message);
+        console.log(error);
       },
       onSuccess: (data) => {
-        toast.success("Login successfully.")
+        toast.success("Login successfully.");
         Cookies.set("authToken", data.data.access_token);
-        router.push('/admin/dashboard');
-      }
-    })
+        router.push("/admin/dashboard");
+      },
+    });
   };
 
   return (
@@ -39,42 +45,60 @@ const LoginCard: React.FC = () => {
       </p>
 
       <InputField
-        label="Email"
+        label={user ? "ID or Email" : "Email"}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         type="email"
       />
 
       <InputField
-        label="Password"
+        label={user ? "PIN" : "Password"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         type="password"
         isPasswordField={true}
       />
 
-      <Link href={"/auth/forgotPassword"} className="w-[100px]">
-        <p
-          className="mt-3.5 text-xs text-right underline text-zinc-600 block "
-        >
-          Forgot Password?
+      <Link href={user? `/auth/${user}/forgotPassword` : "/auth/forgotPassword"} className="w-[100px]">
+        <p className="mt-3.5 text-xs text-right underline text-zinc-600 block ">
+          Forgot {user ? "PIN" : "Password"}?
         </p>
       </Link>
 
       <div className="relative mt-9 max-sm:mt-6">
-        <ActionButton onClick={handleSignIn} text="Sign In" loading={isPending} />
+        <ActionButton
+          onClick={handleSignIn}
+          text="Sign In"
+          loading={isPending}
+        />
       </div>
 
-      <p className="mt-11 text-xs text-center text-zinc-600">
-        Need an account?{" "}
-        <Link href={"/auth/signup"}>
-          <button
-            className="font-semibold text-purple-500 cursor-pointer"
-          >
-            Sign up
-          </button>
-        </Link>
-      </p>
+      {user === "teacher" ? (
+        <>
+          <p className="mt-11 text-xs text-center text-zinc-600">
+            Forgot Credentials?{" "}
+            <Link href={`/auth/${user}/forgotPassword`}>
+              <button className="font-semibold text-purple-500 cursor-pointer">
+                Reset
+              </button>
+            </Link>
+          </p>
+        </>
+      ) : (
+        <></>
+      )}
+      {user ? (
+        <></>
+      ) : (
+        <p className="mt-11 text-xs text-center text-zinc-600">
+          Need an account?{" "}
+          <Link href={"/auth/signup"}>
+            <button className="font-semibold text-purple-500 cursor-pointer">
+              Sign up
+            </button>
+          </Link>
+        </p>
+      )}
     </div>
   );
 };
