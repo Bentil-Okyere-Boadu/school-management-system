@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { AuthCredentials } from "@/@types"
 
@@ -32,4 +32,17 @@ export const usePasswordReset = (payload: {token: string, password: string}) => 
             return customAPI.post(`/auth/reset-password`, { token: payload.token, password: payload.password})
         }
     })
+}
+
+export const useGetRoles = () => {
+    const { data, isLoading, error, isSuccess } = useQuery({
+        queryFn: () => {
+            return customAPI.get('/roles')
+        },
+        queryKey: ['roles']
+    })
+
+    const roles = data?.data
+
+    return { roles , isLoading, error, isSuccess }
 }
