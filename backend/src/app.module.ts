@@ -9,6 +9,9 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { SchoolModule } from './school/school.module';
 import { CommonModule } from './common/common.module';
+import { FeeStructureModule } from './fee-structure/fee-structure.module';
+import { GradingSystemModule } from './grading-system/grading-system.module';
+import { AdmissionPolicyModule } from './admission-policy/admission-policy.module';
 
 @Module({
   imports: [
@@ -33,6 +36,9 @@ import { CommonModule } from './common/common.module';
     PermissionModule,
     AuthModule,
     SchoolModule,
+    FeeStructureModule,
+    GradingSystemModule,
+    AdmissionPolicyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
