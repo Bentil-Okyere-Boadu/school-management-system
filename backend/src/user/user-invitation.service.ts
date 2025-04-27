@@ -14,12 +14,9 @@ import { School } from '../school/school.entity';
 import { InviteUserDto } from './dto/invite-user.dto';
 import * as bcrypt from 'bcryptjs';
 import { EmailService } from '../common/services/email.service';
-import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class UserInvitationService {
-  private readonly logger = new Logger(UserInvitationService.name);
-
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -104,43 +101,32 @@ export class UserInvitationService {
   }
 
   async verifyInvitationToken(token: string): Promise<User> {
-    this.logger.log(`Verifying invitation token: ${token}`);
-
     const user = await this.userRepository.findOne({
       where: { invitationToken: token, status: 'pending' },
       relations: ['role', 'school'],
     });
 
     if (!user) {
-      this.logger.error(`Invalid invitation token - no user found with token: ${token}`);
-      throw new BadRequestException('Invalid invitation token - token not found');
+      throw new BadRequestException(
+        'Invalid invitation token - token not found',
+      );
     }
 
-    this.logger.log(`Found user with token: ${user.email}`);
-    this.logger.log(`Token expiration: ${user.invitationExpires.toISOString()}`);
-    this.logger.log(`Current time: ${new Date().toISOString()}`);
-
+    // Check if token has expired using timestamp comparison
     const expiryTimestamp = user.invitationExpires.getTime();
     const currentTimestamp = Date.now();
 
-    this.logger.log(`Expiry timestamp: ${expiryTimestamp}`);
-    this.logger.log(`Current timestamp: ${currentTimestamp}`);
-    this.logger.log(`Is token expired? ${expiryTimestamp <= currentTimestamp}`);
-
     if (expiryTimestamp <= currentTimestamp) {
-      this.logger.error(`Invitation token expired for user: ${user.email}`);
-      throw new BadRequestException('Invitation token has expired - please request a new invitation');
+      throw new BadRequestException(
+        'Invitation token has expired - please request a new invitation',
+      );
     }
 
     return user;
   }
 
   async completeRegistration(token: string, password: string): Promise<User> {
-    this.logger.log(`Processing registration completion for token: ${token}`);
-    
     const user = await this.verifyInvitationToken(token);
-    this.logger.log(`Invitation token verified for user: ${user.email}`);
-    
     const hashPassword = await bcrypt.hash(password, 10);
 
     user.password = hashPassword;
@@ -150,11 +136,9 @@ export class UserInvitationService {
     user.invitationExpires = new Date(0);
 
     const savedUser = await this.userRepository.save(user);
-    this.logger.log(`Registration completed successfully for user: ${savedUser.email}`);
 
     // Send registration confirmation email
     await this.emailService.sendRegistrationConfirmationEmail(savedUser);
-    this.logger.log(`Registration confirmation email sent to: ${savedUser.email}`);
 
     return savedUser;
   }
