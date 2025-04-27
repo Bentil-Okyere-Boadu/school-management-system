@@ -341,7 +341,7 @@ export class EmailService {
             <p style="margin: 25px 0;">
               <a href="${data.resetLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Password</a>
             </p>
-            <p>This link will expire in 1 hour.</p>
+            <p>This link will expire in 30 minutes.</p>
             <p>If you did not request a password reset, please ignore this email or contact the administrator if you have concerns.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="color: #777; font-size: 12px;">School Management System</p>

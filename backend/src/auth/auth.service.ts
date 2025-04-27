@@ -139,7 +139,6 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // Return login token
     return this.login(user);
   }
 
@@ -162,11 +161,9 @@ export class AuthService {
     }
 
     const resetToken = uuidv4();
+
     const resetTokenExpires = new Date();
     resetTokenExpires.setMinutes(resetTokenExpires.getMinutes() + 30);
-    // Store token with 30min expiry
-    const expiry = new Date();
-    expiry.setMinutes(expiry.getMinutes() + 30);
 
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = resetTokenExpires;
@@ -174,6 +171,7 @@ export class AuthService {
 
     try {
       await this.emailService.sendPasswordResetEmail(email, resetToken);
+      this.logger.log(`Password reset email sent to ${email}`);
     } catch (error) {
       this.logger.error('Error sending email:', error);
       // Still return success message for security
@@ -183,25 +181,33 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const user = await this.userRepository.findOne({
-      where: {
-        resetPasswordToken: token,
-        resetPasswordExpires: MoreThan(new Date()),
-      },
+    const userWithToken = await this.userRepository.findOne({
+      where: { resetPasswordToken: token },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid or expired token');
+    if (!userWithToken) {
+      this.logger.error(
+        `Password reset failed: Token not found in database: ${token}`,
+      );
+      throw new UnauthorizedException('Invalid token - token not found');
     }
 
-    // Hash and update the new password
-    user.password = await bcrypt.hash(newPassword, 10);
+    const expiryTimestamp = userWithToken.resetPasswordExpires.getTime();
+    const currentTimestamp = Date.now();
 
-    // Clear the reset token fields
-    user.resetPasswordToken = null as unknown as string;
-    user.resetPasswordExpires = null as unknown as Date;
+    if (expiryTimestamp <= currentTimestamp) {
+      this.logger.error('Password reset failed: Token expired');
+      throw new UnauthorizedException(
+        'Expired token - please request a new password reset',
+      );
+    }
 
-    await this.userRepository.save(user);
+    userWithToken.password = await bcrypt.hash(newPassword, 10);
+
+    userWithToken.resetPasswordToken = null as unknown as string;
+    userWithToken.resetPasswordExpires = null as unknown as Date;
+
+    await this.userRepository.save(userWithToken);
 
     return {
       success: true,
