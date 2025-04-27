@@ -18,8 +18,6 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  console.log(user);
-
   const { mutate, isPending } = useLogin({ email, password });
 
   const handleSignIn = () => {
