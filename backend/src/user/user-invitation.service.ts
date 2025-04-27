@@ -98,11 +98,19 @@ export class UserInvitationService {
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired invitation token');
+      throw new BadRequestException(
+        'Invalid invitation token - token not found',
+      );
     }
 
-    if (user.invitationExpires < new Date()) {
-      throw new BadRequestException('Invitation token has expired');
+    // Check if token has expired using timestamp comparison
+    const expiryTimestamp = user.invitationExpires.getTime();
+    const currentTimestamp = Date.now();
+
+    if (expiryTimestamp <= currentTimestamp) {
+      throw new BadRequestException(
+        'Invitation token has expired - please request a new invitation',
+      );
     }
 
     return user;
