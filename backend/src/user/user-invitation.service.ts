@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { User } from './user.entity';
 import { Role } from '../role/role.entity';
@@ -70,13 +69,6 @@ export class UserInvitationService {
       throw new BadRequestException('Super admins can only invite admin users');
     }
 
-    const school = await this.schoolRepository.findOneBy({
-      id: inviteUserDto.schoolId,
-    });
-    if (!school) {
-      throw new NotFoundException('School not found');
-    }
-
     // Create the invitation token and set expiration
     const invitationToken = this.generateInvitationToken();
     const invitationExpires = this.calculateTokenExpiration();
@@ -86,7 +78,6 @@ export class UserInvitationService {
       name: inviteUserDto.name,
       email: inviteUserDto.email,
       role,
-      school,
       status: 'pending',
       invitationToken,
       invitationExpires,
