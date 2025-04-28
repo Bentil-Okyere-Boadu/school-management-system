@@ -1,14 +1,14 @@
 "use client";
 import React, { useState } from "react";
-import { Pagination } from "@/components/admin/Pagination";
-import { UserTable } from "@/components/admin/users/UsersTable";
-import { SearchBar } from "@/components/admin/SearchBar";
-import FilterButton from "@/components/admin/FilterButton";
-import { CustomSelectTag } from "@/components/admin/CustomSelectTag";
+import { Pagination } from "@/components/superadmin/Pagination";
+import { UserTable } from "@/components/superadmin/users/UsersTable";
+import { SearchBar } from "@/components/superadmin/SearchBar";
+import FilterButton from "@/components/superadmin/FilterButton";
+import { CustomSelectTag } from "@/components/superadmin/CustomSelectTag";
 import CustomButton from "@/components/Button";
-import { Dialog } from "@/components/admin/Dialog";
-import MultiSelectDropdown from "@/components/admin/users/MultiSelectDropdown";
-import SelectDropdown from "@/components/admin/users/SelectDropdown";
+import { Dialog } from "@/components/superadmin/Dialog";
+import MultiSelectDropdown from "@/components/superadmin/users/MultiSelectDropdown";
+import SelectDropdown from "@/components/superadmin/users/SelectDropdown";
 
 interface User {
   id: string;

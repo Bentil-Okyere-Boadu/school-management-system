@@ -34,13 +34,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     switch (item) {
       case "Dashboard":
-        router.push("/admin/dashboard");
+        router.push("/superadmin/dashboard");
         break;
         case "Users":
-          router.push("/admin/users");
+          router.push("/superadmin/users");
           break;
       case "Schools":
-        router.push("/admin/schools");
+        router.push("/superadmin/schools");
         break;
     }
   };

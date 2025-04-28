@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Sidebar } from "@/components/admin/Sidebar";
-import { UserHeader } from "@/components/admin/UserHeader";
+import { Sidebar } from "@/components/superadmin/Sidebar";
+import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname } from "next/navigation";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
@@ -13,22 +13,22 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
 
   useEffect(() => {
     // Overview Pages
-    if (pathname === "/admin/dashboard") {
+    if (pathname === "/superadmin/dashboard") {
       setActiveMenuItem("Dashboard");
       setIsOverviewPage(true);
-    } else if (pathname === "/admin/users") {
+    } else if (pathname === "/superadmin/users") {
       setActiveMenuItem("Users");
       setIsOverviewPage(true);
-    } else if (pathname === "/admin/schools") {
+    } else if (pathname === "/superadmin/schools") {
       setActiveMenuItem("Schools");
       setIsOverviewPage(true);
     } 
     
     // Detail Pages
-    else if (pathname.startsWith("/admin/schools/")) {
+    else if (pathname.startsWith("/superadmin/schools/")) {
       setActiveMenuItem("Schools");
       setIsOverviewPage(false);
-    } else if (pathname.startsWith("/admin/users/")) {
+    } else if (pathname.startsWith("/superadmin/users/")) {
       setActiveMenuItem("Users");
       setIsOverviewPage(false);
     } 
@@ -43,7 +43,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     <>
       <link
         href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
-        rel="stylesheet"
+        rel="stylesheet" 
       />
 
       <div className="flex flex-row mx-auto w-full min-h-screen max-w-none bg-zinc-100 max-md:flex-col max-md:max-w-[991px] max-sm:max-w-screen-sm">
@@ -67,7 +67,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         )}
 
         <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden">
-          <UserHeader isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} onToggleSidebar={() => setIsSidebarOpen(true)} />
+          <HeaderSection isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} onToggleSidebar={() => setIsSidebarOpen(true)} />
           <main className="flex-1 pt-8 overflow-auto">
             {children}
           </main>
