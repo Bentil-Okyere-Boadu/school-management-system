@@ -1,9 +1,9 @@
 "use client";
 import React, { useState } from "react";
-import TabBar from "@/components/admin/TabBar";
-import { SchoolSettingsTabSection } from "@/components/admin/schools/SchoolSettingsTabSection";
-import { ConfigurationTabSection } from "@/components/admin/schools/ConfigurationTabSection";
-import { ProfileTabSection } from "@/components/admin/schools/ProfileTabSection";
+import TabBar from "@/components/superadmin/TabBar";
+import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
+import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
+import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
 
 export type TabListItem = {
   tabLabel: string;

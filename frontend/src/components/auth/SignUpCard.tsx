@@ -87,7 +87,7 @@ const SignUpCard: React.FC = () => {
       mutate({name: "Koo Admin", email: data.email, password: data.password, role:"super_admin"}, {
         onSuccess: () => {
           toast.success("Sign up successful");
-          router.push('/admin/dashboard');
+          router.push('/superadmin/dashboard');
         }, 
         onError: (error: AxiosError) => {
           toast.error(error.response?.data.message);

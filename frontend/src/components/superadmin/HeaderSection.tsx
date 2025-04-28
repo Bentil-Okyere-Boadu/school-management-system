@@ -2,17 +2,17 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 
-interface UserHeaderProps {
+interface HeaderSectionProps {
   activeMenuItem: string;
   isOverviewPage?: boolean;
   onToggleSidebar?: () => void;
 }
 
-export const UserHeader: React.FC<UserHeaderProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar }) => {
+export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar }) => {
   const router = useRouter();
   
   const onHandleBreadCrumbPress = () => {
-    router.push(`/admin/${activeMenuItem?.toLowerCase()}`);
+    router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
   };
 
   return (

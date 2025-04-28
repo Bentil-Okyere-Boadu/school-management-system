@@ -30,7 +30,7 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
       onSuccess: (data) => {
         toast.success("Login successfully.");
         Cookies.set("authToken", data.data.access_token);
-        router.push("/admin/dashboard");
+        router.push("/superadmin/dashboard");
       },
     });
   };

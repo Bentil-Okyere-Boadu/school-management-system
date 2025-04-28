@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
-import SchoolCard from "@/components/admin/schools/SchoolCard";
-import { SearchBar } from "@/components/admin/SearchBar";
+import SchoolCard from "@/components/superadmin/schools/SchoolCard";
+import { SearchBar } from "@/components/superadmin/SearchBar";
 import { useRouter } from "next/navigation";
 
 interface School {
@@ -63,7 +63,7 @@ const SchoolsPage: React.FC = () => {
   };
 
   const handleSchoolCardClick = (schoolId: number) => {
-    router.push(`/admin/schools/${schoolId}`);
+    router.push(`/superadmin/schools/${schoolId}`);
   };
 
 
