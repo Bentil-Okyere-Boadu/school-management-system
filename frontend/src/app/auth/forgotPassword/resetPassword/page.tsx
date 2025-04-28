@@ -1,12 +1,18 @@
 "use client"
 import AuthBg from '@/components/auth/AuthBg'
 import ResetPassword from '@/components/auth/ResetPassword'
+import { useSearchParams } from 'next/navigation'
 import React from 'react'
+import "../../../global.css"
+
 
 const ResetPasswordPage = () => {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+
   return (
     <AuthBg>
-        <ResetPassword/>
+        <ResetPassword token={token as string}/>
     </AuthBg>
   )
 }

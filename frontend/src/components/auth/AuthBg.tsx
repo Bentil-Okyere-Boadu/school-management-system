@@ -1,4 +1,5 @@
 import React from 'react'
+import '../../app/global.css'
 
 const AuthBg = ({
     children,
@@ -6,9 +7,10 @@ const AuthBg = ({
     children: React.ReactNode;
   }>) => {
   return (
-    <main className="flex relative justify-center items-center w-full h-screen">
-      <div className="authBg absolute top-0 left-0 size-full" />
-      {children}
+    <main className=" flex relative justify-center items-center w-full min-h-[100vh] py-2 authBg">
+      <section className="absolute top-0 left-0 size-full flex justify-center items-center">
+        {children}
+      </section>
     </main>
   )
 }
