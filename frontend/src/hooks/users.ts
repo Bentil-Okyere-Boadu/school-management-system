@@ -29,9 +29,9 @@ export const useGetUsers = () => {
     return { user, isLoading }
  }
 
- export const useCreateUser = (userDetails: any) => {
+ export const useCreateUser = () => {
     return useMutation({ 
-        mutationFn: () => {
+        mutationFn: (userDetails) => {
             return customAPI.post(`/users`, userDetails);
         }
     })
