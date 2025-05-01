@@ -12,6 +12,7 @@ import { CommonModule } from './common/common.module';
 import { FeeStructureModule } from './fee-structure/fee-structure.module';
 import { GradingSystemModule } from './grading-system/grading-system.module';
 import { AdmissionPolicyModule } from './admission-policy/admission-policy.module';
+import { InvitationModule } from './invitation/invitation.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AdmissionPolicyModule } from './admission-policy/admission-policy.modul
     FeeStructureModule,
     GradingSystemModule,
     AdmissionPolicyModule,
+    InvitationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -10,8 +10,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Role } from 'src/role/role.entity';
 import { School } from 'src/school/school.entity';
-import { InvitationService } from './service/invitation.service';
 import { EmailService } from 'src/common/services/email.service';
+import { InvitationModule } from 'src/invitation/invitation.module';
 
 @Module({
   imports: [
@@ -26,16 +26,15 @@ import { EmailService } from 'src/common/services/email.service';
       }),
     }),
     ConfigModule,
+    InvitationModule,
   ],
   providers: [
     AuthService,
     LocalStrategy,
     JwtStrategy,
     ConfigService,
-    InvitationService,
     EmailService,
   ],
-
   controllers: [AuthController],
 })
 export class AuthModule {}

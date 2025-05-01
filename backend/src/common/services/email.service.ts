@@ -13,6 +13,8 @@ export enum EmailTemplate {
   GENERAL_NOTIFICATION = 'general_notification',
   STUDENT_INVITATION = 'student_invitation',
   TEACHER_INVITATION = 'teacher_invitation',
+  STUDENT_PIN_RESET = 'student_pin_reset',
+  TEACHER_PIN_RESET = 'teacher_pin_reset',
 }
 
 /**
@@ -246,6 +248,64 @@ export class EmailService {
   }
 
   /**
+   * Send PIN reset email to a student
+   * @param user The student user
+   * @param pin The new PIN
+   */
+  async sendStudentPinReset(user: User, pin: string): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Your PIN Has Been Reset - School Management System',
+        html: this.getEmailTemplate(EmailTemplate.STUDENT_PIN_RESET, {
+          name: user.name,
+          pin,
+          studentId: user.studentId,
+        }),
+      });
+      this.logger.log(`Student PIN reset email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send student PIN reset email to ${user.email}`,
+        error,
+      );
+      throw new Error(
+        `Failed to send student PIN reset email: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Send PIN reset email to a teacher
+   * @param user The teacher user
+   * @param pin The new PIN
+   */
+  async sendTeacherPinReset(user: User, pin: string): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Your PIN Has Been Reset - School Management System',
+        html: this.getEmailTemplate(EmailTemplate.TEACHER_PIN_RESET, {
+          name: user.name,
+          pin,
+          teacherId: user.teacherId,
+        }),
+      });
+      this.logger.log(`Teacher PIN reset email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send teacher PIN reset email to ${user.email}`,
+        error,
+      );
+      throw new Error(
+        `Failed to send teacher PIN reset email: ${error.message}`,
+      );
+    }
+  }
+
+  /**
    * Get the HTML template for a specific email type
    * @param template The email template to use
    * @param data Data to populate the template with
@@ -367,6 +427,42 @@ export class EmailService {
             ${actionButton}
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.STUDENT_PIN_RESET:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+            <h2 style="color: #AB58E7;">Your PIN Has Been Reset</h2>
+            <p>Hello ${data.name},</p>
+            <p>Your PIN for the School Management System has been reset as requested.</p>
+            <p>Here are your login details:</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Student ID:</strong> ${data.studentId}</p>
+              <p><strong>New PIN:</strong> ${data.pin}</p>
+            </div>
+            <p>Please use these credentials to log in to your account.</p>
+            <p>For security reasons, we recommend changing your PIN after logging in.</p>
+            <p>If you did not request this PIN reset, please contact your school administrator immediately.</p>
+            <p>Thank you,<br>School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.TEACHER_PIN_RESET:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+            <h2 style="color: #AB58E7;">Your PIN Has Been Reset</h2>
+            <p>Hello ${data.name},</p>
+            <p>Your PIN for the School Management System has been reset as requested.</p>
+            <p>Here are your login details:</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Teacher ID:</strong> ${data.teacherId}</p>
+              <p><strong>New PIN:</strong> ${data.pin}</p>
+            </div>
+            <p>Please use these credentials to log in to your account.</p>
+            <p>For security reasons, we recommend changing your PIN after logging in.</p>
+            <p>If you did not request this PIN reset, please contact your school administrator immediately.</p>
+            <p>Thank you,<br>School Management System</p>
           </div>
         `;
 
