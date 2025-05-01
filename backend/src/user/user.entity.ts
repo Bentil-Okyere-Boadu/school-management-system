@@ -54,4 +54,7 @@ export class User {
 
   @Column({ nullable: true, unique: true })
   teacherId: string;
+
+  @Column({ nullable: true, unique: true })
+  adminId: string;
 }
