@@ -5,19 +5,12 @@ import { Roles } from 'src/auth/roles.decorator';
 import { CurrentUser } from './current-user.decorator';
 import { User } from './user.entity';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  @Post()
-  @Roles('super_admin', 'school_admin')
-  create(@Body() createUserDto: CreateUserDto, @CurrentUser() user: User) {
-    return this.userService.create(createUserDto, user);
-  }
 
   @Get()
   @Roles('super_admin', 'school_admin')

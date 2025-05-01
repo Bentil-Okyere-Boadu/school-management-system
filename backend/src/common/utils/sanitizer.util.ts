@@ -1,11 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
-/**
- * Utility for sanitizing data to remove sensitive information like passwords
- */
-
 const SENSITIVE_FIELDS = [
   'password',
   'invitationToken',
@@ -82,11 +74,7 @@ export function SanitizeResponse() {
  * Method decorator to sanitize response data from a specific controller method
  */
 export function SanitizeMethod() {
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor,
-  ) {
+  return function (descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
