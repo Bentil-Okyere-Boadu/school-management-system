@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { CustomSelectTag } from "../CustomSelectTag";
+import { CustomSelectTag } from "../../common/CustomSelectTag";
 import InputField from "@/components/InputField";
 
 

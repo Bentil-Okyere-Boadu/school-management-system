@@ -1,14 +1,14 @@
 "use client";
 import React, { useState } from "react";
-import { Pagination } from "@/components/superadmin/Pagination";
+import { Pagination } from "@/components/common/Pagination";
 import { UserTable } from "@/components/superadmin/users/UsersTable";
-import { SearchBar } from "@/components/superadmin/SearchBar";
-import FilterButton from "@/components/superadmin/FilterButton";
-import { CustomSelectTag } from "@/components/superadmin/CustomSelectTag";
+import { SearchBar } from "@/components/common/SearchBar";
+import FilterButton from "@/components/common/FilterButton";
+import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import CustomButton from "@/components/Button";
-import { Dialog } from "@/components/superadmin/Dialog";
-import MultiSelectDropdown from "@/components/superadmin/users/MultiSelectDropdown";
-import SelectDropdown from "@/components/superadmin/users/SelectDropdown";
+import { Dialog } from "@/components/common/Dialog";
+import { MultiSelect , Select } from '@mantine/core';
+import InputField from "@/components/InputField";
 
 interface User {
   id: string;
@@ -26,8 +26,11 @@ const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterOptions, setShowFilterOptions] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedDataRole, setSelectedDataRole] = useState<string>("school-admin");
+  const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
+  const [selectedDataRole, setSelectedDataRole] = useState<string | null>("school-admin");
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
+  const [userName, setUserName] = useState("");
+  const [email, setEmail] = useState("");
 
   const mockUsers: User[] = [
     {
@@ -153,10 +156,10 @@ const UsersPage: React.FC = () => {
     { value: "manage-schools", label: "Manage Schools" },
   ];
   const permissions = [
-    { id: "manage-users", label: "Manage Users" },
-    { id: "assign-grades", label: "Assign Grades" },
-    { id: "view-reports", label: "View Reports" },
-    { id: "data-reports", label: "Data Reports" }
+    { value: "manage-users", label: "Manage Users" },
+    { value: "assign-grades", label: "Assign Grades" },
+    { value: "view-reports", label: "View Reports" },
+    { value: "data-reports", label: "Data Reports" }
   ];
   const roles = [
     { value: "school-admin", label: "School Admin" },
@@ -183,11 +186,12 @@ const UsersPage: React.FC = () => {
   const handleUserRowClick = (userId: string) => {
     console.log(userId)
   }
-  const handlePermissionChange = (selectedIds: string[]) => {
-    console.log("Selected permissions:", selectedIds);
+  const handlePermissionChange = (value: string[]) => {
+    setSelectedPermissions(value)
+    console.log("Selected permissions:", value);
   };
 
-  const handleRoleDataChange = (value: string) => {
+  const handleRoleDataChange = (value: string | null) => {
     setSelectedDataRole(value);
     console.log("Selected role:", value);
   };
@@ -196,7 +200,7 @@ const UsersPage: React.FC = () => {
     <div>
       <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
         <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
-        <CustomButton text="Invite New User" onClick={() => setIsDialogOpen(true)} />
+        <CustomButton text="Invite New User" onClick={() => setIsInviteUserDialogOpen(true)} />
       </div>
       <div className="flex flex-col items-end mb-4 px-1">
         <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
@@ -218,26 +222,45 @@ const UsersPage: React.FC = () => {
         totalPages={10}
         onPageChange={handlePageChange}
       />
+
+      {/* Invite user dialog */}
       <Dialog 
-        isOpen={isDialogOpen}
-        dialogTitle="Dialog Title"
-        onClose={() => setIsDialogOpen(false)} 
-        onSave={() => setIsDialogOpen(false)}
+        isOpen={isInviteUserDialogOpen}
+        dialogTitle="Invite New User"
+        saveButtonText="Save Changes"
+        onClose={() => setIsInviteUserDialogOpen(false)} 
+        onSave={() => setIsInviteUserDialogOpen(false)}
       >
+        <p className="text-xs text-gray-500">User will receive email to accept invite and sign up</p>
         <div className="my-3 flex flex-col gap-4">
-          <SelectDropdown
-            id="role-select"
+          <InputField
+            className="!py-0"
+            label="User Name"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+          />
+
+          <InputField
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+            
+          <Select
             label="Role"
-            options={roles}
-            selectedItem={selectedDataRole}
+            placeholder="Pick role"
+            data={roles}
+            value={selectedDataRole}
             onChange={handleRoleDataChange}
           />
 
-          <MultiSelectDropdown
-            items={permissions}
-            selectedItems={["assign-grades"]}
+          <MultiSelect
+            label="Permissions"
+            placeholder="Pick permissions"
+            data={permissions}
+            value={selectedPermissions}
             onChange={handlePermissionChange}
-            label="Select Permissions"
+            withCheckIcon
           />
         </div>
       </Dialog>
