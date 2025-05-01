@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import StatCard from "@/components/superadmin/dashboard/StatCard";
-import { SearchBar } from "@/components/superadmin/SearchBar";
+import { SearchBar } from "@/components/common/SearchBar";
 
 const DashboardPage: React.FC = () => {
   const stats = [

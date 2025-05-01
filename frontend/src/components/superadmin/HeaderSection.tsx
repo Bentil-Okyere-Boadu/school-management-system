@@ -1,6 +1,11 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
+import { Menu } from '@mantine/core';
+import {
+  IconLogout2,
+} from '@tabler/icons-react';
+import Cookies from "js-cookie";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -14,6 +19,11 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   const onHandleBreadCrumbPress = () => {
     router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
   };
+
+  const onHandleLogout = () => {
+    Cookies.remove("authToken");
+    router.push("/auth/login");
+  }
 
   return (
     <header className="flex flex-col mb-2 w-full relative">
@@ -70,11 +80,21 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
             </svg>
           </button>
 
-          <img
-            src="https://cdn.builder.io/api/v1/image/assets/TEMP/34e6a6b0bf75a410bbabb863c166f5f4fc26163d?placeholderIfAbsent=true"
-            alt="User Avatar"
-            className="w-11 h-11 rounded-full"
-          />
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <img
+                src="https://cdn.builder.io/api/v1/image/assets/TEMP/34e6a6b0bf75a410bbabb863c166f5f4fc26163d?placeholderIfAbsent=true"
+                alt="User Avatar"
+                className="w-11 h-11 rounded-full cursor-pointer"
+              />
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Profile</Menu.Label>
+              <Menu.Item onClick={onHandleLogout} leftSection={<IconLogout2 size={14} />}>
+                Log out
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
 
           <div className="flex flex-col">
             <span className="text-base text-neutral-800">Damon Salvatore</span>

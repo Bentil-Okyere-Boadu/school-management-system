@@ -53,10 +53,10 @@ export const Dialog: React.FC<DialogProps> = ({
       style={{ backgroundColor: `rgba(217, 217, 217, ${backdropOpacity})` }}
       onClick={handleBackdropClick}
     >
-      <div className="bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg p-5 z-50 max-h-[90vh] flex flex-col w-[568px] max-w-[569px]">
+      <div className="bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg p-5 z-50 max-h-[90vh] flex flex-col w-[568px] max-w-[569px] mx-2">
         {/* Dialog Header */}
         <div className='flex items-center justify-between'>
-            <h1 className='font-bold'>{dialogTitle}</h1>
+            <h1 className='font-semibold text-xl'>{dialogTitle}</h1>
             <button
                 aria-label="Close"
                 onClick={onClose}

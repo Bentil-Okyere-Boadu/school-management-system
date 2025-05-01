@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import TabBar from "@/components/superadmin/TabBar";
+import TabBar from "@/components/common/TabBar";
 import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
 import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
