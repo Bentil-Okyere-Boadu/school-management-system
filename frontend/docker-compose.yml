@@ -12,6 +12,7 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
       - CHOKIDAR_USEPOLLING=true # For file watching in Docker
 
   test:

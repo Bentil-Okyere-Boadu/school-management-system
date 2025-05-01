@@ -9,12 +9,35 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_DB: school_management
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend-network
+  
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/school_management
+      DB_PORT: 5432
+      DB_PASSWORD: postgres
+      DB_USERNAME: postgres
+      DB_NAME: school_management
+      JWT_SECRET: 'your secret'
+      MAIL_HOST: smtp.gmail.com
+      MAIL_PORT: 465
+      MAIL_SECURE: true
+      MAIL_USER: judeedemnyahe@gmail.com
+      MAIL_PASSWORD: hglo fqgf tzip bizo
+      MAIL_FROM: noreply@schoolmanagementsystem.com
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      - database
 
 volumes:
   postgres_data:
