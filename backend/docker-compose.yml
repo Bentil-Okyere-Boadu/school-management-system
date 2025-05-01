@@ -23,7 +23,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/school_management
+      DATABASE_URL: postgresql://school_management_4os8_user:HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL@dpg-d09im6be5dus73blj570-a/school_management_4os8
       DB_PORT: 5432
       DB_PASSWORD: postgres
       DB_USERNAME: postgres
