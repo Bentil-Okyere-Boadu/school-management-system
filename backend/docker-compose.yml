@@ -8,9 +8,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: school_management
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: school_management_4os8
+      POSTGRES_USER: school_management_4os8_user
+      POSTGRES_PASSWORD: HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -25,9 +25,9 @@ services:
     environment:
       DATABASE_URL: postgresql://school_management_4os8_user:HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL@dpg-d09im6be5dus73blj570-a/school_management_4os8
       DB_PORT: 5432
-      DB_PASSWORD: postgres
-      DB_USERNAME: postgres
-      DB_NAME: school_management
+      DB_PASSWORD: HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL
+      DB_USERNAME: school_management_4os8_user
+      DB_NAME: school_management_4os8
       JWT_SECRET: 'your secret'
       MAIL_HOST: smtp.gmail.com
       MAIL_PORT: 465
