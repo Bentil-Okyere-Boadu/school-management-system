@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
   ConflictException,
   BadRequestException,
+  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,6 +20,8 @@ import { InviteUserDto } from './dto/invite-user.dto';
 import { InviteStudentDto } from './dto/invite-student.dto';
 import { InviteTeacherDto } from './dto/invite-teacher.dto';
 import { Not } from 'typeorm';
+import { InvitationException } from '../common/exceptions/invitation.exception';
+import { BaseException } from '../common/exceptions/base.exception';
 
 @Injectable()
 export class InvitationService {
@@ -94,9 +97,7 @@ export class InvitationService {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
-    const schoolCode =
-      school.schoolCode ||
-      school.id.toString().padStart(5, '0').substring(0, 5);
+    const schoolCode = school.schoolCode;
 
     // Role code for student = 120
     const roleCode = '120';
@@ -494,7 +495,10 @@ export class InvitationService {
       this.logger.log(`Invitation resent to student ${email}`);
     } catch (error) {
       this.logger.error(`Failed to resend invitation to ${email}`, error);
-      throw new Error(`Failed to resend invitation: ${error.message}`);
+      throw new InvitationException(
+        `Failed to resend invitation: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
     return updatedStudent;
@@ -548,7 +552,10 @@ export class InvitationService {
       this.logger.log(`Invitation resent to teacher ${email}`);
     } catch (error) {
       this.logger.error(`Failed to resend invitation to ${email}`, error);
-      throw new Error(`Failed to resend invitation: ${error.message}`);
+      throw new InvitationException(
+        `Failed to resend invitation: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
     return updatedTeacher;
@@ -600,7 +607,10 @@ export class InvitationService {
       };
     } catch (error) {
       this.logger.error(`Failed to send PIN reset email to ${email}`, error);
-      throw new Error(`Failed to send PIN reset email: ${error.message}`);
+      throw new InvitationException(
+        `Failed to send PIN reset email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }
