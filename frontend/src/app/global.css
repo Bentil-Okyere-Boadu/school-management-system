@@ -2,3 +2,11 @@
     background: #D1D6FA;
     background: linear-gradient(90deg, rgba(209, 214, 250, 1) 0%, rgba(250, 210, 209, 1) 43%, rgba(216, 208, 251, 1) 98%);
 }
+
+.fullPageSpinner {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
