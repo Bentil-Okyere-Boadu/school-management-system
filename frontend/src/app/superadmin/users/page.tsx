@@ -256,6 +256,7 @@ const UsersPage: React.FC = () => {
         saveButtonText="Save Changes"
         onClose={() => setIsInviteUserDialogOpen(false)} 
         onSave={() => inviteUser()}
+        busy={isPending}
       >
         <p className="text-xs text-gray-500">User will receive email to accept invite and sign up</p>
         <div className="my-3 flex flex-col gap-4">
