@@ -29,10 +29,18 @@ export const useGetUsers = () => {
     return { user, isLoading }
  }
 
- export const useCreateUser = (userDetails: any) => {
+ export const useCreateUser = () => {
     return useMutation({ 
-        mutationFn: () => {
+        mutationFn: (userDetails) => {
             return customAPI.post(`/users`, userDetails);
+        }
+    })
+}
+
+export const useInviteUser = () => {
+    return useMutation({
+        mutationFn: (inviteDetails: {name:string, email: string, roleId: string}) => {
+            return customAPI.post(`/user-invitations`, inviteDetails)
         }
     })
 }
