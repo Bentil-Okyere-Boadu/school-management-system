@@ -13,6 +13,8 @@ import { FeeStructureModule } from './fee-structure/fee-structure.module';
 import { GradingSystemModule } from './grading-system/grading-system.module';
 import { AdmissionPolicyModule } from './admission-policy/admission-policy.module';
 import { InvitationModule } from './invitation/invitation.module';
+import { SuperAdminModule } from './super-admin/super-admin.module';
+import { SchoolAdminModule } from './school-admin/school-admin.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { InvitationModule } from './invitation/invitation.module';
     GradingSystemModule,
     AdmissionPolicyModule,
     InvitationModule,
+    SuperAdminModule,
+    SchoolAdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
