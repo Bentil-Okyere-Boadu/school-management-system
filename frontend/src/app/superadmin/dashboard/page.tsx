@@ -2,6 +2,8 @@
 import React from "react";
 import StatCard from "@/components/superadmin/dashboard/StatCard";
 import { SearchBar } from "@/components/common/SearchBar";
+import CustomBarChart from "@/components/superadmin/dashboard/CustomBarChart";
+import { DashboardTable } from "@/components/superadmin/dashboard/DashboardTable";
 
 const DashboardPage: React.FC = () => {
   const stats = [
@@ -55,6 +57,12 @@ const DashboardPage: React.FC = () => {
           />
         ))}
       </section>
+
+      <CustomBarChart />
+
+      <div className="mt-10 p-6 bg-white rounded-lg">
+        <DashboardTable />
+      </div>
     </div>
     
   );
