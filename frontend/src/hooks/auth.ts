@@ -5,15 +5,15 @@ import { AuthCredentials } from "@/@types"
 export const useLogin = (userDetails: AuthCredentials) => {
     return useMutation({ 
         mutationFn: () => {
-            return customAPI.post(`/auth/login`, userDetails)
+            return customAPI.post(`/super-admin/auth/login`, userDetails)
         }
     })
 }
 
 export const useAdminSignUp = () => {
     return useMutation({ 
-        mutationFn: (signUpDetails: {name: string, email: string, password: string, role: string}) => {
-            return customAPI.post(`/auth/signup/super-admin`, signUpDetails)
+        mutationFn: (signUpDetails: {name: string, email: string, password: string}) => {
+            return customAPI.post(`/super-admin/auth/signup`, signUpDetails)
         }
     })
 }
@@ -21,7 +21,7 @@ export const useAdminSignUp = () => {
 export const useRequestPasswordReset = (email: string) => {
     return useMutation({ 
         mutationFn: () => {
-            return customAPI.post(`/auth/forgot-password`, { email: email})
+            return customAPI.post(`/super-admin/auth/forgot-password`, { email: email})
         }
     })
 }
@@ -29,7 +29,7 @@ export const useRequestPasswordReset = (email: string) => {
 export const usePasswordReset = (payload: {token: string, password: string}) => {
     return useMutation({ 
         mutationFn: () => {
-            return customAPI.post(`/auth/reset-password`, { token: payload.token, password: payload.password})
+            return customAPI.post(`/super-admin/auth/reset-password`, { token: payload.token, password: payload.password})
         }
     })
 }

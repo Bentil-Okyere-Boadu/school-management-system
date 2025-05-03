@@ -5,9 +5,9 @@ import ActionButton from "../ActionButton";
 import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
+import { handleLoginRedirectAndToken } from "@/middleware";
 
 interface LoginCardProps {
   user?: string;
@@ -29,25 +29,7 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
-        const expireToken = new Date(Date.now() + 60*60*60*10);
-        Cookies.set("authToken", data.data.access_token, { expires: expireToken });
-        switch (data.data.role.name) {
-          case 'super_admin':
-            router.push("/superadmin/dashboard");
-            break;
-          case 'school_admin':
-            router.push("/admin/dashboard");
-            break;
-          case 'teacher':
-            router.push("/teacher/dashboard");
-            break;
-          case 'student':
-            router.push("/student/dashboard");
-            break;
-        
-          default:
-            break;
-        }
+        handleLoginRedirectAndToken(data, router);
       },
     });
   };

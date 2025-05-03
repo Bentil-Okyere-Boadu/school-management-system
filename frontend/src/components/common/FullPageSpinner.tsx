@@ -1,7 +1,7 @@
 'use client'
 import React from 'react'
 import { HashLoader } from "react-spinners";
-import '@/app/global.css';
+import '@/app/globals.css';
 
 const FullPageSpinner = () => {
 

@@ -2,7 +2,7 @@ import React, { ReactNode, useEffect } from 'react';
 import CustomButton from '../Button';
 import { HashLoader } from 'react-spinners';
 import { IconX } from '@tabler/icons-react';
-import '../../app/global.css'
+import '../../app/globals.css'
 
 interface DialogProps {
   isOpen: boolean;

@@ -2,7 +2,6 @@
 import AuthBg from '@/components/auth/AuthBg'
 import ResetRequest from '@/components/auth/ResetRequest'
 import React from 'react'
-import "../../../global.css"
 
 const ResetRequestPage = () => {
   return (
