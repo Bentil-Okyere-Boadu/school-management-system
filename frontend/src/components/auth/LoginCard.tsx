@@ -41,7 +41,7 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
           case 'teacher':
             router.push("/teacher/dashboard");
             break;
-          case 'stuudent':
+          case 'student':
             router.push("/student/dashboard");
             break;
         
