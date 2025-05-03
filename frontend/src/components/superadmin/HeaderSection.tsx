@@ -82,11 +82,17 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
           <Menu shadow="md" width={200}>
             <Menu.Target>
-              <img
-                src="https://cdn.builder.io/api/v1/image/assets/TEMP/34e6a6b0bf75a410bbabb863c166f5f4fc26163d?placeholderIfAbsent=true"
-                alt="User Avatar"
-                className="w-11 h-11 rounded-full cursor-pointer"
-              />
+              <div className="flex gap-3 cursor-pointer">
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  alt="User Avatar"
+                  className="w-11 h-11 rounded-full"
+                />
+                <div className="flex flex-col">
+                  <span className="text-base text-neutral-800">Damon Salvatore</span>
+                  <span className="text-xs text-zinc-600">Super Admin</span>
+                </div>
+              </div>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>Profile</Menu.Label>
@@ -95,11 +101,6 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
-
-          <div className="flex flex-col">
-            <span className="text-base text-neutral-800">Damon Salvatore</span>
-            <span className="text-xs text-zinc-600">Super Admin</span>
-          </div>
         </div>
       </div>
     </header>

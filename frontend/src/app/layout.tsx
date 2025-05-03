@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from './providers'
 import "./globals.css";
 import '@mantine/core/styles.css';
+import '@mantine/charts/styles.css';
 import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from '@mantine/core';
 import { mantineOverrides } from "./mantineTheme";
 
