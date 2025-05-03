@@ -9,6 +9,11 @@ import CustomButton from "@/components/Button";
 import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect , Select } from '@mantine/core';
 import InputField from "@/components/InputField";
+import { useInviteUser } from "@/hooks/users";
+import { toast } from "react-toastify";
+import { AxiosError } from "axios";
+import { getRoleId } from "@/utils/roles";
+import { useAppContext } from "@/context/AppContext";
 
 interface User {
   id: string;
@@ -27,7 +32,7 @@ const UsersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
-  const [selectedDataRole, setSelectedDataRole] = useState<string | null>("school-admin");
+  const [selectedDataRole, setSelectedDataRole] = useState<string>("school_admin");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
@@ -162,11 +167,9 @@ const UsersPage: React.FC = () => {
     { value: "data-reports", label: "Data Reports" }
   ];
   const roles = [
-    { value: "school-admin", label: "School Admin" },
+    { value: "school_admin", label: "School Admin" },
     { value: "teacher", label: "Teacher" },
-    { value: "principal", label: "Principal" },
-    { value: "district-admin", label: "District Admin" },
-    { value: "student", label: "Student" },
+    { value: "student", label: "Student" }
   ];
 
   const handleSearch = (query: string) => {
@@ -191,10 +194,33 @@ const UsersPage: React.FC = () => {
     console.log("Selected permissions:", value);
   };
 
-  const handleRoleDataChange = (value: string | null) => {
+  const { roles: Roles } = useAppContext();
+
+
+  const handleRoleDataChange = (value: string) => {
     setSelectedDataRole(value);
-    console.log("Selected role:", value);
   };
+
+  const { mutate: invitation, isPending } = useInviteUser();
+
+  const inviteUser = () => {
+    if(userName && email) {
+      invitation({ name: userName, email: email, roleId: getRoleId(Roles, selectedDataRole)}, {
+        onSuccess: () => {
+          toast.success('Invitation sent successfully.');
+          setSelectedDataRole("");
+          setEmail("");
+          setUserName("");
+          setIsInviteUserDialogOpen(false);
+        },
+        onError: (error: AxiosError) => {
+          toast.error(error.response?.statusText)
+        }
+      })
+    } else {
+      toast.error('Please enter details of user to invite.');
+    }
+  }
 
   return (
     <div>
@@ -229,7 +255,8 @@ const UsersPage: React.FC = () => {
         dialogTitle="Invite New User"
         saveButtonText="Save Changes"
         onClose={() => setIsInviteUserDialogOpen(false)} 
-        onSave={() => setIsInviteUserDialogOpen(false)}
+        onSave={() => inviteUser()}
+        busy={isPending}
       >
         <p className="text-xs text-gray-500">User will receive email to accept invite and sign up</p>
         <div className="my-3 flex flex-col gap-4">
@@ -238,12 +265,14 @@ const UsersPage: React.FC = () => {
             label="User Name"
             value={userName}
             onChange={(e) => setUserName(e.target.value)}
+            isTransulent={isPending}
           />
 
           <InputField
             label="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            isTransulent={isPending}
           />
             
           <Select
