@@ -1,24 +1,30 @@
 import {
   Injectable,
   NotFoundException,
+  Logger,
   ConflictException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SuperAdmin } from './super-admin.entity';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { UpdateSuperAdminDto } from './dto/update-super-admin.dto';
-import { AuthService } from '../auth/services/auth.service';
 import { Role } from '../role/role.entity';
+import { v4 as uuidv4 } from 'uuid';
+import { EmailService } from 'src/common/services/email.service';
+import * as bcrypt from 'bcryptjs';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class SuperAdminService {
+  private readonly logger = new Logger(SuperAdminService.name);
   constructor(
     @InjectRepository(SuperAdmin)
     private superAdminRepository: Repository<SuperAdmin>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
-    private authService: AuthService,
+    private superAdminAuthService: AuthService,
   ) {}
 
   async findAll(): Promise<SuperAdmin[]> {
@@ -82,9 +88,10 @@ export class SuperAdminService {
 
     // If updating password, hash it
     if (updateSuperAdminDto.password) {
-      updateSuperAdminDto.password = await this.authService.hashPassword(
-        updateSuperAdminDto.password,
-      );
+      updateSuperAdminDto.password =
+        await this.superAdminAuthService.hashPassword(
+          updateSuperAdminDto.password,
+        );
     }
 
     // If updating role, find the new role

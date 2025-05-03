@@ -4,6 +4,7 @@ import * as nodemailer from 'nodemailer';
 import { User } from '../../user/user.entity';
 import { EmailException } from '../exceptions/email.exception';
 import { BaseException } from '../exceptions/base.exception';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 /**
  * Email templates
@@ -66,7 +67,7 @@ export class EmailService {
    * @param user The user to send the invitation to
    * @returns Promise resolving to the mail send info
    */
-  async sendInvitationEmail(user: User): Promise<void> {
+  async sendInvitationEmail(user: SchoolAdmin): Promise<void> {
     const invitationLink = `${this.frontendUrl}/auth/complete-registration?token=${user.invitationToken}`;
 
     try {
@@ -169,7 +170,7 @@ export class EmailService {
    * @param user The user to send the confirmation to
    * @returns Promise resolving to the mail send info
    */
-  async sendRegistrationConfirmationEmail(user: User): Promise<void> {
+  async sendRegistrationConfirmationEmail(user: SchoolAdmin): Promise<void> {
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,

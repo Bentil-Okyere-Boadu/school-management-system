@@ -6,12 +6,16 @@ import {
 import { SuperAdminService } from './super-admin.service';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { SuperAdmin } from './super-admin.entity';
-import { AuthService } from '../auth/services/auth.service';
 import { RoleService } from 'src/role/role.service';
+import { AuthService } from 'src/auth/auth.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class SuperAdminAuthService {
   constructor(
+    @InjectRepository(SuperAdmin)
+    private superAdminRepository: Repository<SuperAdmin>,
     private superAdminService: SuperAdminService,
     private authService: AuthService,
     private roleService: RoleService,
@@ -70,5 +74,18 @@ export class SuperAdminAuthService {
     });
 
     return this.login(superAdmin);
+  }
+  async forgotAdminPassword(email: string) {
+    return this.authService.handleForgotPassword(
+      email,
+      this.superAdminRepository,
+    );
+  }
+  async resetAdminPassword(token: string, newPassword: string) {
+    return this.authService.handleResetPassword(
+      token,
+      newPassword,
+      this.superAdminRepository,
+    );
   }
 }

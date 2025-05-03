@@ -32,10 +32,11 @@ export class SuperAdminJwtStrategy extends PassportStrategy(
     }
 
     // Return only necessary fields
-    return { 
+    return {
       id: superAdmin.id,
       email: superAdmin.email,
       name: superAdmin.name,
+      status: superAdmin.status,
       role: superAdmin.role,
     };
   }

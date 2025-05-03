@@ -1,12 +1,12 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Param,
   Put,
   Delete,
   UseGuards,
+  Post,
 } from '@nestjs/common';
 import { SuperAdminService } from './super-admin.service';
 import { UpdateSuperAdminDto } from './dto/update-super-admin.dto';
@@ -39,6 +39,7 @@ export class SuperAdminController {
     return this.superAdminService.update(id, updateSuperAdminDto);
   }
 
+  //TODO: ADD endpoints
   @UseGuards(SuperAdminJwtAuthGuard)
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<void> {

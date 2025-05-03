@@ -5,13 +5,13 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { User } from 'src/user/user.entity';
+import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 
 @Injectable()
 export class ActiveUserGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<{ user: User }>();
-    const user: User = request.user;
+    const request = context.switchToHttp().getRequest<{ user: SuperAdmin }>();
+    const user: SuperAdmin = request.user;
 
     if (!user || user.status !== 'active') {
       throw new UnauthorizedException(

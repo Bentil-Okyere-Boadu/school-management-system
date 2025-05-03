@@ -9,14 +9,15 @@ import { SuperAdminAuthService } from './super-admin-auth.service';
 import { PassportModule } from '@nestjs/passport';
 import { SuperAdminAuthController } from './super-admin-auth.controller';
 import { SuperAdminJwtStrategy } from './strategies/super-admin-jwt.strategy';
-import { AuthService } from '../auth/services/auth.service';
 import { Role } from '../role/role.entity';
 import { SuperAdminLocalStrategy } from './strategies/super-admin-local.strategy';
 import { RoleService } from '../role/role.service';
+import { AuthService } from 'src/auth/auth.service';
+import { User } from 'src/user/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SuperAdmin, Role]),
+    TypeOrmModule.forFeature([SuperAdmin, Role, User]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

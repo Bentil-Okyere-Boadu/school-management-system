@@ -18,4 +18,18 @@ export class SuperAdminAuthController {
   async signup(@Body() createSuperAdminDto: CreateSuperAdminDto) {
     return this.superAdminAuthService.signupSuperAdmin(createSuperAdminDto);
   }
+  @Post('forgot-password')
+  forgotPassword(@Body() forgotPasswordDto: { email: string }) {
+    return this.superAdminAuthService.forgotAdminPassword(
+      forgotPasswordDto.email,
+    );
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() resetPasswordDto: { token: string; password: string }) {
+    return this.superAdminAuthService.resetAdminPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.password,
+    );
+  }
 }
