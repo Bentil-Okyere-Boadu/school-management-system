@@ -6,9 +6,13 @@ import { School } from '../school/school.entity';
 import { InvitationService } from './invitation.service';
 import { InvitationController } from './invitation.controller';
 import { EmailModule } from '../common/modules/email.module';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Role, School]), EmailModule],
+  imports: [
+    TypeOrmModule.forFeature([User, Role, School, SchoolAdmin]),
+    EmailModule,
+  ],
   providers: [InvitationService],
   controllers: [InvitationController],
   exports: [InvitationService],

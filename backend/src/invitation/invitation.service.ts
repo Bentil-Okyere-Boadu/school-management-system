@@ -22,6 +22,8 @@ import { InviteTeacherDto } from './dto/invite-teacher.dto';
 import { Not } from 'typeorm';
 import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 
 @Injectable()
 export class InvitationService {
@@ -30,6 +32,8 @@ export class InvitationService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(SchoolAdmin)
+    private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
     @InjectRepository(School)
@@ -192,17 +196,17 @@ export class InvitationService {
    */
   async inviteAdmin(
     inviteUserDto: InviteUserDto,
-    currentUser: User,
-  ): Promise<User> {
+    currentUser: SuperAdmin,
+  ): Promise<SchoolAdmin> {
     if (currentUser.role.name !== 'super_admin') {
       throw new UnauthorizedException('Only super admins can invite users');
     }
 
-    const existingUser = await this.userRepository.findOne({
+    const existingAdmin = await this.adminRepository.findOne({
       where: { email: inviteUserDto.email },
     });
 
-    if (existingUser) {
+    if (existingAdmin) {
       throw new ConflictException('User with this email already exists');
     }
 
@@ -217,38 +221,25 @@ export class InvitationService {
       throw new BadRequestException('Super admins can only invite admin users');
     }
 
-    const school = await this.schoolRepository.findOneBy({
-      id: inviteUserDto.schoolId,
-    });
-    if (!school) {
-      throw new NotFoundException('School not found');
-    }
-
-    // Generate admin ID
-    const adminId = await this.generateAdminId(school);
-
     // Create the invitation token and set expiration
     const invitationToken = this.generateInvitationToken();
     const invitationExpires = this.calculateTokenExpiration();
 
     // Create the user in pending state
-    const newUser = this.userRepository.create({
+    const newAdmin = this.adminRepository.create({
       name: inviteUserDto.name,
       email: inviteUserDto.email,
       role,
-      school,
       status: 'pending',
       invitationToken,
       invitationExpires,
-      adminId,
     });
 
-    const savedUser = await this.userRepository.save(newUser);
+    const savedAdmin = await this.adminRepository.save(newAdmin);
 
-    // Send invitation email using the EmailService
-    await this.emailService.sendInvitationEmail(savedUser);
+    await this.emailService.sendInvitationEmail(savedAdmin);
 
-    return savedUser;
+    return savedAdmin;
   }
 
   /**
@@ -382,8 +373,8 @@ export class InvitationService {
     return savedUser;
   }
 
-  async verifyInvitationToken(token: string): Promise<User> {
-    const user = await this.userRepository.findOne({
+  async verifyInvitationToken(token: string) {
+    const user = await this.adminRepository.findOne({
       where: { invitationToken: token, status: 'pending' },
       relations: ['role', 'school'],
     });
@@ -406,50 +397,50 @@ export class InvitationService {
     return user;
   }
 
-  async completeRegistration(token: string, password: string): Promise<User> {
-    const user = await this.verifyInvitationToken(token);
+  async completeRegistration(token: string, password: string) {
+    const adminuser = await this.verifyInvitationToken(token);
     const hashPassword = await bcrypt.hash(password, 10);
 
-    user.password = hashPassword;
-    user.status = 'active';
-    user.isInvitationAccepted = true;
-    user.invitationToken = '';
-    user.invitationExpires = new Date(0);
+    adminuser.password = hashPassword;
+    adminuser.status = 'active';
+    adminuser.isInvitationAccepted = true;
+    adminuser.invitationToken = '';
+    adminuser.invitationExpires = new Date(0);
 
-    const savedUser = await this.userRepository.save(user);
+    const savedAdmin = await this.adminRepository.save(adminuser);
 
-    await this.emailService.sendRegistrationConfirmationEmail(savedUser);
+    await this.emailService.sendRegistrationConfirmationEmail(adminuser);
 
-    return savedUser;
+    return savedAdmin;
   }
 
   async resendAdminInvitation(
     userId: string,
-    currentUser: User,
-  ): Promise<User> {
+    currentUser: SuperAdmin,
+  ): Promise<SchoolAdmin> {
     if (currentUser.role.name !== 'super_admin') {
       throw new UnauthorizedException(
         'Only super admins can resend invitations',
       );
     }
 
-    const user = await this.userRepository.findOne({
+    const admin = await this.adminRepository.findOne({
       where: { id: userId, status: 'pending' },
       relations: ['role', 'school'],
     });
 
-    if (!user) {
+    if (!admin) {
       throw new NotFoundException('Pending user not found');
     }
 
-    user.invitationToken = this.generateInvitationToken();
-    user.invitationExpires = this.calculateTokenExpiration();
+    admin.invitationToken = this.generateInvitationToken();
+    admin.invitationExpires = this.calculateTokenExpiration();
 
-    const updatedUser = await this.userRepository.save(user);
+    const updatedAdmin = await this.adminRepository.save(admin);
 
-    await this.emailService.sendInvitationEmail(updatedUser);
+    await this.emailService.sendInvitationEmail(updatedAdmin);
 
-    return updatedUser;
+    return updatedAdmin;
   }
 
   async resendStudentInvitation(email: string, adminUser: User): Promise<User> {

@@ -11,9 +11,5 @@ export class InviteUserDto {
 
   @IsNotEmpty()
   @IsUUID()
-  roleId: string;
-
-  @IsNotEmpty()
-  @IsUUID()
-  schoolId: string;
+  roleId?: string;
 }

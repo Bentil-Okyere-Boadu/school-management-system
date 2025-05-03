@@ -20,6 +20,8 @@ import { CurrentUser } from '../user/current-user.decorator';
 import { SanitizeResponseInterceptor } from '../common/interceptors/sanitize-response.interceptor';
 import { ActiveUserGuard } from '../auth/guards/active-user.guard';
 import { ForgotPinDto } from './dto/forgot-pin.dto';
+import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
+import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 
 @Controller('invitations')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -27,22 +29,22 @@ export class InvitationController {
   constructor(private invitationService: InvitationService) {}
 
   // Superadmin endpoints
-  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('admin')
   @Roles('super_admin')
   async inviteAdmin(
     @Body() inviteUserDto: InviteUserDto,
-    @CurrentUser() user: User,
+    @CurrentUser() user: SuperAdmin,
   ) {
     return this.invitationService.inviteAdmin(inviteUserDto, user);
   }
 
-  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles('super_admin')
   @Post('admin/resend/:userId')
   async resendAdminInvitation(
     @Param('userId') userId: string,
-    @CurrentUser() user: User,
+    @CurrentUser() user: SuperAdmin,
   ) {
     return this.invitationService.resendAdminInvitation(userId, user);
   }

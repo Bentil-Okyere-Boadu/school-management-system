@@ -2,7 +2,6 @@ const SENSITIVE_FIELDS = [
   'password',
   'invitationToken',
   'invitationExpires',
-  'isInvitationAccepted',
   'resetPasswordToken',
   'resetPasswordExpires',
 ];
