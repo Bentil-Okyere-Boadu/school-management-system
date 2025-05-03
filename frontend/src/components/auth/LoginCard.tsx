@@ -29,8 +29,25 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
-        Cookies.set("authToken", data.data.access_token);
-        router.push("/superadmin/dashboard");
+        const expireToken = new Date(Date.now() + 60*60*60*10);
+        Cookies.set("authToken", data.data.access_token, { expires: expireToken });
+        switch (data.data.role.name) {
+          case 'super_admin':
+            router.push("/superadmin/dashboard");
+            break;
+          case 'school_admin':
+            router.push("/admin/dashboard");
+            break;
+          case 'teacher':
+            router.push("/teacher/dashboard");
+            break;
+          case 'stuudent':
+            router.push("/student/dashboard");
+            break;
+        
+          default:
+            break;
+        }
       },
     });
   };
