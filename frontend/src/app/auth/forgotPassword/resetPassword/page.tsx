@@ -3,7 +3,6 @@ import AuthBg from '@/components/auth/AuthBg'
 import ResetPassword from '@/components/auth/ResetPassword'
 import { useSearchParams } from 'next/navigation'
 import React from 'react'
-import "../../../global.css"
 
 
 const ResetPasswordPage = () => {

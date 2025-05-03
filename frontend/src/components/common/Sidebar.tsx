@@ -1,11 +1,15 @@
 "use client";
 import React from "react";
-import { SidebarItem } from "../../utils/types";
 
 interface SidebarProps {
   activeItem: string;
   onItemChange: (item: string) => void;
   sidebarItems: SidebarItem[];
+}
+
+interface SidebarItem {
+  icon: string;
+  label: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({

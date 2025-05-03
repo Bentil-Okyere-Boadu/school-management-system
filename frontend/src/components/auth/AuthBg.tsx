@@ -1,5 +1,4 @@
 import React from 'react'
-import '../../app/global.css'
 
 const AuthBg = ({
     children,
