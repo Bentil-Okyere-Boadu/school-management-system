@@ -8,8 +8,6 @@ import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { Role } from 'src/role/role.entity';
 import { School } from 'src/school/school.entity';
-import * as bcrypt from 'bcryptjs';
-import { CreateUserDto } from './dto/create-user.dto';
 import { sanitize } from '../common/utils/sanitizer.util';
 
 @Injectable()
@@ -19,50 +17,6 @@ export class UserService {
     @InjectRepository(Role) private roleRepo: Repository<Role>,
     @InjectRepository(School) private schoolRepo: Repository<School>,
   ) {}
-
-  async create(createUserDto: CreateUserDto, currentUser?: User) {
-    const { password, role: roleName } = createUserDto;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Find the role
-    const role = await this.roleRepo.findOne({
-      where: { name: roleName },
-    });
-
-    if (!role) {
-      throw new Error(`Role '${roleName}' not found`);
-    }
-
-    // Create new user
-    const user = this.userRepo.create({
-      ...createUserDto,
-      password: hashedPassword,
-      role,
-    });
-
-    // If creating user as school admin, assign to admin's school
-    if (
-      currentUser &&
-      currentUser.role.name === 'school_admin' &&
-      currentUser.school
-    ) {
-      user.school = currentUser.school;
-    }
-    // If creating admin as super_admin, check for schoolId in DTO
-    else if (roleName === 'school_admin' && createUserDto['schoolId']) {
-      const school = await this.schoolRepo.findOne({
-        where: { id: createUserDto['schoolId'] },
-      });
-
-      if (!school) {
-        throw new Error('School not found');
-      }
-
-      user.school = school;
-    }
-
-    return this.userRepo.save(user);
-  }
 
   async findAll(currentUser: User) {
     // Super admin can see all users

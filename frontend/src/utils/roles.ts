@@ -15,4 +15,9 @@ export function getRolesEnum() {
   return rolesEnum;
 }
 
+export function getRoleId(roles: Array<{ id: string; name: string }>, roleName: string): string {
+  const foundRole = roles.find((role) => role.name === roleName);
+  return foundRole?.id || "";
+}
+
 export type RoleName = keyof typeof rolesEnum;

@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from './providers'
 import "./globals.css";
+import "./global.css"
+import '@mantine/core/styles.css';
+import '@mantine/charts/styles.css';
+import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from '@mantine/core';
+import { mantineOverrides } from "./mantineTheme";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -11,6 +17,12 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+const roboto = {
+  variable: "--font-roboto",
+  fontFamily: "'Roboto', sans-serif",
+  subsets: ["latin"],
+};
 
 export const metadata: Metadata = {
   title: "School Management System",
@@ -23,11 +35,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" {...mantineHtmlProps}>
+      <head>
+        <ColorSchemeScript />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${roboto.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <MantineProvider theme={mantineOverrides}>
+          <Providers>{children}</Providers>
+        </MantineProvider>
       </body>
     </html>
   );

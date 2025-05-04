@@ -36,3 +36,11 @@ export const useGetUsers = () => {
         }
     })
 }
+
+export const useInviteUser = () => {
+    return useMutation({
+        mutationFn: (inviteDetails: {name:string, email: string, roleId: string}) => {
+            return customAPI.post(`/invitations/admin`, inviteDetails)
+        }
+    })
+}

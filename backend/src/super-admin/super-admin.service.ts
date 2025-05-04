@@ -1,0 +1,144 @@
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  ConflictException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SuperAdmin } from './super-admin.entity';
+import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
+import { UpdateSuperAdminDto } from './dto/update-super-admin.dto';
+import { Role } from '../role/role.entity';
+import { AuthService } from 'src/auth/auth.service';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { APIFeatures, QueryString } from '../common/api-features/api-features';
+
+@Injectable()
+export class SuperAdminService {
+  private readonly logger = new Logger(SuperAdminService.name);
+  constructor(
+    @InjectRepository(SuperAdmin)
+    private superAdminRepository: Repository<SuperAdmin>,
+    @InjectRepository(SchoolAdmin)
+    private adminRepository: Repository<SchoolAdmin>,
+    @InjectRepository(Role)
+    private roleRepository: Repository<Role>,
+    private superAdminAuthService: AuthService,
+  ) {}
+
+  async findAllUsers(queryString: QueryString) {
+    const query = this.adminRepository
+      .createQueryBuilder('admin')
+      .leftJoinAndSelect('admin.role', 'role')
+      .leftJoinAndSelect('admin.school', 'school')
+      .where('admin.isArchived = :isArchived', { isArchived: false });
+
+    const features = new APIFeatures(query, queryString)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+
+    return await features.getQuery().getMany();
+  }
+
+  async findOne(id: string) {
+    const superAdmin = await this.adminRepository.findOne({
+      where: { id },
+      relations: ['role', 'school'],
+    });
+
+    if (!superAdmin) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
+    }
+
+    return superAdmin;
+  }
+
+  async findByEmail(email: string): Promise<SuperAdmin | null> {
+    return this.superAdminRepository.findOne({
+      where: { email },
+      relations: ['role'],
+    });
+  }
+
+  async createWithRole(
+    data: CreateSuperAdminDto & { role: Role },
+  ): Promise<SuperAdmin> {
+    // Check if super admin with email already exists
+    const existingAdmin = await this.findByEmail(data.email);
+    if (existingAdmin) {
+      throw new ConflictException('Super Admin with this email already exists');
+    }
+
+    // Create super admin with provided role
+    const superAdmin = this.superAdminRepository.create(data);
+    return this.superAdminRepository.save(superAdmin);
+  }
+
+  async update(
+    id: string,
+    updateSuperAdminDto: UpdateSuperAdminDto,
+  ): Promise<SuperAdmin> {
+    const superAdmin = await this.findOne(id);
+
+    // If updating email, check if it already exists
+    if (
+      updateSuperAdminDto.email &&
+      updateSuperAdminDto.email !== superAdmin.email
+    ) {
+      const existingAdmin = await this.findByEmail(updateSuperAdminDto.email);
+      if (existingAdmin) {
+        throw new ConflictException(
+          'Super Admin with this email already exists',
+        );
+      }
+    }
+
+    // If updating password, hash it
+    if (updateSuperAdminDto.password) {
+      updateSuperAdminDto.password =
+        await this.superAdminAuthService.hashPassword(
+          updateSuperAdminDto.password,
+        );
+    }
+
+    // If updating role, find the new role
+    let role: Role | null = superAdmin.role;
+    if (updateSuperAdminDto.roleId) {
+      role = await this.roleRepository.findOne({
+        where: { id: updateSuperAdminDto.roleId },
+      });
+
+      if (!role) {
+        throw new NotFoundException(
+          `Role with ID ${updateSuperAdminDto.roleId} not found`,
+        );
+      }
+    }
+
+    const { roleId, ...superAdminData } = updateSuperAdminDto;
+
+    // Update super admin
+    const updatedSuperAdmin = this.superAdminRepository.merge(
+      superAdmin,
+      superAdminData,
+    );
+    updatedSuperAdmin.role = role;
+
+    return this.superAdminRepository.save(updatedSuperAdmin);
+  }
+
+  async remove(id: string): Promise<void> {
+    const superAdmin = await this.findOne(id);
+    await this.superAdminRepository.remove(superAdmin);
+  }
+
+  async archive(id: string, archive: boolean) {
+    const admin = await this.findOne(id);
+    admin.isArchived = archive;
+    admin.status = archive ? 'archived' : 'active';
+    return this.adminRepository.save(admin);
+  }
+}

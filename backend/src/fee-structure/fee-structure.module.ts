@@ -4,6 +4,6 @@ import { FeeStructureController } from './fee-structure.controller';
 
 @Module({
   providers: [FeeStructureService],
-  controllers: [FeeStructureController]
+  controllers: [FeeStructureController],
 })
 export class FeeStructureModule {}

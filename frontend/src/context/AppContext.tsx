@@ -5,7 +5,7 @@ import { initializeRoles } from '@/utils/roles';
 import { createContext, useContext, useEffect, useState } from 'react';
 
 type AppContextType = {
-  roles: Record<string, string>;
+  roles: {id: string, name: string}[];
   isLoading: boolean;
   error: Error | null;
 };
@@ -14,11 +14,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function ContextProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<{
-    roles: Record<string, string>;
+    roles: {id: string, name: string}[];
     isLoading: boolean;
     error: Error | null;
   }>({
-    roles: {},
+    roles: [],
     isLoading: true,
     error: null,
   });

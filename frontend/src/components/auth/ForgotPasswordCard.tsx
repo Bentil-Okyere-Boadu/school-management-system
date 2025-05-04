@@ -75,7 +75,6 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
         )}
         <div className="relative mt-9 max-sm:mt-6">
           <ActionButton
-            onClick={requestPwdReset}
             text={user ? "Request PIN Reset" : "Request Password Reset"}
             loading={isPending}
           />

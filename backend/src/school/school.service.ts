@@ -1,18 +1,55 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { School } from './school.entity';
+import { User } from 'src/user/user.entity';
+import { CreateSchoolDto } from './dto/create-school.dto';
+import { InvitationService } from 'src/invitation/invitation.service';
 
 @Injectable()
 export class SchoolService {
   constructor(
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private invitationService: InvitationService,
   ) {}
 
-  async create(schoolData: Partial<School>): Promise<School> {
-    const school = this.schoolRepository.create(schoolData);
-    return this.schoolRepository.save(school);
+  async create(
+    createSchoolDto: CreateSchoolDto,
+    adminUser: User,
+  ): Promise<School> {
+    if (adminUser.role.name !== 'school_admin') {
+      throw new UnauthorizedException('Only school admins can create schools');
+    }
+
+    if (adminUser.school) {
+      throw new UnauthorizedException('Admin already associated with a school');
+    }
+
+    const school = this.schoolRepository.create(createSchoolDto);
+    const savedSchool = await this.schoolRepository.save(school);
+
+    adminUser.school = savedSchool;
+
+    if (!adminUser.adminId) {
+      // Get admin ID from invitation service
+      const adminId = await this.invitationService.generateAdminId(
+        savedSchool,
+        adminUser,
+      );
+      adminUser.adminId = adminId;
+    }
+
+    // Save the updated admin user
+    await this.userRepository.save(adminUser);
+
+    return savedSchool;
   }
 
   async findAll(): Promise<School[]> {
@@ -20,23 +57,58 @@ export class SchoolService {
   }
 
   async findOne(id: string): Promise<School> {
-    const school = await this.schoolRepository.findOne({ where: { id } });
+    const school = await this.schoolRepository.findOne({
+      where: { id },
+      relations: ['users'],
+    });
+
     if (!school) {
       throw new NotFoundException(`School with ID ${id} not found`);
     }
+
     return school;
   }
 
-  async update(id: string, schoolData: Partial<School>): Promise<School> {
-    await this.schoolRepository.update(id, schoolData);
-    const updatedSchool = await this.schoolRepository.findOne({ where: { id } });
-    if (!updatedSchool) {
-      throw new NotFoundException(`School with ID ${id} not found`);
+  /**
+   * Find the school associated with a specific admin user
+   * @param adminUser The admin user
+   * @returns The school associated with the admin
+   */
+  async findByAdmin(adminUser: User): Promise<School> {
+    if (adminUser.role.name !== 'school_admin') {
+      throw new UnauthorizedException('User is not a school admin');
     }
-    return updatedSchool;
+
+    if (!adminUser.school) {
+      throw new NotFoundException('Admin not associated with any school');
+    }
+
+    return this.findOne(adminUser.school.id);
+  }
+
+  async update(
+    id: string,
+    schoolData: Partial<School>,
+    adminUser: User,
+  ): Promise<School> {
+    // Ensure admin user can only update their own school
+    if (adminUser.role.name === 'school_admin') {
+      if (!adminUser.school || adminUser.school.id !== id) {
+        throw new UnauthorizedException('You can only update your own school');
+      }
+    }
+
+    await this.schoolRepository.update(id, schoolData);
+    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
+    // Check if school exists
+    await this.findOne(id);
+
+    // Only super_admin can remove schools
+    // This check will be in the controller
+
     await this.schoolRepository.delete(id);
   }
-} 
+}

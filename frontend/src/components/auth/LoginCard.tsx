@@ -5,9 +5,9 @@ import ActionButton from "../ActionButton";
 import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
+import { handleLoginRedirectAndToken } from "@/middleware";
 
 interface LoginCardProps {
   user?: string;
@@ -29,8 +29,7 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
-        Cookies.set("authToken", data.data.access_token);
-        router.push("/admin/dashboard");
+        handleLoginRedirectAndToken(data, router);
       },
     });
   };

@@ -1,7 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { User } from '../../user/user.entity';
+import { EmailException } from '../exceptions/email.exception';
+import { BaseException } from '../exceptions/base.exception';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 /**
  * Email templates
@@ -13,6 +16,8 @@ export enum EmailTemplate {
   GENERAL_NOTIFICATION = 'general_notification',
   STUDENT_INVITATION = 'student_invitation',
   TEACHER_INVITATION = 'teacher_invitation',
+  STUDENT_PIN_RESET = 'student_pin_reset',
+  TEACHER_PIN_RESET = 'teacher_pin_reset',
 }
 
 /**
@@ -62,7 +67,7 @@ export class EmailService {
    * @param user The user to send the invitation to
    * @returns Promise resolving to the mail send info
    */
-  async sendInvitationEmail(user: User): Promise<void> {
+  async sendInvitationEmail(user: SchoolAdmin): Promise<void> {
     const invitationLink = `${this.frontendUrl}/auth/complete-registration?token=${user.invitationToken}`;
 
     try {
@@ -81,7 +86,10 @@ export class EmailService {
         `Failed to send invitation email to ${user.email}`,
         error,
       );
-      throw new Error(`Failed to send invitation email: ${error.message}`);
+      throw new EmailException(
+        `Failed to send invitation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -111,8 +119,9 @@ export class EmailService {
         `Failed to send student invitation email to ${user.email}`,
         error,
       );
-      throw new Error(
-        `Failed to send student invitation email: ${error.message}`,
+      throw new EmailException(
+        `Failed to send student invitation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -149,8 +158,9 @@ export class EmailService {
         `Failed to send teacher invitation email to ${user.email}`,
         error,
       );
-      throw new Error(
-        `Failed to send teacher invitation email: ${error.message}`,
+      throw new EmailException(
+        `Failed to send teacher invitation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -160,7 +170,7 @@ export class EmailService {
    * @param user The user to send the confirmation to
    * @returns Promise resolving to the mail send info
    */
-  async sendRegistrationConfirmationEmail(user: User): Promise<void> {
+  async sendRegistrationConfirmationEmail(user: SchoolAdmin): Promise<void> {
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
@@ -177,8 +187,9 @@ export class EmailService {
         `Failed to send registration confirmation email to ${user.email}`,
         error,
       );
-      throw new Error(
-        `Failed to send registration confirmation email: ${error.message}`,
+      throw new EmailException(
+        `Failed to send registration confirmation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -208,7 +219,10 @@ export class EmailService {
         `Failed to send password reset email to ${email}`,
         error,
       );
-      throw new Error(`Failed to send password reset email: ${error.message}`);
+      throw new EmailException(
+        `Failed to send password reset email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -241,7 +255,70 @@ export class EmailService {
       this.logger.log(`Notification email sent to ${to}`);
     } catch (error) {
       this.logger.error(`Failed to send notification email to ${to}`, error);
-      throw new Error(`Failed to send notification email: ${error.message}`);
+      throw new EmailException(
+        `Failed to send notification email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Send PIN reset email to a student
+   * @param user The student user
+   * @param pin The new PIN
+   */
+  async sendStudentPinReset(user: User, pin: string): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Your PIN Has Been Reset - School Management System',
+        html: this.getEmailTemplate(EmailTemplate.STUDENT_PIN_RESET, {
+          name: user.name,
+          pin,
+          studentId: user.studentId,
+        }),
+      });
+      this.logger.log(`Student PIN reset email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send student PIN reset email to ${user.email}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send student PIN reset email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Send PIN reset email to a teacher
+   * @param user The teacher user
+   * @param pin The new PIN
+   */
+  async sendTeacherPinReset(user: User, pin: string): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: user.email,
+        subject: 'Your PIN Has Been Reset - School Management System',
+        html: this.getEmailTemplate(EmailTemplate.TEACHER_PIN_RESET, {
+          name: user.name,
+          pin,
+          teacherId: user.teacherId,
+        }),
+      });
+      this.logger.log(`Teacher PIN reset email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send teacher PIN reset email to ${user.email}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send teacher PIN reset email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -251,7 +328,12 @@ export class EmailService {
    * @param data Data to populate the template with
    * @returns The HTML email content
    */
-  private getEmailTemplate(template: EmailTemplate, data: any): string {
+  private getEmailTemplate(
+    template: EmailTemplate,
+    data: {
+      [key: string]: any;
+    },
+  ): string {
     switch (template) {
       case EmailTemplate.INVITATION:
         return `
@@ -349,24 +431,58 @@ export class EmailService {
         `;
 
       case EmailTemplate.GENERAL_NOTIFICATION:
-        let actionButton = '';
-
-        if (data.actionLink && data.actionText) {
-          actionButton = `
-            <p style="margin: 25px 0;">
-              <a href="${data.actionLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">${data.actionText}</a>
-            </p>
-          `;
-        }
-
         return `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-            <h2 style="color: #333;">School Management System Notification</h2>
-            <p>Dear ${data.name},</p>
-            <p>${data.message}</p>
-            ${actionButton}
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="color: #777; font-size: 12px;">School Management System</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+              <h2 style="color: #333;">Notification</h2>
+              <p>Dear ${data.name},</p>
+              <p>${data.message}</p>
+              ${
+                data.actionLink
+                  ? `<p style="margin: 25px 0;">
+                      <a href="${data.actionLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                        ${data.actionText || 'Take Action'}
+                      </a>
+                     </p>`
+                  : ''
+              }
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="color: #777; font-size: 12px;">School Management System</p>
+            </div>
+          `;
+
+      case EmailTemplate.STUDENT_PIN_RESET:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+            <h2 style="color: #AB58E7;">Your PIN Has Been Reset</h2>
+            <p>Hello ${data.name},</p>
+            <p>Your PIN for the School Management System has been reset as requested.</p>
+            <p>Here are your login details:</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Student ID:</strong> ${data.studentId}</p>
+              <p><strong>New PIN:</strong> ${data.pin}</p>
+            </div>
+            <p>Please use these credentials to log in to your account.</p>
+            <p>For security reasons, we recommend changing your PIN after logging in.</p>
+            <p>If you did not request this PIN reset, please contact your school administrator immediately.</p>
+            <p>Thank you,<br>School Management System</p>
+          </div>
+        `;
+
+      case EmailTemplate.TEACHER_PIN_RESET:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+            <h2 style="color: #AB58E7;">Your PIN Has Been Reset</h2>
+            <p>Hello ${data.name},</p>
+            <p>Your PIN for the School Management System has been reset as requested.</p>
+            <p>Here are your login details:</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Teacher ID:</strong> ${data.teacherId}</p>
+              <p><strong>New PIN:</strong> ${data.pin}</p>
+            </div>
+            <p>Please use these credentials to log in to your account.</p>
+            <p>For security reasons, we recommend changing your PIN after logging in.</p>
+            <p>If you did not request this PIN reset, please contact your school administrator immediately.</p>
+            <p>Thank you,<br>School Management System</p>
           </div>
         `;
 
