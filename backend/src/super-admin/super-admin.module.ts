@@ -15,10 +15,11 @@ import { RoleService } from '../role/role.service';
 import { AuthService } from 'src/auth/auth.service';
 import { User } from 'src/user/user.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { School } from 'src/school/school.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SuperAdmin, Role, User, SchoolAdmin]),
+    TypeOrmModule.forFeature([SuperAdmin, Role, User, SchoolAdmin, School]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
