@@ -5,6 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
   JoinColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Role } from 'src/role/role.entity';
@@ -49,9 +50,14 @@ export class SchoolAdmin {
   @Column({ nullable: true })
   resetPasswordExpires: Date;
 
+  @Column({ default: false })
+  isArchived: boolean;
+  @Column({ nullable: true, unique: true })
+  adminId: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ nullable: true, unique: true })
-  adminId: string;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

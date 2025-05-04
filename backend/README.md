@@ -79,6 +79,78 @@ $ npm run test:cov
 $ npm run seed:superadmin
 ```
 
+## API Features – Usage Guide
+
+### Base URL
+
+`{{URL}}/api/v1/super-admin/admins`
+
+This endpoint supports filtering, sorting, field selection, and pagination through query parameters.
+
+### Filtering by Date
+
+To fetch recently added admins, use the `createdAt` field with comparison operators:
+
+- `createdAt_ge` – greater than or equal to a specific date
+- `createdAt_le` – less than or equal to a specific date
+
+For example, to get admins created in the last 30 days (recently added users/admins), pass:
+
+```
+createdAt_ge=2025-04-04
+```
+
+(assuming today is 2025-05-04)
+
+### Sorting
+
+Use the `sort` parameter to control the order of results.
+
+- `sort=createdAt` sorts by creation date (descending by default)
+- Add `,asc` or `,desc` to set order explicitly
+
+**Examples:**
+
+- `sort=createdAt,desc` (newest first)
+- `sort=name,asc` (alphabetical order)
+
+### Field Selection
+
+Use the `fields` parameter to return only specific fields. Separate multiple fields with commas.
+
+**Example:**
+
+```
+fields=id,name,email
+```
+
+returns only the ID, name, and email of each admin.
+
+Essential fields like `createdAt` are always included automatically.
+
+### Pagination
+
+Use `page` and `limit` to paginate results.
+
+- `page` – which page of results to fetch (default: 1)
+- `limit` – how many items per page (default: 20)
+
+**Example:**
+
+```
+page=2&limit=10
+```
+
+returns the second page of results, 10 items per page.
+
+### Combined Example
+
+To get the 5 most recently added admins (from the last 30 days), showing only their ID and name, sorted by newest first:
+
+```
+{{URL}}/api/v1/super-admin/admins?createdAt_ge=2025-04-04&fields=id,name&sort=createdAt,desc&page=1&limit=5
+```
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

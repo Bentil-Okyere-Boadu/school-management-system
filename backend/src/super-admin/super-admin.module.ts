@@ -14,10 +14,11 @@ import { SuperAdminLocalStrategy } from './strategies/super-admin-local.strategy
 import { RoleService } from '../role/role.service';
 import { AuthService } from 'src/auth/auth.service';
 import { User } from 'src/user/user.entity';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SuperAdmin, Role, User]),
+    TypeOrmModule.forFeature([SuperAdmin, Role, User, SchoolAdmin]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

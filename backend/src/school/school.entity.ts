@@ -4,7 +4,8 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
-  BeforeInsert,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 //Todo: proper mapping to missing requirememts in mockup
 @Entity()
@@ -34,18 +35,9 @@ export class School {
   @OneToMany(() => User, (user) => user.school)
   users: User[];
 
-  /**
-   * Generate a 5-digit school code before inserting
-   * This will be used for generating user IDs
-   */
-  @BeforeInsert()
-  generateSchoolCode() {
-    // Simple way: random 5-digit number
-    // In a production system, this should be more sophisticated
-    const min = 10000; // 5 digits min
-    const max = 99999; // 5 digits max
-    this.schoolCode = Math.floor(
-      Math.random() * (max - min + 1) + min,
-    ).toString();
-  }
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

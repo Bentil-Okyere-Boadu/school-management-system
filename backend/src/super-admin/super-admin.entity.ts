@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Role } from '../role/role.entity';
 
@@ -30,8 +31,11 @@ export class SuperAdmin {
   @JoinColumn()
   role: Role;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamp with time zone' })
+  updatedAt: Date;
 
   @Column({ nullable: true })
   resetPasswordToken: string;
