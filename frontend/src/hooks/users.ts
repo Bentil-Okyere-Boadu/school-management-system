@@ -44,3 +44,25 @@ export const useInviteUser = () => {
         }
     })
 }
+
+export const useGetAdminUsers = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['allAdminUsers'],
+        queryFn: () => {
+            return customAPI.get('/super-admin/admins');
+        },
+        refetchOnWindowFocus: true
+    });
+
+    const adminUsers = data?.data;
+
+    return { adminUsers, isLoading, refetch }
+}
+
+export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: boolean}) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.put(`/super-admin/admin/${id}/archive`, {archive: archiveState})
+        }
+    })
+}
