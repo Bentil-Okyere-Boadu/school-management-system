@@ -13,6 +13,7 @@ import { Role } from '../role/role.entity';
 import { AuthService } from 'src/auth/auth.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { APIFeatures, QueryString } from '../common/api-features/api-features';
+import { School } from 'src/school/school.entity';
 
 @Injectable()
 export class SuperAdminService {
@@ -22,6 +23,8 @@ export class SuperAdminService {
     private superAdminRepository: Repository<SuperAdmin>,
     @InjectRepository(SchoolAdmin)
     private adminRepository: Repository<SchoolAdmin>,
+    @InjectRepository(School)
+    private schoolRepository: Repository<School>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
     private superAdminAuthService: AuthService,
@@ -37,6 +40,22 @@ export class SuperAdminService {
     const features = new APIFeatures(query, queryString)
       .filter()
       .sort()
+      .search()
+      .limitFields()
+      .paginate();
+
+    return await features.getQuery().getMany();
+  }
+
+  async findAllSchools(queryString: QueryString) {
+    const query = this.schoolRepository
+      .createQueryBuilder('school')
+      .leftJoinAndSelect('school.users', 'users');
+
+    const features = new APIFeatures(query, queryString)
+      .filter()
+      .sort()
+      .search()
       .limitFields()
       .paginate();
 
@@ -140,5 +159,21 @@ export class SuperAdminService {
     admin.isArchived = archive;
     admin.status = archive ? 'archived' : 'active';
     return this.adminRepository.save(admin);
+  }
+  async findAllArchivedUsers(queryString: QueryString) {
+    const query = this.adminRepository
+      .createQueryBuilder('admin')
+      .leftJoinAndSelect('admin.role', 'role')
+      .leftJoinAndSelect('admin.school', 'school')
+      .where('admin.isArchived = :isArchived', { isArchived: true });
+
+    const features = new APIFeatures(query, queryString)
+      .filter()
+      .sort()
+      .search()
+      .limitFields()
+      .paginate();
+
+    return await features.getQuery().getMany();
   }
 }

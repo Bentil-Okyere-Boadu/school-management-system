@@ -7,7 +7,6 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-//Todo: proper mapping to missing requirememts in mockup
 @Entity()
 export class School {
   @PrimaryGeneratedColumn('uuid')

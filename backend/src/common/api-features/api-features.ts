@@ -1,4 +1,4 @@
-import { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
+import { ObjectLiteral, SelectQueryBuilder, Brackets } from 'typeorm';
 
 export interface QueryString {
   page?: string;
@@ -19,7 +19,7 @@ export class APIFeatures<T extends ObjectLiteral> {
 
   filter(): this {
     const queryObj = { ...this.queryString };
-    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    const excludedFields = ['page', 'sort', 'limit', 'fields', 'search'];
     excludedFields.forEach((el) => delete queryObj[el]);
 
     Object.entries(queryObj).forEach(([key, value]) => {
@@ -94,6 +94,29 @@ export class APIFeatures<T extends ObjectLiteral> {
       const fields = combinedFields.map((f) => `${this.query.alias}.${f}`);
       this.query = this.query.select(fields);
     }
+    return this;
+  }
+  search(): this {
+    const searchValue = this.queryString.search;
+    if (searchValue) {
+      const fieldsToSearch: string[] = [
+        'name',
+        'email',
+        'address',
+        'schoolCode',
+      ];
+
+      this.query = this.query.andWhere(
+        new Brackets((qb: SelectQueryBuilder<T>) => {
+          for (const field of fieldsToSearch) {
+            qb.orWhere(`${qb.alias}.${field} ILIKE :searchTerm`, {
+              searchTerm: `%${searchValue}%`,
+            });
+          }
+        }),
+      );
+    }
+
     return this;
   }
 
