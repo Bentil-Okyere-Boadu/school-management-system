@@ -6,6 +6,7 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity()
@@ -46,9 +47,6 @@ export class User {
   @Column({ nullable: true })
   resetPasswordExpires: Date;
 
-  @CreateDateColumn()
-  createdAt: Date;
-
   @Column({ nullable: true, unique: true })
   studentId: string;
 
@@ -57,4 +55,10 @@ export class User {
 
   @Column({ nullable: true, unique: true })
   adminId: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

@@ -3,7 +3,6 @@ import {
   NotFoundException,
   Logger,
   ConflictException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,10 +10,9 @@ import { SuperAdmin } from './super-admin.entity';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { UpdateSuperAdminDto } from './dto/update-super-admin.dto';
 import { Role } from '../role/role.entity';
-import { v4 as uuidv4 } from 'uuid';
-import { EmailService } from 'src/common/services/email.service';
-import * as bcrypt from 'bcryptjs';
 import { AuthService } from 'src/auth/auth.service';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { APIFeatures, QueryString } from '../common/api-features/api-features';
 
 @Injectable()
 export class SuperAdminService {
@@ -22,25 +20,37 @@ export class SuperAdminService {
   constructor(
     @InjectRepository(SuperAdmin)
     private superAdminRepository: Repository<SuperAdmin>,
+    @InjectRepository(SchoolAdmin)
+    private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
     private superAdminAuthService: AuthService,
   ) {}
 
-  async findAll(): Promise<SuperAdmin[]> {
-    return this.superAdminRepository.find({
-      relations: ['role'],
-    });
+  async findAllUsers(queryString: QueryString) {
+    const query = this.adminRepository
+      .createQueryBuilder('admin')
+      .leftJoinAndSelect('admin.role', 'role')
+      .leftJoinAndSelect('admin.school', 'school')
+      .where('admin.isArchived = :isArchived', { isArchived: false });
+
+    const features = new APIFeatures(query, queryString)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+
+    return await features.getQuery().getMany();
   }
 
-  async findOne(id: string): Promise<SuperAdmin> {
-    const superAdmin = await this.superAdminRepository.findOne({
+  async findOne(id: string) {
+    const superAdmin = await this.adminRepository.findOne({
       where: { id },
-      relations: ['role'],
+      relations: ['role', 'school'],
     });
 
     if (!superAdmin) {
-      throw new NotFoundException(`SuperAdmin with ID ${id} not found`);
+      throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
     return superAdmin;
@@ -123,5 +133,12 @@ export class SuperAdminService {
   async remove(id: string): Promise<void> {
     const superAdmin = await this.findOne(id);
     await this.superAdminRepository.remove(superAdmin);
+  }
+
+  async archive(id: string, archive: boolean) {
+    const admin = await this.findOne(id);
+    admin.isArchived = archive;
+    admin.status = archive ? 'archived' : 'active';
+    return this.adminRepository.save(admin);
   }
 }
