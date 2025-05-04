@@ -28,6 +28,7 @@ services:
       DB_PASSWORD: HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL
       DB_USERNAME: school_management_4os8_user
       DB_NAME: school_management_4os8
+      DB_HOST: dpg-d09im6be5dus73blj570-a
       JWT_SECRET: 'your secret'
       MAIL_HOST: smtp.gmail.com
       MAIL_PORT: 465
@@ -35,7 +36,7 @@ services:
       MAIL_USER: judeedemnyahe@gmail.com
       MAIL_PASSWORD: hglo fqgf tzip bizo
       MAIL_FROM: noreply@schoolmanagementsystem.com
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: https://school-management-system-sgnc.onrender.com
     depends_on:
       - database
 
