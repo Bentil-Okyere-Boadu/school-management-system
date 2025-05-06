@@ -17,6 +17,7 @@ import { useAppContext } from "@/context/AppContext";
 
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
@@ -153,7 +154,7 @@ const UsersPage: React.FC = () => {
             placeholder="Pick role"
             data={roles}
             value={selectedDataRole}
-            onChange={handleRoleDataChange}
+            onChange={() => handleRoleDataChange}
           />
 
           <MultiSelect
