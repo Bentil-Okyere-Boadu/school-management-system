@@ -13,5 +13,8 @@ COPY --from=builder /node_modules ./node_modules
 COPY --from=builder /dist ./dist
 COPY --from=builder /package*.json ./
 
+# Then run your seed command before starting
+RUN npm run seed:reset-prod
+
 EXPOSE 5000
 CMD ["npm", "run", "start:prod"]
