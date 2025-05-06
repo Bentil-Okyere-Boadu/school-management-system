@@ -10,6 +10,7 @@ import {
 import { Dialog } from "@/components/common/Dialog";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useArchiveUser, useGetAdminUsers } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
@@ -32,6 +33,7 @@ export const DashboardTable = () => {
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
   const [selectedDataRole, setSelectedDataRole] = useState<string | null>("school-admin");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
+  // const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
 
   const router = useRouter()
@@ -112,7 +114,7 @@ export const DashboardTable = () => {
         <h1 className="font-bold text-md">Recently Added Users</h1>
         <div onClick={onGoToUsersView} className="flex items-center gap-1 text-purple-900 underline font-semibold cursor-pointer">
           <p className="text-xs">View more</p>
-          <img
+          <Image
             src="https://cdn.builder.io/api/v1/image/assets/TEMP/4d8890e47ae5922cab75f778cb06d458b12088a7?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
             alt="Right arrow"
             className="object-contain w-2 h-2"
@@ -182,7 +184,7 @@ export const DashboardTable = () => {
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
-                          <img
+                          <Image
                             src="https://cdn.builder.io/api/v1/image/assets/TEMP/b2f2eaa24477a78660ce4a3d9636251012a42858?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
                             className="object-contain self-stretch my-auto w-5 aspect-square cursor-pointer"
                             alt="Table cell icon"

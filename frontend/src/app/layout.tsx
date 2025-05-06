@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+// import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from './providers'
 import "./globals.css";
 import "./global.css"
@@ -8,15 +8,15 @@ import '@mantine/charts/styles.css';
 import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from '@mantine/core';
 import { mantineOverrides } from "./mantineTheme";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// const geistSans = Geist({
+//   variable: "--font-geist-sans",
+//   subsets: ["latin"],
+// });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });
 
 const roboto = {
   variable: "--font-roboto",
@@ -40,7 +40,7 @@ export default function RootLayout({
         <ColorSchemeScript />
       </head>
       <body
-        className={`${roboto.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${roboto.variable} antialiased`}
       >
         <MantineProvider theme={mantineOverrides}>
           <Providers>{children}</Providers>

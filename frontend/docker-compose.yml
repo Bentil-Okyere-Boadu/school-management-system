@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: docker/dev.Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=https://sms-backend-9gyh.onrender.com/api/v1
+      - CHOKIDAR_USEPOLLING=true # For file watching in Docker
+
+  test:
+    build:
+      context: .
+      dockerfile: docker/test.Dockerfile
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    depends_on:
+      - dev

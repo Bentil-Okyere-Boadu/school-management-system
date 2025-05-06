@@ -8,6 +8,7 @@ import {
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
+import Image from "next/image";
 import { useArchiveUser, useGetAdminUsers } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
@@ -161,7 +162,7 @@ export const UserTable = () => {
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
-                          <img
+                          <Image
                             src="https://cdn.builder.io/api/v1/image/assets/TEMP/b2f2eaa24477a78660ce4a3d9636251012a42858?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
                             className="object-contain self-stretch my-auto w-5 aspect-square cursor-pointer"
                             alt="Table cell icon"

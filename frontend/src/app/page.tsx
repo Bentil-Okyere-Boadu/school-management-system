@@ -13,7 +13,7 @@ export default function Home() {
   useEffect(() => {
     // console.log(rolesEnum)
     router.replace('/auth/login');
-  }, [])
+  }, [router])
   
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
