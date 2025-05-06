@@ -12,7 +12,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "seed:reset": "ts-node -r tsconfig-paths/register src/seed/database-reset.seed.ts",
+    "seed:reset": "ts-node -r tsconfig-paths/register src/seed/database-reset.seed.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "db:up": "docker-compose up -d",
