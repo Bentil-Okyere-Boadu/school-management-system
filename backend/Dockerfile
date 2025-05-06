@@ -14,4 +14,4 @@ COPY --from=builder /dist ./dist
 COPY --from=builder /package*.json ./
 
 EXPOSE 5000
-CMD ["npm", "run", "start:prod"]
+CMD ["npm", "run", "seed:reset && start:prod"]
