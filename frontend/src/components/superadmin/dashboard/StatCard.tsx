@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React from "react";
 
 interface StatCardProps {
@@ -24,7 +25,7 @@ const StatCard: React.FC<StatCardProps> = ({
     <p className="text-xs text-neutral-700 max-sm:text-xs font-medium">{label}</p>
   </div>
 
-  <img
+  <Image
     src={iconUrl}
     className="w-[66px] h-[66px] max-md:w-14 max-md:h-14 pb-[-4px]"
     alt={iconAlt}

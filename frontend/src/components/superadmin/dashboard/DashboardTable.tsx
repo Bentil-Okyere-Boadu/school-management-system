@@ -10,6 +10,7 @@ import {
 import { Dialog } from "@/components/common/Dialog";
 import { getInitials } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface User {
     id: string;
@@ -28,7 +29,7 @@ export const DashboardTable = () => {
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
   const [selectedDataRole, setSelectedDataRole] = useState<string | null>("school-admin");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
-  const [searchQuery, setSearchQuery] = useState("");
+  // const [searchQuery, setSearchQuery] = useState("");
 
   const router = useRouter()
 
@@ -109,12 +110,12 @@ export const DashboardTable = () => {
     }
   ];
 
-  const filteredUsers = mockUsers.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // const filteredUsers = mockUsers.filter(
+  //   (user) =>
+  //     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     user.role.toLowerCase().includes(searchQuery.toLowerCase()),
+  // );
 
   const handlePermissionChange = (value: string[]) => {
     setSelectedPermissions(value)
@@ -157,7 +158,7 @@ export const DashboardTable = () => {
     return (
         <div className="flex flex-1 items-center">
         {user.avatarUrl ? (
-          <img
+          <Image
             src={user.avatarUrl}
             alt={`${user.name}'s avatar`}
             className="mr-2.5 w-10 h-10 rounded-full"
@@ -181,7 +182,7 @@ export const DashboardTable = () => {
         <h1 className="font-bold text-md">Recently Added Users</h1>
         <div onClick={onGoToUsersView} className="flex items-center gap-1 text-purple-900 underline font-semibold cursor-pointer">
           <p className="text-xs">View more</p>
-          <img
+          <Image
             src="https://cdn.builder.io/api/v1/image/assets/TEMP/4d8890e47ae5922cab75f778cb06d458b12088a7?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
             alt="Right arrow"
             className="object-contain w-2 h-2"
@@ -203,7 +204,7 @@ export const DashboardTable = () => {
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div className="flex gap-1 items-center">
                     <span>Status</span>
-                    <img
+                    <Image
                       src="https://cdn.builder.io/api/v1/image/assets/TEMP/a5b5f70481930cc666ac35bf17e5abb048a46a43?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
                       className="object-contain shrink-0 w-4 aspect-square"
                       alt=""
@@ -217,7 +218,7 @@ export const DashboardTable = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
+              {mockUsers.map((user) => (
                 <tr key={user.id} onClick={() => onTableRowClick?.(user.id)}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     {renderUser(user)}
@@ -250,7 +251,7 @@ export const DashboardTable = () => {
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
-                          <img
+                          <Image
                             src="https://cdn.builder.io/api/v1/image/assets/TEMP/b2f2eaa24477a78660ce4a3d9636251012a42858?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
                             className="object-contain self-stretch my-auto w-5 aspect-square cursor-pointer"
                             alt="Table cell icon"

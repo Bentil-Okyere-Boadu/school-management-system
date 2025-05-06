@@ -6,6 +6,7 @@ import {
   IconLogout2,
 } from '@tabler/icons-react';
 import Cookies from "js-cookie";
+import Image from "next/image";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -83,8 +84,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
           <Menu shadow="md" width={200}>
             <Menu.Target>
               <div className="flex gap-3 cursor-pointer">
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                <Image
+                  src=""
                   alt="User Avatar"
                   className="w-11 h-11 rounded-full"
                 />
