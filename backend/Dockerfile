@@ -13,6 +13,5 @@ COPY --from=builder /node_modules ./node_modules
 COPY --from=builder /dist ./dist
 COPY --from=builder /package*.json ./
 
-RUN npm run seed:reset
 EXPOSE 5000
 CMD ["npm", "run", "start:prod"]
