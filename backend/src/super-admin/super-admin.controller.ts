@@ -27,13 +27,26 @@ export class SuperAdminController {
   async findAllAdminUsers(@Query() query: QueryString) {
     return this.superAdminService.findAllUsers(query);
   }
-
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('/admins/schools')
+  @Roles('super_admin')
+  async findAllSchool(@Query() query: QueryString) {
+    return this.superAdminService.findAllSchools(query);
+  }
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('/admin/:id')
   async findOne(@Param('id') id: string): Promise<SuperAdmin> {
     return this.superAdminService.findOne(id);
   }
 
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('/admins/archived')
+  @Roles('super_admin')
+  async findAllArchivedUsers(@Query() query: QueryString) {
+    return this.superAdminService.findAllArchivedUsers(query);
+  }
+
+  //
   //TODO: ADD endpoints
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put(':id')
