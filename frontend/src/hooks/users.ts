@@ -45,11 +45,30 @@ export const useInviteUser = () => {
     })
 }
 
-export const useGetAdminUsers = () => {
+export const useGetAdminUsers = (page=1,search: string = "", status: string = "", role: string = "" ) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allAdminUsers'],
+        queryKey: ['allAdminUsers', { page, search, status, role }],
         queryFn: () => {
-            return customAPI.get('/super-admin/admins');
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+
+            if(status) {
+                queryBuilder.push(`status=${status}`);
+            }
+            
+            if(role) {
+                queryBuilder.push(`role=${role}`);
+            }
+            
+            if(page) {
+                queryBuilder.push(`page=${page}`);
+            }
+            
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+            
+            return customAPI.get(`/super-admin/admins?${params}`);
         },
         refetchOnWindowFocus: true
     });

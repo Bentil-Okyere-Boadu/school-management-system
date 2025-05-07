@@ -4,12 +4,12 @@ import Badge from "../../common/Badge";
 // import { PermissionTags } from "../PermissionsTag";
 import { Menu, MultiSelect , Select} from '@mantine/core';
 import {
+  IconDots,
   IconPencil,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import Image from "next/image";
-import { useArchiveUser, useGetAdminUsers } from "@/hooks/users";
+import { useArchiveUser } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
@@ -26,7 +26,12 @@ interface User {
   isArchived?: boolean;
 }
 
-export const UserTable = () => {
+interface UserTableProps {
+  users: User[];
+  refetch: () => void;
+}
+
+export const UserTable = ({users, refetch}: UserTableProps) => {
 
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
@@ -48,7 +53,7 @@ export const UserTable = () => {
     { value: "fullstack-developer", label: "Fullstack Developer" },
   ];
 
-  const { adminUsers, refetch } = useGetAdminUsers();
+  // const { adminUsers, refetch } = useGetAdminUsers();
 
   const handlePermissionChange = (value: string[]) => {
     setSelectedPermissions(value)
@@ -121,7 +126,7 @@ export const UserTable = () => {
               </tr>
             </thead>
             <tbody>
-              {adminUsers?.length > 0 ? (adminUsers.map((user: User) => (
+              {users?.length > 0 ? (users.map((user: User) => (
                 <tr key={user.id}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div className="flex flex-1 items-center">
@@ -162,11 +167,7 @@ export const UserTable = () => {
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
-                          <Image
-                            src="https://cdn.builder.io/api/v1/image/assets/TEMP/b2f2eaa24477a78660ce4a3d9636251012a42858?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
-                            className="object-contain self-stretch my-auto w-5 aspect-square cursor-pointer"
-                            alt="Table cell icon"
-                          />
+                            <IconDots/>
                           </Menu.Target>
                           <Menu.Dropdown>
                             <Menu.Item 
