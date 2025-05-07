@@ -9,16 +9,16 @@ import CustomButton from "@/components/Button";
 import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect , Select } from '@mantine/core';
 import InputField from "@/components/InputField";
-import { useInviteUser } from "@/hooks/users";
+import { useGetAdminUsers, useInviteUser } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { getRoleId } from "@/utils/roles";
 import { useAppContext } from "@/context/AppContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDebouncer } from "@/hooks/generalHooks";
 
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
@@ -29,6 +29,7 @@ const UsersPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
+    const { adminUsers, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery));
 
   const roleOptions = [
     { value: "admin", label: "Admin" },
@@ -119,7 +120,7 @@ const UsersPage: React.FC = () => {
         )}
       </div>
 
-      <UserTable />
+      <UserTable users={adminUsers} refetch={refetch}/>
 
       <Pagination
         currentPage={currentPage}

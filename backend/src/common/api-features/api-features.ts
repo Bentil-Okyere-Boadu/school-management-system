@@ -101,9 +101,7 @@ export class APIFeatures<T extends ObjectLiteral> {
     if (searchValue) {
       const fieldsToSearch: string[] = [
         'name',
-        'email',
-        'address',
-        'schoolCode',
+        'email'
       ];
 
       this.query = this.query.andWhere(
