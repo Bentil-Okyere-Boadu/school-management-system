@@ -14,6 +14,7 @@ import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { getRoleId } from "@/utils/roles";
 import { useAppContext } from "@/context/AppContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -25,6 +26,8 @@ const UsersPage: React.FC = () => {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
+
+  const queryClient = useQueryClient();
 
 
   const roleOptions = [
@@ -88,6 +91,7 @@ const UsersPage: React.FC = () => {
           setEmail("");
           setUserName("");
           setIsInviteUserDialogOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['allAdminUsers']})
         },
         onError: (error: AxiosError) => {
           toast.error(error.response?.statusText)
