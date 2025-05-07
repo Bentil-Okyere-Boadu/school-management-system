@@ -4,6 +4,7 @@ import Badge from "../../common/Badge";
 // import { PermissionTags } from "../PermissionsTag";
 import { Menu, MultiSelect , Select} from '@mantine/core';
 import {
+  IconArrowRight,
   IconDots,
   IconPencil,
   IconSquareArrowDownFilled,
@@ -11,7 +12,6 @@ import {
 import { Dialog } from "@/components/common/Dialog";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useArchiveUser, useGetAdminUsers } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
@@ -115,13 +115,7 @@ export const DashboardTable = () => {
         <h1 className="font-bold text-md">Recently Added Users</h1>
         <div onClick={onGoToUsersView} className="flex items-center gap-1 text-purple-900 underline font-semibold cursor-pointer">
           <p className="text-xs">View more</p>
-          {/* <Image
-            src="https://cdn.builder.io/api/v1/image/assets/TEMP/4d8890e47ae5922cab75f778cb06d458b12088a7?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
-            alt="Right arrow"
-            width={15}
-            height={15}
-            className="object-contain w-2 h-2"
-          /> */}
+          <IconArrowRight className="object-contain w-3 h-3" />
         </div>
       </div>
 

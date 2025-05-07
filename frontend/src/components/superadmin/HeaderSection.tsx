@@ -85,7 +85,9 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
             <Menu.Target>
               <div className="flex gap-3 cursor-pointer">
                 <Image
-                  src=""
+                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/f33b143daa0a988b8358b2dd952c60f8aadfc974?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
+                  width={100}
+                  height={100}
                   alt="User Avatar"
                   className="w-11 h-11 rounded-full"
                 />
