@@ -31,20 +31,39 @@ export class SuperAdminService {
   ) {}
 
   async findAllUsers(queryString: QueryString) {
-    const query = this.adminRepository
+    const baseQuery = this.adminRepository
       .createQueryBuilder('admin')
       .leftJoinAndSelect('admin.role', 'role')
       .leftJoinAndSelect('admin.school', 'school')
       .where('admin.isArchived = :isArchived', { isArchived: false });
 
-    const features = new APIFeatures(query, queryString)
+    const featuresWithoutPagination = new APIFeatures(
+      baseQuery.clone(),
+      queryString,
+    )
       .filter()
       .sort()
       .search()
-      .limitFields()
-      .paginate();
+      .limitFields();
 
-    return await features.getQuery().getMany();
+    const total = await featuresWithoutPagination.getQuery().getCount();
+
+    const featuresWithPagination = featuresWithoutPagination.paginate();
+    const data = await featuresWithPagination.getQuery().getMany();
+
+    const page = parseInt(queryString.page ?? '1', 10);
+    const limit = parseInt(queryString.limit ?? '20', 10);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
   }
 
   async findAllSchools(queryString: QueryString) {
