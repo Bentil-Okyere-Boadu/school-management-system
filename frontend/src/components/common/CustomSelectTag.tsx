@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import { IconChevronDown } from "@tabler/icons-react";
 import React from "react";
 
 export type OptionItem = {
@@ -36,12 +36,7 @@ export const CustomSelectTag: React.FC<SelectTagProps> = ({options, defaultValue
         className="relative pointer-events-none"
         style={{ marginLeft: "-28px" }}
       >
-        <Image
-          src="https://cdn.builder.io/api/v1/image/assets/TEMP/c6feee3a2cc31f2ab869c95399cb5d21ebae648f?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
-          className="object-contain w-4 aspect-square pr-1"
-          alt=""
-          aria-hidden="true"
-        />
+        <IconChevronDown className="object-contain w-5 aspect-square pr-1" />
       </div>
     </section>
   );

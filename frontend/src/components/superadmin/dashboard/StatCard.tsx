@@ -29,6 +29,8 @@ const StatCard: React.FC<StatCardProps> = ({
     src={iconUrl}
     className="w-[66px] h-[66px] max-md:w-14 max-md:h-14 pb-[-4px]"
     alt={iconAlt}
+    height={100}
+    width={100}
   />
 </article>
   );
