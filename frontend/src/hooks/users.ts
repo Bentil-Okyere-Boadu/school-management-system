@@ -73,9 +73,9 @@ export const useGetAdminUsers = (page=1,search: string = "", status: string = ""
         refetchOnWindowFocus: true
     });
 
-    const adminUsers = data?.data;
-
-    return { adminUsers, isLoading, refetch }
+    const adminUsers = data?.data?.data;
+    const paginationValues = data?.data.meta;
+    return { adminUsers, isLoading, paginationValues, refetch }
 }
 
 export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: boolean}) => {
