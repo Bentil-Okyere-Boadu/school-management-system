@@ -53,7 +53,6 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
     { value: "fullstack-developer", label: "Fullstack Developer" },
   ];
 
-  // const { adminUsers, refetch } = useGetAdminUsers();
 
   const handlePermissionChange = (value: string[]) => {
     setSelectedPermissions(value)
