@@ -1,6 +1,5 @@
 "use client";
 import { SettingsIcon } from "@/utils/icons";
-import { IconSettings } from "@tabler/icons-react";
 import React from "react";
 
 interface SidebarProps {
