@@ -1,23 +1,27 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu } from '@mantine/core';
 import {
   IconLogout2,
 } from '@tabler/icons-react';
 import Cookies from "js-cookie";
 import Image from "next/image";
+import { User } from "@/@types";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
   isOverviewPage?: boolean;
   onToggleSidebar?: () => void;
+  user: User;
 }
 
-export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar }) => {
+export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar, user }) => {
   const router = useRouter();
+  const pathName = usePathname();
   
   const onHandleBreadCrumbPress = () => {
+    console.log(pathName);
     router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
   };
 
@@ -51,7 +55,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
           { isOverviewPage ? 
             (
               <div className="flex flex-col">
-                <h1 className="text-2xl text-neutral-800">Hello, Admin</h1>
+                <h1 className="text-2xl text-neutral-800">Hello, {user?.name}</h1>
                 <p className="text-base text-zinc-600">Welcome to your {activeMenuItem} Overview</p>
               </div>
             ) : (
@@ -92,8 +96,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
                   className="w-11 h-11 rounded-full"
                 />
                 <div className="flex flex-col">
-                  <span className="text-base text-neutral-800">Damon Salvatore</span>
-                  <span className="text-xs text-zinc-600">Super Admin</span>
+                  <span className="text-base text-neutral-800">{user?.name}</span>
+                  <span className="text-xs text-zinc-600">{user?.role.name}</span>
                 </div>
               </div>
             </Menu.Target>
