@@ -1,12 +1,10 @@
 "use client";
 import React, { useState } from "react";
 import Badge from "../../common/Badge";
-// import { PermissionTags } from "../PermissionsTag";
 import { Menu, MultiSelect , Select} from '@mantine/core';
 import {
   IconArrowRight,
   IconDots,
-  IconPencil,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
@@ -34,7 +32,6 @@ export const DashboardTable = () => {
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
   const [selectedDataRole, setSelectedDataRole] = useState<string | null>("school-admin");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
-  // const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
 
   const router = useRouter()
@@ -65,20 +62,6 @@ export const DashboardTable = () => {
     setSelectedDataRole(value);
     console.log("Selected role:", value);
   };
-
-  const onEditPermissionMenuItemClick = (user: User) => {
-    setIsPermissionDialogOpen(true)
-
-    // const selectedRole = roles.find((r) => r.label === user.role);
-    // setSelectedDataRole(selectedRole?.value ?? null)
-
-    // const selectedPermissions = permissions
-    //   .filter((perm) => user.permissions.includes(perm.label))
-    //   .map((perm) => perm.value);
-
-    // setSelectedPermissions(selectedPermissions)
-    console.log(user)
-  }
 
   const onArchiveUserMenuItemClick = (user: User) => {
     setIsConfirmArchiveDialogOpen(true);
@@ -133,9 +116,6 @@ export const DashboardTable = () => {
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div>Status</div>
                 </th>
-                {/* <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-60 max-w-[350px]">
-                  <div>Permissions</div>
-                </th> */}
                 <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"></th>
               </tr>
             </thead>
@@ -166,29 +146,15 @@ export const DashboardTable = () => {
                         variant={user.status} />
                     </div>
                   </td>
-                  {/* <td
-                    className={` text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:pl-5`}
-                  >
-                    <div
-                      className={`flex gap-1.5 items-start justity-start }`}
-                    >
-                      <PermissionTags permissions={user.permissions} />
-                    </div>
-                  </td> */}
                     <td
                       className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]"
                     >
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
-                            <IconDots/>
+                            <IconDots className="cursor-pointer" />
                           </Menu.Target>
-                          <Menu.Dropdown>
-                            <Menu.Item 
-                              onClick={() => onEditPermissionMenuItemClick(user)} 
-                              leftSection={<IconPencil size={18} color="#AB58E7" />}>
-                              Edit Permissions
-                            </Menu.Item>
+                          <Menu.Dropdown className="!-ml-8 !-mt-2">
                             <Menu.Item 
                               onClick={() => onArchiveUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>

@@ -77,6 +77,7 @@ const SchoolsPage: React.FC = () => {
             onNavigateToSchoolDetail={() => handleSchoolCardClick(school.id)}
             key={school.id}
             schoolName={school.name}
+            schoolId={school.id}
             logoUrl={school.logoUrl}
             backgroundColor={school.backgroundColor}
             textColor={school.textColor}
