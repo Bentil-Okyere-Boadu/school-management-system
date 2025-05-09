@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
-import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, UsersIcon, SchoolsIcon } from "@/utils/icons";
+import { DashboardIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon } from "@/utils/icons";
+import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { User } from "@/@types";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
@@ -21,45 +21,65 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     },
     {
       icon: UsersIcon,      
-      label: "Users",
+      label: "All Users",
     },
     {
-      icon: SchoolsIcon,      
-      label: "Schools",
+      icon: StudentsIcon,      
+      label: "Students",
+    },
+    {
+      icon: AdmissionsIcon,      
+      label: "Admissions",
+    },
+    {
+      icon: AttendanceIcon,      
+      label: "Attendance",
     },
   ];
 
   const user: User = {
-      id: '134',
-      name: 'Super Admin',
-      email: 'abc@gmail.com',
-      password: '.....',
-      role: {
-        name: 'SUPER_ADMIN',
-        id: '4431'
-      },
-      status: 'active'
-    }
+    id: '134',
+    name: 'School Admin',
+    email: 'abc@gmail.com',
+    password: '.....',
+    role: {
+      name: 'SCHOOL_ADMIN',
+      id: '4431'
+    },
+    status: 'active'
+  }
 
   useEffect(() => {
     // Overview Pages
-    if (pathname === "/superadmin/dashboard") {
+    if (pathname === "/admin/dashboard") {
       setActiveMenuItem("Dashboard");
       setIsOverviewPage(true);
-    } else if (pathname === "/superadmin/users") {
-      setActiveMenuItem("Users");
+    } else if (pathname === "/admin/users") {
+      setActiveMenuItem("All Users");
       setIsOverviewPage(true);
-    } else if (pathname === "/superadmin/schools") {
-      setActiveMenuItem("Schools");
+    } else if (pathname === "/admin/students") {
+      setActiveMenuItem("Students");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/admissions") {
+      setActiveMenuItem("Admissions");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/attendance") {
+      setActiveMenuItem("Attendance");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/settings") {
+      setActiveMenuItem("Settings");
       setIsOverviewPage(true);
     } 
     
     // Detail Pages
-    else if (pathname.startsWith("/superadmin/schools/")) {
+    else if (pathname.startsWith("/admin/schools/")) {
       setActiveMenuItem("Schools");
       setIsOverviewPage(false);
-    } else if (pathname.startsWith("/superadmin/users/")) {
+    } else if (pathname.startsWith("/admin/users/")) {
       setActiveMenuItem("Users");
+      setIsOverviewPage(false);
+    } else if (pathname.startsWith("/admin/settings/")) {
+      setActiveMenuItem("Settings");
       setIsOverviewPage(false);
     } 
     
@@ -72,13 +92,22 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const handleSidebarClick = (item: string) => {
     switch (item) {
       case "Dashboard":
-        router.push("/superadmin/dashboard");
+        router.push("/admin/dashboard");
         break;
-      case "Users":
-        router.push("/superadmin/users");
+      case "All Users":
+        router.push("/admin/users");
         break;
-      case "Schools":
-        router.push("/superadmin/schools");
+      case "Students":
+        router.push("/admin/students");
+        break;
+      case "Admissions":
+        router.push("/admin/admissions");
+        break;
+      case "Attendance":
+        router.push("/admin/attendance");
+        break;
+      case "Settings":
+        router.push("/admin/settings");
         break;
     }
     setIsSidebarOpen(false);
@@ -88,14 +117,14 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     <div className="flex flex-row mx-auto w-full min-h-screen max-w-none bg-zinc-100 max-md:flex-col max-md:max-w-[991px] max-sm:max-w-screen-sm">
       {/* Sidebar for large screens */}
       <div className="hidden h-screen md:flex sticky top-0 overflow-y-auto bg-[#D9CDE2]">
-        <Sidebar activeItem={activeMenuItem} sidebarItems={sidebarItems} onItemChange={handleSidebarClick} />
+        <Sidebar activeItem={activeMenuItem} sidebarItems={sidebarItems} onItemChange={handleSidebarClick}  isSchoolAdminDashboard={true}/>
       </div>
 
       {/* Sidebar Overlay for small screens */}
       {isSidebarOpen && (
         <div className="fixed inset-0 z-50 flex min-h-[100%]">
           <div className="bg-[#D9CDE2] w-64 h-full shadow-lg overflow-y-auto">
-            <Sidebar activeItem={activeMenuItem} sidebarItems={sidebarItems} onItemChange={handleSidebarClick} />
+            <Sidebar activeItem={activeMenuItem} sidebarItems={sidebarItems} onItemChange={handleSidebarClick} isSchoolAdminDashboard={true}/>
           </div>
           {/* Backdrop */}
           <div className="flex-1 bg-black/50" onClick={() => setIsSidebarOpen(false)} />

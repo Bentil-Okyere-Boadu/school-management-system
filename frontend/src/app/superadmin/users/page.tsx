@@ -28,7 +28,8 @@ const UsersPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-    const { adminUsers, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery));
+  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery));
+
   const statusOptions = [
     { value: "active", label: "Active" },
     { value: "in-active", label: "Inactive" },
@@ -102,7 +103,7 @@ const UsersPage: React.FC = () => {
 
       <Pagination
         currentPage={currentPage}
-        totalPages={10}
+        totalPages={paginationValues?.totalPages || 1}
         onPageChange={handlePageChange}
       />
 
