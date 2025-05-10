@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { handleLoginRedirectAndToken } from "@/middleware";
 import { Roles } from "@/@types";
+import { useAppContext } from "@/context/AppContext";
 
 const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -17,6 +18,8 @@ const LoginCard: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
 
+  // To set the user data
+  const { setLoggedInUser } = useAppContext();
   useEffect(() => {
     getLoginUrl()
   }, [])
@@ -41,6 +44,8 @@ const LoginCard: React.FC = () => {
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
+        console.log(data)
+        setLoggedInUser(data.data);
         handleLoginRedirectAndToken(data, router);
       },
     });

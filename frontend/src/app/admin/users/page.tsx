@@ -1,5 +1,5 @@
 "use client";
-import React, { ChangeEvent, useState } from "react";
+import React, { useState } from "react";
 import { Pagination } from "@/components/common/Pagination";
 import { UserTable } from "@/components/superadmin/users/UsersTable";
 import { SearchBar } from "@/components/common/SearchBar";

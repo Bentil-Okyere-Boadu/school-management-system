@@ -64,7 +64,7 @@ export const useGetFeeStructure = () => {
 
  export const useCreateSchool = () => {
     return useMutation({ 
-        mutationFn: (schoolDetails) => {
+        mutationFn: (schoolDetails: {name: string, address: string, phone: string, email: string}) => {
             return customAPI.post(`/schools/create`, schoolDetails);
         }
     })
