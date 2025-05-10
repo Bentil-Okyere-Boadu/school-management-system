@@ -11,11 +11,16 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SchoolAdminLocalAuthGuard } from './guards/school-admin-local-auth.guard';
 import { SchoolAdmin } from './school-admin.entity';
+import { SchoolAdminService } from './school-admin.service';
+import { CurrentUser } from 'src/user/current-user.decorator';
+import { SchoolAdminJwtAuthGuard } from './guards/school-admin-jwt-auth.guard';
+import { Roles } from 'src/auth/roles.decorator';
 
 @Controller('school-admin')
 export class SchoolAdminController {
   constructor(
     private readonly schoolAdminAuthService: SchoolAdminAuthService,
+    private readonly schoolAdminService: SchoolAdminService,
   ) {}
 
   @UseGuards(SchoolAdminLocalAuthGuard)
@@ -43,4 +48,11 @@ export class SchoolAdminController {
   // getProfile(@Request() req) {
   //   // return req.user;
   // }
+
+  @UseGuards(SchoolAdminJwtAuthGuard)
+  @Get('my-school')
+  @Roles('school_admin')
+  getMySchool(@CurrentUser() user: SchoolAdmin) {
+    return this.schoolAdminService.getMySchool(user);
+  }
 }
