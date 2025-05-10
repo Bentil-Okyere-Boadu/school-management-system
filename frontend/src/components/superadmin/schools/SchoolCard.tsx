@@ -9,6 +9,7 @@ interface SchoolCardProps {
   logoUrl: string;
   textColor?: string;
   showSchoolName?: boolean,
+  schoolId?: number
   onNavigateToSchoolDetail?: (schoolId: number) => void;
 }
 
@@ -18,10 +19,12 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
   logoUrl,
   textColor = "text-zinc-700",
   showSchoolName = true,
-  onNavigateToSchoolDetail = () => {},
+  schoolId = 0,
+  onNavigateToSchoolDetail,
 }) => {
   return (
-    <article onClick={onNavigateToSchoolDetail}
+    <article
+      onClick={() => onNavigateToSchoolDetail && onNavigateToSchoolDetail(schoolId)}
       className={`overflow-hidden grow shrink self-stretch my-auto ${backgroundColor} rounded-xl max-w-[164px] ${textColor} cursor-pointer hover:shadow-sm`}
     >
       <div className="flex relative flex-col px-3.5 py-2.5 aspect-[1.065] w-[164px] max-md:px-5">
