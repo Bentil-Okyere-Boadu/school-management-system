@@ -22,6 +22,7 @@ import { ActiveUserGuard } from '../auth/guards/active-user.guard';
 import { ForgotPinDto } from './dto/forgot-pin.dto';
 import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
+import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 
 @Controller('invitations')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -50,7 +51,7 @@ export class InvitationController {
   }
 
   // School admin endpoints
-  @UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles('school_admin')
   @Post('student')
   inviteStudent(

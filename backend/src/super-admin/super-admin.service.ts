@@ -8,9 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SuperAdmin } from './super-admin.entity';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
-import { UpdateSuperAdminDto } from './dto/update-super-admin.dto';
 import { Role } from '../role/role.entity';
-import { AuthService } from 'src/auth/auth.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { APIFeatures, QueryString } from '../common/api-features/api-features';
 import { School } from 'src/school/school.entity';
@@ -25,9 +23,6 @@ export class SuperAdminService {
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
-    @InjectRepository(Role)
-    private roleRepository: Repository<Role>,
-    private superAdminAuthService: AuthService,
   ) {}
 
   async findAllUsers(queryString: QueryString) {
@@ -80,18 +75,32 @@ export class SuperAdminService {
 
     return await features.getQuery().getMany();
   }
+  async getMe(user: SuperAdmin): Promise<SuperAdmin> {
+    const superAdmin = await this.superAdminRepository.findOne({
+      where: { id: user.id },
+      relations: ['role'],
+    });
+
+    if (!superAdmin) {
+      throw new NotFoundException(
+        `Super Admin with ID ${superAdmin} not found`,
+      );
+    }
+
+    return superAdmin;
+  }
 
   async findOne(id: string) {
-    const superAdmin = await this.adminRepository.findOne({
+    const admin = await this.adminRepository.findOne({
       where: { id },
       relations: ['role', 'school'],
     });
 
-    if (!superAdmin) {
+    if (!admin) {
       throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
-    return superAdmin;
+    return admin;
   }
 
   async findByEmail(email: string): Promise<SuperAdmin | null> {
@@ -113,64 +122,6 @@ export class SuperAdminService {
     // Create super admin with provided role
     const superAdmin = this.superAdminRepository.create(data);
     return this.superAdminRepository.save(superAdmin);
-  }
-
-  async update(
-    id: string,
-    updateSuperAdminDto: UpdateSuperAdminDto,
-  ): Promise<SuperAdmin> {
-    const superAdmin = await this.findOne(id);
-
-    // If updating email, check if it already exists
-    if (
-      updateSuperAdminDto.email &&
-      updateSuperAdminDto.email !== superAdmin.email
-    ) {
-      const existingAdmin = await this.findByEmail(updateSuperAdminDto.email);
-      if (existingAdmin) {
-        throw new ConflictException(
-          'Super Admin with this email already exists',
-        );
-      }
-    }
-
-    // If updating password, hash it
-    if (updateSuperAdminDto.password) {
-      updateSuperAdminDto.password =
-        await this.superAdminAuthService.hashPassword(
-          updateSuperAdminDto.password,
-        );
-    }
-
-    // If updating role, find the new role
-    let role: Role | null = superAdmin.role;
-    if (updateSuperAdminDto.roleId) {
-      role = await this.roleRepository.findOne({
-        where: { id: updateSuperAdminDto.roleId },
-      });
-
-      if (!role) {
-        throw new NotFoundException(
-          `Role with ID ${updateSuperAdminDto.roleId} not found`,
-        );
-      }
-    }
-
-    const { roleId, ...superAdminData } = updateSuperAdminDto;
-
-    // Update super admin
-    const updatedSuperAdmin = this.superAdminRepository.merge(
-      superAdmin,
-      superAdminData,
-    );
-    updatedSuperAdmin.role = role;
-
-    return this.superAdminRepository.save(updatedSuperAdmin);
-  }
-
-  async remove(id: string): Promise<void> {
-    const superAdmin = await this.findOne(id);
-    await this.superAdminRepository.remove(superAdmin);
   }
 
   async archive(id: string, archive: boolean) {

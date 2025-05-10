@@ -42,4 +42,13 @@ export class SuperAdmin {
 
   @Column({ nullable: true })
   resetPasswordExpires: Date;
+
+  @Column({ nullable: true })
+  phoneNumber: string;
+
+  @Column({ nullable: true })
+  profilePic: string;
+
+  @Column({ nullable: true })
+  bio: string;
 }

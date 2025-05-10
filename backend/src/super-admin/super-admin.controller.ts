@@ -4,18 +4,17 @@ import {
   Body,
   Param,
   Put,
-  Delete,
   UseGuards,
   Query,
 } from '@nestjs/common';
 import { SuperAdminService } from './super-admin.service';
-import { UpdateSuperAdminDto } from './dto/update-super-admin.dto';
 import { SuperAdmin } from './super-admin.entity';
 import { SuperAdminJwtAuthGuard } from './guards/super-admin-jwt-auth.guard';
 import { Roles } from 'src/auth/roles.decorator';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { QueryString } from 'src/common/api-features/api-features';
+import { CurrentUser } from 'src/user/current-user.decorator';
 
 @Controller('super-admin')
 export class SuperAdminController {
@@ -35,7 +34,7 @@ export class SuperAdminController {
   }
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('/admin/:id')
-  async findOne(@Param('id') id: string): Promise<SuperAdmin> {
+  async findOne(@Param('id') id: string) {
     return this.superAdminService.findOne(id);
   }
 
@@ -46,30 +45,17 @@ export class SuperAdminController {
     return this.superAdminService.findAllArchivedUsers(query);
   }
 
-  //
-  //TODO: ADD endpoints
-  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateSuperAdminDto: UpdateSuperAdminDto,
-  ): Promise<SuperAdmin> {
-    return this.superAdminService.update(id, updateSuperAdminDto);
-  }
-
-  //TODO: ADD endpoints
-  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Delete(':id')
-  async remove(@Param('id') id: string): Promise<void> {
-    return this.superAdminService.remove(id);
-  }
-
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('/admin/:id/archive')
-  async archive(
-    @Param('id') id: string,
-    @Body() body: { archive: boolean },
-  ): Promise<SuperAdmin> {
+  @Roles('super_admin')
+  async archive(@Param('id') id: string, @Body() body: { archive: boolean }) {
     return this.superAdminService.archive(id, body.archive);
+  }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('/me')
+  @Roles('super_admin')
+  async getMe(@CurrentUser() user: SuperAdmin) {
+    return this.superAdminService.getMe(user);
   }
 }

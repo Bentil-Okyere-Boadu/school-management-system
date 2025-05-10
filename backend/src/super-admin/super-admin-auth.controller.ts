@@ -6,7 +6,7 @@ import { SuperAdmin } from './super-admin.entity';
 
 @Controller('super-admin/auth')
 export class SuperAdminAuthController {
-  constructor(private superAdminAuthService: SuperAdminAuthService) {}
+  constructor(private readonly superAdminAuthService: SuperAdminAuthService) {}
 
   @UseGuards(SuperAdminLocalAuthGuard)
   @Post('login')

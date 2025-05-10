@@ -36,8 +36,6 @@ export class InvitationService {
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
-    @InjectRepository(School)
-    private schoolRepository: Repository<School>,
     private emailService: EmailService,
   ) {}
 
