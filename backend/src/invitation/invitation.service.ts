@@ -24,6 +24,7 @@ import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
+import { Student } from 'src/student/student.entity';
 
 @Injectable()
 export class InvitationService {
@@ -32,6 +33,8 @@ export class InvitationService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
     @InjectRepository(SchoolAdmin)
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Role)
@@ -105,7 +108,7 @@ export class InvitationService {
     const roleCode = '120';
 
     // Get sequential person ID (count students in this school + 1)
-    const studentCount = await this.userRepository.count({
+    const studentCount = await this.studentRepository.count({
       where: {
         school: { id: school.id },
         role: { name: 'student' },
@@ -178,7 +181,7 @@ export class InvitationService {
     const roleCode = '110';
 
     // Get sequential person ID (count admins in this school + 1)
-    const adminCount = await this.userRepository.count({
+    const adminCount = await this.adminRepository.count({
       where: {
         school: { id: school.id },
         role: { name: 'school_admin' },
@@ -248,8 +251,9 @@ export class InvitationService {
    */
   async inviteStudent(
     inviteStudentDto: InviteStudentDto,
-    adminUser: User,
+    adminUser: SchoolAdmin,
   ): Promise<User> {
+    console.log('Admin User:', adminUser);
     if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite students');
     }
@@ -258,7 +262,7 @@ export class InvitationService {
       throw new UnauthorizedException('Admin not associated with any school');
     }
 
-    const existingUser = await this.userRepository.findOne({
+    const existingUser = await this.studentRepository.findOne({
       where: { email: inviteStudentDto.email },
     });
 
@@ -281,13 +285,12 @@ export class InvitationService {
     const invitationExpires = new Date();
     invitationExpires.setHours(invitationExpires.getHours() + 24);
 
-    const studentUser = this.userRepository.create({
+    const studentUser = this.studentRepository.create({
       name: inviteStudentDto.name,
       email: inviteStudentDto.email,
       password: await bcrypt.hash(pin, 10), // PIN is used as initial password
       role: studentRole,
       school: adminUser.school,
-      status: 'pending',
       invitationToken: uuidv4(),
       invitationExpires,
       isInvitationAccepted: false,
@@ -476,7 +479,7 @@ export class InvitationService {
     student.invitationExpires = this.calculateTokenExpiration();
     student.password = await bcrypt.hash(pin, 10);
 
-    const updatedStudent = await this.userRepository.save(student);
+    const updatedStudent = await this.studentRepository.save(student);
 
     try {
       await this.emailService.sendStudentInvitation(

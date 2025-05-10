@@ -16,6 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from 'src/common/services/email.service';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { Student } from 'src/student/student.entity';
 
 @Injectable()
 export class AuthService {
@@ -39,15 +40,16 @@ export class AuthService {
     return bcrypt.hash(password, 10);
   }
 
-  generateToken(payload: { [key: string]: string }): string {
+  generateToken(payload: { [key: string]: any }): string {
     return this.jwtService.sign(payload);
   }
 
-  createAuthResponse(entity: SuperAdmin | SchoolAdmin | User) {
+  createAuthResponse(entity: SuperAdmin | SchoolAdmin | User | Student) {
     const payload = {
       email: entity.email,
       sub: entity.id,
       role: entity.role?.name,
+      //schoolId: entity?.school?.id,
     };
 
     return {
