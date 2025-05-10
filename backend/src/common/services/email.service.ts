@@ -203,7 +203,7 @@ export class EmailService {
     email: string,
     resetToken: string,
   ): Promise<void> {
-    const resetLink = `${this.frontendUrl}/auth/forgotPassword/resetPassword?token=${resetToken}`;
+    const resetLink = `${this.frontendUrl}/auth/complete-registration?token=${resetToken}`;
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
