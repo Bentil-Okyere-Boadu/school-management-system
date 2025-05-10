@@ -84,4 +84,11 @@ export class SchoolAdminController {
   getProfile(@CurrentUser() admin: SchoolAdmin) {
     return admin;
   }
+
+  @UseGuards(SchoolAdminJwtAuthGuard)
+  @Get('my-school')
+  @Roles('school_admin')
+  getMySchool(@CurrentUser() user: SchoolAdmin) {
+    return this.schoolAdminService.getMySchool(user);
+  }
 }

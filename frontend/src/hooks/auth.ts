@@ -4,8 +4,8 @@ import { AuthCredentials } from "@/@types"
 
 export const useLogin = (userDetails: AuthCredentials) => {
     return useMutation({ 
-        mutationFn: () => {
-            return customAPI.post(`/super-admin/auth/login`, userDetails)
+        mutationFn: (url: string) => {
+            return customAPI.post(url, userDetails)
         }
     })
 }
@@ -30,6 +30,14 @@ export const usePasswordReset = (payload: {token: string, password: string}) => 
     return useMutation({ 
         mutationFn: () => {
             return customAPI.post(`/super-admin/auth/reset-password`, { token: payload.token, password: payload.password})
+        }
+    })
+}
+
+export const useCompleteRegistration = (payload: {token: string, password: string}) => {
+    return useMutation({ 
+        mutationFn: () => {
+            return customAPI.post(`/invitations/complete-registration`, { token: payload.token, password: payload.password})
         }
     })
 }
