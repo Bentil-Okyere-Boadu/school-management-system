@@ -52,6 +52,7 @@ export class SchoolAdmin {
 
   @Column({ default: false })
   isArchived: boolean;
+
   @Column({ nullable: true, unique: true })
   adminId: string;
 

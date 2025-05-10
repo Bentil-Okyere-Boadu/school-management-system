@@ -1,14 +1,46 @@
-import { Controller, UseGuards, UseInterceptors } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { ActiveUserGuard } from '../auth/guards/active-user.guard';
-import { SanitizeResponseInterceptor } from '../common/interceptors/sanitize-response.interceptor';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Get,
+} from '@nestjs/common';
+import { SchoolAdminAuthService } from './school-admin-auth.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SchoolAdminLocalAuthGuard } from './guards/school-admin-local-auth.guard';
+import { SchoolAdmin } from './school-admin.entity';
 
 @Controller('school-admin')
-@UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
-@Roles('school_admin')
-@UseInterceptors(SanitizeResponseInterceptor)
 export class SchoolAdminController {
-  constructor() {}
+  constructor(
+    private readonly schoolAdminAuthService: SchoolAdminAuthService,
+  ) {}
+
+  @UseGuards(SchoolAdminLocalAuthGuard)
+  @Post('login')
+  login(@Request() req: { user: SchoolAdmin }) {
+    return this.schoolAdminAuthService.login(req.user);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.schoolAdminAuthService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.schoolAdminAuthService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.password,
+    );
+  }
+
+  // @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  // @Get('profile')
+  // @Roles('school_admin')
+  // getProfile(@Request() req) {
+  //   // return req.user;
+  // }
 }
