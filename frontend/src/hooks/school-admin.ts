@@ -72,7 +72,7 @@ export const useGetFeeStructure = () => {
 
 export const useInvitation = (role: string) => {
     return useMutation({
-        mutationFn: (inviteDetails: {name:string, email: string, roleId: string}) => {
+        mutationFn: (inviteDetails: {name:string, email: string}) => {
             return customAPI.post(`/invitations/${role}`, inviteDetails);
         }
     })

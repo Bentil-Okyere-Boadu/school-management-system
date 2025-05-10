@@ -11,8 +11,8 @@ import { Select } from '@mantine/core';
 import InputField from "@/components/InputField";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
-import { getRoleId } from "@/utils/roles";
-import { useAppContext } from "@/context/AppContext";
+// import { getRoleId } from "@/utils/roles";
+// import { useAppContext } from "@/context/AppContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebouncer } from "@/hooks/generalHooks";
 import { useGetSchoolUsers, useInvitation } from "@/hooks/school-admin";
@@ -53,7 +53,7 @@ const UsersPage: React.FC = () => {
     console.log("Selected:", selectedValue);
   };
 
-  const { roles: Roles } = useAppContext();
+  // const { roles: Roles } = useAppContext();
 
 
   const handleRoleDataChange = (value: string) => {
@@ -65,7 +65,7 @@ const UsersPage: React.FC = () => {
 
   const inviteUser = () => {
     if(userName && email) {
-      invitation({ name: userName, email: email, roleId: getRoleId(Roles, selectedDataRole)}, {
+      invitation({ name: userName, email: email }, {
         onSuccess: () => {
           toast.success('Invitation sent successfully.');
           setSelectedDataRole("");
