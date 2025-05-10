@@ -1,9 +1,60 @@
-import React from 'react'
+"use client";
+import React, { useState } from "react";
+import TabBar from "@/components/common/TabBar";
+import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
+import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
+import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
 
-const Settings = () => {
+export type TabListItem = {
+  tabLabel: string;
+  tabKey: string;
+};
+
+
+const AdminSchoolPage: React.FC = () => {
+
+  const [activeTabKey, setActiveTabKey] = useState('school-settings');
+
+  const handleItemClick = (item: TabListItem) => {
+    setActiveTabKey(item.tabKey);
+  };
+
+  const defaultNavItems: TabListItem[] = [
+    { tabLabel: "School Settings", tabKey: "school-settings" },
+    { tabLabel: "Configuration", tabKey: "configuration" },
+    { tabLabel: "Profile", tabKey: "profile" },
+  ];
+
+
   return (
-    <div>Settings</div>
-  )
-}
+    <div className="px-0.5">
+        <TabBar 
+          items={defaultNavItems} 
+          activeTabKey={activeTabKey} 
+          onItemClick={handleItemClick} // triggered from the child, it will in return trigger handleItemClick function
+        />
+  
+        {activeTabKey === "school-settings" && (
+          <div>
+            <SchoolSettingsTabSection />
+          </div>
+        )}
 
-export default Settings
+        {activeTabKey === "configuration" && (
+          <div>
+            <ConfigurationTabSection />
+          </div>
+        )}
+
+        {activeTabKey === "profile" && (
+          <div>
+            <ProfileTabSection />
+          </div>
+        )}
+
+
+    </div>
+  );
+};
+
+export default AdminSchoolPage;

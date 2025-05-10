@@ -1,31 +1,43 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import InputField from "../InputField";
 import ActionButton from "../ActionButton";
 import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { handleLoginRedirectAndToken } from "@/middleware";
+import { Roles } from "@/@types";
 
-interface LoginCardProps {
-  user?: string;
-}
-
-const LoginCard: React.FC = ({ user }: LoginCardProps) => {
+const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [user, setUser] = useState("")
   const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    getLoginUrl()
+  }, [])
+  
+  const getLoginUrl = () => {
+    if(pathname.includes('school-admin')){
+      setUser('admin');
+      return '/school-admin/login'
+    } else if(pathname.includes('teacher')) {
+      setUser(Roles.STUDENT);
+      return '/teacher/login'
+    } else return '/super-admin/auth/login';
+  }
 
   const { mutate, isPending } = useLogin({ email, password });
 
   const handleSignIn = () => {
     // Handle sign in logic here
-    mutate(null as unknown as void, {
-      onError: (error: AxiosError) => {
-        toast.error(error.response.data.message);
-        console.log(error);
+    mutate(getLoginUrl(), {
+      onError: (error) => {
+        toast.error((error as AxiosError).response.data.message);
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
@@ -42,14 +54,14 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
       </p>
 
       <InputField
-        label={user ? "ID or Email" : "Email"}
+        label={user === Roles.TEACHER || user === Roles.STUDENT ? "ID or Email" : "Email"}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         type="email"
       />
 
       <InputField
-        label={user ? "PIN" : "Password"}
+        label={user === Roles.TEACHER || user === Roles.STUDENT  ? "PIN" : "Password"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         type="password"
@@ -58,7 +70,7 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
 
       <Link href={user? `/auth/${user}/forgotPassword` : "/auth/forgotPassword"} className="w-[100px]">
         <p className="mt-3.5 text-xs text-right underline text-zinc-600 block ">
-          Forgot {user ? "PIN" : "Password"}?
+          Forgot {user === Roles.TEACHER || user === Roles.STUDENT ? "PIN" : "Password"}?
         </p>
       </Link>
 
@@ -70,7 +82,7 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
         />
       </div>
 
-      {user === "teacher" ? (
+      {user === Roles.TEACHER ? (
         <>
           <p className="mt-11 text-xs text-center text-zinc-600">
             Forgot Credentials?{" "}
