@@ -12,17 +12,28 @@ import { Role } from 'src/role/role.entity';
 import { School } from 'src/school/school.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { InvitationModule } from 'src/invitation/invitation.module';
+import { UserModule } from '../user/user.module';
+import { SchoolAdminModule } from '../school-admin/school-admin.module';
+import { SuperAdminModule } from '../super-admin/super-admin.module';
+import { StudentModule } from '../student/student.module';
+import { StudentLocalStrategy } from './strategies/student-local.strategy';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Role, School]),
+    UserModule,
+    SchoolAdminModule,
+    SuperAdminModule,
+    StudentModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1d' },
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'secret_key',
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRES') || '1d',
+        },
       }),
     }),
     ConfigModule,
@@ -34,7 +45,9 @@ import { InvitationModule } from 'src/invitation/invitation.module';
     JwtStrategy,
     ConfigService,
     EmailService,
+    StudentLocalStrategy,
   ],
   controllers: [AuthController],
+  exports: [AuthService],
 })
 export class AuthModule {}

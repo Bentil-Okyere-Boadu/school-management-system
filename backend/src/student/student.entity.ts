@@ -4,14 +4,14 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
-  JoinColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { School } from '../school/school.entity';
-import { Role } from 'src/role/role.entity';
+import { Role } from '../role/role.entity';
 
 @Entity()
-export class SchoolAdmin {
+export class Student {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -21,15 +21,21 @@ export class SchoolAdmin {
   @Column({ unique: true })
   email: string;
 
-  @Column({ nullable: true })
-  password: string;
-
-  @Column({ default: 'pending' })
-  status: string;
+  @Column()
+  password: string; // For PIN storage
 
   @ManyToOne(() => Role, { eager: true })
   @JoinColumn()
   role: Role;
+
+  @ManyToOne(() => School, (school) => school.students, {
+    //onDelete: 'CASCADE',
+    eager: true,
+  })
+  school: School;
+
+  @Column({ default: 'pending' })
+  status: string;
 
   @Column({ nullable: true })
   invitationToken: string;
@@ -43,20 +49,14 @@ export class SchoolAdmin {
   @Column({ nullable: true })
   resetPasswordToken: string;
 
-  @ManyToOne(() => School, (school) => school.admins, {
-    // onDelete: 'CASCADE',
-    eager: true,
-  })
-  school: School;
-
   @Column({ nullable: true })
   resetPasswordExpires: Date;
 
+  @Column({ unique: true })
+  studentId: string; // Custom generated ID for student login
+
   @Column({ default: false })
   isArchived: boolean;
-
-  @Column({ nullable: true, unique: true })
-  adminId: string;
 
   @CreateDateColumn()
   createdAt: Date;

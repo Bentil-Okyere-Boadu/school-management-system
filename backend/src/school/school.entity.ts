@@ -15,6 +15,7 @@ import { FeeStructure } from '../fee-structure/fee-structure.entity';
 import { AcademicCalendar } from '../academic-calendar/academic-calendar.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { Student } from 'src/student/student.entity';
 
 @Entity()
 export class School {
@@ -45,6 +46,9 @@ export class School {
 
   @OneToMany(() => User, (user) => user.school)
   users: User[];
+
+  @OneToMany(() => Student, (student) => student.school)
+  students: Student[];
 
   @OneToMany(() => ClassLevel, (classLevel) => classLevel.school)
   classLevels: ClassLevel[];
