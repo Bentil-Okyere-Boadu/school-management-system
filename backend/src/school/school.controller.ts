@@ -10,16 +10,17 @@ import {
 } from '@nestjs/common';
 import { SchoolService } from './school.service';
 import { School } from './school.entity';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/user.entity';
+import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 @Controller('schools')
-@UseGuards(JwtAuthGuard, ActiveUserGuard, RolesGuard)
+@UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}
 
@@ -27,11 +28,11 @@ export class SchoolController {
    * Create a new school
    * School admins can create one school and will be associated with it
    */
-  @Post()
+  @Post('/create')
   @Roles('school_admin')
   create(
     @Body() createSchoolDto: CreateSchoolDto,
-    @CurrentUser() user: User,
+    @CurrentUser() user: SchoolAdmin,
   ): Promise<School> {
     return this.schoolService.create(createSchoolDto, user);
   }
