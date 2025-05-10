@@ -12,8 +12,8 @@ import { EmailModule } from '../common/modules/email.module';
 import { SchoolAdminLocalStrategy } from './strategies/school-admin-local.strategy';
 import { SchoolAdminJwtStrategy } from './strategies/school-admin-jwt.strategy';
 import { AuthService } from 'src/auth/auth.service';
-import { User } from 'src/user/user.entity';
 import { Role } from 'src/role/role.entity';
+import { User } from 'src/user/user.entity';
 
 @Module({
   imports: [

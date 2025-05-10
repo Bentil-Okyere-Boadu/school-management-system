@@ -162,7 +162,10 @@ export class InvitationService {
    * 110 = role code (110 for admin)
    * 12345 = 5-digit person ID
    */
-  async generateAdminId(school: School, existingUser?: User): Promise<string> {
+  async generateAdminId(
+    school: School,
+    existingUser?: SchoolAdmin,
+  ): Promise<string> {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
