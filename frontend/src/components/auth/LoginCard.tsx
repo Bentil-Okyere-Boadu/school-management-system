@@ -4,7 +4,7 @@ import InputField from "../InputField";
 import ActionButton from "../ActionButton";
 import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { handleLoginRedirectAndToken } from "@/middleware";
@@ -17,15 +17,23 @@ const LoginCard: React.FC = ({ user }: LoginCardProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
+  
+  const getLoginUrl = () => {
+    if(pathname.includes('school-admin')){
+      return '/school-admin/login'
+    } else if(pathname.includes('teacher')) {
+      return '/teacher/login'
+    } else return '/super-admin/auth/login';
+  }
 
   const { mutate, isPending } = useLogin({ email, password });
 
   const handleSignIn = () => {
     // Handle sign in logic here
-    mutate(null as unknown as void, {
-      onError: (error: AxiosError) => {
-        toast.error(error.response.data.message);
-        console.log(error);
+    mutate(getLoginUrl(), {
+      onError: (error) => {
+        toast.error((error as AxiosError).response.data.message);
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
