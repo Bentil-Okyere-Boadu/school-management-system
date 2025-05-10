@@ -44,6 +44,7 @@ export class SchoolAdminJwtStrategy extends PassportStrategy(
       name: schoolAdmin.name,
       status: schoolAdmin.status,
       role: schoolAdmin.role,
+      school: schoolAdmin.school,
       schoolId: schoolAdmin.school?.id,
     };
   }

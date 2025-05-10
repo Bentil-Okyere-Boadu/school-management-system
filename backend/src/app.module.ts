@@ -15,6 +15,9 @@ import { AdmissionPolicyModule } from './admission-policy/admission-policy.modul
 import { InvitationModule } from './invitation/invitation.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
 import { SchoolAdminModule } from './school-admin/school-admin.module';
+import { ClassLevelModule } from './class-level/class-level.module';
+import { AcademicCalendarModule } from './academic-calendar/academic-calendar.module';
+import { ProfileModule } from './profile/profile.module';
 
 @Module({
   imports: [
@@ -45,6 +48,9 @@ import { SchoolAdminModule } from './school-admin/school-admin.module';
     InvitationModule,
     SuperAdminModule,
     SchoolAdminModule,
+    ClassLevelModule,
+    AcademicCalendarModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
