@@ -5,17 +5,30 @@ import {
   UseGuards,
   Request,
   Get,
+  Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
+import { SchoolAdminService } from './school-admin.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SchoolAdminLocalAuthGuard } from './guards/school-admin-local-auth.guard';
 import { SchoolAdmin } from './school-admin.entity';
+import { SchoolAdminJwtAuthGuard } from './guards/school-admin-jwt-auth.guard';
+import { ActiveUserGuard } from '../auth/guards/active-user.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../user/current-user.decorator';
+import { QueryString } from '../common/api-features/api-features';
+import { SanitizeResponseInterceptor } from 'src/common/interceptors/sanitize-response.interceptor';
+import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
 
 @Controller('school-admin')
+@UseInterceptors(SanitizeResponseInterceptor)
 export class SchoolAdminController {
   constructor(
     private readonly schoolAdminAuthService: SchoolAdminAuthService,
+    private readonly schoolAdminService: SchoolAdminService,
   ) {}
 
   @UseGuards(SchoolAdminLocalAuthGuard)
@@ -37,10 +50,38 @@ export class SchoolAdminController {
     );
   }
 
-  // @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  // @Get('profile')
-  // @Roles('school_admin')
-  // getProfile(@Request() req) {
-  //   // return req.user;
-  // }
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('users')
+  @Roles('school_admin')
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
+  findAllUsers(@CurrentUser() admin: SchoolAdmin, @Query() query: QueryString) {
+    return this.schoolAdminService.findAllUsers(admin.school.id, query);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('students')
+  @Roles('school_admin')
+  async findAllStudents(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
+  ) {
+    return this.schoolAdminService.findAllStudents(admin.school.id, query);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('teachers')
+  @Roles('school_admin')
+  async findAllTeachers(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
+  ) {
+    return this.schoolAdminService.findAllTeachers(admin.school.id, query);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('me')
+  @Roles('school_admin')
+  getProfile(@CurrentUser() admin: SchoolAdmin) {
+    return admin;
+  }
 }

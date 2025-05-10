@@ -7,11 +7,14 @@ import { InvitationService } from './invitation.service';
 import { InvitationController } from './invitation.controller';
 import { EmailModule } from '../common/modules/email.module';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { StudentModule } from 'src/student/student.module';
+import { Student } from 'src/student/student.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, School, SchoolAdmin]),
+    TypeOrmModule.forFeature([User, Role, School, SchoolAdmin, Student]),
     EmailModule,
+    StudentModule,
   ],
   providers: [InvitationService],
   controllers: [InvitationController],

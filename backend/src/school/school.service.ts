@@ -34,7 +34,15 @@ export class SchoolService {
     }
 
     const school = this.schoolRepository.create(createSchoolDto);
+
     const savedSchool = await this.schoolRepository.save(school);
+    if (!savedSchool.schoolCode) {
+      savedSchool.schoolCode = savedSchool.id
+        .toString()
+        .padStart(5, '0')
+        .substring(0, 5);
+      await this.schoolRepository.save(savedSchool); // Update schoolCode
+    }
 
     adminUser.school = savedSchool;
 

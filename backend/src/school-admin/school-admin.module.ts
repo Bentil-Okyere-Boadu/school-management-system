@@ -14,10 +14,11 @@ import { SchoolAdminJwtStrategy } from './strategies/school-admin-jwt.strategy';
 import { AuthService } from 'src/auth/auth.service';
 import { Role } from 'src/role/role.entity';
 import { User } from 'src/user/user.entity';
+import { Student } from 'src/student/student.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SchoolAdmin, Role, School, User]),
+    TypeOrmModule.forFeature([SchoolAdmin, Role, School, User, Student]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

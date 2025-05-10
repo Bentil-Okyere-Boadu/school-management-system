@@ -5,6 +5,7 @@ import { User } from '../../user/user.entity';
 import { EmailException } from '../exceptions/email.exception';
 import { BaseException } from '../exceptions/base.exception';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { Student } from 'src/student/student.entity';
 
 /**
  * Email templates
@@ -94,7 +95,7 @@ export class EmailService {
   }
 
   async sendStudentInvitation(
-    user: User,
+    student: Student,
     studentId: string,
     pin: string,
   ): Promise<void> {
@@ -103,20 +104,20 @@ export class EmailService {
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
-        to: user.email,
+        to: student.email,
         subject: 'Your Student Account for School Management System',
         html: this.getEmailTemplate(EmailTemplate.STUDENT_INVITATION, {
-          name: user.name,
+          name: student.name,
           studentId,
           pin,
           loginLink,
-          school: user.school?.name || 'your school',
+          school: student.school?.name || 'your school',
         }),
       });
-      this.logger.log(`Student invitation email sent to ${user.email}`);
+      this.logger.log(`Student invitation email sent to ${student.email}`);
     } catch (error) {
       this.logger.error(
-        `Failed to send student invitation email to ${user.email}`,
+        `Failed to send student invitation email to ${student.email}`,
         error,
       );
       throw new EmailException(
@@ -264,25 +265,31 @@ export class EmailService {
 
   /**
    * Send PIN reset email to a student
-   * @param user The student user
+   * @param student The student user
    * @param pin The new PIN
    */
-  async sendStudentPinReset(user: User, pin: string): Promise<void> {
+  async sendStudentPinReset(
+    student: Student | User,
+    pin: string,
+  ): Promise<void> {
+    const loginLink = `${this.frontendUrl}/auth/login`;
+
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
-        to: user.email,
-        subject: 'Your PIN Has Been Reset - School Management System',
+        to: student.email,
+        subject: 'Your PIN Has Been Reset',
         html: this.getEmailTemplate(EmailTemplate.STUDENT_PIN_RESET, {
-          name: user.name,
+          name: student.name,
           pin,
-          studentId: user.studentId,
+          loginLink,
+          school: student.school?.name || 'your school',
         }),
       });
-      this.logger.log(`Student PIN reset email sent to ${user.email}`);
+      this.logger.log(`Student PIN reset email sent to ${student.email}`);
     } catch (error) {
       this.logger.error(
-        `Failed to send student PIN reset email to ${user.email}`,
+        `Failed to send student PIN reset email to ${student.email}`,
         error,
       );
       throw new EmailException(

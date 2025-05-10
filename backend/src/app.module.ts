@@ -18,6 +18,7 @@ import { SchoolAdminModule } from './school-admin/school-admin.module';
 import { ClassLevelModule } from './class-level/class-level.module';
 import { AcademicCalendarModule } from './academic-calendar/academic-calendar.module';
 import { ProfileModule } from './profile/profile.module';
+import { StudentModule } from './student/student.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ProfileModule } from './profile/profile.module';
     ClassLevelModule,
     AcademicCalendarModule,
     ProfileModule,
+    StudentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
