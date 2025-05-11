@@ -6,7 +6,7 @@ import React from 'react'
 
 const CompleteRegistrationPage = () => {
     const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get('token') || "";
 
   return (
     <AuthBg>
