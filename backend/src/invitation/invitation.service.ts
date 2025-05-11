@@ -468,58 +468,6 @@ export class InvitationService {
     return updatedAdmin;
   }
 
-  async resendStudentInvitation(email: string, adminUser: User): Promise<User> {
-    if (adminUser.role.name !== 'school_admin') {
-      throw new UnauthorizedException(
-        'Only school admins can resend invitations',
-      );
-    }
-
-    if (!adminUser.school) {
-      throw new UnauthorizedException('Admin not associated with any school');
-    }
-
-    // Find the student user
-    const student = await this.userRepository.findOne({
-      where: {
-        email,
-        role: { name: 'student' },
-        school: { id: adminUser.school.id },
-      },
-      relations: ['role', 'school'],
-    });
-
-    if (!student) {
-      throw new NotFoundException('Student not found in your school');
-    }
-
-    // Generate new PIN
-    const pin = this.generatePin();
-
-    student.invitationToken = uuidv4();
-    student.invitationExpires = this.calculateTokenExpiration();
-    student.password = await bcrypt.hash(pin, 10);
-
-    const updatedStudent = await this.studentRepository.save(student);
-
-    try {
-      await this.emailService.sendStudentInvitation(
-        updatedStudent,
-        updatedStudent.studentId,
-        pin,
-      );
-      this.logger.log(`Invitation resent to student ${email}`);
-    } catch (error) {
-      this.logger.error(`Failed to resend invitation to ${email}`, error);
-      throw new InvitationException(
-        `Failed to resend invitation: ${BaseException.getErrorMessage(error)}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-
-    return updatedStudent;
-  }
-
   /**
    * Resend invitation to a teacher - Used by school admin
    */

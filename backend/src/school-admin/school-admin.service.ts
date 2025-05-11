@@ -6,6 +6,7 @@ import { SchoolAdmin } from './school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { User } from 'src/user/user.entity';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
+import { School } from 'src/school/school.entity';
 @Injectable()
 export class SchoolAdminService {
   private readonly logger = new Logger(SchoolAdminService.name);
@@ -17,6 +18,8 @@ export class SchoolAdminService {
     private studentRepository: Repository<Student>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(School)
+    private schoolRepository: Repository<School>,
   ) {}
 
   async findAll(): Promise<SchoolAdmin[]> {
@@ -208,6 +211,29 @@ export class SchoolAdminService {
         teachersCount,
       },
     };
+  }
+  async getMySchoolWithRelations(user: SchoolAdmin) {
+    if (!user.school) {
+      throw new NotFoundException('School not found for this admin');
+    }
+
+    const school = await this.schoolRepository.findOne({
+      where: { id: user.school.id },
+      relations: [
+        'admissionPolicies',
+        'gradingSystems',
+        'feeStructures',
+        'profile',
+        'academicCalendars',
+        'classLevels',
+      ],
+    });
+
+    if (!school) {
+      throw new NotFoundException(`School with ID ${user.school.id} not found`);
+    }
+
+    return school;
   }
   getMySchool(user: SchoolAdmin) {
     if (!user.school) {

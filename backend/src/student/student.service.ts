@@ -192,7 +192,7 @@ export class StudentService {
    * Resend invitation to a student - Used by school admin
    */
   async resendStudentInvitation(
-    email: string,
+    userId: string,
     adminUser: SchoolAdmin,
   ): Promise<Student> {
     if (adminUser.role.name !== 'school_admin') {
@@ -208,14 +208,15 @@ export class StudentService {
     // Find the student user
     const student = await this.studentRepository.findOne({
       where: {
-        email,
+        id: userId,
+        status: 'pending',
         school: { id: adminUser.school.id },
       },
       relations: ['role', 'school'],
     });
 
     if (!student) {
-      throw new NotFoundException('Student not found in your school');
+      throw new NotFoundException('Pending student not found in your school');
     }
 
     // Generate new PIN
@@ -233,9 +234,12 @@ export class StudentService {
         updatedStudent.studentId,
         pin,
       );
-      this.logger.log(`Invitation resent to student ${email}`);
+      this.logger.log(`Invitation resent to student ${student.email}`);
     } catch (error) {
-      this.logger.error(`Failed to resend invitation to ${email}`, error);
+      this.logger.error(
+        `Failed to resend invitation to ${student.email}`,
+        error,
+      );
       throw new InvitationException(
         `Failed to resend invitation: ${BaseException.getErrorMessage(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,

@@ -77,12 +77,12 @@ export class InvitationController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles('school_admin')
-  @Post('student/resend')
+  @Post('student/resend/:userId')
   resendStudentInvitation(
-    @Body() dto: { email: string },
+    @Param('userId') userId: string,
     @CurrentUser() currentUser: SchoolAdmin,
   ) {
-    return this.studentService.resendStudentInvitation(dto.email, currentUser);
+    return this.studentService.resendStudentInvitation(userId, currentUser);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

@@ -61,6 +61,25 @@ export class SchoolService {
     return savedSchool;
   }
 
+  async findOneWithDetails(id: string): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id },
+      relations: [
+        'admissionPolicies',
+        'gradingSystems',
+        'feeStructures',
+        'profile',
+        'academicCalendars',
+        'classLevels',
+      ],
+    });
+
+    if (!school) {
+      throw new NotFoundException(`School with ID ${id} not found`);
+    }
+
+    return school;
+  }
   async findAll(): Promise<School[]> {
     return this.schoolRepository.find();
   }
@@ -78,23 +97,29 @@ export class SchoolService {
     return school;
   }
 
-  /**
-   * Find the school associated with a specific admin user
-   * @param adminUser The admin user
-   * @returns The school associated with the admin
-   */
-  async findByAdmin(adminUser: User): Promise<School> {
-    if (adminUser.role.name !== 'school_admin') {
-      throw new UnauthorizedException('User is not a school admin');
+  async getMySchoolWithRelations(user: SchoolAdmin) {
+    if (!user.school) {
+      throw new NotFoundException('School not found for this admin');
     }
 
-    if (!adminUser.school) {
-      throw new NotFoundException('Admin not associated with any school');
+    const school = await this.schoolRepository.findOne({
+      where: { id: user.school.id },
+      relations: [
+        'admissionPolicies',
+        'gradingSystems',
+        'feeStructures',
+        'profile',
+        'academicCalendars',
+        'classLevels',
+      ],
+    });
+
+    if (!school) {
+      throw new NotFoundException(`School with ID ${user.school.id} not found`);
     }
 
-    return this.findOne(adminUser.school.id);
+    return school;
   }
-
   async update(
     id: string,
     schoolData: Partial<School>,
