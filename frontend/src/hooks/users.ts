@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
+import { School } from "@/@types";
 
 export const useGetUsers = () => {
     const { data, isLoading } = useQuery({
@@ -84,4 +85,51 @@ export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: bo
             return customAPI.put(`/super-admin/admin/${id}/archive`, {archive: archiveState})
         }
     })
+}
+
+export const useGetAllSchools = (page=1,search: string = "", status: string = "", role: string = "" ) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['allSchools', { page, search, status, role }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+
+            if(status) {
+                queryBuilder.push(`status=${status}`);
+            }
+            
+            if(role) {
+                queryBuilder.push(`role=${role}`);
+            }
+            
+            if(page) {
+                queryBuilder.push(`page=${page}`);
+            }
+            
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+            
+            return customAPI.get(`/super-admin/admins/schools?${params}`);
+        },
+        refetchOnWindowFocus: true
+    });
+
+    const schools = data?.data as School[];
+    const paginationValues = data?.data.meta;
+    return { schools , isLoading, paginationValues, refetch }
+}
+
+export const useGetSchoolById = (id: string) => {
+    const { data, isPending} = useQuery({
+        queryKey: [id],
+        queryFn: () => {
+            return customAPI.get(`/super-admin/admins/schools/${id}`)
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const school = data?.data
+
+    return { school, isPending }
 }
