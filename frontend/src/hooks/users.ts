@@ -85,3 +85,11 @@ export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: bo
         }
     })
 }
+
+export const useResendAdminInvitation = ({id}: {id: string}) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.post(`/invitations/admin/resend/${id}`)
+        }
+    })
+}
