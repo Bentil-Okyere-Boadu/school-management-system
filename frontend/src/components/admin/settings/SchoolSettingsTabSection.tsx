@@ -7,11 +7,12 @@ import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import { GradingSystemTable } from "./GradingSystemTable";
 import SchoolCard from "@/components/common/SchoolCard";
-import DocumentItem from "@/components/common/DocumentItem";
+// import DocumentItem from "@/components/common/DocumentItem";
 import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
-import { useGetFeeStructure, useSaveFeeStructure } from "@/hooks/school-admin";
+import { useDeleteFeeStructure, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
+import { FeeStructure } from "@/@types";
 // import { FeeStructureTable } from "./FeeStructureTable";
 // import { GradingSystemTable } from "./GradingSystemTable";
 
@@ -28,6 +29,10 @@ export const SchoolSettingsTabSection: React.FC = () => {
     isConfirmDeleteFeeStructureDialogOpen,
     setIsConfirmDeleteFeeStructureDialogOpen,
   ] = useState(false);
+    const [feeId, setFeeId] = useState('');
+    const [editMode, setEditMode] = useState(false);
+
+
   const appliesTo = [
     { value: "new", label: "New Students" },
     { value: "continuing", label: "Continuing Students" },
@@ -89,9 +94,51 @@ export const SchoolSettingsTabSection: React.FC = () => {
 
   const { mutate: createFeeStructure } = useSaveFeeStructure();
   const { feesStructure, isLoading, refetch } = useGetFeeStructure();
-  console.log(feesStructure)
+  const {mutate: deleteMutation } = useDeleteFeeStructure();
+  const { mutate: editMutation } = useEditFeeStructure(feeId);
+
+  const deleteFeeStructure = () => {
+    deleteMutation(feeId, {
+      onSuccess: () => {
+        setFeeId('');
+        toast.success('Deleted successfully');
+        setIsConfirmDeleteFeeStructureDialogOpen(false);
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      }
+    })
+  }
+
+  const onDeleteFeeStructureClick = (id: string) => {
+    setFeeId(id);
+    setIsConfirmDeleteFeeStructureDialogOpen(true);
+  }
+
   const addNewFeeStructure = () => {
     createFeeStructure({
+      feeTitle: feesTitle,
+     feeType: selectedDuration,
+     amount: amount,
+     appliesTo: feesAppliesTo,
+     dueDate: dueDate,
+     classes: selectedClasses
+    }, {
+      onSuccess: () => {
+        toast.success('Saved successfully.');
+        setIsFeeStructureDialogOpen(false);
+        clearDialog()
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      }
+    })
+  }
+
+  const editFeeStructure = () => {
+    editMutation({
       feeTitle: feesTitle,
      feeType: selectedDuration,
      amount: amount,
@@ -100,12 +147,34 @@ export const SchoolSettingsTabSection: React.FC = () => {
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');
+        setIsFeeStructureDialogOpen(false);
+        clearDialog()
         refetch();
       },
       onError: (error) => {
         toast.error(error.message);
       }
     })
+  }
+
+  const onEditFeeStructureClick = (fee: FeeStructure) => {
+    setFeeId(fee.id || "");
+    setEditMode(true);
+    setAmount(fee.amount);
+    setDueDate(fee.dueDate);
+    setFeesTitle(fee.feeTitle);
+    setFeesAppliesTo(fee.appliesTo);
+    setSelectedClasses(fee.classes);
+    setSelectedDuration(fee.feeType);
+    setIsFeeStructureDialogOpen(true);
+  }
+
+  const clearDialog = () => {
+     setFeesAppliesTo('');
+      setFeesAppliesTo('');
+      setDueDate('');
+      setFeesTitle('');
+      setSelectedClasses([]);
   }
 
   const handleDurationChange = (value: string | null) => {
@@ -118,7 +187,6 @@ export const SchoolSettingsTabSection: React.FC = () => {
 
   const handleClassesChange = (value: string[]) => {
     setSelectedClasses(value);
-    console.log("Selected permissions:", value);
   };
 
   return (
@@ -149,7 +217,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
                     <CustomUnderlinedButton
                       text="Edit"
                       textColor="text-gray-500"
-                      onClick={() => setIsFeeStructureDialogOpen(true)}
+                      onClick={() => onEditFeeStructureClick(feeStructure) }
                       icon={<IconUpload size={10} />}
                       showIcon={false}
                     />
@@ -164,7 +232,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
                       text="Delete"
                       textColor="text-gray-500"
                       onClick={() =>
-                        setIsConfirmDeleteFeeStructureDialogOpen(true)
+                        onDeleteFeeStructureClick(feeStructure.id || "")
                       }
                       icon={<IconUpload size={10} />}
                       showIcon={false}
@@ -175,12 +243,13 @@ export const SchoolSettingsTabSection: React.FC = () => {
                       label="Fee Title"
                       isTransulent={false}
                       value={feeStructure.feeTitle}
-                    
+                      readOnly={true}
                     />
                     <InputField
                       label="Fee Duration"
                       isTransulent={false}
-                      value={feeStructure.dueDate}
+                      value={feeStructure.feeType}
+                      readOnly={true}
                     />
                   </div>
                 </div>
@@ -188,46 +257,6 @@ export const SchoolSettingsTabSection: React.FC = () => {
             })
           }
           
-
-          {/* <div className="bg-[#EAEAEAB3] px-6 py-2 rounded-sm">
-            <div className="flex justify-end gap-3">
-              <CustomUnderlinedButton
-                text="Edit"
-                textColor="text-gray-500"
-                onClick={() => setIsFeeStructureDialogOpen(true)}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-              <CustomUnderlinedButton
-                text="Send Reminder"
-                textColor="text-gray-500"
-                onClick={() => {}}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-              <CustomUnderlinedButton
-                text="Delete"
-                textColor="text-gray-500"
-                onClick={() => setIsConfirmDeleteFeeStructureDialogOpen(true)}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-            </div>
-            <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
-              <InputField
-                label="Fee Title"
-                isTransulent={false}
-                value={""}
-                onChange={() => {}}
-              />
-              <InputField
-                label="Fee Duration"
-                isTransulent={false}
-                value={""}
-                onChange={() => {}}
-              />
-            </div>
-          </div> */}
         </div>
         <NoAvailableEmptyState message="No fee structure available, click ‘Add New’ to create one." />
       </div>
@@ -303,8 +332,11 @@ export const SchoolSettingsTabSection: React.FC = () => {
         isOpen={isFeeStructureDialogOpen}
         dialogTitle="Add New Fee Structure"
         saveButtonText="Save Changes"
-        onClose={() => setIsFeeStructureDialogOpen(false)}
-        onSave={addNewFeeStructure}
+        onClose={() => {
+          clearDialog();
+          setIsFeeStructureDialogOpen(false);
+        }}
+        onSave={editMode? editFeeStructure : addNewFeeStructure}
         busy={isLoading}
       >
         <p className="text-xs text-gray-500">
@@ -383,7 +415,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
         dialogTitle="Confirm Delete"
         saveButtonText="Delete Fee"
         onClose={() => setIsConfirmDeleteFeeStructureDialogOpen(false)}
-        onSave={() => {}}
+        onSave={deleteFeeStructure}
       >
         <div className="my-3 flex flex-col gap-4">
           <p>

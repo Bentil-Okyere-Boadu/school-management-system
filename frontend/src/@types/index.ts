@@ -38,9 +38,11 @@ export type Role = {
   };
 
 export type FeeStructure = {
-      feeTitle: string,
+    id?: string;
+    feeTitle: string,
      feeType: string,
      amount: number,
      appliesTo: string,
-     dueDate: string
+     dueDate: string,
+     classes: string[]
     }

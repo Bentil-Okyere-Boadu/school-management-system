@@ -88,16 +88,16 @@ export const useSaveFeeStructure = () => {
 }
 export const useEditFeeStructure = (id: string) => {
     return useMutation({
-        mutationFn: (feeStructure) => {
+        mutationFn: (feeStructure: Partial<FeeStructure>) => {
             return customAPI.put(`/fee-structure/${id}`, feeStructure);
         }
     })
 }
 
-export const useDeleteFeeStructure = (id: string) => {
+export const useDeleteFeeStructure = () => {
     return useMutation({
-        mutationFn: () => {
-            return customAPI.delete(`/fee-structure/${id}`)
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/fee-structure/id=${id}`)
         }
     })
 }

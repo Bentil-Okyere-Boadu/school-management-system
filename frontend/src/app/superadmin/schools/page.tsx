@@ -13,7 +13,7 @@ const SchoolsPage: React.FC = () => {
     console.log("Search query:", query);
   };
 
-  const handleSchoolCardClick = (schoolId: number) => {
+  const handleSchoolCardClick = (schoolId: string) => {
     router.push(`/superadmin/schools/${schoolId}`);
   };
 

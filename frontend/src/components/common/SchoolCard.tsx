@@ -9,8 +9,8 @@ interface SchoolCardProps {
   logoUrl: string;
   textColor?: string;
   showSchoolName?: boolean,
-  schoolId?: number
-  onNavigateToSchoolDetail?: (schoolId: number) => void;
+  schoolId?: string,
+  onNavigateToSchoolDetail?: (schoolId: string) => void;
 }
 
 const SchoolCard: React.FC<SchoolCardProps> = ({
@@ -19,7 +19,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
   logoUrl,
   textColor = "text-zinc-700",
   showSchoolName = true,
-  schoolId = 0,
+  schoolId = "",
   onNavigateToSchoolDetail,
 }) => {
   return (

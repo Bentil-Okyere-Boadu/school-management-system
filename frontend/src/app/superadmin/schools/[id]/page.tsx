@@ -18,6 +18,7 @@ const SingleSchoolPage: React.FC = () => {
   const schoolId = params.id;
 
   const { school } = useGetSchoolById(schoolId as string);
+  console.log(school);
   const [activeTabKey, setActiveTabKey] = useState('school-settings');
 
   const handleItemClick = (item: TabListItem) => {
