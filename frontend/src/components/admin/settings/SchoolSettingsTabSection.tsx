@@ -123,7 +123,6 @@ export const SchoolSettingsTabSection: React.FC = () => {
      amount: amount,
      appliesTo: feesAppliesTo,
      dueDate: dueDate,
-     classes: selectedClasses
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');

@@ -81,7 +81,7 @@ export const useInvitation = (role: string) => {
 
 export const useSaveFeeStructure = () => {
     return useMutation({
-        mutationFn: (feeStructure: FeeStructure) => {
+        mutationFn: (feeStructure: Partial<FeeStructure>) => {
             return customAPI.post('/fee-structure', feeStructure);
         }
     })
