@@ -4,10 +4,11 @@ import Badge from "../../common/Badge";
 import { Menu } from '@mantine/core';
 import {
   IconDots,
+  IconSend2,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import { useArchiveUser } from "@/hooks/users";
+import { useArchiveUser, useResendAdminInvitation } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
@@ -37,9 +38,24 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
   const onArchiveUserMenuItemClick = (user: User) => {
     setIsConfirmArchiveDialogOpen(true)
     setSelectedUser(user);
-  }
+  } 
+
+  const onResendInvitationMenuItemClick = (user: User) => {
+    setSelectedUser(user);
+
+    resendInvitationMutate(null as unknown as void, {
+      onSuccess: () => {
+        toast.success('Resend invitation successful.');
+      },
+      onError: (error: Error) => {
+        const axiosError = error as AxiosError;
+        toast.error(axiosError.response?.statusText);
+      }
+    });
+  } 
 
   const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
+  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id})
 
   const handleArchiveUser = () => {
     archiveMutate(null as unknown as void, {
@@ -53,7 +69,7 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
         toast.error(axiosError.response?.statusText);
       }
     });
-  }
+  } 
  
   return (
     <>
@@ -113,6 +129,12 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
                             <IconDots className="cursor-pointer" />
                           </Menu.Target>
                           <Menu.Dropdown className="!-ml-8 !-mt-2">
+                            <Menu.Item 
+                              onClick={() => onResendInvitationMenuItemClick(user)} 
+                              disabled={user.status !== 'pending'}
+                              leftSection={<IconSend2 size={18} color="#AB58E7" />}>
+                              Resend Invitation
+                            </Menu.Item>
                             <Menu.Item 
                               onClick={() => onArchiveUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>

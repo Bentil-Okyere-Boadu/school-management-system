@@ -69,7 +69,7 @@ export class EmailService {
    * @returns Promise resolving to the mail send info
    */
   async sendInvitationEmail(user: SchoolAdmin): Promise<void> {
-    const invitationLink = `${this.frontendUrl}/auth/forgotPassword/resetPassword?token=${user.invitationToken}`;
+    const invitationLink = `${this.frontendUrl}/auth/complete-registration?token=${user.invitationToken}`;
 
     try {
       await this.transporter.sendMail({
@@ -204,7 +204,7 @@ export class EmailService {
     email: string,
     resetToken: string,
   ): Promise<void> {
-    const resetLink = `${this.frontendUrl}/auth/complete-registration?token=${resetToken}`;
+    const resetLink = `${this.frontendUrl}/auth/forgotPassword/resetPassword?token=${resetToken}`;
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
