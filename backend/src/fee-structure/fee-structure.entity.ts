@@ -6,6 +6,8 @@ import { ClassLevel } from '../class-level/class-level.entity';
 export class FeeStructure {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+  @Column({ nullable: true })
+  feeTitle: string;
 
   @Column()
   feeType: string;
@@ -21,7 +23,7 @@ export class FeeStructure {
   dueDate?: string;
 
   @ManyToOne(() => School, (school) => school.feeStructures, {
-    onDelete: 'CASCADE',
+    //onDelete: 'CASCADE',
   })
   school: School;
 
