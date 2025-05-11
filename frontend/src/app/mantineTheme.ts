@@ -7,6 +7,7 @@ export const mantineOverrides: MantineThemeOverride = {
       classNames: {
         label: '!text-xs !text-zinc-600 !font-normal mb-2',
         input: '!py-2 !border-solid !border-[0.5px] !border-zinc-500 text-zinc-800',
+        dropdown: '!outline !outline-1 !outline-purple-500',
       },
     },
     TextInput: {
@@ -19,6 +20,7 @@ export const mantineOverrides: MantineThemeOverride = {
       classNames: {
         label: '!text-xs !text-zinc-600 !font-normal mb-2',
         input: '!py-5 !border-solid !border-[0.5px] !border-zinc-500 text-zinc-800',
+        dropdown: '!outline !outline-1 !outline-purple-500',
       },
     },
   },

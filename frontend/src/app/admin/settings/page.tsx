@@ -1,9 +1,9 @@
 "use client";
 import React, { useState } from "react";
 import TabBar from "@/components/common/TabBar";
-import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
-import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
-import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
+import { SchoolSettingsTabSection } from "@/components/admin/settings/SchoolSettingsTabSection";
+import { ConfigurationTabSection } from "@/components/admin/settings/ConfigurationTabSection";
+import { ProfileTabSection } from "@/components/admin/settings/ProfileTabSection";
 
 export type TabListItem = {
   tabLabel: string;
@@ -11,7 +11,7 @@ export type TabListItem = {
 };
 
 
-const AdminSchoolPage: React.FC = () => {
+const AdminSchoolSettings: React.FC = () => {
 
   const [activeTabKey, setActiveTabKey] = useState('school-settings');
 
@@ -25,13 +25,12 @@ const AdminSchoolPage: React.FC = () => {
     { tabLabel: "Profile", tabKey: "profile" },
   ];
 
-
   return (
     <div className="px-0.5">
         <TabBar 
           items={defaultNavItems} 
           activeTabKey={activeTabKey} 
-          onItemClick={handleItemClick} // triggered from the child, it will in return trigger handleItemClick function
+          onItemClick={handleItemClick}
         />
   
         {activeTabKey === "school-settings" && (
@@ -51,10 +50,8 @@ const AdminSchoolPage: React.FC = () => {
             <ProfileTabSection />
           </div>
         )}
-
-
     </div>
-  );
-};
+  )
+}
 
-export default AdminSchoolPage;
+export default AdminSchoolSettings;
