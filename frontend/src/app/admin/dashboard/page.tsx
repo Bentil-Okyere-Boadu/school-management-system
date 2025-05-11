@@ -52,7 +52,7 @@ const AdminDashboard = () => {
   const { loggedInUser } = useAppContext();
 
   useEffect(() => {
-    if(loggedInUser?.school.id) {
+    if(loggedInUser?.school?.id) {
       setIsCreateSchoolDialogOpen(false);
     }
   }, [loggedInUser])

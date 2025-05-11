@@ -133,3 +133,11 @@ export const useGetSchoolById = (id: string) => {
 
     return { school, isPending }
 }
+
+export const useResendAdminInvitation = ({id}: {id: string}) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.post(`/invitations/admin/resend/${id}`)
+        }
+    })
+}

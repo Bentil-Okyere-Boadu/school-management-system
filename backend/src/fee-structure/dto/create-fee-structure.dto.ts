@@ -1,6 +1,18 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsEnum, IsUUID, IsDateString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsUUID,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateFeeStructureDto {
+  @IsNotEmpty()
+  @IsString()
+  feeTitle: string;
+
   @IsNotEmpty()
   @IsString()
   feeType: string;
@@ -10,8 +22,9 @@ export class CreateFeeStructureDto {
   amount: number;
 
   @IsOptional()
-  @IsEnum(['all', 'new', 'continuing'], { 
-    message: 'appliesTo must be one of the following values: all, new, continuing' 
+  @IsEnum(['all', 'new', 'continuing'], {
+    message:
+      'appliesTo must be one of the following values: all, new, continuing',
   })
   appliesTo?: 'all' | 'new' | 'continuing' = 'all';
 
@@ -22,4 +35,4 @@ export class CreateFeeStructureDto {
   @IsOptional()
   @IsUUID()
   classLevelId?: string;
-} 
+}
