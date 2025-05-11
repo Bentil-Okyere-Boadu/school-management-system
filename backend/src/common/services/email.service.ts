@@ -69,7 +69,7 @@ export class EmailService {
    * @returns Promise resolving to the mail send info
    */
   async sendInvitationEmail(user: SchoolAdmin): Promise<void> {
-    const invitationLink = `${this.frontendUrl}/auth/forgotPassword/resetPassword?token=${user.invitationToken}`;
+    const invitationLink = `${this.frontendUrl}/auth/complete-registration?token=${user.invitationToken}`;
 
     try {
       await this.transporter.sendMail({
@@ -99,7 +99,7 @@ export class EmailService {
     studentId: string,
     pin: string,
   ): Promise<void> {
-    const loginLink = `${this.frontendUrl}/auth/login`;
+    const loginLink = `${this.frontendUrl}/auth/student/login`;
 
     try {
       await this.transporter.sendMail({
@@ -138,7 +138,7 @@ export class EmailService {
     teacherId: string,
     pin: string,
   ): Promise<void> {
-    const loginLink = `${this.frontendUrl}/auth/login`;
+    const loginLink = `${this.frontendUrl}/auth/teacher/login`;
 
     try {
       await this.transporter.sendMail({
@@ -179,7 +179,7 @@ export class EmailService {
         subject: 'Registration Confirmed - School Management System',
         html: this.getEmailTemplate(EmailTemplate.REGISTRATION_CONFIRMATION, {
           name: user.name,
-          loginLink: `${this.frontendUrl}/auth/login`,
+          loginLink: `${this.frontendUrl}/auth/school-admin/login`,
         }),
       });
       this.logger.log(`Registration confirmation email sent to ${user.email}`);
@@ -204,7 +204,7 @@ export class EmailService {
     email: string,
     resetToken: string,
   ): Promise<void> {
-    const resetLink = `${this.frontendUrl}/auth/complete-registration?token=${resetToken}`;
+    const resetLink = `${this.frontendUrl}/auth/forgotPassword/resetPassword?token=${resetToken}`;
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
@@ -272,7 +272,7 @@ export class EmailService {
     student: Student | User,
     pin: string,
   ): Promise<void> {
-    const loginLink = `${this.frontendUrl}/auth/login`;
+    const loginLink = `${this.frontendUrl}/auth/student/login`;
 
     try {
       await this.transporter.sendMail({
