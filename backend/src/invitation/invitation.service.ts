@@ -39,6 +39,8 @@ export class InvitationService {
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+    @InjectRepository(School)
+    private schoolRepository: Repository<School>,
     private emailService: EmailService,
   ) {}
 
@@ -98,11 +100,34 @@ export class InvitationService {
     return initials;
   }
 
+  /**
+   * Get or generate a proper 5-digit school code
+   * If the school already has a code, use it
+   * Otherwise, generate a new one based on existing schools count
+   */
+  private async getSchoolCode(school: School): Promise<string> {
+    // If the school already has a valid 5-digit code, use it
+    if (school.schoolCode && /^\d{5}$/.test(school.schoolCode)) {
+      return school.schoolCode;
+    }
+
+    // Generate a new 5-digit code
+    const schoolCount = await this.schoolRepository.count();
+    const newCode = (schoolCount + 1).toString().padStart(5, '0');
+
+    // Update the school with the new code
+    school.schoolCode = newCode;
+    await this.schoolRepository.save(school);
+
+    return newCode;
+  }
+
   private async generateStudentId(school: School): Promise<string> {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
-    const schoolCode = school.schoolCode;
+    // Get or generate school code
+    const schoolCode = await this.getSchoolCode(school);
 
     // Role code for student = 120
     const roleCode = '120';
@@ -134,10 +159,8 @@ export class InvitationService {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
-    // 5-digit school code
-    const schoolCode =
-      school.schoolCode ||
-      school.id.toString().padStart(5, '0').substring(0, 5);
+    // Get or generate school code
+    const schoolCode = await this.getSchoolCode(school);
 
     // Role code for teacher = 123
     const roleCode = '123';
@@ -172,10 +195,8 @@ export class InvitationService {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
-    // 5-digit school code
-    const schoolCode =
-      school.schoolCode ||
-      school.id.toString().padStart(5, '0').substring(0, 5);
+    // Get or generate school code
+    const schoolCode = await this.getSchoolCode(school);
 
     // Role code for admin = 110
     const roleCode = '110';
