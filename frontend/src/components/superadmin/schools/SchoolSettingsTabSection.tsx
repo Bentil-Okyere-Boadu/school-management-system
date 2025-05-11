@@ -1,9 +1,9 @@
 "use client";
 import React from "react";
-import SchoolCard from "./SchoolCard";
+import SchoolCard from "../../common/SchoolCard";
 import { FeeStructureTable } from "./FeeStructureTable";
 import { GradingSystemTable } from "./GradingSystemTable";
-import DocumentItem from "./DocumentItem";
+import DocumentItem from "../../common/DocumentItem";
 
 
 export const SchoolSettingsTabSection: React.FC = () => {

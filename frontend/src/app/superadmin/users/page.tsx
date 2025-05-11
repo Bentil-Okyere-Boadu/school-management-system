@@ -7,7 +7,7 @@ import FilterButton from "@/components/common/FilterButton";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import CustomButton from "@/components/Button";
 import { Dialog } from "@/components/common/Dialog";
-import { MultiSelect , Select } from '@mantine/core';
+import { Select } from '@mantine/core';
 import InputField from "@/components/InputField";
 import { useGetAdminUsers, useInviteUser } from "@/hooks/users";
 import { toast } from "react-toastify";
@@ -23,31 +23,16 @@ const UsersPage: React.FC = () => {
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
   const [selectedDataRole, setSelectedDataRole] = useState<string>("school_admin");
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
 
   const queryClient = useQueryClient();
 
-    const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery));
+  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery));
 
-  const roleOptions = [
-    { value: "admin", label: "Admin" },
-    { value: "projectManager", label: "Project Manager" },
-  ];
   const statusOptions = [
     { value: "active", label: "Active" },
     { value: "in-active", label: "Inactive" },
-  ];
-  const premissionOptions = [
-    { value: "manager-users", label: "Manage Users" },
-    { value: "manage-schools", label: "Manage Schools" },
-  ];
-  const permissions = [
-    { value: "manage-users", label: "Manage Users" },
-    { value: "assign-grades", label: "Assign Grades" },
-    { value: "view-reports", label: "View Reports" },
-    { value: "data-reports", label: "Data Reports" }
   ];
   const roles = [
     { value: "school_admin", label: "School Admin" },
@@ -67,11 +52,6 @@ const UsersPage: React.FC = () => {
   const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
     console.log("Selected:", selectedValue);
-  };
-
-  const handlePermissionChange = (value: string[]) => {
-    setSelectedPermissions(value)
-    console.log("Selected permissions:", value);
   };
 
   const { roles: Roles } = useAppContext();
@@ -94,8 +74,9 @@ const UsersPage: React.FC = () => {
           setIsInviteUserDialogOpen(false);
           queryClient.invalidateQueries({ queryKey: ['allAdminUsers']})
         },
-        onError: (error: AxiosError) => {
-          toast.error(error.response?.statusText)
+        onError: (error) => {
+          const axiosError = error as AxiosError;
+          toast.error(axiosError.response?.statusText);
         }
       })
     } else {
@@ -113,9 +94,7 @@ const UsersPage: React.FC = () => {
         <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
         {showFilterOptions && (
           <div className="flex gap-3 mt-3">
-            <CustomSelectTag defaultValue="" optionLabel="Role" options={roleOptions} onOptionItemClick={handleRoleChange} />
             <CustomSelectTag defaultValue="" optionLabel="Status" options={statusOptions} onOptionItemClick={handleRoleChange} />
-            <CustomSelectTag defaultValue="" optionLabel="Permissions" options={premissionOptions} onOptionItemClick={handleRoleChange} />
           </div>
         )}
       </div>
@@ -160,15 +139,6 @@ const UsersPage: React.FC = () => {
             data={roles}
             value={selectedDataRole}
             onChange={() => handleRoleDataChange}
-          />
-
-          <MultiSelect
-            label="Permissions"
-            placeholder="Pick permissions"
-            data={permissions}
-            value={selectedPermissions}
-            onChange={handlePermissionChange}
-            withCheckIcon
           />
         </div>
       </Dialog>

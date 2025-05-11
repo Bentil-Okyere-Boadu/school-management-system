@@ -1,4 +1,5 @@
 import { User } from 'src/user/user.entity';
+import { ClassLevel } from '../class-level/class-level.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -6,7 +7,16 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
 } from 'typeorm';
+import { AdmissionPolicy } from '../admission-policy/admission-policy.entity';
+import { GradingSystem } from '../grading-system/grading-system.entity';
+import { FeeStructure } from '../fee-structure/fee-structure.entity';
+import { AcademicCalendar } from '../academic-calendar/academic-calendar.entity';
+import { Profile } from 'src/profile/profile.entity';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { Student } from 'src/student/student.entity';
+
 @Entity()
 export class School {
   @PrimaryGeneratedColumn('uuid')
@@ -31,8 +41,35 @@ export class School {
   @Column({ nullable: true, unique: true })
   schoolCode: string;
 
+  @OneToMany(() => SchoolAdmin, (admin) => admin.school)
+  admins: SchoolAdmin[];
+
   @OneToMany(() => User, (user) => user.school)
   users: User[];
+
+  @OneToMany(() => Student, (student) => student.school)
+  students: Student[];
+
+  @OneToMany(() => ClassLevel, (classLevel) => classLevel.school)
+  classLevels: ClassLevel[];
+
+  @OneToMany(() => AdmissionPolicy, (admissionPolicy) => admissionPolicy.school)
+  admissionPolicies: AdmissionPolicy[];
+
+  @OneToMany(() => GradingSystem, (gradingSystem) => gradingSystem.school)
+  gradingSystems: GradingSystem[];
+
+  @OneToMany(() => FeeStructure, (feeStructure) => feeStructure.school)
+  feeStructures: FeeStructure[];
+
+  @OneToOne(() => Profile, (profile) => profile.school, { cascade: true })
+  profile: Profile;
+
+  @OneToMany(
+    () => AcademicCalendar,
+    (academicCalendar) => academicCalendar.school,
+  )
+  academicCalendars: AcademicCalendar[];
 
   @CreateDateColumn()
   createdAt: Date;

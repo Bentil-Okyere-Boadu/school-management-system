@@ -24,6 +24,7 @@ import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
+import { Student } from 'src/student/student.entity';
 
 @Injectable()
 export class InvitationService {
@@ -32,6 +33,8 @@ export class InvitationService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
     @InjectRepository(SchoolAdmin)
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Role)
@@ -97,17 +100,40 @@ export class InvitationService {
     return initials;
   }
 
+  /**
+   * Get or generate a proper 5-digit school code
+   * If the school already has a code, use it
+   * Otherwise, generate a new one based on existing schools count
+   */
+  private async getSchoolCode(school: School): Promise<string> {
+    // If the school already has a valid 5-digit code, use it
+    if (school.schoolCode && /^\d{5}$/.test(school.schoolCode)) {
+      return school.schoolCode;
+    }
+
+    // Generate a new 5-digit code
+    const schoolCount = await this.schoolRepository.count();
+    const newCode = (schoolCount + 1).toString().padStart(5, '0');
+
+    // Update the school with the new code
+    school.schoolCode = newCode;
+    await this.schoolRepository.save(school);
+
+    return newCode;
+  }
+
   private async generateStudentId(school: School): Promise<string> {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
-    const schoolCode = school.schoolCode;
+    // Get or generate school code
+    const schoolCode = await this.getSchoolCode(school);
 
     // Role code for student = 120
     const roleCode = '120';
 
     // Get sequential person ID (count students in this school + 1)
-    const studentCount = await this.userRepository.count({
+    const studentCount = await this.studentRepository.count({
       where: {
         school: { id: school.id },
         role: { name: 'student' },
@@ -133,10 +159,8 @@ export class InvitationService {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
-    // 5-digit school code
-    const schoolCode =
-      school.schoolCode ||
-      school.id.toString().padStart(5, '0').substring(0, 5);
+    // Get or generate school code
+    const schoolCode = await this.getSchoolCode(school);
 
     // Role code for teacher = 123
     const roleCode = '123';
@@ -164,20 +188,21 @@ export class InvitationService {
    * 110 = role code (110 for admin)
    * 12345 = 5-digit person ID
    */
-  async generateAdminId(school: School, existingUser?: User): Promise<string> {
+  async generateAdminId(
+    school: School,
+    existingUser?: SchoolAdmin,
+  ): Promise<string> {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
-    // 5-digit school code
-    const schoolCode =
-      school.schoolCode ||
-      school.id.toString().padStart(5, '0').substring(0, 5);
+    // Get or generate school code
+    const schoolCode = await this.getSchoolCode(school);
 
     // Role code for admin = 110
     const roleCode = '110';
 
     // Get sequential person ID (count admins in this school + 1)
-    const adminCount = await this.userRepository.count({
+    const adminCount = await this.adminRepository.count({
       where: {
         school: { id: school.id },
         role: { name: 'school_admin' },
@@ -247,8 +272,9 @@ export class InvitationService {
    */
   async inviteStudent(
     inviteStudentDto: InviteStudentDto,
-    adminUser: User,
+    adminUser: SchoolAdmin,
   ): Promise<User> {
+    console.log('Admin User:', adminUser);
     if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite students');
     }
@@ -257,7 +283,7 @@ export class InvitationService {
       throw new UnauthorizedException('Admin not associated with any school');
     }
 
-    const existingUser = await this.userRepository.findOne({
+    const existingUser = await this.studentRepository.findOne({
       where: { email: inviteStudentDto.email },
     });
 
@@ -280,13 +306,12 @@ export class InvitationService {
     const invitationExpires = new Date();
     invitationExpires.setHours(invitationExpires.getHours() + 24);
 
-    const studentUser = this.userRepository.create({
+    const studentUser = this.studentRepository.create({
       name: inviteStudentDto.name,
       email: inviteStudentDto.email,
       password: await bcrypt.hash(pin, 10), // PIN is used as initial password
       role: studentRole,
       school: adminUser.school,
-      status: 'pending',
       invitationToken: uuidv4(),
       invitationExpires,
       isInvitationAccepted: false,
@@ -475,7 +500,7 @@ export class InvitationService {
     student.invitationExpires = this.calculateTokenExpiration();
     student.password = await bcrypt.hash(pin, 10);
 
-    const updatedStudent = await this.userRepository.save(student);
+    const updatedStudent = await this.studentRepository.save(student);
 
     try {
       await this.emailService.sendStudentInvitation(

@@ -9,20 +9,21 @@ import { School } from './school.entity';
 import { User } from 'src/user/user.entity';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { InvitationService } from 'src/invitation/invitation.service';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 @Injectable()
 export class SchoolService {
   constructor(
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(SchoolAdmin)
+    private adminRepository: Repository<SchoolAdmin>,
     private invitationService: InvitationService,
   ) {}
 
   async create(
     createSchoolDto: CreateSchoolDto,
-    adminUser: User,
+    adminUser: SchoolAdmin,
   ): Promise<School> {
     if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can create schools');
@@ -33,7 +34,15 @@ export class SchoolService {
     }
 
     const school = this.schoolRepository.create(createSchoolDto);
+
     const savedSchool = await this.schoolRepository.save(school);
+    if (!savedSchool.schoolCode) {
+      savedSchool.schoolCode = savedSchool.id
+        .toString()
+        .padStart(5, '0')
+        .substring(0, 5);
+      await this.schoolRepository.save(savedSchool); // Update schoolCode
+    }
 
     adminUser.school = savedSchool;
 
@@ -47,7 +56,7 @@ export class SchoolService {
     }
 
     // Save the updated admin user
-    await this.userRepository.save(adminUser);
+    await this.adminRepository.save(adminUser);
 
     return savedSchool;
   }

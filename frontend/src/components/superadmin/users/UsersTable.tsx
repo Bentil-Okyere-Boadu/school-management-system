@@ -1,11 +1,9 @@
 "use client";
 import React, { useState } from "react";
 import Badge from "../../common/Badge";
-// import { PermissionTags } from "../PermissionsTag";
-import { Menu, MultiSelect , Select} from '@mantine/core';
+import { Menu } from '@mantine/core';
 import {
   IconDots,
-  IconPencil,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
@@ -33,50 +31,8 @@ interface UserTableProps {
 
 export const UserTable = ({users, refetch}: UserTableProps) => {
 
-  const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
-  const [selectedDataRole, setSelectedDataRole] = useState<string | null>("school-admin");
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
-
-  const permissions = [
-    { value: "manage-users", label: "Manage Users" },
-    { value: "assign-grades", label: "Assign Grades" },
-    { value: "view-reports", label: "View Reports" },
-    { value: "data-reports", label: "Data Reports" }
-  ];
-  const roles = [
-    { value: "school-admin", label: "School Admin" },
-    { value: "ux-copywriter", label: "UX Copywriter" },
-    { value: "UI Designer", label: "UI Designer" },
-    { value: "product-manager", label: "Product Manager" },
-    { value: "fullstack-developer", label: "Fullstack Developer" },
-  ];
-
-
-  const handlePermissionChange = (value: string[]) => {
-    setSelectedPermissions(value)
-    console.log("Selected permissions:", value);
-  };
-
-  const handleRoleDataChange = (value: string | null) => {
-    setSelectedDataRole(value);
-    console.log("Selected role:", value);
-  };
-
-  const onEditPermissionMenuItemClick = (user: User) => {
-    setIsPermissionDialogOpen(true)
-
-    // const selectedRole = roles.find((r) => r.label === user.role);
-    // setSelectedDataRole(selectedRole?.value ?? null)
-
-    // const selectedPermissions = permissions
-    //   .filter((perm) => user.permissions.includes(perm.label))
-    //   .map((perm) => perm.value);
-
-    // setSelectedPermissions(selectedPermissions)
-    console.log(user)
-  }
 
   const onArchiveUserMenuItemClick = (user: User) => {
     setIsConfirmArchiveDialogOpen(true)
@@ -118,9 +74,6 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div>Status</div>
                 </th>
-                {/* <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-60 max-w-[350px]">
-                  <div>Permissions</div>
-                </th> */}
                 <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"> Clear all filters</th>
               </tr>
             </thead>
@@ -151,29 +104,15 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
                         variant={user.status} />
                     </div>
                   </td>
-                  {/* <td
-                    className={` text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:pl-5`}
-                  >
-                    <div
-                      className={`flex gap-1.5 items-start justity-start }`}
-                    >
-                      <PermissionTags permissions={user.permissions} />
-                    </div>
-                  </td> */}
                     <td
                       className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]"
                     >
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
-                            <IconDots/>
+                            <IconDots className="cursor-pointer" />
                           </Menu.Target>
-                          <Menu.Dropdown>
-                            <Menu.Item 
-                              onClick={() => onEditPermissionMenuItemClick(user)} 
-                              leftSection={<IconPencil size={18} color="#AB58E7" />}>
-                              Edit Permissions
-                            </Menu.Item>
+                          <Menu.Dropdown className="!-ml-8 !-mt-2">
                             <Menu.Item 
                               onClick={() => onArchiveUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>
@@ -200,35 +139,6 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
         </div>
       </section>
 
-      {/* Edit Permissions Dialog */}
-      <Dialog 
-        isOpen={isPermissionDialogOpen}
-        dialogTitle="Edit Permissions"
-        saveButtonText="Save Changes"
-        onClose={() => setIsPermissionDialogOpen(false)} 
-        onSave={() => setIsPermissionDialogOpen(false)}
-      >
-        <div className="my-3 flex flex-col gap-4">
-          <Select
-            label="Role"
-            placeholder="Pick role"
-            data={roles}
-            value={selectedDataRole}
-            onChange={handleRoleDataChange}
-          />
-
-          <MultiSelect
-            label="Permissions"
-            placeholder="Pick permissions"
-            data={permissions}
-            value={selectedPermissions}
-            onChange={handlePermissionChange}
-            searchable
-            clearable
-            withCheckIcon
-          />
-        </div>
-      </Dialog>
 
       {/* Confirm Archive Dialog */}
       <Dialog 

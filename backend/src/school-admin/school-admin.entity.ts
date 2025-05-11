@@ -24,10 +24,6 @@ export class SchoolAdmin {
   @Column({ nullable: true })
   password: string;
 
-  @ManyToOne(() => School, { eager: true, nullable: true })
-  @JoinColumn()
-  school: School;
-
   @Column({ default: 'pending' })
   status: string;
 
@@ -47,11 +43,18 @@ export class SchoolAdmin {
   @Column({ nullable: true })
   resetPasswordToken: string;
 
+  @ManyToOne(() => School, (school) => school.admins, {
+    // onDelete: 'CASCADE',
+    eager: true,
+  })
+  school: School;
+
   @Column({ nullable: true })
   resetPasswordExpires: Date;
 
   @Column({ default: false })
   isArchived: boolean;
+
   @Column({ nullable: true, unique: true })
   adminId: string;
 

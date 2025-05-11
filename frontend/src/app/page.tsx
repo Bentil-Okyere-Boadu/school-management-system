@@ -12,7 +12,7 @@ export default function Home() {
   
   useEffect(() => {
     // console.log(rolesEnum)
-    router.replace('/auth/login');
+    router.replace('/home');
   }, [router])
   
   return (

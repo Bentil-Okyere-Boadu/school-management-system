@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import InputField from "@/components/InputField";
-import SchoolCard from "./SchoolCard";
+import SchoolCard from "../../common/SchoolCard";
 
 
 
