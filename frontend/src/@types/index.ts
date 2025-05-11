@@ -38,7 +38,7 @@ export type Role = {
   };
 
 export type FeeStructure = {
-    id?: string;
+    id: string;
     feeTitle: string,
      feeType: string,
      amount: number,
