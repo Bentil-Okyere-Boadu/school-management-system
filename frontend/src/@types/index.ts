@@ -4,13 +4,20 @@ export enum ButtonType {
     button = "button",
   }
 
+  export type School = {
+    id?: string;
+    email: string;
+    address: string;
+    phone: string;
+  }
 export interface User {
     id: string;
     email: string;
-    password: string;
+    password?: string;
     name: string;
     role: Role;
-    status: string
+    status: string;
+    school: School;
 }
 
 export type AuthCredentials = Pick<User, "email"| "password">;

@@ -11,11 +11,10 @@ import { Select } from '@mantine/core';
 import InputField from "@/components/InputField";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
-// import { getRoleId } from "@/utils/roles";
-// import { useAppContext } from "@/context/AppContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebouncer } from "@/hooks/generalHooks";
 import { useGetSchoolUsers, useInvitation } from "@/hooks/school-admin";
+import { Roles } from "@/@types";
 
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,12 +52,8 @@ const UsersPage: React.FC = () => {
     console.log("Selected:", selectedValue);
   };
 
-  // const { roles: Roles } = useAppContext();
-
-
-  const handleRoleDataChange = (value: string) => {
-    setSelectedDataRole(value);
-    console.log(value)
+  const handleRoleDataChange = (event: string = Roles.TEACHER) => {
+    setSelectedDataRole(event);
   };
 
   const { mutate: invitation, isPending } = useInvitation(selectedDataRole);
@@ -138,7 +133,7 @@ const UsersPage: React.FC = () => {
             placeholder="Pick role"
             data={roles}
             value={selectedDataRole}
-            onChange={() => handleRoleDataChange}
+            onChange={(e) => handleRoleDataChange(e as string)}
           />
         </div>
       </Dialog>

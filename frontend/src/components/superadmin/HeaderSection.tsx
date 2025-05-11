@@ -28,7 +28,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
   const onHandleLogout = () => {
     Cookies.remove("authToken");
-    router.push("/auth/login");
+    router.push("/home");
   }
 
   return (

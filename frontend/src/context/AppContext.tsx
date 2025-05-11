@@ -1,5 +1,6 @@
 'use client';
 
+import { User } from '@/@types';
 import { useGetRoles } from '@/hooks/auth';
 import { initializeRoles } from '@/utils/roles';
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -8,11 +9,14 @@ type AppContextType = {
   roles: {id: string, name: string}[];
   isLoading: boolean;
   error: Error | null;
+  loggedInUser: User | null;
+  setLoggedInUser: (user: User) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function ContextProvider({ children }: { children: React.ReactNode }) {
+  const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
   const [state, setState] = useState<{
     roles: {id: string, name: string}[];
     isLoading: boolean;
@@ -31,8 +35,14 @@ export function ContextProvider({ children }: { children: React.ReactNode }) {
     }
   }, [roles, isLoading, error, isSuccess]);
 
+  const contextValue = {
+    ...state,
+    loggedInUser,
+    setLoggedInUser,
+  };
+
   return (
-    <AppContext.Provider value={state}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

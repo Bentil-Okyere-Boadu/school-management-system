@@ -15,6 +15,9 @@ const HomePage = () => {
           <li>
             <Link href={'/auth/teacher/login'}>Teacher</Link>
           </li>
+          <li>
+            <Link href={'/auth/student/login'}>Student</Link>
+          </li>
         </ul>
       </div>
   )

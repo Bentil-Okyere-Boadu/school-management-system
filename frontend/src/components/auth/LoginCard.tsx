@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { handleLoginRedirectAndToken } from "@/middleware";
 import { Roles } from "@/@types";
+import { useAppContext } from "@/context/AppContext";
 
 const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -17,6 +18,8 @@ const LoginCard: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
 
+  // To set the user data
+  const { setLoggedInUser } = useAppContext();
   useEffect(() => {
     getLoginUrl()
   }, [])
@@ -26,8 +29,11 @@ const LoginCard: React.FC = () => {
       setUser('admin');
       return '/school-admin/login'
     } else if(pathname.includes('teacher')) {
-      setUser(Roles.STUDENT);
+      setUser(Roles.TEACHER);
       return '/teacher/login'
+    } else if(pathname.includes('student')) {
+      setUser(Roles.STUDENT);
+      return '/student/login'
     } else return '/super-admin/auth/login';
   }
 
@@ -41,6 +47,7 @@ const LoginCard: React.FC = () => {
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
+        setLoggedInUser(data.data);
         handleLoginRedirectAndToken(data, router);
       },
     });
