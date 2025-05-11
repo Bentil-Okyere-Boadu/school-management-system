@@ -5,10 +5,11 @@ export enum ButtonType {
   }
 
   export type School = {
-    id?: string;
+    id: string;
     email: string;
     address: string;
     phone: string;
+    name: string;
   }
 export interface User {
     id: string;
@@ -35,3 +36,11 @@ export type Role = {
     id: string;
     name: keyof typeof Roles;
   };
+
+export type FeeStructure = {
+      feeTitle: string,
+     feeType: string,
+     amount: number,
+     appliesTo: string,
+     dueDate: string
+    }

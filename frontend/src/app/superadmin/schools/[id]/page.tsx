@@ -4,6 +4,8 @@ import TabBar from "@/components/common/TabBar";
 import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
 import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
+import { useParams } from "next/navigation";
+import { useGetSchoolById } from "@/hooks/users";
 
 export type TabListItem = {
   tabLabel: string;
@@ -12,7 +14,10 @@ export type TabListItem = {
 
 
 const SingleSchoolPage: React.FC = () => {
+  const params = useParams();
+  const schoolId = params.id;
 
+  const { school } = useGetSchoolById(schoolId as string);
   const [activeTabKey, setActiveTabKey] = useState('school-settings');
 
   const handleItemClick = (item: TabListItem) => {

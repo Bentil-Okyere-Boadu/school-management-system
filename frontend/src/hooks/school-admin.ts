@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
+import { FeeStructure } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading } = useQuery({
@@ -49,7 +50,7 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
 }
 
 export const useGetFeeStructure = () => {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, refetch } = useQuery({
         queryKey: ['myFeeStructure'],
         queryFn: () => {
             return customAPI.get('/fee-structure/my-school');
@@ -57,9 +58,9 @@ export const useGetFeeStructure = () => {
         refetchOnWindowFocus: true
     })
 
-    const users = data?.data
+    const feesStructure = data?.data as FeeStructure[];
 
-    return { users, isLoading }
+    return { feesStructure, isLoading, refetch }
 }
 
  export const useCreateSchool = () => {
@@ -74,6 +75,29 @@ export const useInvitation = (role: string) => {
     return useMutation({
         mutationFn: (inviteDetails: {name:string, email: string}) => {
             return customAPI.post(`/invitations/${role}`, inviteDetails);
+        }
+    })
+}
+
+export const useSaveFeeStructure = () => {
+    return useMutation({
+        mutationFn: (feeStructure: FeeStructure) => {
+            return customAPI.post('/fee-structure', feeStructure);
+        }
+    })
+}
+export const useEditFeeStructure = (id: string) => {
+    return useMutation({
+        mutationFn: (feeStructure) => {
+            return customAPI.put(`/fee-structure/${id}`, feeStructure);
+        }
+    })
+}
+
+export const useDeleteFeeStructure = (id: string) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.delete(`/fee-structure/${id}`)
         }
     })
 }
