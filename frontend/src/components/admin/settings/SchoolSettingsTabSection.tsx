@@ -7,68 +7,199 @@ import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import { GradingSystemTable } from "./GradingSystemTable";
 import SchoolCard from "@/components/common/SchoolCard";
-import DocumentItem from "@/components/common/DocumentItem";
+// import DocumentItem from "@/components/common/DocumentItem";
 import { Dialog } from "@/components/common/Dialog";
-import { MultiSelect, Select } from "@mantine/core";
+import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
+import { useDeleteFeeStructure, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure } from "@/hooks/school-admin";
+import { toast } from "react-toastify";
+import { FeeStructure } from "@/@types";
 // import { FeeStructureTable } from "./FeeStructureTable";
 // import { GradingSystemTable } from "./GradingSystemTable";
 
-
 export const SchoolSettingsTabSection: React.FC = () => {
+  const [isFeeStructureDialogOpen, setIsFeeStructureDialogOpen] =
+    useState(false);
+  const [selectedDuration, setSelectedDuration] = useState<string>("daily");
+  const [feesAppliesTo, setFeesAppliesTo] = useState<string>("new");
+  const [feesTitle, setFeesTitle] = useState("");
+  const [amount, setAmount] = useState(0);
+  const [dueDate, setDueDate] = useState('')
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(["class-1"]);
+  const [
+    isConfirmDeleteFeeStructureDialogOpen,
+    setIsConfirmDeleteFeeStructureDialogOpen,
+  ] = useState(false);
+    const [feeId, setFeeId] = useState('');
+    const [editMode, setEditMode] = useState(false);
 
-  const [isFeeStructureDialogOpen, setIsFeeStructureDialogOpen] = useState(false);
-  const [selectedDataRole, setSelectedDataRole] = useState<string>("school_admin");
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
-    const [isConfirmDeleteFeeStructureDialogOpen, setIsConfirmDeleteFeeStructureDialogOpen] = useState(false);
-  const roles = [
-    { value: "school_admin", label: "School Admin" },
-    { value: "teacher", label: "Teacher" },
-    { value: "student", label: "Student" }
+
+  const appliesTo = [
+    { value: "new", label: "New Students" },
+    { value: "continuing", label: "Continuing Students" },
   ];
-  const permissions = [
-    { value: "manage-users", label: "Manage Users" },
-    { value: "assign-grades", label: "Assign Grades" },
-    { value: "view-reports", label: "View Reports" },
-    { value: "data-reports", label: "Data Reports" }
+  const duration = [
+    { value: "daily", label: "Daily" },
+    { value: "monthly", label: "Monthly" },
+    { value: "term", label: "Per term" },
+    { value: "yearly", label: "Yearly" },
   ];
-  
-  const documents = [
-    {
-      id: 1,
-      name: "Admission Policy 2.0 .pdf",
-      width: "231px",
-    },
-    {
-      id: 2,
-      name: "Fee Policy .pdf",
-      width: "160px", // w-40 = 10rem = 160px
-    },
-    {
-      id: 3,
-      name: "Admission Policy 3.0 .pdf",
-      width: "232px",
-    },
+  const classes = [
+    { value: "class-1", label: "Class 1" },
+    { value: "class-2", label: "Class 2" },
+    { value: "class-3", label: "Class 3" },
+    { value: "class-4", label: "Class 4" },
   ];
 
-  const handleRoleDataChange = (value: string) => {
-    setSelectedDataRole(value);
+  const currencies = [
+    { value: "ghc", label: "GHC" },
+    { value: "eur", label: "🇪🇺 EUR" },
+    { value: "usd", label: "🇺🇸 USD" },
+    { value: "cad", label: "🇨🇦 CAD" },
+    { value: "gbp", label: "🇬🇧 GBP" },
+    { value: "aud", label: "🇦🇺 AUD" },
+  ];
+
+  const select = (
+    <NativeSelect
+      data={currencies}
+      rightSectionWidth={15}
+      styles={{
+        input: {
+          fontWeight: 500,
+          borderTopRightRadius: 0,
+          borderBottomRightRadius: 0,
+          width: 80,
+        },
+      }}
+    />
+  );
+
+  // const documents = [
+  //   // {
+  //   //   id: 1,
+  //   //   name: "Admission Policy 2.0 .pdf",
+  //   //   width: "231px",
+  //   // },
+  //   // {
+  //   //   id: 2,
+  //   //   name: "Fee Policy .pdf",
+  //   //   width: "160px", // w-40 = 10rem = 160px
+  //   // },
+  //   // {
+  //   //   id: 3,
+  //   //   name: "Admission Policy 3.0 .pdf",
+  //   //   width: "232px",
+  //   // },
+  // ];
+
+  const { mutate: createFeeStructure } = useSaveFeeStructure();
+  const { feesStructure, isLoading, refetch } = useGetFeeStructure();
+  const {mutate: deleteMutation } = useDeleteFeeStructure();
+  const { mutate: editMutation } = useEditFeeStructure(feeId);
+
+  const deleteFeeStructure = () => {
+    deleteMutation(feeId, {
+      onSuccess: () => {
+        setFeeId('');
+        toast.success('Deleted successfully');
+        setIsConfirmDeleteFeeStructureDialogOpen(false);
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      }
+    })
+  }
+
+  const onDeleteFeeStructureClick = (id: string) => {
+    setFeeId(id);
+    setIsConfirmDeleteFeeStructureDialogOpen(true);
+  }
+
+  const addNewFeeStructure = () => {
+    createFeeStructure({
+      feeTitle: feesTitle,
+     feeType: selectedDuration,
+     amount: amount,
+     appliesTo: feesAppliesTo,
+     dueDate: dueDate,
+     classes: selectedClasses
+    }, {
+      onSuccess: () => {
+        toast.success('Saved successfully.');
+        setIsFeeStructureDialogOpen(false);
+        clearDialog()
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      }
+    })
+  }
+
+  const editFeeStructure = () => {
+    editMutation({
+      feeTitle: feesTitle,
+     feeType: selectedDuration,
+     amount: amount,
+     appliesTo: feesAppliesTo,
+     dueDate: dueDate,
+    }, {
+      onSuccess: () => {
+        toast.success('Saved successfully.');
+        setIsFeeStructureDialogOpen(false);
+        clearDialog()
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      }
+    })
+  }
+
+  const onEditFeeStructureClick = (fee: FeeStructure) => {
+    setFeeId(fee.id || "");
+    setEditMode(true);
+    setAmount(fee.amount);
+    setDueDate(fee.dueDate);
+    setFeesTitle(fee.feeTitle);
+    setFeesAppliesTo(fee.appliesTo);
+    setSelectedClasses(fee.classes);
+    setSelectedDuration(fee.feeType);
+    setIsFeeStructureDialogOpen(true);
+  }
+
+  const clearDialog = () => {
+     setFeesAppliesTo('');
+      setFeesAppliesTo('');
+      setDueDate('');
+      setFeesTitle('');
+      setSelectedClasses([]);
+  }
+
+  const handleDurationChange = (value: string | null) => {
+    setSelectedDuration(value as string);
   };
 
-  const handlePermissionChange = (value: string[]) => {
-    setSelectedPermissions(value)
-    console.log("Selected permissions:", value);
+  const handleAppliesToChange = (value: string | null) => {
+    setFeesAppliesTo(value as string);
+  };
+
+  const handleClassesChange = (value: string[]) => {
+    setSelectedClasses(value);
   };
 
   return (
     <div className="pb-16">
-
       <div className="flex justify-end">
         <CustomButton text="Save Changes" onClick={() => {}} />
       </div>
 
       <div className="mt-8">
         <div className="flex items-center gap-2">
-          <h1 className="text-md font-semibold text-neutral-800">Fee Structure</h1>
+          <h1 className="text-md font-semibold text-neutral-800">
+            Fee Structure
+          </h1>
           <CustomUnderlinedButton
             text="Add New"
             textColor="text-purple-500"
@@ -78,85 +209,54 @@ export const SchoolSettingsTabSection: React.FC = () => {
           />
         </div>
         <div className="flex flex-col gap-4">
-          <div className="bg-[#EAEAEAB3] px-6 py-2 rounded-sm">
-            <div className="flex justify-end gap-3">
-              <CustomUnderlinedButton
-                text="Edit"
-                textColor="text-gray-500"
-                onClick={() => setIsFeeStructureDialogOpen(true)}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-              <CustomUnderlinedButton
-                text="Send Reminder"
-                textColor="text-gray-500"
-                onClick={() => {}}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-              <CustomUnderlinedButton
-                text="Delete"
-                textColor="text-gray-500"
-                onClick={() => setIsConfirmDeleteFeeStructureDialogOpen(true)}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-            </div>
-            <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
-              <InputField
-                  label="Fee Title"
-                  isTransulent={false}
-                  value={''}
-                  onChange={() => {}}
-              />
-              <InputField
-                  label="Fee Duration"
-                  isTransulent={false}
-                  value={''}
-                  onChange={() => {}}
-              />
-            </div>
-          </div>
-
-          <div className="bg-[#EAEAEAB3] px-6 py-2 rounded-sm">
-            <div className="flex justify-end gap-3">
-              <CustomUnderlinedButton
-                text="Edit"
-                textColor="text-gray-500"
-                onClick={() => setIsFeeStructureDialogOpen(true)}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-              <CustomUnderlinedButton
-                text="Send Reminder"
-                textColor="text-gray-500"
-                onClick={() => {}}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-              <CustomUnderlinedButton
-                text="Delete"
-                textColor="text-gray-500"
-                onClick={() => setIsConfirmDeleteFeeStructureDialogOpen(true)}
-                icon={<IconUpload size={10} />}
-                showIcon={false}
-              />
-            </div>
-            <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
-              <InputField
-                  label="Fee Title"
-                  isTransulent={false}
-                  value={''}
-                  onChange={() => {}}
-              />
-              <InputField
-                  label="Fee Duration"
-                  isTransulent={false}
-                  value={''}
-                  onChange={() => {}}
-              />
-            </div>
-          </div>
+          {
+            feesStructure?.map((feeStructure, index) => {
+              return (
+                <div key={index} className="bg-[#EAEAEAB3] px-6 py-2 rounded-sm">
+                  <div className="flex justify-end gap-3">
+                    <CustomUnderlinedButton
+                      text="Edit"
+                      textColor="text-gray-500"
+                      onClick={() => onEditFeeStructureClick(feeStructure) }
+                      icon={<IconUpload size={10} />}
+                      showIcon={false}
+                    />
+                    <CustomUnderlinedButton
+                      text="Send Reminder"
+                      textColor="text-gray-500"
+                      onClick={() => {}}
+                      icon={<IconUpload size={10} />}
+                      showIcon={false}
+                    />
+                    <CustomUnderlinedButton
+                      text="Delete"
+                      textColor="text-gray-500"
+                      onClick={() =>
+                        onDeleteFeeStructureClick(feeStructure.id || "")
+                      }
+                      icon={<IconUpload size={10} />}
+                      showIcon={false}
+                    />
+                  </div>
+                  <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
+                    <InputField
+                      label="Fee Title"
+                      isTransulent={false}
+                      value={feeStructure.feeTitle}
+                      readOnly={true}
+                    />
+                    <InputField
+                      label="Fee Duration"
+                      isTransulent={false}
+                      value={feeStructure.feeType}
+                      readOnly={true}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          }
+          
         </div>
         <NoAvailableEmptyState message="No fee structure available, click ‘Add New’ to create one." />
       </div>
@@ -167,7 +267,9 @@ export const SchoolSettingsTabSection: React.FC = () => {
       </div>
 
       <div className="mt-8">
-        <h1 className="text-md font-semibold text-neutral-800">Admission Policies</h1>
+        <h1 className="text-md font-semibold text-neutral-800">
+          Admission Policies
+        </h1>
         <CustomUnderlinedButton
           text="Upload Document"
           textColor="text-purple-500"
@@ -176,17 +278,18 @@ export const SchoolSettingsTabSection: React.FC = () => {
           showIcon={true}
         />
         <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-2">
-          {documents.map((doc) => (
+          {/* {documents.map((doc) => (
             <DocumentItem
               key={doc.id}
               name={doc.name}
               width={doc.width}
-              onClose={() => {console.log("clicked");}}
+              onClose={() => {
+                console.log("clicked");
+              }}
             />
-          ))}
+          ))} */}
         </section>
       </div>
-
 
       <div className="mt-8">
         <h1 className="text-md font-semibold text-neutral-800">School Logo</h1>
@@ -224,78 +327,103 @@ export const SchoolSettingsTabSection: React.FC = () => {
         </section>
       </div>
 
-
       {/* Fee structure dialog */}
-      <Dialog 
+      <Dialog
         isOpen={isFeeStructureDialogOpen}
         dialogTitle="Add New Fee Structure"
         saveButtonText="Save Changes"
-        onClose={() => setIsFeeStructureDialogOpen(false)} 
-        onSave={() => {}}
-        busy={false}
+        onClose={() => {
+          clearDialog();
+          setIsFeeStructureDialogOpen(false);
+        }}
+        onSave={editMode? editFeeStructure : addNewFeeStructure}
+        busy={isLoading}
       >
-        <p className="text-xs text-gray-500">Enter the fee details to update the fee structure</p>
+        <p className="text-xs text-gray-500">
+          Enter the fee details to update the fee structure
+        </p>
         <div className="my-3 flex flex-col gap-4">
           <InputField
             className="!py-0"
             placeholder="Enter Title"
             label="Fee Title"
-            value={''}
-            onChange={() => {}}
+            value={feesTitle}
+            onChange={(e) => { setFeesTitle(e.target.value)}}
             isTransulent={false}
-          />
-            
-          <Select
-            label="Fee Duration"
-            placeholder="Please Select"
-            data={roles}
-            value={selectedDataRole}
-            onChange={() => handleRoleDataChange}
           />
 
           <Select
             label="Fee Duration"
             placeholder="Please Select"
-            data={roles}
-            value={selectedDataRole}
-            onChange={() => handleRoleDataChange}
+            data={duration}
+            value={selectedDuration}
+            onChange={handleDurationChange}
           />
 
           <Select
             label="Apply Fees to"
             placeholder="Please Select"
-            data={roles}
-            value={selectedDataRole}
-            onChange={() => handleRoleDataChange}
+            data={appliesTo}
+            value={feesAppliesTo}
+            onChange={handleAppliesToChange}
           />
 
           <MultiSelect
             label="Class / Level"
             placeholder="Please Select"
-            data={permissions}
-            value={selectedPermissions}
-            onChange={handlePermissionChange}
+            data={classes}
+            value={selectedClasses}
+            onChange={handleClassesChange}
             withCheckIcon
+          />
+
+          <TextInput
+            type="number"
+            label="Amount"
+            leftSection={select}
+            leftSectionWidth={90}
+            value={amount}
+            onChange={(e) => { setAmount(Number(e.target.value)) }}
+          />
+
+          {/* <InputField
+            className="!py-0"
+            placeholder=""
+            label="Amount"
+            value={''}
+            type="number"
+            onChange={() => {}}
+            isTransulent={false}
+          /> */}
+
+          <InputField
+            className="!py-0"
+            placeholder="Enter Date"
+            label="Due Date"
+            value={dueDate}
+            type="date"
+            onChange={(e) => { setDueDate(e.target.value)}}
+            isTransulent={false}
           />
         </div>
       </Dialog>
 
       {/* Confirm Delete Fee Structure Dialog */}
-      <Dialog 
+      <Dialog
         isOpen={isConfirmDeleteFeeStructureDialogOpen}
         busy={false}
         dialogTitle="Confirm Delete"
         saveButtonText="Delete Fee"
-        onClose={() => setIsConfirmDeleteFeeStructureDialogOpen(false)} 
-        onSave={() => {}}
+        onClose={() => setIsConfirmDeleteFeeStructureDialogOpen(false)}
+        onSave={deleteFeeStructure}
       >
         <div className="my-3 flex flex-col gap-4">
           <p>
-          Are you sure you want to delete this fee structure? You will loose all related information
+            Are you sure you want to delete this fee structure? You will loose
+            all related information
           </p>
         </div>
       </Dialog>
     </div>
   );
 };
- 
