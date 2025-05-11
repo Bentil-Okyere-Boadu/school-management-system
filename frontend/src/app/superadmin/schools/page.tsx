@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import SchoolCard from "@/components/superadmin/schools/SchoolCard";
+import SchoolCard from "@/components/common/SchoolCard";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useRouter } from "next/navigation";
 
