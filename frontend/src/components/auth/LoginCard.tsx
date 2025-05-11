@@ -29,8 +29,11 @@ const LoginCard: React.FC = () => {
       setUser('admin');
       return '/school-admin/login'
     } else if(pathname.includes('teacher')) {
-      setUser(Roles.STUDENT);
+      setUser(Roles.TEACHER);
       return '/teacher/login'
+    } else if(pathname.includes('student')) {
+      setUser(Roles.STUDENT);
+      return '/student/login'
     } else return '/super-admin/auth/login';
   }
 
@@ -44,7 +47,6 @@ const LoginCard: React.FC = () => {
       },
       onSuccess: (data) => {
         toast.success("Login successfully.");
-        console.log(data)
         setLoggedInUser(data.data);
         handleLoginRedirectAndToken(data, router);
       },
