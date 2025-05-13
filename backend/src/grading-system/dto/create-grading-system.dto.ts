@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, Min, Max } from 'class-validator';
 
 export class CreateGradingSystemDto {
   @IsNotEmpty()
@@ -16,8 +16,4 @@ export class CreateGradingSystemDto {
   @Min(0)
   @Max(100)
   maxRange: number;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
-} 
+}
