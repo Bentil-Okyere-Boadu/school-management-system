@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { FeeStructure } from "@/@types";
+import { FeeStructure, SchoolAdminInfo } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading } = useQuery({
@@ -11,9 +11,9 @@ export const useGetMySchool = () => {
         refetchOnWindowFocus: true
     })
 
-    const users = data?.data
+    const school = data?.data
 
-    return { users, isLoading }
+    return { school, isLoading }
 }
 
 export const useGetSchoolUsers = (page=1,search: string = "", status: string = "", role: string = "" ) => {
@@ -97,7 +97,29 @@ export const useEditFeeStructure = (id: string) => {
 export const useDeleteFeeStructure = () => {
     return useMutation({
         mutationFn: (id: string) => {
-            return customAPI.delete(`/fee-structure/id=${id}`)
+            return customAPI.delete(`/fee-structure/${id}`)
+        }
+    })
+}
+
+export const useGetSchoolAdminInfo = () => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['schoolAdminInfo'],
+        queryFn: () => {
+            return customAPI.get('/school-admin/me');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const schoolAdminInfo = data?.data
+
+    return { schoolAdminInfo, isLoading }
+}
+
+export const useEditSchoolAdminInfo = () => {
+    return useMutation({
+        mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
+            return customAPI.put('/school-admin/profile/me', schoolAdminInfo);
         }
     })
 }
