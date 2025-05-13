@@ -41,7 +41,7 @@ export class GradingSystemController {
     if (!user.school) {
       throw new BadRequestException('No school found for this admin');
     }
-    
+
     try {
       return await this.gradingSystemService.create(
         createGradingSystemDto,
@@ -63,7 +63,7 @@ export class GradingSystemController {
     if (!user.school) {
       throw new BadRequestException('No school found for this admin');
     }
-    
+
     try {
       return await this.gradingSystemService.update(
         id,
@@ -78,14 +78,11 @@ export class GradingSystemController {
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Delete(':id')
   @Roles('school_admin')
-  async remove(
-    @Param('id') id: string,
-    @CurrentUser() user: SchoolAdmin,
-  ) {
+  async remove(@Param('id') id: string, @CurrentUser() user: SchoolAdmin) {
     if (!user.school) {
       throw new BadRequestException('No school found for this admin');
     }
-    
+
     await this.gradingSystemService.remove(id, user.school.id);
     return { message: 'Grading system item deleted successfully' };
   }

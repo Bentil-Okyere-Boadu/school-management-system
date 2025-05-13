@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { GradingSystem } from './grading-system.entity';
 import { CreateGradingSystemDto } from './dto/create-grading-system.dto';
 import { UpdateGradingSystemDto } from './dto/update-grading-system.dto';
@@ -64,7 +64,9 @@ export class GradingSystemService {
     });
 
     if (!existingGrade) {
-      throw new NotFoundException(`Grading system with ID ${id} not found in this school`);
+      throw new NotFoundException(
+        `Grading system with ID ${id} not found in this school`,
+      );
     }
 
     // If updating ranges, validate them
@@ -72,8 +74,10 @@ export class GradingSystemService {
       updateGradingSystemDto.minRange !== undefined ||
       updateGradingSystemDto.maxRange !== undefined
     ) {
-      const minRange = updateGradingSystemDto.minRange ?? existingGrade.minRange;
-      const maxRange = updateGradingSystemDto.maxRange ?? existingGrade.maxRange;
+      const minRange =
+        updateGradingSystemDto.minRange ?? existingGrade.minRange;
+      const maxRange =
+        updateGradingSystemDto.maxRange ?? existingGrade.maxRange;
 
       // Validate that minRange < maxRange
       if (minRange > maxRange) {
@@ -100,7 +104,9 @@ export class GradingSystemService {
     });
 
     if (!existingGrade) {
-      throw new NotFoundException(`Grading system with ID ${id} not found in this school`);
+      throw new NotFoundException(
+        `Grading system with ID ${id} not found in this school`,
+      );
     }
 
     await this.gradingSystemRepository.remove(existingGrade);
@@ -122,7 +128,7 @@ export class GradingSystemService {
 
     // If excludeId is provided, exclude that grade from the check
     if (excludeId) {
-      whereClause.id = { $ne: excludeId };
+      whereClause.id = Not(excludeId);
     }
 
     const existingGrades = await this.gradingSystemRepository.find({

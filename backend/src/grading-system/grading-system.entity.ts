@@ -15,11 +15,8 @@ export class GradingSystem {
   @Column('float')
   maxRange: number;
 
-  @Column({ nullable: true })
-  description?: string;
-
   @ManyToOne(() => School, (school) => school.gradingSystems, {
-    onDelete: 'CASCADE',
+    //  onDelete: 'CASCADE',
   })
   school: School;
 }
