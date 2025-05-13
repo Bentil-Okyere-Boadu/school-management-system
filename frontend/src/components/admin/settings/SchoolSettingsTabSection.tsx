@@ -225,7 +225,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
                     <CustomUnderlinedButton
                       text="Send Reminder"
                       textColor="text-gray-500"
-                      onClick={() => {setIsSendReminderDialogOpen(true)}}
+                      onClick={() => {}}
                       icon={<IconUpload size={10} />}
                       showIcon={false}
                     />

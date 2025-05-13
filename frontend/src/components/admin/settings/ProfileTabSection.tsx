@@ -9,15 +9,18 @@ import { useEditSchoolAdminInfo } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 
 
-
 interface ProfileTabSectionProps {
   schoolAdminInfo: {
     email: string;
-    phone: string;
-    address: string;
     name: string;
     role: {
       label: string;
+    }
+    profile: {    
+      address: string;
+      phoneContact: string;
+      streetAddress: string;
+      optionalPhoneContact: string;
     }
   };
 }
@@ -29,40 +32,48 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
-  const [boxAddress, setBoxAddress] = useState("");
-  const [phone, setPhone] = useState("");
-  const [optionalPhone, setOptionalPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [phoneContact, setPhoneContact] = useState("");
+  const [optionalPhoneContact, setOptionalPhoneContact] = useState("");
 
   const prepopulateProfileSettings = () => {
     setFirstName(schoolAdminInfo?.name?.split(" ")?.[0]);
     setLastName(schoolAdminInfo?.name?.split(" ")?.[1]);
     setRole(schoolAdminInfo?.role?.label)
     setEmail(schoolAdminInfo?.email);
-    setStreetAddress(schoolAdminInfo.address);
-    setBoxAddress('');
-    setPhone(schoolAdminInfo.phone);
-    setOptionalPhone('');  
+    setStreetAddress(schoolAdminInfo?.profile?.streetAddress);
+    setAddress(schoolAdminInfo?.profile?.address);
+    setPhoneContact(schoolAdminInfo?.profile?.phoneContact);
+    setOptionalPhoneContact(schoolAdminInfo?.profile?.optionalPhoneContact);  
   }
 
   useEffect(() => {
     prepopulateProfileSettings()
   }, [])
 
-    const { mutate: editMutation } = useEditSchoolAdminInfo();
+    const { mutate: editMutation, isPending } = useEditSchoolAdminInfo();
 
 
     const editSchoolAdminInfo = () => {
-      editMutation({
-        name: firstName + " " +  lastName,
-        phone: "",
-      }, {
-        onSuccess: () => {
-          toast.success('Saved successfully.');
-        },
-        onError: (error) => {
-          toast.error(error.message);
+      if(firstName && lastName && email) {
+        editMutation({
+          name: firstName + " " +  lastName,
+          email: email,
+          phoneContact: phoneContact,
+          address: address,
+          streetAddress: streetAddress,
+          optionalPhoneContact: optionalPhoneContact,
+        }, {
+          onSuccess: () => {
+            toast.success('Saved successfully.');
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          }
+        })
+      } else {
+          toast.error('Some fields can not be left empty');
         }
-      })
     }
 
 
@@ -70,7 +81,7 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
   return (
     <div className="pb-8">
         <div className="flex justify-end">
-            <CustomButton text="Save Changes" onClick={() => editSchoolAdminInfo()} />
+            <CustomButton text="Save Changes" loading={isPending} onClick={() => editSchoolAdminInfo()} />
         </div>
 
         <h1 className="text-md font-semibold text-neutral-800 mb-2">My Profile</h1>
@@ -120,7 +131,7 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
             />
             <InputField
                 label="Email"
-                isTransulent={true}
+                isTransulent={false}
                 value={email}
                 onChange={(e) => {setEmail(e.target.value)}}
             />
@@ -133,20 +144,20 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
             <InputField
                 label="Box Address"
                 isTransulent={false}
-                value={boxAddress}
-                onChange={(e) => {setBoxAddress(e.target.value)}}
+                value={address}
+                onChange={(e) => {setAddress(e.target.value)}}
             />
             <InputField
                 label="Phone"
                 isTransulent={false}
-                value={phone}
-                onChange={(e) => {setPhone(e.target.value)}}
+                value={phoneContact}
+                onChange={(e) => {setPhoneContact(e.target.value)}}
             />
             <InputField
                 label="Phone(optional)"
                 isTransulent={false}
-                value={optionalPhone}
-                onChange={(e) => {setOptionalPhone(e.target.value)}}
+                value={optionalPhoneContact}
+                onChange={(e) => {setOptionalPhoneContact(e.target.value)}}
             />
         </div>
     </div>

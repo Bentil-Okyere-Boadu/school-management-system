@@ -49,10 +49,12 @@ export type FeeStructure = {
 
 export type SchoolAdminInfo = {
   email: string;
-  phone: string;
+  phoneContact: string;
   address: string;
   name: string;
   role: {
     label: string;
   }
+  streetAddress?: string;
+  optionalPhoneContact?: string;
 }

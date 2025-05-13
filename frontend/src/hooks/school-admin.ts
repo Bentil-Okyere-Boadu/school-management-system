@@ -119,7 +119,7 @@ export const useGetSchoolAdminInfo = () => {
 export const useEditSchoolAdminInfo = () => {
     return useMutation({
         mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
-            return customAPI.put('/school-admin/me', schoolAdminInfo);
+            return customAPI.put('/school-admin/profile/me', schoolAdminInfo);
         }
     })
 }
