@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { FeeStructure } from "@/@types";
+import { FeeStructure, Grade } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading } = useQuery({
@@ -49,20 +49,6 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
     return { adminUsers, isLoading, paginationValues, refetch }
 }
 
-export const useGetFeeStructure = () => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['myFeeStructure'],
-        queryFn: () => {
-            return customAPI.get('/fee-structure/my-school');
-        },
-        refetchOnWindowFocus: true
-    })
-
-    const feesStructure = data?.data as FeeStructure[];
-
-    return { feesStructure, isLoading, refetch }
-}
-
  export const useCreateSchool = () => {
     return useMutation({ 
         mutationFn: (schoolDetails: {name: string, address: string, phone: string, email: string}) => {
@@ -77,6 +63,25 @@ export const useInvitation = (role: string) => {
             return customAPI.post(`/invitations/${role}`, inviteDetails);
         }
     })
+}
+
+/**
+ * FEE STRUCTURE CRUD
+ * @returns 
+ */
+
+export const useGetFeeStructure = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['myFeeStructure'],
+        queryFn: () => {
+            return customAPI.get('/fee-structure/my-school');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const feesStructure = data?.data as FeeStructure[];
+
+    return { feesStructure, isLoading, refetch }
 }
 
 export const useSaveFeeStructure = () => {
@@ -98,6 +103,47 @@ export const useDeleteFeeStructure = () => {
     return useMutation({
         mutationFn: (id: string) => {
             return customAPI.delete(`/fee-structure/id=${id}`)
+        }
+    })
+}
+
+/**
+ * GRADING SYSTEM CRUD
+ */
+export const useGetGradingSystem = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['myGradingSystem'],
+        queryFn: () => {
+            return customAPI.get('/grading-system/my-school');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const grades = data?.data as Grade[];
+
+    return { grades, isLoading, refetch }
+}
+
+export const useCreateGrade = () => {
+    return useMutation({
+        mutationFn: (grade: Partial<Grade>) => {
+            return customAPI.post('/grading-system', grade);
+        }
+    })
+}
+
+export const useDeleteGrade = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/grading-system/id=${id}`)
+        }
+    })
+}
+
+export const useEditGrade = (id: string) => {
+    return useMutation({
+        mutationFn: (grade: Partial<Grade>) => {
+            return customAPI.put(`/grading-system/${id}`, grade);
         }
     })
 }
