@@ -4,40 +4,83 @@ import { IconPencil, IconTrashFilled, IconUpload } from "@tabler/icons-react";
 import React, { useState } from "react";
 import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
-
-interface GradeData {
-  grade: string;
-  minRange: string;
-  maxRange: string;
-}
+import NoAvailableEmptyState from "../NoAvailableEmptyState";
+import { Grade } from "@/@types";
+import { useCreateGrade, useDeleteGrade, useEditGrade, useGetGradingSystem } from "@/hooks/school-admin";
+import { toast } from "react-toastify";
 
 export const GradingSystemTable: React.FC = () => {
   const [isConfirmDeleteGradingSystemDialogOpen, setIsConfirmDeleteGradingSystemDialogOpen] = useState(false);
   const [isGradingSystemDialogOpen, setIsGradingSystemDialogOpen] = useState(false);
   const [gradeLabel, setGradeLabel] = useState('');
-  const [minRange, setMinRange] = useState('');
-  const [maxRange, setMaxRange] = useState('');
+  const [minRange, setMinRange] = useState<number | null>(null);
+  const [maxRange, setMaxRange] = useState<number | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [gradeId, setGradeId] = useState('');
 
+  const { grades, refetch } = useGetGradingSystem();
+  const { mutate: editMutation, isPending: pendingEdit } = useEditGrade(gradeId);
+  const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteGrade();
+  const { mutate: createMutation, isPending: pendingCreate } = useCreateGrade();
+  
+  const onEditGradingClick = (data: Partial<Grade>) => {
+    setEditMode(true);
+    setGradeId(data.id as string);
+    setIsGradingSystemDialogOpen(true);
+    setGradeLabel(data.grade as string);
+    setMinRange(data.minRange as number);
+    setMaxRange(data.maxRange as number);
+  }
 
-  const gradeData: GradeData[] = [
-    { grade: "A", minRange: "80", maxRange: "80" },
-    { grade: "B", minRange: "70", maxRange: "70" },
-    { grade: "C", minRange: "60", maxRange: "60" },
-    { grade: "D", minRange: "50", maxRange: "50" },
-  ];
+  const editGrade = () => {
+    editMutation({ grade: gradeLabel, minRange: Number(minRange), maxRange: Number(maxRange) }, {
+      onSuccess: () => {
+        toast.success('Successfully updated grade.')
+        setIsGradingSystemDialogOpen(false);
+        refetch();
+      },
+      onError: () => {}
+    }
+    )
+  }
 
-  const onEditGrading = (data: GradeData) => {
-    setIsGradingSystemDialogOpen(true)
-    setGradeLabel(data.grade);
-    setMinRange(data.minRange);
-    setMaxRange(data.maxRange);
+  const createGrade = () => {
+    createMutation({ grade: gradeLabel, minRange: Number(minRange), maxRange: Number(maxRange) }, {
+      onSuccess: () => {
+        toast.success('Successfully created grade.')
+        setIsGradingSystemDialogOpen(false);
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message)
+      }
+    })
+  }
+
+  const deleteGrade = () => {
+    deleteMutation(gradeId, {
+      onSuccess: () => {
+        toast.success('Deleted successfully.');
+        setIsConfirmDeleteGradingSystemDialogOpen(false);
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      }
+    })
+  }
+
+  const onDeleteButtonClick = (sId: string) => {
+    setIsConfirmDeleteGradingSystemDialogOpen(true);
+    setGradeId(sId);
   }
 
   const onAddNewGrading = () => {
     setIsGradingSystemDialogOpen(true)
     setGradeLabel('');
-    setMinRange('');
-    setMaxRange('');
+    setMinRange(null);
+    setMaxRange(null);
+    setGradeId('');
   }
 
   return (
@@ -70,7 +113,8 @@ export const GradingSystemTable: React.FC = () => {
         </tr>
       </thead>
       <tbody>
-        {gradeData.map((data, index) => (
+        {
+        grades.length > 0 && grades.map((data, index) => (
           <tr className="border-b border-solid border-b-gray-200" key={index + "12"}>
             <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
             {data.grade}
@@ -83,23 +127,29 @@ export const GradingSystemTable: React.FC = () => {
             </td>
             <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
               <div className="flex gap-3">
-                <IconPencil size={18} className="cursor-pointer" onClick={() => onEditGrading(data)} />
-                <IconTrashFilled size={18} className="text-red-600 cursor-pointer" onClick={() => setIsConfirmDeleteGradingSystemDialogOpen(true)} />
+                <IconPencil size={18} className="cursor-pointer" onClick={() => onEditGradingClick(data)} />
+                <IconTrashFilled size={18} className="text-red-600 cursor-pointer" onClick={() => onDeleteButtonClick(data.id)} />
               </div>
             </td>
           </tr>
-        ))}
+        )) 
+      }
       </tbody>
     </table>
+    {
+      grades.length === 0 && (
+          <NoAvailableEmptyState message="No grade available, click ‘Add New’ to create one." />
+        )
+    }
 
     {/* Creating Editing Grading Dialog */}
     <Dialog 
       isOpen={isGradingSystemDialogOpen}
-      busy={false}
+      busy={editMode? pendingEdit : pendingCreate}
       dialogTitle="Grading System"
       saveButtonText="Save Grading"
       onClose={() => setIsGradingSystemDialogOpen(false)} 
-      onSave={() => {}}
+      onSave={editMode? editGrade : createGrade }
     >
       <div className="my-3 flex flex-col gap-4">
         <InputField
@@ -107,7 +157,7 @@ export const GradingSystemTable: React.FC = () => {
           placeholder=""
           label="Grade Label"
           value={gradeLabel}
-          onChange={() => {}}
+          onChange={(e) => { setGradeLabel(e.target.value)}}
           isTransulent={false}
         />
           
@@ -115,8 +165,8 @@ export const GradingSystemTable: React.FC = () => {
           className="!py-0"
           placeholder=""
           label="Minimum Range"
-          value={minRange}
-          onChange={(e) => {setMinRange(e.target.value)}}
+          value={minRange as unknown as string}
+          onChange={(e) => {setMinRange(e.target.value as unknown as number)}}
           type="number"
           isTransulent={false}
         />
@@ -125,8 +175,8 @@ export const GradingSystemTable: React.FC = () => {
           className="!py-0"
           placeholder=""
           label="Maximum Range"
-          value={maxRange}
-          onChange={(e) => {setMaxRange(e.target.value)}}
+          value={maxRange as unknown as string}
+          onChange={(e) => {setMaxRange(e.target.value as unknown as number)}}
           type="number"
           isTransulent={false}
         />
@@ -136,11 +186,11 @@ export const GradingSystemTable: React.FC = () => {
     {/* Confirm Delete Grading Dialog */}
     <Dialog 
       isOpen={isConfirmDeleteGradingSystemDialogOpen}
-      busy={false}
+      busy={pendingDelete}
       dialogTitle="Confirm Delete"
       saveButtonText="Delete Grading"
-      onClose={() => setIsConfirmDeleteGradingSystemDialogOpen(false)} 
-      onSave={() => {}}
+      onClose={() => { setIsConfirmDeleteGradingSystemDialogOpen(false)}} 
+      onSave={deleteGrade}
     >
       <div className="my-3 flex flex-col gap-4">
         <p>

@@ -1,3 +1,26 @@
+/* For WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 4px;  /* Width of the scrollbar */
+  height: 4px; /* Height for horizontal scrollbar */
+}
+
+/* Track (background) */
+::-webkit-scrollbar-track {
+  background: #888; 
+  border-radius: 5px;
+}
+
+/* Handle (thumb) */
+::-webkit-scrollbar-thumb {
+  background: #AB58E7;
+  border-radius: 5px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #D1D6FA;
+}
+
 .authBg {
   background: #D1D6FA;
   background: linear-gradient(90deg, rgba(209, 214, 250, 1) 0%, rgba(250, 210, 209, 1) 43%, rgba(216, 208, 251, 1) 98%);

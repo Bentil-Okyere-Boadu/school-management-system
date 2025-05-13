@@ -76,24 +76,6 @@ export const SchoolSettingsTabSection: React.FC = () => {
     />
   );
 
-  // const documents = [
-  //   // {
-  //   //   id: 1,
-  //   //   name: "Admission Policy 2.0 .pdf",
-  //   //   width: "231px",
-  //   // },
-  //   // {
-  //   //   id: 2,
-  //   //   name: "Fee Policy .pdf",
-  //   //   width: "160px", // w-40 = 10rem = 160px
-  //   // },
-  //   // {
-  //   //   id: 3,
-  //   //   name: "Admission Policy 3.0 .pdf",
-  //   //   width: "232px",
-  //   // },
-  // ];
-
   const { mutate: createFeeStructure } = useSaveFeeStructure();
   const { feesStructure, isLoading, refetch } = useGetFeeStructure();
   const {mutate: deleteMutation } = useDeleteFeeStructure();
@@ -211,7 +193,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
         </div>
         <div className="flex flex-col gap-4 mb-12">
           {
-            feesStructure?.map((feeStructure, index) => {
+            feesStructure.length > 0? feesStructure?.map((feeStructure, index) => {
               return (
                 <div key={index} className="bg-[#EAEAEAB3] px-6 py-2 rounded-sm">
                   <div className="flex justify-end gap-3">
@@ -255,19 +237,15 @@ export const SchoolSettingsTabSection: React.FC = () => {
                   </div>
                 </div>
               );
-            })
+            }) : (
+              <NoAvailableEmptyState message="No fee structure available, click ‘Add New’ to create one." />
+            )
           }
         </div>
-        {
-          feesStructure?.length == 0 && (
-            <NoAvailableEmptyState message="No fee structure available, click ‘Add New’ to create one." />
-          )
-        }
       </div>
 
       <div className="mt-8">
         <GradingSystemTable />
-        <NoAvailableEmptyState message="No grade available, click ‘Add New’ to create one." />
       </div>
 
       <div className="mt-8">
