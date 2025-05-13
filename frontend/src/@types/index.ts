@@ -52,4 +52,16 @@ export type Grade = {
   minRange: number | null;
   maxRange: number | null;
   id: string;
+  }
+
+export type SchoolAdminInfo = {
+  email: string;
+  phoneContact: string;
+  address: string;
+  name: string;
+  role: {
+    label: string;
+  }
+  streetAddress?: string;
+  optionalPhoneContact?: string;
 }

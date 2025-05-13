@@ -5,12 +5,13 @@ import { Menu, MultiSelect , Select} from '@mantine/core';
 import {
   IconArrowRight,
   IconDots,
+  IconSend2,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
-import { useArchiveUser, useGetAdminUsers } from "@/hooks/users";
+import { useArchiveUser, useGetAdminUsers, useResendAdminInvitation } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 
@@ -92,6 +93,22 @@ export const DashboardTable = () => {
     });
   }
 
+  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id});
+
+  const onResendInvitationMenuItemClick = (user: User) => {
+    setSelectedUser(user);
+
+    resendInvitationMutate(null as unknown as void, {
+      onSuccess: () => {
+        toast.success('Resend invitation successful.');
+      },
+      onError: (error: Error) => {
+        const axiosError = error as AxiosError;
+        toast.error(axiosError.response?.statusText);
+      }
+    });
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-3">
@@ -154,7 +171,13 @@ export const DashboardTable = () => {
                           <Menu.Target>
                             <IconDots className="cursor-pointer" />
                           </Menu.Target>
-                          <Menu.Dropdown className="!-ml-8 !-mt-2">
+                          <Menu.Dropdown className="!-ml-12 !-mt-2">
+                            <Menu.Item 
+                              onClick={() => onResendInvitationMenuItemClick(user)} 
+                              disabled={user.status !== 'pending'}
+                              leftSection={<IconSend2 size={18} color="#AB58E7" />}>
+                              Resend Invitation
+                            </Menu.Item>
                             <Menu.Item 
                               onClick={() => onArchiveUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>
