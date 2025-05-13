@@ -18,9 +18,9 @@ import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/user.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
+import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 
 @Controller('schools')
-@UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}
 
@@ -28,6 +28,7 @@ export class SchoolController {
    * Create a new school
    * School admins can create one school and will be associated with it
    */
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('/create')
   @Roles('school_admin')
   create(
@@ -40,6 +41,7 @@ export class SchoolController {
   /**
    * Get all schools (super admin only)
    */
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get()
   @Roles('super_admin')
   findAll(): Promise<School[]> {
