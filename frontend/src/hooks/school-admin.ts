@@ -79,7 +79,7 @@ export const useGetFeeStructure = () => {
         refetchOnWindowFocus: true
     })
 
-    const feesStructure = data?.data as FeeStructure[];
+    const feesStructure = data?.data as FeeStructure[] || [] ;
 
     return { feesStructure, isLoading, refetch }
 }
@@ -102,7 +102,7 @@ export const useEditFeeStructure = (id: string) => {
 export const useDeleteFeeStructure = () => {
     return useMutation({
         mutationFn: (id: string) => {
-            return customAPI.delete(`/fee-structure/id=${id}`)
+            return customAPI.delete(`/fee-structure/${id}`)
         }
     })
 }
@@ -119,7 +119,7 @@ export const useGetGradingSystem = () => {
         refetchOnWindowFocus: true
     })
 
-    const grades = data?.data as Grade[];
+    const grades = data?.data as Grade[] || [] ;
 
     return { grades, isLoading, refetch }
 }
@@ -135,7 +135,7 @@ export const useCreateGrade = () => {
 export const useDeleteGrade = () => {
     return useMutation({
         mutationFn: (id: string) => {
-            return customAPI.delete(`/grading-system/id=${id}`)
+            return customAPI.delete(`/grading-system/${id}`)
         }
     })
 }
