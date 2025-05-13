@@ -24,6 +24,7 @@ import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { StudentService } from 'src/student/student.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { SchoolAdminAuthService } from 'src/school-admin/school-admin-auth.service';
 
 @Controller('invitations')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -31,6 +32,7 @@ export class InvitationController {
   constructor(
     private invitationService: InvitationService,
     private studentService: StudentService,
+    private readonly schoolAdminAuthService: SchoolAdminAuthService,
   ) {}
 
   // Superadmin endpoints
@@ -105,12 +107,12 @@ export class InvitationController {
       throw new BadRequestException('Token and password are required');
     }
 
-    await this.invitationService.completeRegistration(
+    const schoolAdmin = await this.invitationService.completeRegistration(
       completeRegDto.token,
       completeRegDto.password,
     );
 
-    return { success: true, message: 'Registration completed successfully' };
+    return this.schoolAdminAuthService.login(schoolAdmin);
   }
 
   // PIN reset for students and teachers
