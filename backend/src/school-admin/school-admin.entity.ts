@@ -3,12 +3,14 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToOne,
   CreateDateColumn,
   JoinColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Role } from 'src/role/role.entity';
+import { Profile } from 'src/profile/profile.entity';
 
 @Entity()
 export class SchoolAdmin {
@@ -48,7 +50,8 @@ export class SchoolAdmin {
     eager: true,
   })
   school: School;
-
+  @OneToOne(() => Profile, (profile) => profile.schoolAdmin)
+  profile: Profile;
   @Column({ nullable: true })
   resetPasswordExpires: Date;
 

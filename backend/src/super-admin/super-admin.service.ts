@@ -12,6 +12,8 @@ import { Role } from '../role/role.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { APIFeatures, QueryString } from '../common/api-features/api-features';
 import { School } from 'src/school/school.entity';
+import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { ProfileService } from 'src/profile/profile.service';
 
 @Injectable()
 export class SuperAdminService {
@@ -23,6 +25,7 @@ export class SuperAdminService {
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
+    private readonly profileService: ProfileService,
   ) {}
 
   async findAllUsers(queryString: QueryString) {
@@ -78,7 +81,7 @@ export class SuperAdminService {
   async getMe(user: SuperAdmin): Promise<SuperAdmin> {
     const superAdmin = await this.superAdminRepository.findOne({
       where: { id: user.id },
-      relations: ['role'],
+      relations: ['role', 'profile'],
     });
 
     if (!superAdmin) {
@@ -145,5 +148,17 @@ export class SuperAdminService {
       .paginate();
 
     return await features.getQuery().getMany();
+  }
+
+  async updateProfile(
+    adminId: string,
+    updateDto: UpdateProfileDto,
+  ): Promise<SuperAdmin> {
+    return this.profileService.handleUpdateProfile(
+      adminId,
+      updateDto,
+      this.superAdminRepository,
+      ['role', 'profile'],
+    );
   }
 }

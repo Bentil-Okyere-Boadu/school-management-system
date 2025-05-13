@@ -1,4 +1,6 @@
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { School } from 'src/school/school.entity';
+import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -13,18 +15,34 @@ export class Profile {
   id: string;
 
   @Column({ nullable: true })
-  principalName?: string;
+  name?: string;
 
   @Column({ nullable: true })
-  contactEmail?: string;
+  email?: string;
 
   @Column({ nullable: true })
-  phone?: string;
+  address: string;
 
   @Column({ nullable: true })
-  address?: string;
+  streetAddress: string;
 
-  @OneToOne(() => School, { onDelete: 'CASCADE' })
+  @Column({ nullable: true })
+  phoneContact: string;
+
+  @Column({ nullable: true })
+  optionalPhoneContact: string;
+
+  @OneToOne(() => SchoolAdmin, (admin) => admin.profile)
+  @JoinColumn()
+  schoolAdmin: SchoolAdmin;
+
+  @OneToOne(() => SuperAdmin, (admin) => admin.profile)
+  @JoinColumn()
+  superAdmin: SuperAdmin;
+
+  @OneToOne(() => School, {
+    // eager: true
+  })
   @JoinColumn()
   school: School;
 }

@@ -7,8 +7,10 @@ import {
   ManyToOne,
   JoinColumn,
   UpdateDateColumn,
+  OneToOne,
 } from 'typeorm';
 import { Role } from '../role/role.entity';
+import { Profile } from 'src/profile/profile.entity';
 
 @Entity()
 export class SuperAdmin {
@@ -27,6 +29,9 @@ export class SuperAdmin {
   @Column({ default: 'active' })
   status: string;
 
+  @OneToOne(() => Profile, (profile) => profile.superAdmin)
+  profile: Profile;
+
   @ManyToOne(() => Role, { eager: true })
   @JoinColumn()
   role: Role;
@@ -42,13 +47,4 @@ export class SuperAdmin {
 
   @Column({ nullable: true })
   resetPasswordExpires: Date;
-
-  @Column({ nullable: true })
-  phoneNumber: string;
-
-  @Column({ nullable: true })
-  profilePic: string;
-
-  @Column({ nullable: true })
-  bio: string;
 }
