@@ -15,10 +15,19 @@ import { AuthService } from 'src/auth/auth.service';
 import { Role } from 'src/role/role.entity';
 import { User } from 'src/user/user.entity';
 import { Student } from 'src/student/student.entity';
+import { ProfileService } from 'src/profile/profile.service';
+import { Profile } from 'src/profile/profile.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SchoolAdmin, Role, School, User, Student]),
+    TypeOrmModule.forFeature([
+      SchoolAdmin,
+      Role,
+      School,
+      User,
+      Student,
+      Profile,
+    ]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -37,6 +46,7 @@ import { Student } from 'src/student/student.entity';
     SchoolAdminLocalStrategy,
     SchoolAdminJwtStrategy,
     AuthService,
+    ProfileService,
     ConfigService,
   ],
   exports: [SchoolAdminAuthService, SchoolAdminService],

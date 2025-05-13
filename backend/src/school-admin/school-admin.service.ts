@@ -7,6 +7,8 @@ import { Student } from 'src/student/student.entity';
 import { User } from 'src/user/user.entity';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { School } from 'src/school/school.entity';
+import { ProfileService } from 'src/profile/profile.service';
+import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 @Injectable()
 export class SchoolAdminService {
   private readonly logger = new Logger(SchoolAdminService.name);
@@ -20,6 +22,7 @@ export class SchoolAdminService {
     private userRepository: Repository<User>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
+    private readonly profileService: ProfileService,
   ) {}
 
   async findAll(): Promise<SchoolAdmin[]> {
@@ -240,5 +243,28 @@ export class SchoolAdminService {
       throw new NotFoundException('School not found for this admin');
     }
     return user.school;
+  }
+  async getMyProfile(user: SchoolAdmin) {
+    if (!user) {
+      throw new NotFoundException('no admin found');
+    }
+
+    const adminInfo = await this.schoolAdminRepository.findOne({
+      where: { id: user.id },
+      relations: ['profile'],
+    });
+
+    return adminInfo;
+  }
+  async updateProfile(
+    adminId: string,
+    updateDto: UpdateProfileDto,
+  ): Promise<SchoolAdmin> {
+    return this.profileService.handleUpdateProfile(
+      adminId,
+      updateDto,
+      this.schoolAdminRepository,
+      ['role', 'school', 'profile'],
+    );
   }
 }

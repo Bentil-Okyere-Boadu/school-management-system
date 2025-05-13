@@ -7,6 +7,7 @@ import {
   Get,
   Query,
   UseInterceptors,
+  Put,
 } from '@nestjs/common';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
@@ -22,6 +23,7 @@ import { CurrentUser } from '../user/current-user.decorator';
 import { QueryString } from '../common/api-features/api-features';
 import { SanitizeResponseInterceptor } from 'src/common/interceptors/sanitize-response.interceptor';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
+import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 
 @Controller('school-admin')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -82,7 +84,16 @@ export class SchoolAdminController {
   @Get('me')
   @Roles('school_admin')
   getProfile(@CurrentUser() admin: SchoolAdmin) {
-    return admin;
+    return this.schoolAdminService.getMyProfile(admin);
+  }
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('profile/me')
+  @Roles('school_admin')
+  async updateProfile(
+    @CurrentUser() admin: SchoolAdmin,
+    @Body() updateDto: UpdateProfileDto,
+  ) {
+    return this.schoolAdminService.updateProfile(admin.id, updateDto);
   }
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Get('my-school/details')
