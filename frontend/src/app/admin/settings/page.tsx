@@ -4,6 +4,7 @@ import TabBar from "@/components/common/TabBar";
 import { SchoolSettingsTabSection } from "@/components/admin/settings/SchoolSettingsTabSection";
 import { ConfigurationTabSection } from "@/components/admin/settings/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/admin/settings/ProfileTabSection";
+import { useGetSchoolAdminInfo } from "@/hooks/school-admin";
 
 export type TabListItem = {
   tabLabel: string;
@@ -24,6 +25,8 @@ const AdminSchoolSettings: React.FC = () => {
     { tabLabel: "Configuration", tabKey: "configuration" },
     { tabLabel: "Profile", tabKey: "profile" },
   ];
+
+  const { schoolAdminInfo } = useGetSchoolAdminInfo();
 
   return (
     <div className="px-0.5">
@@ -47,7 +50,7 @@ const AdminSchoolSettings: React.FC = () => {
 
         {activeTabKey === "profile" && (
           <div>
-            <ProfileTabSection />
+            <ProfileTabSection schoolAdminInfo={schoolAdminInfo} />
           </div>
         )}
     </div>

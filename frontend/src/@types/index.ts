@@ -46,3 +46,13 @@ export type FeeStructure = {
      dueDate: string,
      classes: string[]
     }
+
+export type SchoolAdminInfo = {
+  email: string;
+  phone: string;
+  address: string;
+  name: string;
+  role: {
+    label: string;
+  }
+}

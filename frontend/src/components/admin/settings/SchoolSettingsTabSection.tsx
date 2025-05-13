@@ -13,6 +13,7 @@ import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
 import { useDeleteFeeStructure, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { FeeStructure } from "@/@types";
+import { EmailItem } from "./EmailItem";
 // import { FeeStructureTable } from "./FeeStructureTable";
 // import { GradingSystemTable } from "./GradingSystemTable";
 
@@ -31,6 +32,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
   ] = useState(false);
     const [feeId, setFeeId] = useState('');
     const [editMode, setEditMode] = useState(false);
+    const [isSendReminderDialogOpen, setIsSendReminderDialogOpen] = useState(false);
 
 
   const appliesTo = [
@@ -207,7 +209,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
             showIcon={false}
           />
         </div>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 mb-12">
           {
             feesStructure?.map((feeStructure, index) => {
               return (
@@ -223,7 +225,7 @@ export const SchoolSettingsTabSection: React.FC = () => {
                     <CustomUnderlinedButton
                       text="Send Reminder"
                       textColor="text-gray-500"
-                      onClick={() => {}}
+                      onClick={() => {setIsSendReminderDialogOpen(true)}}
                       icon={<IconUpload size={10} />}
                       showIcon={false}
                     />
@@ -255,9 +257,12 @@ export const SchoolSettingsTabSection: React.FC = () => {
               );
             })
           }
-          
         </div>
-        <NoAvailableEmptyState message="No fee structure available, click ‘Add New’ to create one." />
+        {
+          feesStructure?.length == 0 && (
+            <NoAvailableEmptyState message="No fee structure available, click ‘Add New’ to create one." />
+          )
+        }
       </div>
 
       <div className="mt-8">
@@ -421,6 +426,53 @@ export const SchoolSettingsTabSection: React.FC = () => {
             Are you sure you want to delete this fee structure? You will loose
             all related information
           </p>
+        </div>
+      </Dialog>
+
+      {/* Send Reminder dialog */}
+      <Dialog
+        isOpen={isSendReminderDialogOpen}
+        dialogTitle="Send Reminder"
+        saveButtonText="Send"
+        onClose={() => {
+          setIsSendReminderDialogOpen(false);
+        }}
+        onSave={() => {}}
+        busy={false}
+      >
+        <p className="text-xs text-gray-500">
+          Enter emails to send fee reminders
+        </p>
+        <div className="my-3 flex flex-col gap-2">
+          <InputField
+            label="Emails"
+            type="text"
+            rightButton={
+              <button type="button" className={`h-8 cursor-pointer text-sm font-semibold rounded-md border  bg-opacity-10  w-[98px]
+                ${false ? "border-[#AB58E7] text-[#AB58E7]" : "bg-[#ebebeb] border-zinc-400 text-zinc-500"}`} 
+                onClick={() => {}}>
+                Add email
+              </button>
+            }
+          />
+          {["mike@gmsdf", "ab@gmai.com"].map((email, index) => (
+            <EmailItem
+              key={index}
+              email={email}
+              onIconClick={() => {
+                console.log("clicked");
+              }}
+            />
+          ))}
+          
+          <Select
+            label="Send via"
+            className="mb-8"
+            placeholder="Please Select"
+            data={['Email', 'SMS']}
+            value={''}
+            onChange={() => {}}
+          />
         </div>
       </Dialog>
     </div>

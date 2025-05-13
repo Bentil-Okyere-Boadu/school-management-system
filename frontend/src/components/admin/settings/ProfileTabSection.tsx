@@ -1,59 +1,152 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import InputField from "@/components/InputField";
-// import SchoolCard from "./SchoolCard";
+import SchoolCard from "@/components/common/SchoolCard";
+import CustomUnderlinedButton from "../CustomUnderlinedButton";
+import NoProfileImg from '@/images/no-profile-img.png' 
+import CustomButton from "@/components/Button";
+import { useEditSchoolAdminInfo } from "@/hooks/school-admin";
+import { toast } from "react-toastify";
 
 
 
-export const ProfileTabSection: React.FC = () => {
-    const [teamName, setTeamName] = useState("1st Semester");
+interface ProfileTabSectionProps {
+  schoolAdminInfo: {
+    email: string;
+    phone: string;
+    address: string;
+    name: string;
+    role: {
+      label: string;
+    }
+  };
+}
+
+export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdminInfo }) => {
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
+  const [boxAddress, setBoxAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [optionalPhone, setOptionalPhone] = useState("");
+
+  const prepopulateProfileSettings = () => {
+    setFirstName(schoolAdminInfo?.name?.split(" ")?.[0]);
+    setLastName(schoolAdminInfo?.name?.split(" ")?.[1]);
+    setRole(schoolAdminInfo?.role?.label)
+    setEmail(schoolAdminInfo?.email);
+    setStreetAddress(schoolAdminInfo.address);
+    setBoxAddress('');
+    setPhone(schoolAdminInfo.phone);
+    setOptionalPhone('');  
+  }
+
+  useEffect(() => {
+    prepopulateProfileSettings()
+  }, [])
+
+    const { mutate: editMutation } = useEditSchoolAdminInfo();
+
+
+    const editSchoolAdminInfo = () => {
+      editMutation({
+        name: firstName + " " +  lastName,
+        phone: "",
+      }, {
+        onSuccess: () => {
+          toast.success('Saved successfully.');
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        }
+      })
+    }
+
 
 
   return (
     <div className="pb-8">
-        <h1 className="text-md font-semibold text-neutral-800 mb-2">Academic Calendar</h1>
-        {/* <SchoolCard
-            key="school-1"
-            logoUrl="https://cdn.builder.io/api/v1/image/assets/TEMP/f33b143daa0a988b8358b2dd952c60f8aadfc974?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
-            backgroundColor="bg-[#FFF]"
-        /> */}
+        <div className="flex justify-end">
+            <CustomButton text="Save Changes" onClick={() => editSchoolAdminInfo()} />
+        </div>
+
+        <h1 className="text-md font-semibold text-neutral-800 mb-2">My Profile</h1>
+        <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-3">
+          <div className="flex flex-col w-auto">
+            <SchoolCard
+              key="school-1"
+              logoUrl={NoProfileImg.src}
+              backgroundColor="bg-[#FFF]"
+            />
+
+            <div className="flex justify-center gap-2 mt-3">
+              <CustomUnderlinedButton
+                text="Change Image"
+                textColor="text-gray-500"
+                onClick={() => {}}
+                showIcon={true}
+              />
+              <CustomUnderlinedButton
+                text="Delete"
+                textColor="text-gray-500"
+                onClick={() => {}}
+                showIcon={true}
+              />
+            </div>
+          </div>
+        </section>
 
         <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2 mt-10">
             <InputField
-                label="Team Name"
-                isTransulent={true}
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
+                label="First Name"
+                isTransulent={false}
+                value={firstName}
+                onChange={(e) => {setFirstName(e.target.value)}}
             />
             <InputField
-                label="Team Name"
-                isTransulent={true}
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
+                label="Last Name"
+                isTransulent={false}
+                value={lastName}
+                onChange={(e) => {setLastName(e.target.value)}}
             />
             <InputField
-                label="Team Name"
+                label="Postition at School"
                 isTransulent={true}
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
+                value={role}
+                onChange={(e) => {setRole(e.target.value)}}
             />
             <InputField
-                label="Team Name"
+                label="Email"
                 isTransulent={true}
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
+                value={email}
+                onChange={(e) => {setEmail(e.target.value)}}
             />
             <InputField
-                label="Team Name"
-                isTransulent={true}
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
+                label="Street Address"
+                isTransulent={false}
+                value={streetAddress}
+                onChange={(e) => {setStreetAddress(e.target.value)}}
             />
             <InputField
-                label="Team Name"
-                isTransulent={true}
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
+                label="Box Address"
+                isTransulent={false}
+                value={boxAddress}
+                onChange={(e) => {setBoxAddress(e.target.value)}}
+            />
+            <InputField
+                label="Phone"
+                isTransulent={false}
+                value={phone}
+                onChange={(e) => {setPhone(e.target.value)}}
+            />
+            <InputField
+                label="Phone(optional)"
+                isTransulent={false}
+                value={optionalPhone}
+                onChange={(e) => {setOptionalPhone(e.target.value)}}
             />
         </div>
     </div>

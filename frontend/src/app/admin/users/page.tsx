@@ -67,7 +67,7 @@ const UsersPage: React.FC = () => {
           setEmail("");
           setUserName("");
           setIsInviteUserDialogOpen(false);
-          queryClient.invalidateQueries({ queryKey: ['allAdminUsers']})
+          queryClient.invalidateQueries({ queryKey: ['allSchoolUsers']})
         },
         onError: (error) => {
           const axiosError = error as AxiosError;
