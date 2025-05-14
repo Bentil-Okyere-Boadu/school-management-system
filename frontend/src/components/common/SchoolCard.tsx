@@ -25,7 +25,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
   return (
     <article
       onClick={() => onNavigateToSchoolDetail && onNavigateToSchoolDetail(schoolId)}
-      className={`overflow-hidden grow shrink self-stretch my-auto ${backgroundColor} rounded-xl max-w-[164px] ${textColor} cursor-pointer hover:shadow-sm`}
+      className={`overflow-hidden grow shrink self-stretch my-auto ${backgroundColor} rounded-xl max-w-[164px] ${textColor} ${onNavigateToSchoolDetail ? 'cursor-pointer hover:shadow-sm': ''} `}
     >
       <div className="flex relative flex-col px-3.5 py-2.5 aspect-[1.065] w-[164px] max-md:px-5">
         <Image
@@ -35,7 +35,7 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
           alt={`${schoolName} logo`}
           className="object-contain w-full rounded-full aspect-[1.03]"
         />
-        {showSchoolName && <h3 className="relative">{schoolName}</h3>}
+        {showSchoolName && <h3 className="relative mt-1">{schoolName}</h3>}
       </div>
     </article>
   );

@@ -124,7 +124,7 @@ export const useGetSchoolById = (id: string) => {
     const { data, isPending} = useQuery({
         queryKey: [id],
         queryFn: () => {
-            return customAPI.get(`/super-admin/admins/schools/${id}`)
+            return customAPI.get(`/schools/${id}`)
         },
         refetchOnWindowFocus: true
     })
