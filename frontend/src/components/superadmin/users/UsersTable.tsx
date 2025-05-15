@@ -15,8 +15,10 @@ import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 
 interface User {
   id: string;
-  name: string;
+  name?: string;
   email: string;
+  firstName: string;
+  lastName: string;
   status: "active" | "inactive" | "pending";
   role: {
     name: string;
@@ -100,10 +102,10 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div className="flex flex-1 items-center">
                       <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
-                        {getInitials(user.name)}
+                        {getInitials(user.firstName, user.lastName)}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-base text-zinc-800">{user.name}</span>
+                        <span className="text-base text-zinc-800">{user.firstName} {user.lastName}</span>
                         <span className="text-sm text-neutral-500">{user.email}</span>
                       </div>
                     </div>

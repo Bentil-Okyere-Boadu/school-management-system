@@ -20,9 +20,9 @@ export class SchoolAdmin {
   firstName: string;
 
   @Column({ nullable: true })
-  LastName: string;
+  lastName: string;
   //Todo remove field
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
   @Column({ unique: true })
