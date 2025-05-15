@@ -2,7 +2,7 @@
 import CustomButton from "@/components/Button";
 import { IconUpload } from "@tabler/icons-react";
 import React, { useState } from "react";
-import NoAvailableEmptyState from "../NoAvailableEmptyState";
+import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
 import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import { GradingSystemTable } from "./GradingSystemTable";
@@ -174,9 +174,9 @@ export const SchoolSettingsTabSection: React.FC = () => {
 
   return (
     <div className="pb-16">
-      <div className="flex justify-end">
+      {/* <div className="flex justify-end">
         <CustomButton text="Save Changes" onClick={() => {}} />
-      </div>
+      </div> */}
 
       <div className="mt-8">
         <div className="flex items-center gap-2">

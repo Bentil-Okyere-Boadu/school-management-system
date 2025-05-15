@@ -4,7 +4,7 @@ import { IconPencil, IconTrashFilled, IconUpload } from "@tabler/icons-react";
 import React, { useState } from "react";
 import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
-import NoAvailableEmptyState from "../NoAvailableEmptyState";
+import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
 import { Grade } from "@/@types";
 import { useCreateGrade, useDeleteGrade, useEditGrade, useGetGradingSystem } from "@/hooks/school-admin";
 import { toast } from "react-toastify";

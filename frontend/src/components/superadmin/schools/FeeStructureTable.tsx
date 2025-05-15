@@ -1,69 +1,57 @@
 "use client";
 import React from "react";
-
-export interface FeeData {
-  title: string;
-  applyTo: string;
-  duration: string;
-  classLevel: string;
+import { FeeStructure } from "@/@types";
+import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
+interface FeeStructureTableProps {
+  feeStructures: FeeStructure[];
 }
 
 
-export const FeeStructureTable: React.FC = () => {
-
-  const feeData: FeeData[] = [
-    {
-      title: "School Fees",
-      applyTo: "All Students",
-      duration: "Yearly",
-      classLevel: "All Classes",
-    },
-    {
-      title: "Admission Fees",
-      applyTo: "New Students",
-      duration: "Once",
-      classLevel: "Class 4, Class 5, Class 6",
-    },
-  ];
-
+export const FeeStructureTable: React.FC<FeeStructureTableProps> = ({feeStructures}) => {
 
   return (
-    <table className="w-full border-collapse">
-      <thead>
-        <tr className="">
-          <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-            Fee Title
-          </th>
-          <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-            Apply Fees To
-          </th>
-          <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-            Fee Duration
-          </th>
-          <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-            Class/Level
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {feeData.map((fee, index) => (
-          <tr className="border-b border-solid border-b-gray-200" key={index + "12"}>
-            <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-            {fee.title}
-            </td>
-            <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-            {fee.applyTo}
-            </td>
-            <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-            {fee.duration}
-            </td>
-            <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-            {fee.classLevel}
-            </td>
+    <>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="">
+            <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
+              Fee Title
+            </th>
+            <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
+              Apply Fees To
+            </th>
+            <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
+              Fee Duration
+            </th>
+            <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
+              Class/Level
+            </th>
           </tr>
-        ))}
-      </tbody>
-  </table>
+        </thead>
+        <tbody>
+          {feeStructures?.length > 0 && feeStructures?.map((fee, index) => (
+            <tr className="border-b border-solid border-b-gray-200" key={index + "12"}>
+              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+              {fee.feeTitle}
+              </td>
+              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+              {fee.appliesTo}
+              </td>
+              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+              {fee.dueDate}
+              </td>
+              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+              {fee.classes ? fee.classes : '-'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {feeStructures?.length === 0 && (
+        <NoAvailableEmptyState message="No fee structure available." />
+      )}
+    </>
   );
 };
  

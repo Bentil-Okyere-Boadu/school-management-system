@@ -4,26 +4,18 @@ import SchoolCard from "../../common/SchoolCard";
 import { FeeStructureTable } from "./FeeStructureTable";
 import { GradingSystemTable } from "./GradingSystemTable";
 import DocumentItem from "../../common/DocumentItem";
+import { School } from "@/@types";
 
+interface SchoolSettingsTabProps {
+  schoolData: School
+}
 
-export const SchoolSettingsTabSection: React.FC = () => {
-  const documents = [
-    {
-      id: 1,
-      name: "Admission Policy 2.0 .pdf",
-      width: "231px",
-    },
-    {
-      id: 2,
-      name: "Fee Policy .pdf",
-      width: "160px", // w-40 = 10rem = 160px
-    },
-    {
-      id: 3,
-      name: "Admission Policy 3.0 .pdf",
-      width: "232px",
-    },
-  ];
+export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabProps> = ({ schoolData }) => {
+  const documents: {
+    id: number;
+    name: string;
+    width: string;
+}[] = [];
 
   return (
     <div className="pb-8">
@@ -36,12 +28,12 @@ export const SchoolSettingsTabSection: React.FC = () => {
 
       <div className="mt-8">
         <h1 className="text-md font-semibold text-neutral-800 mb-2">Fee Structure</h1>
-        <FeeStructureTable />
+        <FeeStructureTable feeStructures={schoolData?.feeStructures}  />
       </div>
 
       <div className="mt-8">
         <h1 className="text-md font-semibold text-neutral-800 mb-2">Grading System</h1>
-        <GradingSystemTable />
+        <GradingSystemTable gradingSystems={schoolData?.gradingSystems} />
       </div>
 
       <div className="mt-8">

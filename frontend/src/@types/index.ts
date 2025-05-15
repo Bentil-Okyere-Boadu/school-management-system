@@ -3,14 +3,6 @@ export enum ButtonType {
   reset = "reset",
   button = "button",
 }
-
-export type School = {
-  id: string;
-  email: string;
-  address: string;
-  phone: string;
-  name: string;
-}
 export interface User {
   id: string;
   email: string;
@@ -64,4 +56,29 @@ export type SchoolAdminInfo = {
   }
   streetAddress?: string;
   optionalPhoneContact?: string;
+}
+
+
+export interface GradingSystem {
+  id: string;
+  grade: string;
+  minRange: number;
+  maxRange: number;
+}
+
+export interface School {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  schoolCode: string;
+  classLevels: string[]; 
+  admissionPolicies: string[]; 
+  gradingSystems: GradingSystem[];
+  feeStructures: FeeStructure[];
+  profile: object | null;
+  academicCalendars: object[]; 
+  createdAt: string; 
+  updatedAt: string; 
 }

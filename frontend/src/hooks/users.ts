@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { School } from "@/@types";
+import { School, User } from "@/@types";
 
 export const useGetUsers = () => {
     const { data, isLoading } = useQuery({
@@ -124,14 +124,28 @@ export const useGetSchoolById = (id: string) => {
     const { data, isPending} = useQuery({
         queryKey: [id],
         queryFn: () => {
-            return customAPI.get(`/super-admin/admins/schools/${id}`)
+            return customAPI.get(`/schools/${id}`)
         },
         refetchOnWindowFocus: true
     })
 
-    const school = data?.data
+    const school = data?.data as School;
 
     return { school, isPending }
+}
+
+export const useGetMe = () => {
+    const { data, isPending} = useQuery({
+        queryKey: ['superAdminMe'],
+        queryFn: () => {
+            return customAPI.get(`/super-admin/me`)
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const me = data?.data as User;
+
+    return { me, isPending }
 }
 
 export const useResendAdminInvitation = ({id}: {id: string}) => {

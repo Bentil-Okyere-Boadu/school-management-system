@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardIcon, UsersIcon, SchoolsIcon } from "@/utils/icons";
-import { User } from "@/@types";
+import { useGetMe } from "@/hooks/users";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -13,6 +13,8 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [activeMenuItem, setActiveMenuItem] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
+
+  const {me} = useGetMe();
 
   const sidebarItems = [
     {
@@ -29,17 +31,6 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     },
   ];
 
-  const user: User = {
-      id: '134',
-      name: 'Super Admin',
-      email: 'abc@gmail.com',
-      password: '.....',
-      role: {
-        name: 'SUPER_ADMIN',
-        id: '4431'
-      },
-      status: 'active'
-    }
 
   useEffect(() => {
     // Overview Pages
@@ -103,7 +94,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       )}
 
       <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden">
-        <HeaderSection user={user} isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} onToggleSidebar={() => setIsSidebarOpen(true)} />
+        <HeaderSection user={me} isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} onToggleSidebar={() => setIsSidebarOpen(true)} />
         <main className="flex-1 pt-8 overflow-auto">
           {children}
         </main>

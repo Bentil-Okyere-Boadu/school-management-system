@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ButtonType } from '@/@types';
+import { handleLoginRedirectAndToken } from '@/middleware';
+import { useAppContext } from '@/context/AppContext';
 
 interface ResetPwdProps {
   token: string
@@ -36,6 +38,7 @@ const passwordSchema = z.object({
 type FormData = z.infer<typeof passwordSchema>;
 
 const CompleteRegistration: React.FC<ResetPwdProps> = ({token}) => {
+    const { setLoggedInUser } = useAppContext();
 
     const {
         register,
@@ -71,7 +74,8 @@ const CompleteRegistration: React.FC<ResetPwdProps> = ({token}) => {
       mutate(null as unknown as void, {
         onSuccess: (data) => {
           toast.success(data.data.message);
-          router.push("/admin/dashboard")
+          setLoggedInUser(data.data);
+          handleLoginRedirectAndToken(data, router);
         },
         onError: (error) => {
           toast.error(error.response.data.message);
