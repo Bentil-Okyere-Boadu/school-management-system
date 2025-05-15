@@ -54,7 +54,7 @@ const SingleSchoolPage: React.FC = () => {
 
         {activeTabKey === "profile" && (
           <div>
-            <ProfileTabSection />
+            <ProfileTabSection schoolData={school} />
           </div>
         )}
 
