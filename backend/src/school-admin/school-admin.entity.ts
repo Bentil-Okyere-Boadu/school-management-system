@@ -16,7 +16,12 @@ import { Profile } from 'src/profile/profile.entity';
 export class SchoolAdmin {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+  @Column({ nullable: true })
+  firstName: string;
 
+  @Column({ nullable: true })
+  LastName: string;
+  //Todo remove field
   @Column()
   name: string;
 

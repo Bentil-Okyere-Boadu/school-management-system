@@ -14,7 +14,7 @@ export class AcademicCalendar {
   id: string;
 
   @Column()
-  name: string; // e.g. "2024/2025 Academic Year"
+  name: string;
 
   @ManyToOne(() => School, (school) => school.academicCalendars, {
     //   onDelete: 'CASCADE',
@@ -22,7 +22,8 @@ export class AcademicCalendar {
   school: School;
 
   @OneToMany(() => AcademicTerm, (term) => term.academicCalendar, {
-    //cascade: true,
+    cascade: true,
+    eager: true,
   })
   terms: AcademicTerm[];
 }
