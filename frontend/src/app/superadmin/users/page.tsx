@@ -25,18 +25,21 @@ const UsersPage: React.FC = () => {
   const [selectedDataRole, setSelectedDataRole] = useState<string>("school_admin");
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
-
-  const queryClient = useQueryClient();
-
-  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), "", "", 10);
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   const statusOptions = [
+    { value: "", label: "Status" },
     { value: "active", label: "Active" },
-    { value: "in-active", label: "Inactive" },
+    { value: "pending", label: "Pending" }
   ];
   const roles = [
     { value: "school_admin", label: "School Admin" },
   ];
+
+  const queryClient = useQueryClient();
+
+  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "", 10);
+
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -47,9 +50,9 @@ const UsersPage: React.FC = () => {
     setCurrentPage(page);
   };
 
-  const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
-    console.log("Selected:", selectedValue);
+    setSelectedStatus(selectedValue);
   };
 
   const { roles: Roles } = useAppContext();
@@ -91,12 +94,12 @@ const UsersPage: React.FC = () => {
         <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
         {showFilterOptions && (
           <div className="flex gap-3 mt-3">
-            <CustomSelectTag defaultValue="" optionLabel="Status" options={statusOptions} onOptionItemClick={handleRoleChange} />
+            <CustomSelectTag value={selectedStatus} options={statusOptions} onOptionItemClick={handleStatusChange} />
           </div>
         )}
       </div>
 
-      <UserTable users={adminUsers} refetch={refetch}/>
+      <UserTable users={adminUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus('')} />
 
       <Pagination
         currentPage={currentPage}

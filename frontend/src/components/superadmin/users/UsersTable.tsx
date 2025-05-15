@@ -28,9 +28,10 @@ interface User {
 interface UserTableProps {
   users: User[];
   refetch: () => void;
+  onClearFilterClick?: () => void;
 }
 
-export const UserTable = ({users, refetch}: UserTableProps) => {
+export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) => {
 
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
@@ -90,7 +91,7 @@ export const UserTable = ({users, refetch}: UserTableProps) => {
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div>Status</div>
                 </th>
-                <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"> Clear all filters</th>
+                <th onClick={onClearFilterClick} className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"> Clear all filters</th>
               </tr>
             </thead>
             <tbody>
