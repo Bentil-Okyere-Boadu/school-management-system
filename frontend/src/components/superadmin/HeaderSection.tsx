@@ -21,10 +21,9 @@ interface HeaderSectionProps {
 export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar, user }) => {
   const router = useRouter();
   const pathName = usePathname();
-    const params = useParams();
+  const params = useParams();
   const schoolId = params.id;
-  
-    const { school } = useGetSchoolById(schoolId as string);
+  const { school } = useGetSchoolById(schoolId as string);
 
   const onHandleBreadCrumbPress = () => {
     console.log(pathName);

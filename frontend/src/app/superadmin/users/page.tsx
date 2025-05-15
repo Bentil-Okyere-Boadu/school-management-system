@@ -28,7 +28,7 @@ const UsersPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery));
+  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), "", "", 10);
 
   const statusOptions = [
     { value: "active", label: "Active" },
@@ -36,8 +36,6 @@ const UsersPage: React.FC = () => {
   ];
   const roles = [
     { value: "school_admin", label: "School Admin" },
-    { value: "teacher", label: "Teacher" },
-    { value: "student", label: "Student" }
   ];
 
   const handleSearch = (query: string) => {
@@ -68,7 +66,6 @@ const UsersPage: React.FC = () => {
       invitation({ name: userName, email: email, roleId: getRoleId(Roles, selectedDataRole)}, {
         onSuccess: () => {
           toast.success('Invitation sent successfully.');
-          setSelectedDataRole("");
           setEmail("");
           setUserName("");
           setIsInviteUserDialogOpen(false);

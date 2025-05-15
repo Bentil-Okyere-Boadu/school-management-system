@@ -51,7 +51,7 @@ export const DashboardTable = () => {
     { value: "fullstack-developer", label: "Fullstack Developer" },
   ];
 
-  const { adminUsers, refetch } = useGetAdminUsers();
+  const { adminUsers, refetch } = useGetAdminUsers(1, "", "", "", 6);
 
 
   const handlePermissionChange = (value: string[]) => {
