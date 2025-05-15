@@ -3,7 +3,11 @@ import { IsEmail, IsNotEmpty, IsString, IsUUID } from 'class-validator';
 export class InviteUserDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  firstName: string;
+
+  @IsNotEmpty()
+  @IsString()
+  lastName: string;
 
   @IsNotEmpty()
   @IsEmail()
