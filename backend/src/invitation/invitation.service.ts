@@ -252,7 +252,8 @@ export class InvitationService {
 
     // Create the user in pending state
     const newAdmin = this.adminRepository.create({
-      name: inviteUserDto.name,
+      firstName: inviteUserDto.firstName,
+      LastName: inviteUserDto.lastName,
       email: inviteUserDto.email,
       role,
       status: 'pending',

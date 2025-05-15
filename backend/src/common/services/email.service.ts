@@ -77,7 +77,7 @@ export class EmailService {
         to: user.email,
         subject: 'Invitation to School Management System',
         html: this.getEmailTemplate(EmailTemplate.INVITATION, {
-          name: user.name,
+          name: user.firstName + '' + user.LastName,
           invitationLink,
         }),
       });
@@ -178,7 +178,7 @@ export class EmailService {
         to: user.email,
         subject: 'Registration Confirmed - School Management System',
         html: this.getEmailTemplate(EmailTemplate.REGISTRATION_CONFIRMATION, {
-          name: user.name,
+          name: user.firstName + '' + user.LastName,
           loginLink: `${this.frontendUrl}/auth/school-admin/login`,
         }),
       });
