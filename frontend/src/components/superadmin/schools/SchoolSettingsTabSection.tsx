@@ -11,23 +11,11 @@ interface SchoolSettingsTabProps {
 }
 
 export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabProps> = ({ schoolData }) => {
-  const documents = [
-    {
-      id: 1,
-      name: "Admission Policy 2.0 .pdf",
-      width: "231px",
-    },
-    {
-      id: 2,
-      name: "Fee Policy .pdf",
-      width: "160px", // w-40 = 10rem = 160px
-    },
-    {
-      id: 3,
-      name: "Admission Policy 3.0 .pdf",
-      width: "232px",
-    },
-  ];
+  const documents: {
+    id: number;
+    name: string;
+    width: string;
+}[] = [];
 
   return (
     <div className="pb-8">
