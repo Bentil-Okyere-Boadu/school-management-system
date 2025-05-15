@@ -40,15 +40,15 @@ export const useGetUsers = () => {
 
 export const useInviteUser = () => {
     return useMutation({
-        mutationFn: (inviteDetails: {name:string, email: string, roleId: string}) => {
+        mutationFn: (inviteDetails: {firstName:string, lastName:string, email: string, roleId: string}) => {
             return customAPI.post(`/invitations/admin`, inviteDetails)
         }
     })
 }
 
-export const useGetAdminUsers = (page=1,search: string = "", status: string = "", role: string = "" ) => {
+export const useGetAdminUsers = (page=1,search: string = "", status: string = "", role: string = "", limit?: number ) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allAdminUsers', { page, search, status, role }],
+        queryKey: ['allAdminUsers', { page, search, status, role, limit }],
         queryFn: () => {
             const queryBuilder = [];
             if(search) {
@@ -65,6 +65,10 @@ export const useGetAdminUsers = (page=1,search: string = "", status: string = ""
             
             if(page) {
                 queryBuilder.push(`page=${page}`);
+            }
+
+            if(limit) {
+                queryBuilder.push(`limit=${limit}`);
             }
             
             const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
@@ -87,9 +91,9 @@ export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: bo
     })
 }
 
-export const useGetAllSchools = (page=1,search: string = "", status: string = "", role: string = "" ) => {
+export const useGetAllSchools = (page=1,search: string = "", status: string = "", role: string = "", limit?: number ) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allSchools', { page, search, status, role }],
+        queryKey: ['allSchools', { page, search, status, role, limit }],
         queryFn: () => {
             const queryBuilder = [];
             if(search) {
@@ -108,6 +112,10 @@ export const useGetAllSchools = (page=1,search: string = "", status: string = ""
                 queryBuilder.push(`page=${page}`);
             }
             
+            if(limit) {
+                queryBuilder.push(`limit=${limit}`);
+            }
+            
             const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
             
             return customAPI.get(`/super-admin/admins/schools?${params}`);
@@ -121,11 +129,14 @@ export const useGetAllSchools = (page=1,search: string = "", status: string = ""
 }
 
 export const useGetSchoolById = (id: string) => {
+    const enabled = Boolean(id);
+
     const { data, isPending} = useQuery({
         queryKey: [id],
         queryFn: () => {
             return customAPI.get(`/schools/${id}`)
         },
+        enabled,
         refetchOnWindowFocus: true
     })
 

@@ -1,13 +1,11 @@
-export function getInitials(name: string) {
-  if (!name) return "";
-  return name
-    .trim()
-    .split(/\s+/)
-    .map(word => word[0].toUpperCase())
-    .join('');
-}
-
 export function capitalizeFirstLetter(text: string): string {
   if (!text) return "";
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+export const getInitials = (firstName: string, lastName: string) => {
+  const firstInitial = firstName?.charAt(0).toUpperCase() || '';
+  const lastInitial = lastName?.charAt(0).toUpperCase() || '';
+  return `${firstInitial}${lastInitial}`;
+};
+

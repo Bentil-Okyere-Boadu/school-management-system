@@ -13,6 +13,8 @@ interface ProfileTabSectionProps {
   schoolAdminInfo: {
     email: string;
     name: string;
+    firstName: string;
+    lastName: string;
     role: {
       label: string;
     }
@@ -37,8 +39,8 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
   const [optionalPhoneContact, setOptionalPhoneContact] = useState("");
 
   const prepopulateProfileSettings = () => {
-    setFirstName(schoolAdminInfo?.name?.split(" ")?.[0]);
-    setLastName(schoolAdminInfo?.name?.split(" ")?.[1]);
+    setFirstName(schoolAdminInfo?.firstName);
+    setLastName(schoolAdminInfo?.lastName);
     setRole(schoolAdminInfo?.role?.label)
     setEmail(schoolAdminInfo?.email);
     setStreetAddress(schoolAdminInfo?.profile?.streetAddress);
@@ -57,7 +59,8 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
     const editSchoolAdminInfo = () => {
       if(firstName && lastName && email) {
         editMutation({
-          name: firstName + " " +  lastName,
+          firstName: firstName,
+          lastName: lastName,
           email: email,
           phoneContact: phoneContact,
           address: address,

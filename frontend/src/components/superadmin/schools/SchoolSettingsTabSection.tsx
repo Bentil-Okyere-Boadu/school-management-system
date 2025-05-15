@@ -5,6 +5,7 @@ import { FeeStructureTable } from "./FeeStructureTable";
 import { GradingSystemTable } from "./GradingSystemTable";
 import DocumentItem from "../../common/DocumentItem";
 import { School } from "@/@types";
+import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 
 interface SchoolSettingsTabProps {
   schoolData: School
@@ -47,6 +48,9 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabProps> = ({ sch
             />
           ))}
         </section>
+          {documents?.length === 0 && (
+            <NoAvailableEmptyState message="No admission policies available." />
+          )}
       </div>
     </div>
   );

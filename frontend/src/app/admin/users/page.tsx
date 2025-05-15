@@ -89,7 +89,7 @@ const UsersPage: React.FC = () => {
         <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
         {showFilterOptions && (
           <div className="flex gap-3 mt-3">
-            <CustomSelectTag defaultValue="" optionLabel="Status" options={statusOptions} onOptionItemClick={handleRoleChange} />
+            <CustomSelectTag value="" optionLabel="Status" options={statusOptions} onOptionItemClick={handleRoleChange} />
           </div>
         )}
       </div>

@@ -48,6 +48,8 @@ export type Grade = {
 
 export type SchoolAdminInfo = {
   email: string;
+  firstName: string;
+  lastName: string;
   phoneContact: string;
   address: string;
   name: string;

@@ -42,7 +42,7 @@ export class SchoolAdminJwtStrategy extends PassportStrategy(
       id: schoolAdmin.id,
       email: schoolAdmin.email,
       firstName: schoolAdmin.firstName,
-      lastName: schoolAdmin.LastName,
+      lastName: schoolAdmin.lastName,
       status: schoolAdmin.status,
       role: schoolAdmin.role,
       school: schoolAdmin.school,

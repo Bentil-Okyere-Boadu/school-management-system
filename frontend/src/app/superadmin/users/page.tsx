@@ -23,22 +23,24 @@ const UsersPage: React.FC = () => {
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
   const [selectedDataRole, setSelectedDataRole] = useState<string>("school_admin");
-  const [userName, setUserName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-
-  const queryClient = useQueryClient();
-
-  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery));
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   const statusOptions = [
+    { value: "", label: "Status" },
     { value: "active", label: "Active" },
-    { value: "in-active", label: "Inactive" },
+    { value: "pending", label: "Pending" }
   ];
   const roles = [
     { value: "school_admin", label: "School Admin" },
-    { value: "teacher", label: "Teacher" },
-    { value: "student", label: "Student" }
   ];
+
+  const queryClient = useQueryClient();
+
+  const { adminUsers, paginationValues, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "", 10);
+
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -49,9 +51,9 @@ const UsersPage: React.FC = () => {
     setCurrentPage(page);
   };
 
-  const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
-    console.log("Selected:", selectedValue);
+    setSelectedStatus(selectedValue);
   };
 
   const { roles: Roles } = useAppContext();
@@ -64,13 +66,13 @@ const UsersPage: React.FC = () => {
   const { mutate: invitation, isPending } = useInviteUser();
 
   const inviteUser = () => {
-    if(userName && email) {
-      invitation({ name: userName, email: email, roleId: getRoleId(Roles, selectedDataRole)}, {
+    if(firstName && lastName && email) {
+      invitation({ firstName: firstName, lastName: lastName, email: email, roleId: getRoleId(Roles, selectedDataRole)}, {
         onSuccess: () => {
           toast.success('Invitation sent successfully.');
-          setSelectedDataRole("");
           setEmail("");
-          setUserName("");
+          setFirstName("");
+          setLastName("");
           setIsInviteUserDialogOpen(false);
           queryClient.invalidateQueries({ queryKey: ['allAdminUsers']})
         },
@@ -94,12 +96,12 @@ const UsersPage: React.FC = () => {
         <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
         {showFilterOptions && (
           <div className="flex gap-3 mt-3">
-            <CustomSelectTag defaultValue="" optionLabel="Status" options={statusOptions} onOptionItemClick={handleRoleChange} />
+            <CustomSelectTag value={selectedStatus} options={statusOptions} onOptionItemClick={handleStatusChange} />
           </div>
         )}
       </div>
 
-      <UserTable users={adminUsers} refetch={refetch}/>
+      <UserTable users={adminUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus('')} />
 
       <Pagination
         currentPage={currentPage}
@@ -120,9 +122,17 @@ const UsersPage: React.FC = () => {
         <div className="my-3 flex flex-col gap-4">
           <InputField
             className="!py-0"
-            label="User Name"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
+            label="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            isTransulent={isPending}
+          />
+
+          <InputField
+            className="!py-0"
+            label="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             isTransulent={isPending}
           />
 
