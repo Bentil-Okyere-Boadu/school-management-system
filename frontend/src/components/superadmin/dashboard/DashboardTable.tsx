@@ -11,13 +11,13 @@ import {
 import { Dialog } from "@/components/common/Dialog";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
-import { useArchiveUser, useGetAdminUsers, useResendAdminInvitation } from "@/hooks/users";
+import { useArchiveUser, useResendAdminInvitation } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 
 interface User {
   id: string;
-  name: string;
+  name?: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -29,7 +29,12 @@ interface User {
   isArchived?: boolean;
 }
 
-export const DashboardTable = () => {
+interface UserTableProps {
+  adminUsers: User[];
+  refetch: () => void;
+}
+
+export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
 
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
@@ -53,7 +58,6 @@ export const DashboardTable = () => {
     { value: "fullstack-developer", label: "Fullstack Developer" },
   ];
 
-  const { adminUsers, refetch } = useGetAdminUsers(1, "", "", "", 6);
 
 
   const handlePermissionChange = (value: string[]) => {

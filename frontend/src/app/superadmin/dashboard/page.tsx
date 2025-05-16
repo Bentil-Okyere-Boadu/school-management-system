@@ -1,11 +1,15 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import StatCard from "@/components/superadmin/dashboard/StatCard";
 import { SearchBar } from "@/components/common/SearchBar";
 import CustomBarChart from "@/components/superadmin/dashboard/CustomBarChart";
 import { DashboardTable } from "@/components/superadmin/dashboard/DashboardTable";
+import { useDebouncer } from "@/hooks/generalHooks";
+import { useGetAdminUsers } from "@/hooks/users";
 
 const DashboardPage: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
   const stats = [
     {
       value: "15, 430",
@@ -38,8 +42,12 @@ const DashboardPage: React.FC = () => {
   ];
 
   const handleSearch = (query: string) => {
-    console.log("Search query:", query);
+    setSearchQuery(query);
+    setCurrentPage(1);
   };
+
+
+  const { adminUsers, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), "", "", 6);
 
   return (
     <div className="px-0.5">
@@ -61,7 +69,7 @@ const DashboardPage: React.FC = () => {
       <CustomBarChart />
 
       <div className="mt-10 p-6 bg-white rounded-lg">
-        <DashboardTable />
+        <DashboardTable adminUsers={adminUsers} refetch={refetch}  />
       </div>
     </div>
     
