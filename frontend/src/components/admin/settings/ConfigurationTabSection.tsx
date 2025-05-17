@@ -13,6 +13,7 @@ import { HolidaySection } from "./HolidaySection";
 export const ConfigurationTabSection: React.FC = () => {
     const [selectedAcademicCalendar, setSelectedAcademicCalendar] = useState('');
     const [isTermDialogOpen, setIsTermDialogOpen] = useState(false);
+    const [isConfirmDeleteTermDialogOpen, setIsConfirmDeleteTermDialogOpen] = useState(false);
     const [selectedHolidaysInTerms, setSelectedHolidaysInTerms] = useState<string | null>('No');
     const [holidaySections, setHolidaySections] = useState<number[]>([]);
     const [holidayCounter, setHolidayCounter] = useState(0);
@@ -102,7 +103,7 @@ export const ConfigurationTabSection: React.FC = () => {
                             <CustomUnderlinedButton
                                 text="Delete"
                                 textColor="text-gray-500"
-                                onClick={()=>{}}
+                                onClick={()=>{setIsConfirmDeleteTermDialogOpen(true)}}
                                 showIcon={false}
                             />
                         </div>
@@ -222,6 +223,22 @@ export const ConfigurationTabSection: React.FC = () => {
                     <HolidaySection key={id} onDeleteClick={() => handleDeleteHolidaySection(id)} />
                 ))}
                 <div ref={scrollRef}></div>
+            </div>
+        </Dialog>
+
+        {/* Confirm Delete New Term Dialog */}
+        <Dialog 
+            isOpen={isConfirmDeleteTermDialogOpen}
+            busy={false}
+            dialogTitle="Confirm Delete"
+            saveButtonText="Delete Term"
+            onClose={() => { setIsConfirmDeleteTermDialogOpen(false)}} 
+            onSave={() => {}}
+        >
+            <div className="my-3 flex flex-col gap-4">
+            <p>
+                Are you sure you want to delete this term? You will loose all related information
+            </p>
             </div>
         </Dialog>
     </>
