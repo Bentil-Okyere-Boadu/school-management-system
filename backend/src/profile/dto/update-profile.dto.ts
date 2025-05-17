@@ -3,7 +3,11 @@ import { IsOptional, IsString, IsEmail, Matches } from 'class-validator';
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
-  name?: string;
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  lastName?: string;
 
   @IsOptional()
   @IsEmail()

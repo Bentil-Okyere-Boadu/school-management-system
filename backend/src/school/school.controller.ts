@@ -47,7 +47,7 @@ export class SchoolController {
   findAll(): Promise<School[]> {
     return this.schoolService.findAll();
   }
-
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id')
   @Roles('super_admin')
   findOne(@Param('id') id: string): Promise<School> {

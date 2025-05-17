@@ -8,6 +8,7 @@ import {
   Query,
   UseInterceptors,
   Put,
+  ForbiddenException,
 } from '@nestjs/common';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
@@ -57,6 +58,11 @@ export class SchoolAdminController {
   @Roles('school_admin')
   @UseInterceptors(DeepSanitizeResponseInterceptor)
   findAllUsers(@CurrentUser() admin: SchoolAdmin, @Query() query: QueryString) {
+    if (!admin.school || !admin.school.id) {
+      throw new ForbiddenException(
+        'You are not yet associated with any school.',
+      );
+    }
     return this.schoolAdminService.findAllUsers(admin.school.id, query);
   }
 
@@ -68,16 +74,6 @@ export class SchoolAdminController {
     @Query() query: QueryString,
   ) {
     return this.schoolAdminService.findAllStudents(admin.school.id, query);
-  }
-
-  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Get('teachers')
-  @Roles('school_admin')
-  async findAllTeachers(
-    @CurrentUser() admin: SchoolAdmin,
-    @Query() query: QueryString,
-  ) {
-    return this.schoolAdminService.findAllTeachers(admin.school.id, query);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

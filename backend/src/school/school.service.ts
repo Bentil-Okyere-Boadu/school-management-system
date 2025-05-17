@@ -71,6 +71,7 @@ export class SchoolService {
         'profile',
         'academicCalendars',
         'classLevels',
+        'students',
       ],
     });
 

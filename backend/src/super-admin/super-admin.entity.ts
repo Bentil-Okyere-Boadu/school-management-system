@@ -17,8 +17,11 @@ export class SuperAdmin {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  name: string;
+  @Column({ nullable: true })
+  firstName: string;
+
+  @Column({ nullable: true })
+  lastName: string;
 
   @Column({ unique: true })
   email: string;
@@ -29,7 +32,10 @@ export class SuperAdmin {
   @Column({ default: 'active' })
   status: string;
 
-  @OneToOne(() => Profile, (profile) => profile.superAdmin)
+  @OneToOne(() => Profile, (profile) => profile.superAdmin, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   profile: Profile;
 
   @ManyToOne(() => Role, { eager: true })

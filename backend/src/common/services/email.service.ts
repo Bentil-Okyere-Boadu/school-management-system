@@ -107,7 +107,7 @@ export class EmailService {
         to: student.email,
         subject: 'Your Student Account for School Management System',
         html: this.getEmailTemplate(EmailTemplate.STUDENT_INVITATION, {
-          name: student.name,
+          name: student.firstName + ' ' + student.lastName,
           studentId,
           pin,
           loginLink,
@@ -268,10 +268,7 @@ export class EmailService {
    * @param student The student user
    * @param pin The new PIN
    */
-  async sendStudentPinReset(
-    student: Student | User,
-    pin: string,
-  ): Promise<void> {
+  async sendStudentPinReset(student: Student, pin: string): Promise<void> {
     const loginLink = `${this.frontendUrl}/auth/student/login`;
 
     try {
@@ -280,7 +277,7 @@ export class EmailService {
         to: student.email,
         subject: 'Your PIN Has Been Reset',
         html: this.getEmailTemplate(EmailTemplate.STUDENT_PIN_RESET, {
-          name: student.name,
+          name: student.firstName + '' + student.lastName,
           pin,
           loginLink,
           school: student.school?.name || 'your school',

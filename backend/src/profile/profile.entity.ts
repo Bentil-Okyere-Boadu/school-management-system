@@ -15,7 +15,10 @@ export class Profile {
   id: string;
 
   @Column({ nullable: true })
-  name?: string;
+  firstName?: string;
+
+  @Column({ nullable: true })
+  lastName?: string;
 
   @Column({ nullable: true })
   email?: string;
@@ -41,7 +44,7 @@ export class Profile {
   superAdmin: SuperAdmin;
 
   @OneToOne(() => School, {
-    // eager: true
+    eager: true,
   })
   @JoinColumn()
   school: School;

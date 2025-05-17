@@ -35,7 +35,8 @@ export class SuperAdminJwtStrategy extends PassportStrategy(
     return {
       id: superAdmin.id,
       email: superAdmin.email,
-      name: superAdmin.name,
+      firstName: superAdmin.firstName,
+      lastName: superAdmin.lastName,
       status: superAdmin.status,
       role: superAdmin.role,
     };

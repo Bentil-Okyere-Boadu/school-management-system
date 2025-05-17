@@ -308,7 +308,8 @@ export class InvitationService {
     invitationExpires.setHours(invitationExpires.getHours() + 24);
 
     const studentUser = this.studentRepository.create({
-      name: inviteStudentDto.name,
+      firstName: inviteStudentDto.firstName,
+      lastName: inviteStudentDto.lastName,
       email: inviteStudentDto.email,
       password: await bcrypt.hash(pin, 10), // PIN is used as initial password
       role: studentRole,
@@ -524,58 +525,5 @@ export class InvitationService {
     }
 
     return updatedTeacher;
-  }
-
-  /**
-   * Handle forgot PIN for students/teachers
-   */
-  async forgotPin(
-    email: string,
-  ): Promise<{ success: boolean; message: string }> {
-    const user = await this.userRepository.findOne({
-      where: { email },
-      relations: ['role'],
-    });
-
-    if (!user) {
-      // For security reasons, don't reveal that the user doesn't exist
-      return {
-        success: true,
-        message: 'If your email is registered, you will receive a PIN reset',
-      };
-    }
-
-    // Only for students and teachers
-    if (user.role.name !== 'student' && user.role.name !== 'teacher') {
-      throw new BadRequestException(
-        'PIN reset is only available for students and teachers',
-      );
-    }
-
-    // Generate new PIN
-    const pin = this.generatePin();
-    user.password = await bcrypt.hash(pin, 10);
-
-    await this.userRepository.save(user);
-
-    try {
-      // Different email based on role
-      if (user.role.name === 'student') {
-        await this.emailService.sendStudentPinReset(user, pin);
-      } else {
-        await this.emailService.sendTeacherPinReset(user, pin);
-      }
-
-      return {
-        success: true,
-        message: 'PIN reset instructions sent to your email',
-      };
-    } catch (error) {
-      this.logger.error(`Failed to send PIN reset email to ${email}`, error);
-      throw new InvitationException(
-        `Failed to send PIN reset email: ${BaseException.getErrorMessage(error)}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
   }
 }
