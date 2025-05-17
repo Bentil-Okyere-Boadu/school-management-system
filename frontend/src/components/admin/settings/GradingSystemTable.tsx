@@ -1,6 +1,6 @@
 "use client";
 import { Dialog } from "@/components/common/Dialog";
-import { IconPencil, IconTrashFilled, IconUpload } from "@tabler/icons-react";
+import { IconPencil, IconTrashFilled } from "@tabler/icons-react";
 import React, { useState } from "react";
 import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
@@ -91,7 +91,6 @@ export const GradingSystemTable: React.FC = () => {
         text="Add New"
         textColor="text-purple-500"
         onClick={() => onAddNewGrading()}
-        icon={<IconUpload size={10} />}
         showIcon={false}
       />
     </div>
