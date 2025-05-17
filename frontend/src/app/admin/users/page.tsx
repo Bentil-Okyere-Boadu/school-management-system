@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Pagination } from "@/components/common/Pagination";
-import { UserTable } from "@/components/superadmin/users/UsersTable";
+import { UserTable } from "@/components/admin/users/UsersTable";
 import { SearchBar } from "@/components/common/SearchBar";
 import FilterButton from "@/components/common/FilterButton";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
@@ -24,14 +24,16 @@ const UsersPage: React.FC = () => {
   const [selectedDataRole, setSelectedDataRole] = useState<string>("teacher");
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   const queryClient = useQueryClient();
 
-  const { adminUsers, paginationValues, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery));
+  const { schoolUsers, paginationValues, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "", 10);
 
   const statusOptions = [
+    { value: "", label: "Status" },
     { value: "active", label: "Active" },
-    { value: "in-active", label: "Inactive" },
+    { value: "pending", label: "Pending" }
   ];
   const roles = [
     { value: "teacher", label: "Teacher" },
@@ -47,9 +49,9 @@ const UsersPage: React.FC = () => {
     setCurrentPage(page);
   };
 
-  const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
-    console.log("Selected:", selectedValue);
+    setSelectedStatus(selectedValue);
   };
 
   const handleRoleDataChange = (event: string = Roles.TEACHER) => {
@@ -89,12 +91,12 @@ const UsersPage: React.FC = () => {
         <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
         {showFilterOptions && (
           <div className="flex gap-3 mt-3">
-            <CustomSelectTag value="" optionLabel="Status" options={statusOptions} onOptionItemClick={handleRoleChange} />
+            <CustomSelectTag value={selectedStatus} options={statusOptions} onOptionItemClick={handleStatusChange} />
           </div>
         )}
       </div>
 
-      <UserTable users={adminUsers} refetch={refetch}/>
+      <UserTable users={schoolUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus('')} />
 
       <Pagination
         currentPage={currentPage}

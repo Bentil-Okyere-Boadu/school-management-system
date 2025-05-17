@@ -1,13 +1,12 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { CustomSelectTag } from "../../common/CustomSelectTag";
 import InputField from "@/components/InputField";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 
 
-
 export const ConfigurationTabSection: React.FC = () => {
-
+    const [selectedAcademicCalendar, setSelectedAcademicCalendar] = useState('')
     const options = [
         { value: "academic-year", label: "Academic Year" },
         { value: "academic-term", label: "Academic Term" },
@@ -39,15 +38,14 @@ export const ConfigurationTabSection: React.FC = () => {
 
     const handleAcademicCalendarChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedValue = event.target.value;
-        console.log("Selected academic calendar:", selectedValue);
-        // Handle the change as needed, e.g., update state or make an API call
+        setSelectedAcademicCalendar(selectedValue)
     };
 
 
   return (
     <div className="pb-8">
         <h1 className="text-md font-semibold text-neutral-800 mb-2">Academic Calendar</h1>
-        <CustomSelectTag options={options} onOptionItemClick={handleAcademicCalendarChange} />
+        <CustomSelectTag options={options} value={selectedAcademicCalendar} onOptionItemClick={handleAcademicCalendarChange} />
 
         <p className="text-xs text-[#878787] my-5">2024/2025 Academic Year</p>
         <h1 className="text-md font-semibold text-neutral-800 my-2">Terms</h1>
@@ -59,21 +57,25 @@ export const ConfigurationTabSection: React.FC = () => {
                             label="Team Name"
                             isTransulent={true}
                             value={term.name}
+                            onChange={() => {}}
                         />
                         <InputField
                             label="Start Date"
                             isTransulent={true}
                             value={term.startDate}
+                            onChange={() => {}}
                         />
                         <InputField
                             label="End Date"
                             isTransulent={true}
                             value={term.endDate}
+                            onChange={() => {}}
                         />
                         <InputField
                             label="Are there holidays in this term?"
                             isTransulent={true}
                             value={term.holidaysInTerm}
+                            onChange={() => {}}
                         />
                         {
                             term.holidays.map((holiday, hIndex) => (
@@ -82,11 +84,13 @@ export const ConfigurationTabSection: React.FC = () => {
                                         label="Holiday Name"
                                         isTransulent={true}
                                         value={holiday.name}
+                                        onChange={() => {}}
                                     />
                                     <InputField
                                         label="Holiday Date"
                                         isTransulent={true}
                                         value={holiday.date}
+                                        onChange={() => {}}
                                     />
                                 </div>
                             ))
@@ -94,7 +98,7 @@ export const ConfigurationTabSection: React.FC = () => {
                     </div>
 
                     {index < arrayList.length - 1 && (
-                        <hr className="my-5 border-t-1 border-[#909090]" />
+                        <hr className="mt-5 mb-7 border-t-1 border-[#909090]" />
                     )}
                 </div>
             ))

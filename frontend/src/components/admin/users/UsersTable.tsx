@@ -1,19 +1,17 @@
 "use client";
 import React, { useState } from "react";
 import Badge from "../../common/Badge";
-import { Menu, MultiSelect , Select} from '@mantine/core';
+import { Menu } from '@mantine/core';
 import {
-  IconArrowRight,
   IconDots,
   IconSend2,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
-import { useRouter } from "next/navigation";
 import { useArchiveUser, useResendAdminInvitation } from "@/hooks/users";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
+import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 
 interface User {
   id: string;
@@ -27,79 +25,27 @@ interface User {
     label: string;
   }
   isArchived?: boolean;
+  studentId?: string;
+  userType: string;
+  teacherId?: string;
 }
 
 interface UserTableProps {
-  adminUsers: User[];
+  users: User[];
   refetch: () => void;
+  onClearFilterClick?: () => void;
 }
 
-export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
+export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) => {
 
-  const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
-  const [selectedDataRole, setSelectedDataRole] = useState<string | null>("school-admin");
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(["manage-users"]);
+  const [isConfirmCredentialSubmitDialogOpen, setIsConfirmCredentialSubmitDialogOpen]  = useState(false);
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
 
-  const router = useRouter()
-
-  const permissions = [
-    { value: "manage-users", label: "Manage Users" },
-    { value: "assign-grades", label: "Assign Grades" },
-    { value: "view-reports", label: "View Reports" },
-    { value: "data-reports", label: "Data Reports" }
-  ];
-  const roles = [
-    { value: "school-admin", label: "School Admin" },
-    { value: "ux-copywriter", label: "UX Copywriter" },
-    { value: "UI Designer", label: "UI Designer" },
-    { value: "product-manager", label: "Product Manager" },
-    { value: "fullstack-developer", label: "Fullstack Developer" },
-  ];
-
-
-
-  const handlePermissionChange = (value: string[]) => {
-    setSelectedPermissions(value)
-    console.log("Selected permissions:", value);
-  };
-
-  const handleRoleDataChange = (value: string | null) => {
-    setSelectedDataRole(value);
-    console.log("Selected role:", value);
-  };
-
   const onArchiveUserMenuItemClick = (user: User) => {
-    setIsConfirmArchiveDialogOpen(true);
+    setIsConfirmArchiveDialogOpen(true)
     setSelectedUser(user);
-  }
-
-  const onTableRowClick = (userId: string) => {
-    console.log(userId)
-  }
-
-  const onGoToUsersView = () => {
-    router.push('/superadmin/users')
-  }
-
-  const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
-
-  const handleArchiveUser = () => {
-    archiveMutate(null as unknown as void, {
-      onSuccess: () => {
-        toast.success('Archived successfully.');
-        setIsConfirmArchiveDialogOpen(false);
-        refetch();
-      },
-      onError: (error: Error) => {
-        const axiosError = error as AxiosError;
-        toast.error(axiosError.response?.statusText);
-      }
-    });
-  }
-
-  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id});
+  } 
 
   const onResendInvitationMenuItemClick = (user: User) => {
     setSelectedUser(user);
@@ -113,21 +59,33 @@ export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
         toast.error(axiosError.response?.statusText);
       }
     });
-  }
+  } 
 
+  const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
+  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id})
+
+  const handleArchiveUser = () => {
+    archiveMutate(null as unknown as void, {
+      onSuccess: () => {
+        toast.success('Archived successfully.');
+        setIsConfirmArchiveDialogOpen(false);
+        refetch();
+      },
+      onError: (error: Error) => {
+        const axiosError = error as AxiosError;
+        toast.error(axiosError.response?.statusText);
+      }
+    });
+  } 
+ 
   return (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="font-bold text-md">Recently Added Users</h1>
-        <div onClick={onGoToUsersView} className="flex items-center gap-1 text-purple-900 underline font-semibold cursor-pointer">
-          <p className="text-xs">View more</p>
-          <IconArrowRight className="object-contain w-3 h-3" />
-        </div>
-      </div>
-
       <section className="bg-white">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[500px]">
+            <caption className="sr-only">
+              Users and their roles, status, and permissions
+            </caption>
             <thead>
               <tr className="bg-gray-50">
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-60 max-w-[340px]">
@@ -136,15 +94,18 @@ export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
                   <div>Role</div>
                 </th>
+                <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
+                  <div>ID</div>
+                </th>
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div>Status</div>
                 </th>
-                <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"></th>
+                <th onClick={onClearFilterClick} className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"> Clear all filters</th>
               </tr>
             </thead>
             <tbody>
-              {adminUsers?.length > 0 ? (adminUsers.map((user: User) => (
-                <tr key={user.id} onClick={() => onTableRowClick?.(user.id)}>
+              {users?.length > 0 ? (users.map((user: User) => (
+                <tr key={user.id}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div className="flex flex-1 items-center">
                       <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
@@ -158,6 +119,9 @@ export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                     {user.role.label}
+                  </td>
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                    {user.userType === 'student' ? user.studentId : user.teacherId}
                   </td>
                   <td
                     className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
@@ -177,12 +141,14 @@ export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
                           <Menu.Target>
                             <IconDots className="cursor-pointer" />
                           </Menu.Target>
-                          <Menu.Dropdown className="!-ml-12 !-mt-2">
+                          <Menu.Dropdown className="!-ml-8 !-mt-2">
                             <Menu.Item 
-                              onClick={() => onResendInvitationMenuItemClick(user)} 
+                              onClick={() => {setSelectedUser(user);
+                                setIsConfirmCredentialSubmitDialogOpen(true)}
+                              } 
                               disabled={user.status !== 'pending'}
                               leftSection={<IconSend2 size={18} color="#AB58E7" />}>
-                              Resend Invitation
+                              Send credentials
                             </Menu.Item>
                             <Menu.Item 
                               onClick={() => onArchiveUserMenuItemClick(user)} 
@@ -210,35 +176,6 @@ export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
         </div>
       </section>
 
-      {/* Edit Permissions Dialog */}
-      <Dialog 
-        isOpen={isPermissionDialogOpen}
-        dialogTitle="Edit Permissions"
-        saveButtonText="Save Changes"
-        onClose={() => setIsPermissionDialogOpen(false)} 
-        onSave={() => setIsPermissionDialogOpen(false)}
-      >
-        <div className="my-3 flex flex-col gap-4">
-          <Select
-            label="Role"
-            placeholder="Pick role"
-            data={roles}
-            value={selectedDataRole}
-            onChange={handleRoleDataChange}
-          />
-
-          <MultiSelect
-            label="Permissions"
-            placeholder="Pick permissions"
-            data={permissions}
-            value={selectedPermissions}
-            onChange={handlePermissionChange}
-            searchable
-            clearable
-            withCheckIcon
-          />
-        </div>
-      </Dialog>
 
       {/* Confirm Archive Dialog */}
       <Dialog 
@@ -252,6 +189,24 @@ export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
         <div className="my-3 flex flex-col gap-4">
           <p>
             Are you sure you want to archive this user? Their account will be deactivated, but their data will be kept.
+          </p>
+        </div>
+      </Dialog>
+
+      {/* Confirm Credential Submission Dialog */}
+      <Dialog 
+        isOpen={isConfirmCredentialSubmitDialogOpen}
+        busy={isPending}
+        dialogTitle="Confirm Credential Submission"
+        saveButtonText="Send Credentials"
+        onClose={() => setIsConfirmCredentialSubmitDialogOpen(false)} 
+        onSave={() => {onResendInvitationMenuItemClick(selectedUser)}}
+      >
+        <div className="my-3 flex flex-col gap-1 text-base">
+          <p>The following login credentials will be sent via email to the user:</p>
+          <span>&bull; ID: [{selectedUser.userType === 'student' ? selectedUser.studentId : selectedUser.teacherId}]</span>
+          <p>Once sent, the user will be able to access their account using these details. This action cannot be undone.
+            Do you want to proceed?
           </p>
         </div>
       </Dialog>

@@ -16,9 +16,9 @@ export const useGetMySchool = () => {
     return { school, isLoading }
 }
 
-export const useGetSchoolUsers = (page=1,search: string = "", status: string = "", role: string = "" ) => {
+export const useGetSchoolUsers = (page=1,search: string = "", status: string = "", role: string = "", limit?: number ) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allSchoolUsers', { page, search, status, role }],
+        queryKey: ['allSchoolUsers', { page, search, status, role, limit }],
         queryFn: () => {
             const queryBuilder = [];
             if(search) {
@@ -37,6 +37,10 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
                 queryBuilder.push(`page=${page}`);
             }
             
+            if(limit) {
+                queryBuilder.push(`limit=${limit}`);
+            }
+            
             const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
             
             return customAPI.get(`/school-admin/users?${params}`);
@@ -44,9 +48,9 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
         refetchOnWindowFocus: true
     });
 
-    const adminUsers = data?.data?.data;
+    const schoolUsers = data?.data?.data;
     const paginationValues = data?.data.meta;
-    return { adminUsers, isLoading, paginationValues, refetch }
+    return { schoolUsers, isLoading, paginationValues, refetch }
 }
 
  export const useCreateSchool = () => {

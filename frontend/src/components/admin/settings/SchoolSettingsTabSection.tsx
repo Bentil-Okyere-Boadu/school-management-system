@@ -187,7 +187,6 @@ export const SchoolSettingsTabSection: React.FC = () => {
             text="Add New"
             textColor="text-purple-500"
             onClick={() => setIsFeeStructureDialogOpen(true)}
-            icon={<IconUpload size={10} />}
             showIcon={false}
           />
         </div>
@@ -201,14 +200,12 @@ export const SchoolSettingsTabSection: React.FC = () => {
                       text="Edit"
                       textColor="text-gray-500"
                       onClick={() => onEditFeeStructureClick(feeStructure) }
-                      icon={<IconUpload size={10} />}
                       showIcon={false}
                     />
                     <CustomUnderlinedButton
                       text="Send Reminder"
                       textColor="text-gray-500"
                       onClick={() => {}}
-                      icon={<IconUpload size={10} />}
                       showIcon={false}
                     />
                     <CustomUnderlinedButton
@@ -217,7 +214,6 @@ export const SchoolSettingsTabSection: React.FC = () => {
                       onClick={() =>
                         onDeleteFeeStructureClick(feeStructure.id || "")
                       }
-                      icon={<IconUpload size={10} />}
                       showIcon={false}
                     />
                   </div>
