@@ -6,6 +6,7 @@ import { ConfigurationTabSection } from "@/components/superadmin/schools/Configu
 import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
 import { useParams } from "next/navigation";
 import { useGetSchoolById } from "@/hooks/users";
+import SchoolPeople from "@/components/superadmin/schools/SchoolPeople";
 
 export type TabListItem = {
   tabLabel: string;
@@ -29,6 +30,7 @@ const SingleSchoolPage: React.FC = () => {
     { tabLabel: "School Settings", tabKey: "school-settings" },
     { tabLabel: "Configuration", tabKey: "configuration" },
     { tabLabel: "Profile", tabKey: "profile" },
+    { tabLabel: "People", tabKey: "people" },
   ];
 
 
@@ -55,6 +57,12 @@ const SingleSchoolPage: React.FC = () => {
         {activeTabKey === "profile" && (
           <div>
             <ProfileTabSection schoolData={school} />
+          </div>
+        )}
+        
+        {activeTabKey === "people" && (
+          <div>
+            <SchoolPeople users={school.users}/>
           </div>
         )}
 

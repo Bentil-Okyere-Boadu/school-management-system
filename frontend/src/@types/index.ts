@@ -6,6 +6,8 @@ export enum ButtonType {
 export interface User {
   id: string;
   email: string;
+  firstName: string;
+  lastName: string;
   password?: string;
   name: string;
   role: Role;
@@ -80,7 +82,17 @@ export interface School {
   gradingSystems: GradingSystem[];
   feeStructures: FeeStructure[];
   profile: object | null;
-  academicCalendars: object[]; 
+  academicCalendars: object[];
+  users: User[]; 
   createdAt: string; 
   updatedAt: string; 
 }
+
+export type BadgeVariant =
+  | "purple"
+  | "red"
+  | "indigo"
+  | "blue"
+  | "green"
+  | "yellow"
+  | "gray" | "active" | "inactive" | "pending";
