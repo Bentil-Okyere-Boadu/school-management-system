@@ -1,34 +1,26 @@
-import {
-  Controller,
-  Post,
-  Body,
-  UseGuards,
-  Request,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Post, UseGuards, Request, Body } from '@nestjs/common';
+
+import { StudentAuthService } from './student.auth.service';
+import { Student } from './student.entity';
+import { StudentLocalAuthGuard } from './guards/student-local-auth.guard';
+import { ForgotStudentPasswordDto } from './dto/forgot-student-password.dto';
 import { StudentService } from './student.service';
-import { StudentLocalAuthGuard } from '../auth/guards/student-local-auth.guard';
-import { AuthService } from '../auth/auth.service';
 
 @Controller('students')
 export class StudentController {
   constructor(
+    private readonly studentAuthService: StudentAuthService,
     private readonly studentService: StudentService,
-    // private readonly authService: AuthService,
   ) {}
 
   @UseGuards(StudentLocalAuthGuard)
   @Post('login')
-  async login(@Request() req) {
-    //  return this.authService.generateToken(req.user);
+  login(@Request() req: { user: Student }) {
+    return this.studentAuthService.login(req.user);
   }
 
-  @Post('forgot-pin')
-  async forgotPin(@Body() body: { email: string }) {
-    if (!body.email) {
-      throw new BadRequestException('Email is required');
-    }
-
-    return this.studentService.forgotPin(body.email);
+  @Post('forgot-password')
+  forgotPassword(@Body() forgotPasswordDto: ForgotStudentPasswordDto) {
+    return this.studentService.forgotPin(forgotPasswordDto.email);
   }
 }

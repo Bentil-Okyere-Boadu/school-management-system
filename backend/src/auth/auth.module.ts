@@ -45,7 +45,6 @@ import { StudentLocalStrategy } from './strategies/student-local.strategy';
     JwtStrategy,
     ConfigService,
     EmailService,
-    StudentLocalStrategy,
   ],
   controllers: [AuthController],
   exports: [AuthService],

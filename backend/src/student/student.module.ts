@@ -7,10 +7,20 @@ import { Role } from '../role/role.entity';
 import { EmailModule } from '../common/modules/email.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { StudentLocalStrategy } from './strategies/student-local.strategy';
+import { StudentLocalAuthGuard } from './guards/student-local-auth.guard';
+import { StudentAuthService } from './student.auth.service';
+import { AuthService } from 'src/auth/auth.service';
+import { User } from 'src/user/user.entity';
+import { StudentJwtStrategy } from './strategies/student-jwt.strategy';
+import { InvitationService } from 'src/invitation/invitation.service';
+import { School } from 'src/school/school.entity';
+import { EmailService } from 'src/common/services/email.service';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Student, Role]),
+    TypeOrmModule.forFeature([Student, Role, User, School, SchoolAdmin]),
     EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -24,7 +34,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
   ],
   controllers: [StudentController],
-  providers: [StudentService],
-  exports: [StudentService],
+  providers: [
+    StudentService,
+    AuthService,
+    EmailService,
+    InvitationService,
+    StudentAuthService,
+    StudentLocalStrategy,
+    StudentLocalAuthGuard,
+    StudentJwtStrategy,
+  ],
+  exports: [StudentService, StudentLocalAuthGuard],
 })
 export class StudentModule {}
