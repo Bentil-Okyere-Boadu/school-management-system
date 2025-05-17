@@ -1,15 +1,7 @@
 "use client";
 
+import { BadgeVariant } from "@/@types";
 import React from "react";
-
-type BadgeVariant =
-  | "purple"
-  | "red"
-  | "indigo"
-  | "blue"
-  | "green"
-  | "yellow"
-  | "gray" | "active" | "inactive" | "pending";
 
 interface BadgeProps {
   text: string;
