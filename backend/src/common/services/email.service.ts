@@ -270,14 +270,15 @@ export class EmailService {
    */
   async sendStudentPinReset(student: Student, pin: string): Promise<void> {
     const loginLink = `${this.frontendUrl}/auth/student/login`;
-
+    const studentId = student.studentId;
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: student.email,
         subject: 'Your PIN Has Been Reset',
         html: this.getEmailTemplate(EmailTemplate.STUDENT_PIN_RESET, {
-          name: student.firstName + '' + student.lastName,
+          name: student.firstName + ' ' + student.lastName,
+          studentId,
           pin,
           loginLink,
           school: student.school?.name || 'your school',

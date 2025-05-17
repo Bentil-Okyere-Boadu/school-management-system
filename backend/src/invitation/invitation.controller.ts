@@ -64,7 +64,7 @@ export class InvitationController {
     @Body() inviteStudentDto: InviteStudentDto,
     @CurrentUser() currentUser: SchoolAdmin,
   ) {
-    return this.studentService.inviteStudent(inviteStudentDto, currentUser);
+    return this.invitationService.inviteStudent(inviteStudentDto, currentUser);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -119,7 +119,7 @@ export class InvitationController {
   @Post('forgot-pin')
   async forgotPin(@Body() forgotPinDto: ForgotPinDto) {
     // Try to find student with this email first
-    const result = await this.studentService.forgotPin(forgotPinDto.email);
+    const result = await this.invitationService.forgotPin(forgotPinDto.email);
 
     // If the student service didn't throw an error, it either found the student
     // or is returning a generic success response for security
