@@ -157,7 +157,8 @@ export class StudentService {
     const invitationExpires = this.calculateTokenExpiration();
 
     const studentUser = this.studentRepository.create({
-      name: inviteStudentDto.name,
+      firstName: inviteStudentDto.firstName,
+      lastName: inviteStudentDto.lastName,
       email: inviteStudentDto.email,
       password: await bcrypt.hash(pin, 10), // PIN is used as initial password
       role: studentRole,

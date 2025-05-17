@@ -3,7 +3,11 @@ import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 export class CreateSuperAdminDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  firstName?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  lastName?: string;
 
   @IsEmail()
   email: string;

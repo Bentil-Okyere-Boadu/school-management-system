@@ -21,9 +21,6 @@ export class SchoolAdmin {
 
   @Column({ nullable: true })
   lastName: string;
-  //Todo remove field
-  @Column({ nullable: true })
-  name: string;
 
   @Column({ unique: true })
   email: string;
@@ -55,7 +52,11 @@ export class SchoolAdmin {
     eager: true,
   })
   school: School;
-  @OneToOne(() => Profile, (profile) => profile.schoolAdmin)
+  @OneToOne(() => Profile, (profile) => profile.schoolAdmin, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
   profile: Profile;
   @Column({ nullable: true })
   resetPasswordExpires: Date;

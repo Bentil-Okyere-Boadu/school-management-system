@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -62,44 +67,6 @@ export class SchoolAdminService {
       .leftJoinAndSelect('student.school', 'school')
       .where('student.school.id = :schoolId', { schoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived: false });
-
-    const featuresWithoutPagination = new APIFeatures(
-      baseQuery.clone(),
-      queryString,
-    )
-      .filter()
-      .sort()
-      .search()
-      .limitFields();
-
-    const total = await featuresWithoutPagination.getQuery().getCount();
-
-    const featuresWithPagination = featuresWithoutPagination.paginate();
-    const data = await featuresWithPagination.getQuery().getMany();
-
-    const page = parseInt(queryString.page ?? '1', 10);
-    const limit = parseInt(queryString.limit ?? '20', 10);
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages,
-      },
-    };
-  }
-
-  async findAllTeachers(schoolId: string, queryString: QueryString) {
-    const baseQuery = this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .leftJoinAndSelect('user.school', 'school')
-      .where('user.school.id = :schoolId', { schoolId })
-      .andWhere('role.name = :roleName', { roleName: 'teacher' })
-      .andWhere('user.status != :status', { status: 'archived' });
 
     const featuresWithoutPagination = new APIFeatures(
       baseQuery.clone(),
