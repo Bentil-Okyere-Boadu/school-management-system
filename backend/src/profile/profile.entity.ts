@@ -24,16 +24,16 @@ export class Profile {
   email?: string;
 
   @Column({ nullable: true })
-  address: string;
+  address?: string;
 
   @Column({ nullable: true })
-  streetAddress: string;
+  streetAddress?: string;
 
   @Column({ nullable: true })
-  phoneContact: string;
+  phoneContact?: string;
 
   @Column({ nullable: true })
-  optionalPhoneContact: string;
+  optionalPhoneContact?: string;
 
   @OneToOne(() => SchoolAdmin, (admin) => admin.profile)
   @JoinColumn()
