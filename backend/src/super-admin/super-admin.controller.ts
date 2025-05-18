@@ -10,12 +10,12 @@ import {
 import { SuperAdminService } from './super-admin.service';
 import { SuperAdmin } from './super-admin.entity';
 import { SuperAdminJwtAuthGuard } from './guards/super-admin-jwt-auth.guard';
-import { Roles } from 'src/auth/roles.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { QueryString } from 'src/common/api-features/api-features';
-import { CurrentUser } from 'src/user/current-user.decorator';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @Controller('super-admin')
 export class SuperAdminController {

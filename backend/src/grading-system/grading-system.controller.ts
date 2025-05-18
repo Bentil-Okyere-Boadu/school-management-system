@@ -12,10 +12,10 @@ import {
 import { GradingSystemService } from './grading-system.service';
 import { CreateGradingSystemDto } from './dto/create-grading-system.dto';
 import { UpdateGradingSystemDto } from './dto/update-grading-system.dto';
-import { CurrentUser } from 'src/user/current-user.decorator';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
-import { Roles } from 'src/auth/roles.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @Controller('grading-system')
 export class GradingSystemController {

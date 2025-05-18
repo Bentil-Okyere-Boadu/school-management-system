@@ -1,11 +1,11 @@
 import { Injectable, Logger, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { User } from '../../user/user.entity';
 import { EmailException } from '../exceptions/email.exception';
 import { BaseException } from '../exceptions/base.exception';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
 
 /**
  * Email templates
@@ -134,7 +134,7 @@ export class EmailService {
    * @param pin The generated PIN
    */
   async sendTeacherInvitation(
-    user: User,
+    user: Teacher,
     teacherId: string,
     pin: string,
   ): Promise<void> {
@@ -146,7 +146,7 @@ export class EmailService {
         to: user.email,
         subject: 'Your Teacher Account for School Management System',
         html: this.getEmailTemplate(EmailTemplate.TEACHER_INVITATION, {
-          name: user.name,
+          name: user.firstName + ' ' + user.lastName,
           teacherId,
           pin,
           loginLink,
@@ -302,14 +302,14 @@ export class EmailService {
    * @param user The teacher user
    * @param pin The new PIN
    */
-  async sendTeacherPinReset(user: User, pin: string): Promise<void> {
+  async sendTeacherPinReset(user: Teacher, pin: string): Promise<void> {
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: user.email,
         subject: 'Your PIN Has Been Reset - School Management System',
         html: this.getEmailTemplate(EmailTemplate.TEACHER_PIN_RESET, {
-          name: user.name,
+          name: user.firstName + ' ' + user.lastName,
           pin,
           teacherId: user.teacherId,
         }),
