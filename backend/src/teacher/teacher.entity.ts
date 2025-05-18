@@ -39,6 +39,9 @@ export class Teacher {
   status: string;
 
   @Column({ default: false })
+  isArchived: boolean;
+
+  @Column({ default: false })
   isInvitationAccepted: boolean;
 
   @Column({ nullable: true })
