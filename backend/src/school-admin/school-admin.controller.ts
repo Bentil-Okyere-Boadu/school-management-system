@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   Put,
   ForbiddenException,
+  Param,
 } from '@nestjs/common';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
@@ -103,5 +104,15 @@ export class SchoolAdminController {
   @Roles('school_admin')
   getMySchool(@CurrentUser() user: SchoolAdmin) {
     return this.schoolAdminService.getMySchool(user);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('users/:id/archive')
+  @Roles('school_admin')
+  async archiveUser(
+    @Param('id') id: string,
+    @Body() body: { archive: boolean },
+  ) {
+    return this.schoolAdminService.archiveUser(id, body.archive);
   }
 }

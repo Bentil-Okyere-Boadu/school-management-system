@@ -6,7 +6,7 @@ import { StudentLocalAuthGuard } from './guards/student-local-auth.guard';
 import { ForgotStudentPasswordDto } from './dto/forgot-student-password.dto';
 import { StudentService } from './student.service';
 
-@Controller('students')
+@Controller('student')
 export class StudentController {
   constructor(
     private readonly studentAuthService: StudentAuthService,

@@ -93,13 +93,22 @@ export class SchoolAdminService {
   }
 
   async findAllUsers(schoolId: string, queryString: QueryString) {
+    let isArchived = false;
+    if (queryString.status === 'archived') {
+      isArchived = true;
+    } else if (queryString.status === 'active' || !queryString.status) {
+      isArchived = false;
+    } else {
+      isArchived = false;
+    }
+
     // Get students
     const studentsQuery = this.studentRepository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
       .where('student.school.id = :schoolId', { schoolId })
-      .andWhere('student.isArchived = :isArchived', { isArchived: false });
+      .andWhere('student.isArchived = :isArchived', { isArchived });
 
     const studentsFeatures = new APIFeatures(studentsQuery, queryString)
       .filter()
@@ -116,7 +125,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
       .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('teacher.isArchived = :isArchived', { isArchived: false });
+      .andWhere('teacher.isArchived = :isArchived', { isArchived });
 
     const teachersFeatures = new APIFeatures(teachersQuery, queryString)
       .filter()
@@ -132,7 +141,7 @@ export class SchoolAdminService {
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.school', 'school')
       .where('student.school.id = :schoolId', { schoolId })
-      .andWhere('student.isArchived = :isArchived', { isArchived: false })
+      .andWhere('student.isArchived = :isArchived', { isArchived })
       .getCount();
 
     const teachersCount = await this.teacherRepository
@@ -140,7 +149,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
       .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('teacher.isArchived = :isArchived', { isArchived: false })
+      .andWhere('teacher.isArchived = :isArchived', { isArchived })
       .getCount();
 
     // Add userType to each entity
@@ -226,5 +235,21 @@ export class SchoolAdminService {
       this.schoolAdminRepository,
       ['role', 'school', 'profile'],
     );
+  }
+  async archiveUser(id: string, archive: boolean) {
+    const user = await this.studentRepository.findOne({ where: { id } });
+    if (user) {
+      user.isArchived = archive;
+      user.status = archive ? 'archived' : 'active';
+      return this.studentRepository.save(user);
+    }
+
+    const teacher = await this.teacherRepository.findOne({ where: { id } });
+    if (teacher) {
+      teacher.isArchived = archive;
+      teacher.status = archive ? 'archived' : 'active';
+      return this.teacherRepository.save(teacher);
+    }
+    throw new NotFoundException(`User with ID ${id} not found`);
   }
 }
