@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { FeeStructure, Grade, SchoolAdminInfo } from "@/@types";
+import { User } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading } = useQuery({
@@ -14,6 +15,20 @@ export const useGetMySchool = () => {
     const school = data?.data
 
     return { school, isLoading }
+}
+
+export const useGetMe = () => {
+    const { data, isPending} = useQuery({
+        queryKey: ['schoolAdminMe'],
+        queryFn: () => {
+            return customAPI.get(`/school-admin/me`)
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const me = data?.data as User;
+
+    return { me, isPending }
 }
 
 export const useGetSchoolUsers = (page=1,search: string = "", status: string = "", role: string = "", limit?: number ) => {

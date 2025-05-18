@@ -6,6 +6,7 @@ import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import NoProfileImg from '@/images/no-profile-img.png' 
 import CustomButton from "@/components/Button";
 import { useEditSchoolAdminInfo } from "@/hooks/school-admin";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 
 
@@ -53,6 +54,8 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
     prepopulateProfileSettings()
   }, [])
 
+    const queryClient = useQueryClient();
+    
     const { mutate: editMutation, isPending } = useEditSchoolAdminInfo();
 
 
@@ -69,6 +72,7 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
         }, {
           onSuccess: () => {
             toast.success('Saved successfully.');
+            queryClient.invalidateQueries({ queryKey: ['schoolAdminMe']})
           },
           onError: (error) => {
             toast.error(error.message);
