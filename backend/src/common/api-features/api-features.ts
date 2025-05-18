@@ -99,7 +99,7 @@ export class APIFeatures<T extends ObjectLiteral> {
   search(): this {
     const searchValue = this.queryString.search;
     if (searchValue) {
-      const fieldsToSearch: string[] = ['name', 'email'];
+      const fieldsToSearch: string[] = ['firstName', 'lastName', 'email'];
 
       this.query = this.query.andWhere(
         new Brackets((qb: SelectQueryBuilder<T>) => {

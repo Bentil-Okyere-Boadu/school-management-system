@@ -1,19 +1,14 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SchoolAdmin } from './school-admin.entity';
 import { Student } from 'src/student/student.entity';
-import { User } from 'src/user/user.entity';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { School } from 'src/school/school.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { Teacher } from 'src/teacher/teacher.entity';
 @Injectable()
 export class SchoolAdminService {
   private readonly logger = new Logger(SchoolAdminService.name);
@@ -23,8 +18,8 @@ export class SchoolAdminService {
     private schoolAdminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Student)
     private studentRepository: Repository<Student>,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(Teacher)
+    private teacherRepository: Repository<Teacher>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
     private readonly profileService: ProfileService,
@@ -116,7 +111,7 @@ export class SchoolAdminService {
     const students = await studentsFeatures.getQuery().getMany();
 
     // Get teachers
-    const teachersQuery = this.userRepository
+    const teachersQuery = this.teacherRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.school', 'school')
@@ -141,7 +136,7 @@ export class SchoolAdminService {
       .andWhere('student.isArchived = :isArchived', { isArchived: false })
       .getCount();
 
-    const teachersCount = await this.userRepository
+    const teachersCount = await this.teacherRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.school', 'school')

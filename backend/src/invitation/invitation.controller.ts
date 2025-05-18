@@ -14,8 +14,6 @@ import { InviteUserDto } from './dto/invite-user.dto';
 import { InviteStudentDto } from './dto/invite-student.dto';
 import { InviteTeacherDto } from './dto/invite-teacher.dto';
 import { CompleteRegistrationDto } from './dto/complete-registration.dto';
-import { User } from '../user/user.entity';
-import { CurrentUser } from '../user/current-user.decorator';
 import { SanitizeResponseInterceptor } from '../common/interceptors/sanitize-response.interceptor';
 import { ActiveUserGuard } from '../auth/guards/active-user.guard';
 import { ForgotPinDto } from './dto/forgot-pin.dto';
@@ -25,6 +23,9 @@ import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jw
 import { StudentService } from 'src/student/student.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SchoolAdminAuthService } from 'src/school-admin/school-admin-auth.service';
+import { TeacherService } from 'src/teacher/teacher.service';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Teacher } from 'src/teacher/teacher.entity';
 
 @Controller('invitations')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -32,6 +33,7 @@ export class InvitationController {
   constructor(
     private invitationService: InvitationService,
     private studentService: StudentService,
+    private teacherService: TeacherService,
     private readonly schoolAdminAuthService: SchoolAdminAuthService,
   ) {}
 
@@ -64,7 +66,7 @@ export class InvitationController {
     @Body() inviteStudentDto: InviteStudentDto,
     @CurrentUser() currentUser: SchoolAdmin,
   ) {
-    return this.studentService.inviteStudent(inviteStudentDto, currentUser);
+    return this.invitationService.inviteStudent(inviteStudentDto, currentUser);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -72,11 +74,12 @@ export class InvitationController {
   @Post('teacher')
   inviteTeacher(
     @Body() inviteTeacherDto: InviteTeacherDto,
-    @CurrentUser() currentUser: User,
+    @CurrentUser() currentUser: Teacher,
   ) {
     return this.invitationService.inviteTeacher(inviteTeacherDto, currentUser);
   }
 
+  //tod remove
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles('school_admin')
   @Post('student/resend/:userId')
@@ -89,15 +92,12 @@ export class InvitationController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles('school_admin')
-  @Post('teacher/resend')
+  @Post('teacher/resend/:userId')
   resendTeacherInvitation(
-    @Body() dto: { email: string },
-    @CurrentUser() currentUser: User,
+    @Param('userId') userId: string,
+    @CurrentUser() currentUser: SchoolAdmin,
   ) {
-    return this.invitationService.resendTeacherInvitation(
-      dto.email,
-      currentUser,
-    );
+    return this.teacherService.resendTeacherInvitation(userId, currentUser);
   }
 
   // Common endpoints
@@ -119,7 +119,7 @@ export class InvitationController {
   @Post('forgot-pin')
   async forgotPin(@Body() forgotPinDto: ForgotPinDto) {
     // Try to find student with this email first
-    const result = await this.studentService.forgotPin(forgotPinDto.email);
+    const result = await this.invitationService.forgotPin(forgotPinDto.email);
 
     // If the student service didn't throw an error, it either found the student
     // or is returning a generic success response for security

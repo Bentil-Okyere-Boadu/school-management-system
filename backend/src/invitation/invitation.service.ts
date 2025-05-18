@@ -6,10 +6,10 @@ import {
   ConflictException,
   BadRequestException,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../user/user.entity';
 import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
 import * as bcrypt from 'bcryptjs';
@@ -25,16 +25,17 @@ import { BaseException } from '../common/exceptions/base.exception';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { Student } from 'src/student/student.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
 
 @Injectable()
 export class InvitationService {
   private readonly logger = new Logger(InvitationService.name);
 
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
     @InjectRepository(Student)
     private studentRepository: Repository<Student>,
+    @InjectRepository(Teacher)
+    private teacherRepository: Repository<Teacher>,
     @InjectRepository(SchoolAdmin)
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(Role)
@@ -47,14 +48,14 @@ export class InvitationService {
   /**
    * Generate a random invitation token
    */
-  private generateInvitationToken(): string {
+  generateInvitationToken(): string {
     return crypto.randomBytes(32).toString('hex');
   }
 
   /**
    * Calculate token expiration date (24 hours from now)
    */
-  private calculateTokenExpiration(): Date {
+  calculateTokenExpiration(): Date {
     const expirationDate = new Date();
     expirationDate.setHours(expirationDate.getHours() + 24);
     return expirationDate;
@@ -63,7 +64,7 @@ export class InvitationService {
   /**
    * Generate a random PIN
    */
-  private generatePin(): string {
+  generatePin(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
@@ -72,7 +73,7 @@ export class InvitationService {
    * Gets first letter of each word, up to 3 letters
    * If the school name has fewer than 3 words, it uses the second letter of the first word
    */
-  private getSchoolInitials(schoolName: string): string {
+  getSchoolInitials(schoolName: string): string {
     const words = schoolName.trim().split(/\s+/);
 
     if (words.length === 0 || words[0].length === 0) {
@@ -122,7 +123,7 @@ export class InvitationService {
     return newCode;
   }
 
-  private async generateStudentId(school: School): Promise<string> {
+  async generateStudentId(school: School): Promise<string> {
     // Get school initials
     const schoolInitials = this.getSchoolInitials(school.name);
 
@@ -166,7 +167,7 @@ export class InvitationService {
     const roleCode = '123';
 
     // Get sequential person ID (count teachers in this school + 1)
-    const teacherCount = await this.userRepository.count({
+    const teacherCount = await this.teacherRepository.count({
       where: {
         school: { id: school.id },
         role: { name: 'teacher' },
@@ -274,14 +275,13 @@ export class InvitationService {
   async inviteStudent(
     inviteStudentDto: InviteStudentDto,
     adminUser: SchoolAdmin,
-  ): Promise<User> {
-    console.log('Admin User:', adminUser);
+  ): Promise<Student> {
     if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite students');
     }
 
     if (!adminUser.school) {
-      throw new UnauthorizedException('Admin not associated with any school');
+      throw new ForbiddenException('Admin not associated with any school');
     }
 
     const existingUser = await this.studentRepository.findOne({
@@ -320,7 +320,7 @@ export class InvitationService {
       studentId: studentId,
     });
 
-    const savedUser = await this.userRepository.save(studentUser);
+    const savedUser = await this.studentRepository.save(studentUser);
 
     try {
       await this.emailService.sendStudentInvitation(savedUser, studentId, pin);
@@ -340,8 +340,8 @@ export class InvitationService {
    */
   async inviteTeacher(
     inviteTeacherDto: InviteTeacherDto,
-    adminUser: User,
-  ): Promise<User> {
+    adminUser: Teacher,
+  ): Promise<Teacher> {
     if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite teachers');
     }
@@ -350,7 +350,7 @@ export class InvitationService {
       throw new UnauthorizedException('Admin not associated with any school');
     }
 
-    const existingUser = await this.userRepository.findOne({
+    const existingUser = await this.teacherRepository.findOne({
       where: { email: inviteTeacherDto.email },
     });
 
@@ -372,8 +372,9 @@ export class InvitationService {
     const invitationExpires = new Date();
     invitationExpires.setHours(invitationExpires.getHours() + 24);
 
-    const teacherUser = this.userRepository.create({
-      name: inviteTeacherDto.name,
+    const teacherUser = this.teacherRepository.create({
+      firstName: inviteTeacherDto.firstName,
+      lastName: inviteTeacherDto.lastName,
       email: inviteTeacherDto.email,
       password: await bcrypt.hash(pin, 10),
       role: teacherRole,
@@ -385,7 +386,7 @@ export class InvitationService {
       teacherId: teacherId,
     });
 
-    const savedUser = await this.userRepository.save(teacherUser);
+    const savedUser = await this.teacherRepository.save(teacherUser);
 
     try {
       await this.emailService.sendTeacherInvitation(savedUser, teacherId, pin);
@@ -471,59 +472,55 @@ export class InvitationService {
   }
 
   /**
-   * Resend invitation to a teacher - Used by school admin
+   * Handle forgot PIN for students/teachers
    */
-  async resendTeacherInvitation(email: string, adminUser: User): Promise<User> {
-    if (adminUser.role.name !== 'school_admin') {
-      throw new UnauthorizedException(
-        'Only school admins can resend invitations',
-      );
-    }
-
-    if (!adminUser.school) {
-      throw new UnauthorizedException('Admin not associated with any school');
-    }
-
-    // Find the teacher user
-    const teacher = await this.userRepository.findOne({
-      where: {
-        email,
-        role: { name: 'teacher' },
-        school: { id: adminUser.school.id },
-      },
-      relations: ['role', 'school'],
+  async forgotPin(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.studentRepository.findOne({
+      where: { email },
+      relations: ['role'],
     });
 
-    if (!teacher) {
-      throw new NotFoundException('Teacher not found in your school');
+    if (!user) {
+      // For security reasons, don't reveal that the user doesn't exist
+      return {
+        success: true,
+        message: 'If your email is registered, you will receive a PIN reset',
+      };
+    }
+
+    // Only for students and teachers
+    if (user.role.name !== 'student' && user.role.name !== 'teacher') {
+      throw new BadRequestException(
+        'PIN reset is only available for students and teachers',
+      );
     }
 
     // Generate new PIN
     const pin = this.generatePin();
+    user.password = await bcrypt.hash(pin, 10);
 
-    // Update token and expiration date
-    teacher.invitationToken = uuidv4();
-    teacher.invitationExpires = this.calculateTokenExpiration();
-    teacher.password = await bcrypt.hash(pin, 10);
-
-    const updatedTeacher = await this.userRepository.save(teacher);
+    await this.studentRepository.save(user);
 
     try {
-      // Send new invitation
-      await this.emailService.sendTeacherInvitation(
-        updatedTeacher,
-        updatedTeacher.teacherId,
-        pin,
-      );
-      this.logger.log(`Invitation resent to teacher ${email}`);
+      // Different email based on role
+      if (user.role.name === 'student') {
+        await this.emailService.sendStudentPinReset(user, pin);
+      } else {
+        //  await this.emailService.sendTeacherPinReset(user, pin);
+      }
+
+      return {
+        success: true,
+        message: 'PIN reset instructions sent to your email',
+      };
     } catch (error) {
-      this.logger.error(`Failed to resend invitation to ${email}`, error);
+      this.logger.error(`Failed to send PIN reset email to ${email}`, error);
       throw new InvitationException(
-        `Failed to resend invitation: ${BaseException.getErrorMessage(error)}`,
+        `Failed to send PIN reset email: ${BaseException.getErrorMessage(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-
-    return updatedTeacher;
   }
 }

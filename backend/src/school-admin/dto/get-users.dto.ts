@@ -1,8 +1,7 @@
 import { Student } from 'src/student/student.entity';
-import { User } from 'src/user/user.entity';
-
+import { Teacher } from 'src/teacher/teacher.entity';
 // User with type discrimination
-export type UserWithType = (Student | User) & {
+export type UserWithType = (Student | Teacher) & {
   userType: 'student' | 'teacher';
 };
 
@@ -16,4 +15,4 @@ export class GetUsersResponseDto {
     studentsCount: number;
     teachersCount: number;
   };
-} 
+}

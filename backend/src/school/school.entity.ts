@@ -1,4 +1,3 @@
-import { User } from 'src/user/user.entity';
 import { ClassLevel } from '../class-level/class-level.entity';
 import {
   Entity,
@@ -16,6 +15,7 @@ import { AcademicCalendar } from '../academic-calendar/entitites/academic-calend
 import { Profile } from 'src/profile/profile.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
+import { Teacher } from '../teacher/teacher.entity';
 
 @Entity()
 export class School {
@@ -44,9 +44,6 @@ export class School {
   @OneToMany(() => SchoolAdmin, (admin) => admin.school)
   admins: SchoolAdmin[];
 
-  @OneToMany(() => User, (user) => user.school)
-  users: User[];
-
   @OneToMany(() => Student, (student) => student.school)
   students: Student[];
 
@@ -70,6 +67,9 @@ export class School {
     (academicCalendar) => academicCalendar.school,
   )
   academicCalendars: AcademicCalendar[];
+
+  @OneToMany(() => Teacher, (teacher) => teacher.school)
+  teachers: Teacher[];
 
   @CreateDateColumn()
   createdAt: Date;

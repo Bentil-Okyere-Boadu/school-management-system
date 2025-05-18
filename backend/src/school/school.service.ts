@@ -6,7 +6,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { School } from './school.entity';
-import { User } from 'src/user/user.entity';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
@@ -47,7 +46,6 @@ export class SchoolService {
     adminUser.school = savedSchool;
 
     if (!adminUser.adminId) {
-      // Get admin ID from invitation service
       const adminId = await this.invitationService.generateAdminId(
         savedSchool,
         adminUser,
@@ -55,13 +53,12 @@ export class SchoolService {
       adminUser.adminId = adminId;
     }
 
-    // Save the updated admin user
     await this.adminRepository.save(adminUser);
 
     return savedSchool;
   }
 
-  async findOneWithDetails(id: string): Promise<School> {
+  async findOneWithDetails(id: string): Promise<any> {
     const school = await this.schoolRepository.findOne({
       where: { id },
       relations: [
@@ -72,6 +69,7 @@ export class SchoolService {
         'academicCalendars',
         'classLevels',
         'students',
+        'teachers',
       ],
     });
 
@@ -79,8 +77,16 @@ export class SchoolService {
       throw new NotFoundException(`School with ID ${id} not found`);
     }
 
-    return school;
+    const { students, teachers, ...rest } = school;
+
+    const users = [...(students || []), ...(teachers || [])];
+
+    return {
+      ...rest,
+      users,
+    };
   }
+
   async findAll(): Promise<School[]> {
     return this.schoolRepository.find();
   }
@@ -120,21 +126,6 @@ export class SchoolService {
     }
 
     return school;
-  }
-  async update(
-    id: string,
-    schoolData: Partial<School>,
-    adminUser: User,
-  ): Promise<School> {
-    // Ensure admin user can only update their own school
-    if (adminUser.role.name === 'school_admin') {
-      if (!adminUser.school || adminUser.school.id !== id) {
-        throw new UnauthorizedException('You can only update your own school');
-      }
-    }
-
-    await this.schoolRepository.update(id, schoolData);
-    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {

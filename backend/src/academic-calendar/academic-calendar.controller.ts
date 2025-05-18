@@ -17,8 +17,8 @@ import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jw
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { CurrentUser } from 'src/user/current-user.decorator';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @Controller('academic-calendar')
 @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

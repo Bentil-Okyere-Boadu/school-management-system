@@ -13,7 +13,6 @@ import { Role } from '../role/role.entity';
 import { SuperAdminLocalStrategy } from './strategies/super-admin-local.strategy';
 import { RoleService } from '../role/role.service';
 import { AuthService } from 'src/auth/auth.service';
-import { User } from 'src/user/user.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { School } from 'src/school/school.entity';
 import { Profile } from 'src/profile/profile.entity';
@@ -21,14 +20,7 @@ import { ProfileService } from 'src/profile/profile.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      SuperAdmin,
-      Role,
-      User,
-      SchoolAdmin,
-      School,
-      Profile,
-    ]),
+    TypeOrmModule.forFeature([SuperAdmin, Role, SchoolAdmin, School, Profile]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -5,20 +5,20 @@ import {
   Body,
   Param,
   Delete,
-  Put,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { SchoolService } from './school.service';
 import { School } from './school.entity';
 import { RolesGuard } from 'src/auth/roles.guard';
-import { Roles } from 'src/auth/decorators/roles.decorator';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { CreateSchoolDto } from './dto/create-school.dto';
-import { CurrentUser } from 'src/user/current-user.decorator';
-import { User } from 'src/user/user.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
 
 @Controller('schools')
 export class SchoolController {
@@ -50,22 +50,9 @@ export class SchoolController {
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id')
   @Roles('super_admin')
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
   findOne(@Param('id') id: string): Promise<School> {
     return this.schoolService.findOneWithDetails(id);
-  }
-
-  /**
-   * Update a school
-   * Super admins can update any school, school admins can only update their own
-   */
-  @Put(':id')
-  @Roles('school_admin')
-  update(
-    @Param('id') id: string,
-    @Body() schoolData: Partial<School>,
-    @CurrentUser() user: User,
-  ): Promise<School> {
-    return this.schoolService.update(id, schoolData, user);
   }
 
   /**

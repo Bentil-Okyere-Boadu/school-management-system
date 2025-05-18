@@ -7,85 +7,33 @@ const SENSITIVE_FIELDS = [
 ];
 
 /**
- * Sanitize a single object by removing sensitive fields
- * @param data Object to sanitize
- * @returns Sanitized object with sensitive fields removed
+ * Recursively sanitize data by removing sensitive fields from objects and arrays.
+ * @param data Any data structure (object, array, primitive)
+ * @returns Sanitized data
  */
-export function sanitize<T>(data: T): Partial<T> {
-  if (!data) {
-    return data;
+export function sanitize<T>(data: T): any {
+  if (Array.isArray(data)) {
+    return data.map(sanitize);
   }
 
-  const sanitized = { ...data } as any;
+  if (data !== null && typeof data === 'object') {
+    const sanitized: Record<string, any> = {};
 
-  // Remove all sensitive fields
-  SENSITIVE_FIELDS.forEach((field) => {
-    if (field in sanitized) {
-      delete sanitized[field];
+    for (const [key, value] of Object.entries(data)) {
+      if (SENSITIVE_FIELDS.includes(key)) {
+        continue;
+      }
+
+      sanitized[key] = typeof value === 'object' ? sanitize(value) : value;
     }
-  });
 
-  return sanitized;
-}
-
-/**
- * Sanitize an array of objects by removing sensitive fields
- * @param dataArray Array of objects to sanitize
- * @returns Array of sanitized objects
- */
-export function sanitizeMany<T>(dataArray: T[]): Partial<T>[] {
-  if (!dataArray || !Array.isArray(dataArray)) {
-    return dataArray;
+    return sanitized;
   }
 
-  return dataArray.map((item) => sanitize(item));
+  return data;
 }
 
 /**
- * Class decorator that automatically sanitizes response data from controller methods
- * Can be applied to a controller class to sanitize all responses
+ * Sanitize an array of objects by removing sensitive fields recursively
  */
-export function SanitizeResponse() {
-  return function (constructor: any) {
-    const methods = Object.getOwnPropertyNames(constructor.prototype);
-
-    methods.forEach((methodName) => {
-      if (methodName !== 'constructor') {
-        const originalMethod = constructor.prototype[methodName];
-
-        constructor.prototype[methodName] = async function (...args: any[]) {
-          const result = await originalMethod.apply(this, args);
-
-          if (Array.isArray(result)) {
-            return sanitizeMany(result);
-          }
-
-          return sanitize(result);
-        };
-      }
-    });
-
-    return constructor;
-  };
-}
-
-/**
- * Method decorator to sanitize response data from a specific controller method
- */
-export function SanitizeMethod() {
-  return function (descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
-
-    descriptor.value = async function (...args: any[]) {
-      const result = await originalMethod.apply(this, args);
-
-      if (Array.isArray(result)) {
-        return sanitizeMany(result);
-      }
-
-      return sanitize(result);
-    };
-
-    return descriptor;
-  };
-}
+export const sanitizeMany = <T>(arr: T[]): T[] => arr.map(sanitize);
