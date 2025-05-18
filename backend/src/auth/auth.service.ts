@@ -34,6 +34,8 @@ export class AuthService {
   createAuthResponse(entity: SuperAdmin | SchoolAdmin | Student | Teacher) {
     const payload = {
       email: entity.email,
+      firstName: entity.firstName,
+      lastName: entity.lastName,
       sub: entity.id,
       role: entity.role?.name,
       //schoolId: entity?.school?.id,
