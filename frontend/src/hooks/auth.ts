@@ -12,7 +12,7 @@ export const useLogin = (userDetails: AuthCredentials) => {
 
 export const useAdminSignUp = () => {
     return useMutation({ 
-        mutationFn: (signUpDetails: {name: string, email: string, password: string}) => {
+        mutationFn: (signUpDetails: {firstName: string, lastName: string, email: string, password: string}) => {
             return customAPI.post(`/super-admin/auth/signup`, signUpDetails)
         }
     })

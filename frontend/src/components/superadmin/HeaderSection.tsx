@@ -60,7 +60,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
           { isOverviewPage ? 
             (
               <div className="flex flex-col">
-                <h1 className="text-2xl text-neutral-800">Hello, {user?.name}</h1>
+                <h1 className="text-2xl text-neutral-800">Hello, {user?.firstName} {user?.lastName}</h1>
                 <p className="text-base text-zinc-600">Welcome to your {activeMenuItem} Overview</p>
               </div>
             ) : (
@@ -101,7 +101,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
                   className="w-11 h-11 rounded-full"
                 />
                 <div className="flex flex-col">
-                  <span className="text-base text-neutral-800">{user?.name}</span>
+                  <span className="text-base text-neutral-800">{user?.firstName} {user?.lastName}</span>
                   <span className="text-xs text-zinc-600">{user?.role.name}</span>
                 </div>
               </div>

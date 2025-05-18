@@ -85,7 +85,7 @@ const SignUpCard: React.FC = () => {
   const handleSignUp = (data: FormData) => {
     // Handle sign up logic here
     if(validationResult.success) {
-      mutate({name: "Koo Admin", email: data.email, password: data.password}, {
+      mutate({firstName: "Koo", lastName: "Admin", email: data.email, password: data.password}, {
         onSuccess: (succesData) => {
           toast.success("Sign up successful");
           handleLoginRedirectAndToken(succesData, router);
