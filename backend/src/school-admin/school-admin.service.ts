@@ -116,8 +116,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
       .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('role.name = :roleName', { roleName: 'teacher' })
-      .andWhere('teacher.status != :status', { status: 'archived' });
+      .andWhere('teacher.isArchived = :isArchived', { isArchived: false });
 
     const teachersFeatures = new APIFeatures(teachersQuery, queryString)
       .filter()
@@ -141,8 +140,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
       .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('role.name = :roleName', { roleName: 'teacher' })
-      .andWhere('teacher.status != :status', { status: 'archived' })
+      .andWhere('teacher.isArchived = :isArchived', { isArchived: false })
       .getCount();
 
     // Add userType to each entity
