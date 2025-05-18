@@ -112,12 +112,12 @@ export class SchoolAdminService {
 
     // Get teachers
     const teachersQuery = this.teacherRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .leftJoinAndSelect('user.school', 'school')
-      .where('user.school.id = :schoolId', { schoolId })
+      .createQueryBuilder('teacher')
+      .leftJoinAndSelect('teacher.role', 'role')
+      .leftJoinAndSelect('teacher.school', 'school')
+      .where('teacher.school.id = :schoolId', { schoolId })
       .andWhere('role.name = :roleName', { roleName: 'teacher' })
-      .andWhere('user.status != :status', { status: 'archived' });
+      .andWhere('teacher.status != :status', { status: 'archived' });
 
     const teachersFeatures = new APIFeatures(teachersQuery, queryString)
       .filter()
@@ -137,12 +137,12 @@ export class SchoolAdminService {
       .getCount();
 
     const teachersCount = await this.teacherRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .leftJoinAndSelect('user.school', 'school')
-      .where('user.school.id = :schoolId', { schoolId })
+      .createQueryBuilder('teacher')
+      .leftJoinAndSelect('teacher.role', 'role')
+      .leftJoinAndSelect('teacher.school', 'school')
+      .where('teacher.school.id = :schoolId', { schoolId })
       .andWhere('role.name = :roleName', { roleName: 'teacher' })
-      .andWhere('user.status != :status', { status: 'archived' })
+      .andWhere('teacher.status != :status', { status: 'archived' })
       .getCount();
 
     // Add userType to each entity
