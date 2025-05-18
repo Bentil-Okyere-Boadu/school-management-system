@@ -113,7 +113,7 @@ const UsersPage: React.FC = () => {
       <Dialog 
         isOpen={isInviteUserDialogOpen}
         dialogTitle="Invite New User"
-        saveButtonText="Save Changes"
+        saveButtonText="Invite User"
         onClose={() => setIsInviteUserDialogOpen(false)} 
         onSave={() => inviteUser()}
         busy={isPending}

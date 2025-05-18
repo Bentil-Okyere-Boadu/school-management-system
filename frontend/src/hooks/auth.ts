@@ -5,7 +5,11 @@ import { AuthCredentials } from "@/@types"
 export const useLogin = (userDetails: AuthCredentials) => {
     return useMutation({ 
         mutationFn: (url: string) => {
-            return customAPI.post(url, userDetails)
+            if(url.includes('teacher') || url.includes('student')) {
+                return customAPI.post(url, { identifier: userDetails.email, pin: userDetails.password})
+            } else {
+                return customAPI.post(url, userDetails)
+            }
         }
     })
 }

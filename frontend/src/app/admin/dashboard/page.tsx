@@ -1,8 +1,7 @@
 'use client'
 import { Dialog } from '@/components/common/Dialog'
 import InputField from '@/components/InputField'
-import { useAppContext } from '@/context/AppContext'
-import { useCreateSchool } from '@/hooks/school-admin'
+import { useCreateSchool, useGetSchoolAdminInfo } from '@/hooks/school-admin'
 import { AxiosError } from 'axios'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
@@ -47,15 +46,17 @@ const AdminDashboard = () => {
 
   const [ address, email, schoolName, phone ] = watch(['address', 'email', 'schoolName', 'phone'])
 
-  const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(true);
+  const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
 
-  const { loggedInUser } = useAppContext();
+  const { schoolAdminInfo, isLoading } = useGetSchoolAdminInfo();
 
   useEffect(() => {
-    if(loggedInUser?.school?.id) {
+    if(schoolAdminInfo?.school?.id || isLoading) {
       setIsCreateSchoolDialogOpen(false);
+    } else {
+      setIsCreateSchoolDialogOpen(true);
     }
-  }, [loggedInUser])
+  }, [schoolAdminInfo, isLoading])
 
 
   const {isPending, mutate} = useCreateSchool()
