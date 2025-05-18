@@ -15,10 +15,6 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\+?[0-9]{7,15}$/, {
-    message:
-      'Phone number must be between 7 and 15 digits and can start with a +',
-  })
   phoneContact?: string;
 
   @IsOptional()
@@ -31,9 +27,5 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\+?[0-9]{7,15}$/, {
-    message:
-      'Optional phone number must be between 7 and 15 digits and can start with a +',
-  })
   optionalPhoneContact?: string;
 }
