@@ -63,7 +63,7 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
 
 export const useInvitation = (role: string) => {
     return useMutation({
-        mutationFn: (inviteDetails: {name:string, email: string}) => {
+        mutationFn: (inviteDetails: {firstName:string, lastName:string, email: string}) => {
             return customAPI.post(`/invitations/${role}`, inviteDetails);
         }
     })

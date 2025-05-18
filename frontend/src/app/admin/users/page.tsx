@@ -22,7 +22,8 @@ const UsersPage: React.FC = () => {
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
   const [selectedDataRole, setSelectedDataRole] = useState<string>("teacher");
-  const [userName, setUserName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedStatus, setSelectedStatus] = useState('');
 
@@ -61,13 +62,14 @@ const UsersPage: React.FC = () => {
   const { mutate: invitation, isPending } = useInvitation(selectedDataRole);
 
   const inviteUser = () => {
-    if(userName && email) {
-      invitation({ name: userName, email: email }, {
+    if(firstName && lastName && email) {
+      invitation({ firstName: firstName, lastName: lastName, email: email }, {
         onSuccess: () => {
           toast.success('Invitation sent successfully.');
           setSelectedDataRole("");
           setEmail("");
-          setUserName("");
+          setFirstName("");
+          setLastName("");
           setIsInviteUserDialogOpen(false);
           queryClient.invalidateQueries({ queryKey: ['allSchoolUsers']})
         },
@@ -117,9 +119,17 @@ const UsersPage: React.FC = () => {
         <div className="my-3 flex flex-col gap-4">
           <InputField
             className="!py-0"
-            label="User Name"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
+            label="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            isTransulent={isPending}
+          />
+
+          <InputField
+            className="!py-0"
+            label="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             isTransulent={isPending}
           />
 
