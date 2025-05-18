@@ -1,12 +1,12 @@
 import {
-  Injectable,
   ExecutionContext,
+  Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
+export class TeacherJwtAuthGuard extends AuthGuard('teacher-jwt') {
   canActivate(context: ExecutionContext) {
     return super.canActivate(context);
   }
@@ -15,7 +15,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (err || !user) {
       throw err || new UnauthorizedException('Authentication required');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return user;
   }
 }

@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../user/user.entity';
 import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
 import { InvitationService } from './invitation.service';
@@ -17,16 +16,19 @@ import { AuthService } from 'src/auth/auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
+import { Teacher } from 'src/teacher/teacher.entity';
+import { EmailService } from 'src/common/services/email.service';
+import { TeacherService } from 'src/teacher/teacher.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      User,
       Role,
       School,
       SchoolAdmin,
       Student,
       Profile,
+      Teacher,
     ]),
     PassportModule,
     JwtModule.registerAsync({
@@ -42,7 +44,9 @@ import { PassportModule } from '@nestjs/passport';
   ],
   providers: [
     InvitationService,
+    TeacherService,
     SchoolAdminService,
+    EmailService,
     ProfileService,
     SchoolAdminAuthService,
     AuthService,

@@ -12,10 +12,10 @@ import {
 import { FeeStructureService } from './fee-structure.service';
 import { CreateFeeStructureDto } from './dto/create-fee-structure.dto';
 import { UpdateFeeStructureDto } from './dto/update-fee-structure.dto';
-import { CurrentUser } from 'src/user/current-user.decorator';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
-import { Roles } from 'src/auth/roles.decorator';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 
 @Controller('fee-structure')
 export class FeeStructureController {

@@ -65,9 +65,7 @@ export class SuperAdminService {
   }
 
   async findAllSchools(queryString: QueryString) {
-    const query = this.schoolRepository
-      .createQueryBuilder('school')
-      .leftJoinAndSelect('school.users', 'users');
+    const query = this.schoolRepository.createQueryBuilder('school');
 
     const features = new APIFeatures(query, queryString)
       .filter()

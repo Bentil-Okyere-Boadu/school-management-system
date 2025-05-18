@@ -11,16 +11,16 @@ import { StudentLocalStrategy } from './strategies/student-local.strategy';
 import { StudentLocalAuthGuard } from './guards/student-local-auth.guard';
 import { StudentAuthService } from './student.auth.service';
 import { AuthService } from 'src/auth/auth.service';
-import { User } from 'src/user/user.entity';
 import { StudentJwtStrategy } from './strategies/student-jwt.strategy';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { School } from 'src/school/school.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Student, Role, User, School, SchoolAdmin]),
+    TypeOrmModule.forFeature([Student, Role, School, SchoolAdmin, Teacher]),
     EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

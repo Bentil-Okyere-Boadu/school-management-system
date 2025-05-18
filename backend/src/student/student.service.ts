@@ -2,20 +2,15 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ConflictException,
   BadRequestException,
   HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Student } from './student.entity';
-import { Role } from '../role/role.entity';
-import { School } from '../school/school.entity';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from '../common/services/email.service';
-import { InviteStudentDto } from '../invitation/dto/invite-student.dto';
-import * as crypto from 'crypto';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
