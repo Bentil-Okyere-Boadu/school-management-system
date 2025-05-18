@@ -236,7 +236,7 @@ export class SchoolAdminService {
       ['role', 'school', 'profile'],
     );
   }
-  async archiveUser(id: string, archive: boolean): Promise<Student | Teacher> {
+  async archiveUser(id: string, archive: boolean) {
     const user = await this.studentRepository.findOne({ where: { id } });
     if (user) {
       user.isArchived = archive;
