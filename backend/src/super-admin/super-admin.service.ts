@@ -29,11 +29,20 @@ export class SuperAdminService {
   ) {}
 
   async findAllUsers(queryString: QueryString) {
+    let isArchived = false;
+    if (queryString.status === 'archived') {
+      isArchived = true;
+    } else if (queryString.status === 'active' || !queryString.status) {
+      isArchived = false;
+    } else {
+      isArchived = false;
+    }
+
     const baseQuery = this.adminRepository
       .createQueryBuilder('admin')
       .leftJoinAndSelect('admin.role', 'role')
       .leftJoinAndSelect('admin.school', 'school')
-      .where('admin.isArchived = :isArchived', { isArchived: false });
+      .where('admin.isArchived = :isArchived', { isArchived });
 
     const featuresWithoutPagination = new APIFeatures(
       baseQuery.clone(),
