@@ -24,16 +24,16 @@ export const useAdminSignUp = () => {
 
 export const useRequestPasswordReset = (email: string) => {
     return useMutation({ 
-        mutationFn: () => {
-            return customAPI.post(`/super-admin/auth/forgot-password`, { email: email})
+        mutationFn: (url: string) => {
+            return customAPI.post(`${url}/forgot-password`, { email: email})
         }
     })
 }
 
 export const usePasswordReset = (payload: {token: string, password: string}) => {
     return useMutation({ 
-        mutationFn: () => {
-            return customAPI.post(`/super-admin/auth/reset-password`, { token: payload.token, password: payload.password})
+        mutationFn: (url: string) => {
+            return customAPI.post(`${url}`, { token: payload.token, password: payload.password})
         }
     })
 }
