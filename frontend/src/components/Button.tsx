@@ -6,6 +6,7 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   variant?: 'solid' | 'outline';
+  className?: string;
 }
 
 const CustomButton = ({
@@ -14,6 +15,7 @@ const CustomButton = ({
   disabled,
   loading = false,
   variant = 'solid',
+  className,
 }: ButtonProps) => {
   const baseStyles = `
     px-4 py-2 text-sm font-medium rounded cursor-pointer w-fit
@@ -32,6 +34,7 @@ const CustomButton = ({
         ${baseStyles}
         ${variant === 'outline' ? outlineStyles : solidStyles}
         ${stateStyles}
+        ${className || ''}
       `}
       aria-label={text}
       onClick={onClick}

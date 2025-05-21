@@ -96,3 +96,25 @@ export type BadgeVariant =
   | "green"
   | "yellow"
   | "gray" | "active" | "inactive" | "pending";
+
+export interface Calendar {
+  id: string;
+  name: string;
+  terms: Term[];
+}
+
+export interface Term {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  termName: string;
+  holidays: Holiday[];
+  academicCalendarId?: string;
+}
+
+export interface Holiday {
+  id?: string;
+  name: string;
+  date: string;
+}
