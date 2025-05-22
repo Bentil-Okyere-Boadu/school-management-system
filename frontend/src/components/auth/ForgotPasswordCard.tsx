@@ -96,7 +96,7 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
         </div>
       </form>
       <p className="mt-11 text-xs text-center text-zinc-600">
-        <Link href={user && user === 'admin'? `/auth/${user}/login` : "/auth/login"}>
+        <Link href={user? `/auth/${user}/login` : "/auth/login"}>
           <button className="font-semibold text-purple-500 cursor-pointer">
             Back to Sign In
           </button> 
