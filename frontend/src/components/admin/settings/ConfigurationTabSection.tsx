@@ -48,7 +48,7 @@ export const ConfigurationTabSection: React.FC = () => {
 
 
     useEffect(() => {
-        const options = calendars.map((calendar) => ({
+        const options = calendars?.map((calendar) => ({
             value: calendar.id,
             label: calendar.name,
         }));
@@ -312,7 +312,7 @@ export const ConfigurationTabSection: React.FC = () => {
                                     onChange={() => {}}
                                 />
                                 {
-                                    term.holidays.map((holiday, hIndex) => (
+                                    term.holidays?.map((holiday, hIndex) => (
                                         <div key={hIndex} className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <InputField
                                                 label="Holiday Name"
