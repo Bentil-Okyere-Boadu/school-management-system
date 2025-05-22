@@ -10,7 +10,7 @@ const HomePage = () => {
             <Link href={'/auth/login'}>Super Admin</Link>
           </li>
           <li>
-            <Link href={'/auth/school-admin/login'}>School Admin</Link>
+            <Link href={'/auth/admin/login'}>School Admin</Link>
           </li>
           <li>
             <Link href={'/auth/teacher/login'}>Teacher</Link>

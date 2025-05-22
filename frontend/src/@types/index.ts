@@ -19,7 +19,7 @@ export type AuthCredentials = Pick<User, "email" | "password">;
 export type SignUpPayload = Pick<User, "email" | "password" | "name" | "role">;
 
 export enum Roles {
-  SCHOOL_ADMIN = "school_admin",
+  SCHOOL_ADMIN = "admin",
   STUDENT = "student",
   TEACHER = "teacher",
   SUPER_ADMIN = "super_admin",

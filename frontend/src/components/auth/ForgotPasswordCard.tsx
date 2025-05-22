@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import InputField from "../InputField";
 import Link from "next/link";
 import ActionButton from "../ActionButton";
@@ -38,12 +38,12 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
 
   // /super-admin/auth
   const getLoginUrl = () => {
-    if (pathname.includes("school-admin")) {
+    if (pathname.includes("admin")) {
       return "/school-admin";
     } else if (pathname.includes("teacher")) {
       return "/teacher";
     } else if (pathname.includes("student")) {
-      return "/students";
+      return "/student";
     } else return "/super-admin/auth";
   };
 
@@ -74,14 +74,14 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
   return (
     <section className="relative px-10 py-12 rounded-3xl border border-white border-solid bg-zinc-100 shadow-sm w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
       <h1 className="mb-3.5 text-2xl font-bold text-neutral-800">
-        Forgot {user ? "PIN" : "Password"}?
+        Forgot {user && user !== 'admin' ? "PIN" : "Password"}?
       </h1>
       <p className="mb-10 text-xs text-zinc-600">
-        Enter {user ? "your email or ID" : "the email you used to sign up"}
+        Enter {user && user !== 'admin' ? "your email or ID" : "the email you used to sign up"}
       </p>
       <form method="POST" onSubmit={handleSubmit(requestPwdReset)}>
         <InputField
-          label={user ? "Email or ID" : "Email"}
+          label={user && user !== 'admin'? "Email or ID" : "Email"}
           {...register("email")}
           type="email"
         />
@@ -90,16 +90,16 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
         )}
         <div className="relative mt-9 max-sm:mt-6">
           <ActionButton
-            text={user ? "Request PIN Reset" : "Request Password Reset"}
+            text={user && user !== 'admin' ? "Request PIN Reset" : "Request Password Reset"}
             loading={isPending}
           />
         </div>
       </form>
       <p className="mt-11 text-xs text-center text-zinc-600">
-        <Link href={user ? `/auth/${user}/login` : "/auth/login"}>
+        <Link href={user && user === 'admin'? `/auth/${user}/login` : "/auth/login"}>
           <button className="font-semibold text-purple-500 cursor-pointer">
             Back to Sign In
-          </button>
+          </button> 
         </Link>
       </p>
     </section>
