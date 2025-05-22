@@ -23,12 +23,12 @@ export class AcademicTerm {
   endDate: string;
 
   @ManyToOne(() => AcademicCalendar, (calendar) => calendar.terms, {
-    //onDelete: 'CASCADE',
+    onDelete: 'CASCADE',
   })
   academicCalendar: AcademicCalendar;
 
   @OneToMany(() => Holiday, (holiday) => holiday.term, {
-    //    cascade: true,
+    cascade: true,
   })
   holidays: Holiday[];
 }
