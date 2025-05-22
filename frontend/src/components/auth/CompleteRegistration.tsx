@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ButtonType } from '@/@types';
+import { ButtonType, ErrorResponse } from '@/@types';
 import { handleLoginRedirectAndToken } from '@/middleware';
 import { useAppContext } from '@/context/AppContext';
 
@@ -77,8 +77,8 @@ const CompleteRegistration: React.FC<ResetPwdProps> = ({token}) => {
           setLoggedInUser(data.data);
           handleLoginRedirectAndToken(data, router);
         },
-        onError: (error) => {
-          toast.error(error.response.data.message);
+        onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
         }
       })
     }

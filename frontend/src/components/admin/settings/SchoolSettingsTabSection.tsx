@@ -12,7 +12,7 @@ import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
 import { useDeleteFeeStructure, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
-import { FeeStructure } from "@/@types";
+import { ErrorResponse, FeeStructure } from "@/@types";
 import { EmailItem } from "./EmailItem";
 // import { FeeStructureTable } from "./FeeStructureTable";
 // import { GradingSystemTable } from "./GradingSystemTable";
@@ -89,8 +89,8 @@ export const SchoolSettingsTabSection: React.FC = () => {
         setIsConfirmDeleteFeeStructureDialogOpen(false);
         refetch();
       },
-      onError: (error) => {
-        toast.error(error.message);
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     })
   }
@@ -114,8 +114,8 @@ export const SchoolSettingsTabSection: React.FC = () => {
         clearDialog()
         refetch();
       },
-      onError: (error) => {
-        toast.error(error.message);
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     })
   }
@@ -134,8 +134,8 @@ export const SchoolSettingsTabSection: React.FC = () => {
         clearDialog()
         refetch();
       },
-      onError: (error) => {
-        toast.error(error.message);
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     })
   }

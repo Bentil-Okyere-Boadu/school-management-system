@@ -118,3 +118,11 @@ export interface Holiday {
   name: string;
   date: string;
 }
+
+export interface ErrorResponse {
+  response: {
+    data: {
+      message: string;
+    };
+  };
+}

@@ -2,12 +2,12 @@
 import { Dialog } from '@/components/common/Dialog'
 import InputField from '@/components/InputField'
 import { useCreateSchool, useGetSchoolAdminInfo } from '@/hooks/school-admin'
-import { AxiosError } from 'axios'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { ErrorResponse } from '@/@types'
 
 // Define validation schema with Zod
 const formSchema = z.object({
@@ -70,8 +70,8 @@ const AdminDashboard = () => {
       onSuccess: () => {
         closeDialog();
       },
-      onError: (error) => {
-        toast.error((error as AxiosError).message);
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     })
   }

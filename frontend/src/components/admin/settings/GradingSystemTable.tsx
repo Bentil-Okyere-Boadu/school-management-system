@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
-import { Grade } from "@/@types";
+import { ErrorResponse, Grade } from "@/@types";
 import { useCreateGrade, useDeleteGrade, useEditGrade, useGetGradingSystem } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 
@@ -39,7 +39,9 @@ export const GradingSystemTable: React.FC = () => {
         setIsGradingSystemDialogOpen(false);
         refetch();
       },
-      onError: () => {}
+      onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      }
     }
     )
   }
@@ -51,8 +53,8 @@ export const GradingSystemTable: React.FC = () => {
         setIsGradingSystemDialogOpen(false);
         refetch();
       },
-      onError: (error) => {
-        toast.error(error.message)
+      onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     })
   }
@@ -64,8 +66,8 @@ export const GradingSystemTable: React.FC = () => {
         setIsConfirmDeleteGradingSystemDialogOpen(false);
         refetch();
       },
-      onError: (error) => {
-        toast.error(error.message);
+      onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     })
   }
