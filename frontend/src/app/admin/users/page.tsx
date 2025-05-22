@@ -10,11 +10,10 @@ import { Dialog } from "@/components/common/Dialog";
 import { Select } from '@mantine/core';
 import InputField from "@/components/InputField";
 import { toast } from "react-toastify";
-import { AxiosError } from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebouncer } from "@/hooks/generalHooks";
 import { useGetSchoolUsers, useInvitation } from "@/hooks/school-admin";
-import { Roles } from "@/@types";
+import { ErrorResponse, Roles } from "@/@types";
 
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,9 +72,8 @@ const UsersPage: React.FC = () => {
           setIsInviteUserDialogOpen(false);
           queryClient.invalidateQueries({ queryKey: ['allSchoolUsers']})
         },
-        onError: (error) => {
-          const axiosError = error as AxiosError;
-          toast.error(axiosError.response?.statusText);
+        onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
         }
       })
     } else {

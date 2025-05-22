@@ -11,11 +11,11 @@ import { Select } from '@mantine/core';
 import InputField from "@/components/InputField";
 import { useGetAdminUsers, useInviteUser } from "@/hooks/users";
 import { toast } from "react-toastify";
-import { AxiosError } from "axios";
 import { getRoleId } from "@/utils/roles";
 import { useAppContext } from "@/context/AppContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebouncer } from "@/hooks/generalHooks";
+import { ErrorResponse } from "@/@types";
 
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,9 +76,8 @@ const UsersPage: React.FC = () => {
           setIsInviteUserDialogOpen(false);
           queryClient.invalidateQueries({ queryKey: ['allAdminUsers']})
         },
-        onError: (error) => {
-          const axiosError = error as AxiosError;
-          toast.error(axiosError.response?.statusText);
+        onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
         }
       })
     } else {

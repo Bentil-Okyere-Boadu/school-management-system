@@ -10,7 +10,7 @@ import CustomButton from "@/components/Button";
 import { HolidaySection } from "./HolidaySection";
 import { toast } from "react-toastify";
 import { useCreateCalendar, useDeleteCalendar, useEditCalendar, useGetCalendars, useCreateTerm, useDeleteTerm, useEditTerm } from "@/hooks/school-admin";
-import { Calendar, Term, Holiday } from "@/@types";
+import { Calendar, Term, Holiday, ErrorResponse } from "@/@types";
 
 
 export const ConfigurationTabSection: React.FC = () => {
@@ -36,6 +36,7 @@ export const ConfigurationTabSection: React.FC = () => {
     const [calendarOptions, setCalendarOptions] = useState<{ value: string; label: string }[]>([]);
     const holidaysInTermOptions = ['Yes', 'No'];
     const [holidays, setHolidays] = useState<Holiday[]>([]);
+    const [isUseFirstCalendar, setIsUseFirstCalendar] = useState(true);
 
     const { calendars, refetch: refetchCalendars } = useGetCalendars();
     const { mutate: editCalendarMutation, isPending: pendingCalendarEdit } = useEditCalendar(calendarId);
@@ -55,9 +56,15 @@ export const ConfigurationTabSection: React.FC = () => {
 
         setCalendarOptions(options);
 
-        if (calendars.length > 0) {
+        if (calendars.length > 0 && isUseFirstCalendar) {
             setSelectedAcademicCalendar(calendars[0].id);
             setSelectedCalendarData(calendars[0]);
+        } else if (!isUseFirstCalendar) {
+            const foundCalendar: Calendar | undefined = calendars.find(c => c.id === selectedAcademicCalendar);
+            if (foundCalendar) {
+                setSelectedAcademicCalendar(foundCalendar.id);
+                setSelectedCalendarData(foundCalendar);
+            }
         }
         
     }, [calendars]);
@@ -112,10 +119,11 @@ export const ConfigurationTabSection: React.FC = () => {
             onSuccess: () => {
                 toast.success('Successfully updated calendar.')
                 setIsAcademicCalendarOpen(false);
+                setIsUseFirstCalendar(false);
                 refetchCalendars();
             },
-            onError: (error) => {
-                toast.error(error.message)
+            onError: (error: unknown) => {
+                toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
             }
         })
     }
@@ -125,10 +133,11 @@ export const ConfigurationTabSection: React.FC = () => {
             onSuccess: () => {
                 toast.success('Successfully created calendar.')
                 setIsAcademicCalendarOpen(false);
+                setIsUseFirstCalendar(false);
                 refetchCalendars();
             },
-            onError: (error) => {
-                toast.error(error.message)
+            onError: (error: unknown) => {
+                toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
             }
         })
     };
@@ -138,10 +147,11 @@ export const ConfigurationTabSection: React.FC = () => {
             onSuccess: () => {
                 toast.success('Deleted successfully.');
                 setIsConfirmDeleteCalendarDialogOpen(false);
+                setIsUseFirstCalendar(true);
                 refetchCalendars();
             },
-            onError: (error) => {
-                toast.error(error.message);
+            onError: (error: unknown) => {
+                toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
             }
         })
     }
@@ -166,7 +176,6 @@ export const ConfigurationTabSection: React.FC = () => {
         setTermName(data.termName as string);
         setTermStartDate(data.startDate as string);
         setTermEndDate(data.endDate as string);
-        // setSelectedTermData(data as Term);
         setSelectedHolidaysInTerms((data?.holidays && data.holidays.length > 0) ? "Yes" : "No");
         const updatedHolidays = data?.holidays?.map((holiday) => ({
             name: holiday.name,
@@ -180,10 +189,11 @@ export const ConfigurationTabSection: React.FC = () => {
             onSuccess: () => {
                 toast.success('Successfully updated term.')
                 setIsTermDialogOpen(false);
+                setIsUseFirstCalendar(false); // ensure the select option doesn't result to the initial value
                 refetchCalendars();
             },
-            onError: (error) => {
-                toast.error(error.message)
+            onError: (error: unknown) => {
+                toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
             }
         })
     }
@@ -193,10 +203,11 @@ export const ConfigurationTabSection: React.FC = () => {
             onSuccess: () => {
                 toast.success('Successfully created term.')
                 setIsTermDialogOpen(false);
+                setIsUseFirstCalendar(false);
                 refetchCalendars();
             },
-            onError: (error) => {
-                toast.error(error.message)
+            onError: (error: unknown) => {
+                toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
             }
         })
     };
@@ -206,10 +217,11 @@ export const ConfigurationTabSection: React.FC = () => {
             onSuccess: () => {
                 toast.success('Deleted successfully.');
                 setIsConfirmDeleteTermDialogOpen(false);
+                setIsUseFirstCalendar(false);
                 refetchCalendars();
             },
-            onError: (error) => {
-                toast.error(error.message);
+            onError: (error: unknown) => {
+                toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
             }
         })
     }
