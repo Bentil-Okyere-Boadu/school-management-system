@@ -52,7 +52,7 @@ export class AcademicCalendarService {
   async findAllCalendars(schoolId: string): Promise<AcademicCalendar[]> {
     return this.calendarRepository.find({
       where: { school: { id: schoolId } },
-      relations: ['terms'],
+      relations: ['terms', 'terms.holidays'],
     });
   }
 

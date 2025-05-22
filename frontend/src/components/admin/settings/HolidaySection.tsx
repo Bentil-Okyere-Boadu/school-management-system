@@ -5,38 +5,43 @@ import InputField from '@/components/InputField';
 import { IconTrashFilled } from '@tabler/icons-react';
 
 interface HolidaySectionProps {
-  showDelete?: boolean;
-   onDeleteClick?: () => void;
+  index: number;
+  name: string;
+  date: string;
+  onChange: (updated: { name: string; date: string }) => void;
+  onDeleteClick?: () => void;
 }
 
-export const HolidaySection: React.FC<HolidaySectionProps> = ({ showDelete = true, onDeleteClick }) => {
+export const HolidaySection: React.FC<HolidaySectionProps> = ({
+  name,
+  date,
+  onChange,
+  onDeleteClick,
+}) => {
   return (
-    <section className="flex overflow-hidden flex-col px-3 py-6 w-full text-xs rounded-lg bg-stone-50">
-      {showDelete && (
-        <div onClick={() => onDeleteClick?.()} className="flex gap-1 self-end mr-3 underline whitespace-nowrap text-zinc-500 max-md:mr-2.5 cursor-pointer">
-            <IconTrashFilled size={14} className="text-red-600" />
-          <button className="z-10 self-start cursor-pointer">
-            Delete
-          </button>
-        </div>
-      )}
-      <div className="flex flex-col w-full text-zinc-600">
+    <section className="flex flex-col px-3 py-6 w-full text-base rounded-lg bg-stone-50">
+      <div className="flex justify-end">
+        <button onClick={onDeleteClick} className="flex items-center gap-1 text-red-600 underline !text-xs !cursor-pointer">
+          <IconTrashFilled size={14} />
+          Delete
+        </button>
+      </div>
+
+      <div className="flex flex-col text-zinc-600">
         <InputField
-            className="!py-0"
-            placeholder=""
-            label="Holiday Name"
-            value={''}
-            onChange={() => {}}
-            isTransulent={false}
+          label="Holiday Name"
+          value={name}
+          onChange={(e) => onChange({ name: e.target.value, date })}
+          className="!py-0"
+          isTransulent={false}
         />
         <InputField
-            className="!py-0"
-            placeholder=""
-            label="Holiday Date"
-            value={''}
-            type="date"
-            onChange={() => {}}
-            isTransulent={false}
+          label="Holiday Date"
+          type="date"
+          value={date}
+          onChange={(e) => onChange({ name, date: e.target.value })}
+          className="!py-0"
+          isTransulent={false}
         />
       </div>
     </section>

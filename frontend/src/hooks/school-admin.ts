@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { FeeStructure, Grade, SchoolAdminInfo } from "@/@types";
-import { User } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading } = useQuery({
@@ -185,6 +184,92 @@ export const useEditGrade = (id: string) => {
     return useMutation({
         mutationFn: (grade: Partial<Grade>) => {
             return customAPI.put(`/grading-system/${id}`, grade);
+        }
+    })
+}
+
+
+/**
+ * ACADEMIC CALENDAR CRUD
+ * @returns 
+ */
+export const useGetCalendars = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['academicCalendars'],
+        queryFn: () => {
+            return customAPI.get('/academic-calendar');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const calendars = data?.data as Calendar[] || [] ;
+
+    return { calendars, isLoading, refetch }
+}
+
+export const useCreateCalendar = () => {
+    return useMutation({
+        mutationFn: (calendar: Partial<Calendar>) => {
+            return customAPI.post('/academic-calendar', calendar);
+        }
+    })
+}
+
+export const useDeleteCalendar = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/academic-calendar/${id}`)
+        }
+    })
+}
+
+export const useEditCalendar = (id: string) => {
+    return useMutation({
+        mutationFn: (calendar: Partial<Calendar>) => {
+            return customAPI.put(`/academic-calendar/${id}`, calendar);
+        }
+    })
+}
+
+
+/**
+ * CALENDAR TERMS CRUD
+ * @returns 
+ */
+export const useGetTerms = (id: string) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['academicTerm'],
+        queryFn: () => {
+            return customAPI.get(`/academic-calendar/${id}/terms`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const terms = data?.data as Term[] || [] ;
+
+    return { terms, isLoading, refetch }
+}
+
+export const useCreateTerm = () => {
+    return useMutation({
+        mutationFn: (term: Partial<Term>) => {
+            return customAPI.post('/academic-calendar/term', term);
+        }
+    })
+}
+
+export const useDeleteTerm = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/academic-calendar/term/${id}`)
+        }
+    })
+}
+
+export const useEditTerm = (id: string) => {
+    return useMutation({
+        mutationFn: (term: Partial<Term>) => {
+            return customAPI.put(`/academic-calendar/term/${id}`, term);
         }
     })
 }
