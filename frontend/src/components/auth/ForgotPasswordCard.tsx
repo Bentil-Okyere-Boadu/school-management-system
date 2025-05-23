@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+"use client"
+import React, { useCallback, useEffect } from "react";
 import InputField from "../InputField";
 import Link from "next/link";
 import ActionButton from "../ActionButton";
@@ -36,8 +37,7 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
 
   const { mutate, isPending } = useRequestPasswordReset(email);
 
-  // /super-admin/auth
-  const getLoginUrl = () => {
+  const getLoginUrl = useCallback(() => {
     if (pathname.includes("admin")) {
       return "/school-admin";
     } else if (pathname.includes("teacher")) {
@@ -45,11 +45,11 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
     } else if (pathname.includes("student")) {
       return "/student";
     } else return "/super-admin/auth";
-  };
+  }, [pathname]);
 
   useEffect(() => {
     getLoginUrl();
-  }, [user]);
+  }, [user, getLoginUrl]);
 
   const router = useRouter();
 
