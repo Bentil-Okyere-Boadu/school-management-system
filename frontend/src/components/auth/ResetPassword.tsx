@@ -1,9 +1,9 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import ActionButton from '../ActionButton';
 import InputField from '../InputField';
 import { usePasswordReset } from '@/hooks/auth';
 import { toast } from 'react-toastify';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,7 +48,8 @@ const ResetPassword: React.FC<ResetPwdProps> = ({token}) => {
       });
 
       const [ password, confirmPassword] = watch(['password', 'confirmPassword']);
-
+        const [user, setUser] = useState("")
+      
 
       const watchValues = watch();
       const validationResult = passwordSchema.safeParse(watchValues);
@@ -64,11 +65,23 @@ const ResetPassword: React.FC<ResetPwdProps> = ({token}) => {
 
     const {mutate, isPending} = usePasswordReset({ token: token, password: password });
     const router = useRouter();
+    const pathname = usePathname();
+
+    const getLoginUrl = () => {
+      if (pathname.includes("admin")) {
+        setUser("admin");
+        return "/school-admin/reset-password";
+      } else return "/super-admin/auth/reset-password";
+    };
+
+    useEffect(() =>  {
+      getLoginUrl()
+    }, [user]);
 
   const handlePwdReset = () => {
     // Handle sign in logic here
     if(validationResult.success) {
-      mutate(null as unknown as void, {
+      mutate(getLoginUrl(), {
         onSuccess: (data) => {
           toast.success(data.data.message);
           router.push("/auth/forgotPassword/resetSuccess")

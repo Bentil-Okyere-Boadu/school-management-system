@@ -25,7 +25,7 @@ const LoginCard: React.FC = () => {
   }, [])
   
   const getLoginUrl = () => {
-    if(pathname.includes('school-admin')){
+    if(pathname.includes('admin')){
       setUser('admin');
       return '/school-admin/login'
     } else if(pathname.includes('teacher')) {

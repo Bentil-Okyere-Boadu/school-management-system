@@ -1,4 +1,5 @@
-import React from "react";
+"use client"
+import React, { useCallback, useEffect } from "react";
 import InputField from "../InputField";
 import Link from "next/link";
 import ActionButton from "../ActionButton";
@@ -7,7 +8,7 @@ import { toast } from "react-toastify";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const emailSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -32,41 +33,55 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
   const [email] = watch(["email"]);
   const watchValue = watch();
   const validationResult = emailSchema.safeParse(watchValue);
+  const pathname = usePathname();
 
   const { mutate, isPending } = useRequestPasswordReset(email);
+
+  const getLoginUrl = useCallback(() => {
+    if (pathname.includes("admin")) {
+      return "/school-admin";
+    } else if (pathname.includes("teacher")) {
+      return "/teacher";
+    } else if (pathname.includes("student")) {
+      return "/student";
+    } else return "/super-admin/auth";
+  }, [pathname]);
+
+  useEffect(() => {
+    getLoginUrl();
+  }, [user, getLoginUrl]);
 
   const router = useRouter();
 
   const requestPwdReset = () => {
-      if (validationResult.success) {
-        mutate(null as unknown as void, {
-          onSuccess: (data) => {
-            toast.success(data.data.message);
-            if(user) {
-              router.push(`/auth/${user}/forgotPassword/resetSuccess`);
-            }
-          },
-          onError: (error) => {
-            toast.error(error.message);
-          },
-        });
-      } else {
-        toast.error("Please enter a valid email");
-      }
-    
+    if (validationResult.success) {
+      mutate(getLoginUrl(), {
+        onSuccess: (data) => {
+          toast.success(data.data.message);
+          if (user) {
+            router.push(`/auth/${user}/forgotPassword/resetSuccess`);
+          }
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      });
+    } else {
+      toast.error("Please enter a valid email");
+    }
   };
 
   return (
     <section className="relative px-10 py-12 rounded-3xl border border-white border-solid bg-zinc-100 shadow-sm w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
       <h1 className="mb-3.5 text-2xl font-bold text-neutral-800">
-        Forgot {user ? "PIN" : "Password"}?
+        Forgot {user && user !== 'admin' ? "PIN" : "Password"}?
       </h1>
       <p className="mb-10 text-xs text-zinc-600">
-        Enter {user ? "your email or ID" : "the email you used to sign up"}
+        Enter {user && user !== 'admin' ? "your email or ID" : "the email you used to sign up"}
       </p>
       <form method="POST" onSubmit={handleSubmit(requestPwdReset)}>
         <InputField
-          label={user ? "Email or ID" : "Email"}
+          label={user && user !== 'admin'? "Email or ID" : "Email"}
           {...register("email")}
           type="email"
         />
@@ -75,16 +90,16 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
         )}
         <div className="relative mt-9 max-sm:mt-6">
           <ActionButton
-            text={user ? "Request PIN Reset" : "Request Password Reset"}
+            text={user && user !== 'admin' ? "Request PIN Reset" : "Request Password Reset"}
             loading={isPending}
           />
         </div>
       </form>
       <p className="mt-11 text-xs text-center text-zinc-600">
-        <Link href={user ? `/auth/${user}/login` : "/auth/login"}>
+        <Link href={user? `/auth/${user}/login` : "/auth/login"}>
           <button className="font-semibold text-purple-500 cursor-pointer">
             Back to Sign In
-          </button>
+          </button> 
         </Link>
       </p>
     </section>

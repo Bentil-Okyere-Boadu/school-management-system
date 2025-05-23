@@ -16,11 +16,12 @@ interface LoginConfigData {
 
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
+  const cookie = request.cookies.get("authToken");
+  if(!cookie) {
+    return NextResponse.redirect(new URL('/home', request.url))
+  } else {
     await updateSession(request);
-    const cookie = request.cookies.get("authToken");
-    if(!cookie) {
-        return NextResponse.redirect(new URL('/home', request.url))
-    }
+  }
 }
 
 //See "Matching Paths" below to learn more
@@ -33,7 +34,7 @@ export async function updateSession(request: NextRequest) {
     if (!authToken) return;
 
     // Refresh the auth so it doesn't expire
-    const expires = new Date(Date.now() + 60 * 60 * 60 * 60 * 60 * 10);
+    const expires = new Date(Date.now() + 30 * 60 * 1000);
     const res = NextResponse.next();
     res.cookies.set({
         name: "authToken",
@@ -51,7 +52,7 @@ export function handleLoginRedirectAndToken(
 ): void {
   if (!data?.data?.access_token || !data?.data?.role?.name) return;
 
-  const expireToken = new Date(Date.now() + 60 * 60 * 60 * 60 * 60 * 10);
+  const expireToken = new Date(Date.now() + 30 * 60 * 1000);
   Cookies.set("authToken", data.data.access_token, { expires: expireToken });
 
   const roleToRouteMap: Record<string, string> = {

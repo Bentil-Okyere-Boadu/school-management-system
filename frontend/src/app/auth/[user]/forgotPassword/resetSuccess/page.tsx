@@ -13,16 +13,21 @@ const ResetSuccess = () => {
     <AuthBg>
         <section className='text-center'>
             <Image src={DoneRafiki} alt='Done rafiki' width={300} height={300} className='m-[auto]' priority={true}></Image>
-            <h1 className='my-2 font-bold'>{user? 'PIN':'Password'} Reset Successful</h1>
-            {user? (
+            <h1 className='my-2 font-bold'>{user  && user !== 'admin'? 'PIN':'Password'} Reset Successful</h1>
+            {user  && user !== 'admin'? (
               <p>
                 Your PIN has been successfully reset.<br/>
-                The new PIN has been sent to your registered email.
+                The new PIN has been sent to your registered email.<br/>
+                <Link href={`/auth/${user}/login`}><button
+              className="font-semibold text-purple-500 cursor-pointer underline"
+            >
+              Log in
+            </button></Link>
               </p>
             ) : (
             <p>
                 Your password has been successfully reset!<br/>
-                You can now <Link href={"/auth/login"}><button
+                You can now <Link href={user? `/auth/${user}/login` : `/auth/login`}><button
               className="font-semibold text-purple-500 cursor-pointer underline"
             >
               log in

@@ -8,7 +8,7 @@ import {
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import { useArchiveUser, useResendAdminInvitation } from "@/hooks/users";
+import { useArchiveUser, useResendAdminInvitation } from "@/hooks/super-admin";
 import { toast } from "react-toastify";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { ErrorResponse } from "@/@types";
