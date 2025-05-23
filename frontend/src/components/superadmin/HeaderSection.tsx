@@ -9,7 +9,7 @@ import Cookies from "js-cookie";
 import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
 import { User } from "@/@types";
-import { useGetSchoolById } from "@/hooks/users";
+import { useGetSchoolById } from "@/hooks/super-admin";
 
 interface HeaderSectionProps {
   activeMenuItem: string;

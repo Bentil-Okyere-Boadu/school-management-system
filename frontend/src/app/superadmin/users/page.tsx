@@ -9,7 +9,7 @@ import CustomButton from "@/components/Button";
 import { Dialog } from "@/components/common/Dialog";
 import { Select } from '@mantine/core';
 import InputField from "@/components/InputField";
-import { useGetAdminUsers, useInviteUser } from "@/hooks/users";
+import { useGetAdminUsers, useInviteUser } from "@/hooks/super-admin";
 import { toast } from "react-toastify";
 import { getRoleId } from "@/utils/roles";
 import { useAppContext } from "@/context/AppContext";

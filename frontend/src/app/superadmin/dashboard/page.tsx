@@ -5,7 +5,7 @@ import { SearchBar } from "@/components/common/SearchBar";
 import CustomBarChart from "@/components/superadmin/dashboard/CustomBarChart";
 import { DashboardTable } from "@/components/superadmin/dashboard/DashboardTable";
 import { useDebouncer } from "@/hooks/generalHooks";
-import { useGetAdminUsers } from "@/hooks/users";
+import { useGetAdminUsers } from "@/hooks/super-admin";
 
 const DashboardPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);

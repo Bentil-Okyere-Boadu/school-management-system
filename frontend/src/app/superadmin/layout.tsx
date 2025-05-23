@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardIcon, UsersIcon, SchoolsIcon } from "@/utils/icons";
-import { useGetMe } from "@/hooks/users";
+import { useGetMe } from "@/hooks/super-admin";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();

@@ -11,7 +11,7 @@ import {
 import { Dialog } from "@/components/common/Dialog";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
-import { useArchiveUser, useResendAdminInvitation } from "@/hooks/users";
+import { useArchiveUser, useResendAdminInvitation } from "@/hooks/super-admin";
 import { toast } from "react-toastify";
 import { ErrorResponse } from "@/@types";
 

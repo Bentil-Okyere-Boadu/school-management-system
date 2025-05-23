@@ -5,7 +5,7 @@ import { SchoolSettingsTabSection } from "@/components/superadmin/schools/School
 import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
 import { useParams } from "next/navigation";
-import { useGetSchoolById } from "@/hooks/users";
+import { useGetSchoolById } from "@/hooks/super-admin";
 import SchoolPeople from "@/components/superadmin/schools/SchoolPeople";
 
 export type TabListItem = {

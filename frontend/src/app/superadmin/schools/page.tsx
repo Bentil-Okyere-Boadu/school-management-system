@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import SchoolCard from "@/components/common/SchoolCard";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useRouter } from "next/navigation";
-import { useGetAllSchools } from "@/hooks/users";
+import { useGetAllSchools } from "@/hooks/super-admin";
 import { useDebouncer } from "@/hooks/generalHooks";
 
 
