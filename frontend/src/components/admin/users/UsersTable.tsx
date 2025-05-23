@@ -10,8 +10,8 @@ import {
 import { Dialog } from "@/components/common/Dialog";
 import { useArchiveUser, useResendAdminInvitation } from "@/hooks/users";
 import { toast } from "react-toastify";
-import { AxiosError } from "axios";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
+import { ErrorResponse } from "@/@types";
 
 interface User {
   id: string;
@@ -54,9 +54,8 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
       onSuccess: () => {
         toast.success('Resend invitation successful.');
       },
-      onError: (error: Error) => {
-        const axiosError = error as AxiosError;
-        toast.error(axiosError.response?.statusText);
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     });
   } 
@@ -71,9 +70,8 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
         setIsConfirmArchiveDialogOpen(false);
         refetch();
       },
-      onError: (error: Error) => {
-        const axiosError = error as AxiosError;
-        toast.error(axiosError.response?.statusText);
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     });
   } 

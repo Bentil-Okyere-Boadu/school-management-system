@@ -8,6 +8,7 @@ import CustomButton from "@/components/Button";
 import { useEditSchoolAdminInfo } from "@/hooks/school-admin";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
+import { ErrorResponse } from "@/@types";
 
 
 interface ProfileTabSectionProps {
@@ -74,8 +75,8 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
             toast.success('Saved successfully.');
             queryClient.invalidateQueries({ queryKey: ['schoolAdminMe']})
           },
-          onError: (error) => {
-            toast.error(error.message);
+          onError: (error: unknown) => {
+            toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
           }
         })
       } else {

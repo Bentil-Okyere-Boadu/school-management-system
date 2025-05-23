@@ -52,7 +52,7 @@ export class AcademicCalendarService {
   async findAllCalendars(schoolId: string): Promise<AcademicCalendar[]> {
     return this.calendarRepository.find({
       where: { school: { id: schoolId } },
-      relations: ['terms'],
+      relations: ['terms', 'terms.holidays'],
     });
   }
 
@@ -277,24 +277,24 @@ export class AcademicCalendarService {
     }
 
     // Update holidays if provided
-    if (updateDto.holidays && updateDto.holidays.length > 0) {
-      // Remove existing holidays
-      if (term.holidays && term.holidays.length > 0) {
-        await this.holidayRepository.remove(term.holidays);
-      }
+    if (updateDto.holidays) {
+      term.holidays = [];
+      await this.termRepository.save(term);
 
-      // Create new holidays
-      const holidays = updateDto.holidays.map((holidayDto) =>
+      // Create and associate new holidays
+      const newHolidays = updateDto.holidays.map((holidayDto) =>
         this.holidayRepository.create({
           name: holidayDto.name,
           date: holidayDto.date,
-          term,
+          term: term,
         }),
       );
-      await this.holidayRepository.save(holidays);
+
+      // Save new holidays
+      const savedHolidays = await this.holidayRepository.save(newHolidays);
+      term.holidays = savedHolidays;
     }
 
-    // Save term
     await this.termRepository.save(term);
 
     // Return updated term with holidays
