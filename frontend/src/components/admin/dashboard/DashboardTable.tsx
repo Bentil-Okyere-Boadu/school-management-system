@@ -3,14 +3,16 @@ import React, { useState } from "react";
 import Badge from "../../common/Badge";
 import { Menu } from '@mantine/core';
 import {
+  IconArrowRight,
   IconDots,
   IconSend2,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
+import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
+import { useRouter } from "next/navigation";
 import { useArchiveUser, useResendAdminInvitation } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
-import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { ErrorResponse } from "@/@types";
 
 interface User {
@@ -31,21 +33,47 @@ interface User {
 }
 
 interface UserTableProps {
-  users: User[];
+  schoolUsers: User[];
   refetch: () => void;
-  onClearFilterClick?: () => void;
 }
 
-export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) => {
+export const DashboardTable = ({schoolUsers, refetch}: UserTableProps) => {
 
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
   const [isConfirmCredentialSubmitDialogOpen, setIsConfirmCredentialSubmitDialogOpen]  = useState(false);
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
 
+  const router = useRouter()
+
   const onArchiveUserMenuItemClick = (user: User) => {
-    setIsConfirmArchiveDialogOpen(true)
+    setIsConfirmArchiveDialogOpen(true);
     setSelectedUser(user);
-  } 
+  }
+
+  const onTableRowClick = (userId: string) => {
+    console.log(userId)
+  }
+
+  const onGoToUsersView = () => {
+    router.push('/admin/users')
+  }
+
+  const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
+
+  const handleArchiveUser = () => {
+    archiveMutate(null as unknown as void, {
+      onSuccess: () => {
+        toast.success('Archived successfully.');
+        setIsConfirmArchiveDialogOpen(false);
+        refetch();
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      }
+    });
+  }
+
+  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id, role: selectedUser?.role?.name});
 
   const onResendInvitationMenuItemClick = (user: User) => {
     setSelectedUser(user);
@@ -59,32 +87,21 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       }
     });
-  } 
+  }
 
-  const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
-  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id, role: selectedUser?.role?.name});
-
-  const handleArchiveUser = () => {
-    archiveMutate(null as unknown as void, {
-      onSuccess: () => {
-        toast.success('Archived successfully.');
-        setIsConfirmArchiveDialogOpen(false);
-        refetch();
-      },
-      onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-      }
-    });
-  } 
- 
   return (
     <>
+      <div className="flex items-center justify-between mb-3">
+        <h1 className="font-bold text-md">Recently Added Users</h1>
+        <div onClick={onGoToUsersView} className="flex items-center gap-1 text-purple-900 underline font-semibold cursor-pointer">
+          <p className="text-xs">View more</p>
+          <IconArrowRight className="object-contain w-3 h-3" />
+        </div>
+      </div>
+
       <section className="bg-white">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[500px]">
-            <caption className="sr-only">
-              Users and their roles, status, and permissions
-            </caption>
             <thead>
               <tr className="bg-gray-50">
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-60 max-w-[340px]">
@@ -99,12 +116,12 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div>Status</div>
                 </th>
-                <th onClick={onClearFilterClick} className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"> Clear all filters</th>
+                <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"></th>
               </tr>
             </thead>
             <tbody>
-              {users?.length > 0 ? (users.map((user: User) => (
-                <tr key={user.id}>
+              {schoolUsers?.length > 0 ? (schoolUsers.map((user: User) => (
+                <tr key={user.id} onClick={() => onTableRowClick?.(user.id)}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div className="flex flex-1 items-center">
                       <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
@@ -174,7 +191,6 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
           </table>
         </div>
       </section>
-
 
       {/* Confirm Archive Dialog */}
       <Dialog 
