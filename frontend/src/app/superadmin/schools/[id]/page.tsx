@@ -7,6 +7,7 @@ import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSec
 import { useParams } from "next/navigation";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import SchoolPeople from "@/components/superadmin/schools/SchoolPeople";
+import { Calendar } from "@/@types";
 
 export type TabListItem = {
   tabLabel: string;
@@ -50,7 +51,7 @@ const SingleSchoolPage: React.FC = () => {
 
         {activeTabKey === "configuration" && (
           <div>
-            <ConfigurationTabSection />
+            <ConfigurationTabSection calendars={school?.academicCalendars as Calendar[] || []} />
           </div>
         )}
 

@@ -8,7 +8,7 @@ import {
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import { useArchiveUser, useResendAdminInvitation } from "@/hooks/super-admin";
+import { useArchiveUser, useResendAdminInvitation } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { ErrorResponse } from "@/@types";
@@ -53,6 +53,7 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
     resendInvitationMutate(null as unknown as void, {
       onSuccess: () => {
         toast.success('Resend invitation successful.');
+        setIsConfirmCredentialSubmitDialogOpen(false);
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -61,7 +62,7 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
   } 
 
   const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
-  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id})
+  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id, role: selectedUser?.role?.name});
 
   const handleArchiveUser = () => {
     archiveMutate(null as unknown as void, {

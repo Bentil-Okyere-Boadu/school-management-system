@@ -67,6 +67,23 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
     return { schoolUsers, isLoading, paginationValues, refetch }
 }
 
+export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: boolean}) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.put(`/school-admin/users/${id}/archive`, {archive: archiveState})
+        }
+    })
+}
+
+export const useResendAdminInvitation = ({id, role}: {id: string, role: string}) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.post(`/invitations/${role}/resend/${id}`)
+        }
+    })
+}
+
+
  export const useCreateSchool = () => {
     return useMutation({ 
         mutationFn: (schoolDetails: {name: string, address: string, phone: string, email: string}) => {
