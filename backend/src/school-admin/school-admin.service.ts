@@ -197,7 +197,12 @@ export class SchoolAdminService {
         'feeStructures',
         'profile',
         'academicCalendars',
+        'academicCalendars.terms.holidays',
         'classLevels',
+        'classLevels.teachers',
+        'classLevels.students',
+        'students',
+        'teachers',
       ],
     });
 
