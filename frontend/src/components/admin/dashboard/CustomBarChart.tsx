@@ -22,7 +22,7 @@ const CustomBarChart: React.FC = () => {
 
   return (
     <div className="bg-[#fff] p-4 rounded-lg relative pt-16">
-        <p className="top-0 lg:top-4 absolute font-semibold"> Attendance Across Different Grades</p>
+        <p className="top-2 lg:top-4 absolute font-semibold"> Attendance Across Different Grades</p>
         <BarChart
             h={320}
             data={data}

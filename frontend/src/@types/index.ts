@@ -77,7 +77,7 @@ export interface School {
   phone: string;
   email: string;
   schoolCode: string;
-  classLevels: string[]; 
+  classLevels: ClassLevel[]; 
   admissionPolicies: string[]; 
   gradingSystems: GradingSystem[];
   feeStructures: FeeStructure[];
@@ -125,4 +125,10 @@ export interface ErrorResponse {
       message: string;
     };
   };
+}
+
+export interface ClassLevel {
+  id: string;
+  name: string;
+  description: string;
 }

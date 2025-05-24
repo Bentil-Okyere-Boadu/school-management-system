@@ -6,6 +6,7 @@ import { GradingSystemTable } from "./GradingSystemTable";
 import DocumentItem from "../../common/DocumentItem";
 import { School } from "@/@types";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
+import { ClassLevelTable } from "./ClassLevelsTable";
 
 interface SchoolSettingsTabProps {
   schoolData: School
@@ -35,6 +36,11 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabProps> = ({ sch
       <div className="mt-8">
         <h1 className="text-md font-semibold text-neutral-800 mb-2">Grading System</h1>
         <GradingSystemTable gradingSystems={schoolData?.gradingSystems} />
+      </div>
+
+      <div className="mt-8">
+        <h1 className="text-md font-semibold text-neutral-800 mb-2">Class Levels</h1>
+        <ClassLevelTable classLevels={schoolData?.classLevels} />
       </div>
 
       <div className="mt-8">

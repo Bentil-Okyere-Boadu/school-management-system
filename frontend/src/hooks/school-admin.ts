@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading } = useQuery({
@@ -287,6 +287,47 @@ export const useEditTerm = (id: string) => {
     return useMutation({
         mutationFn: (term: Partial<Term>) => {
             return customAPI.put(`/academic-calendar/term/${id}`, term);
+        }
+    })
+}
+
+/**
+ * CLASS LEVELS CRUD
+ */
+export const useGetClassLevels = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['myClassLevels'],
+        queryFn: () => {
+            return customAPI.get('/class-level');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const classLevels = data?.data as ClassLevel[] || [] ;
+
+    return { classLevels, isLoading, refetch }
+}
+
+export const useCreateClassLevel = () => {
+    return useMutation({
+        mutationFn: (classLevel: Partial<ClassLevel>) => {
+            return customAPI.post('/class-level', classLevel);
+        }
+    })
+}
+
+export const useDeleteClassLevel = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/class-level/${id}`)
+        }
+    })
+}
+
+export const useEditClassLevel = (id: string) => {
+    return useMutation({
+        mutationFn: (classLevel: Partial<ClassLevel>) => {
+            return customAPI.patch(`/class-level/${id}`, classLevel);
         }
     })
 }
