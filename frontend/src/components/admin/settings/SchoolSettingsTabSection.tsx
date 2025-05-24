@@ -14,6 +14,7 @@ import { useDeleteFeeStructure, useEditFeeStructure, useGetFeeStructure, useSave
 import { toast } from "react-toastify";
 import { ErrorResponse, FeeStructure } from "@/@types";
 import { EmailItem } from "./EmailItem";
+import { ClassLevelsTable } from "./ClassLevelsTable";
 // import { FeeStructureTable } from "./FeeStructureTable";
 // import { GradingSystemTable } from "./GradingSystemTable";
 
@@ -242,6 +243,10 @@ export const SchoolSettingsTabSection: React.FC = () => {
 
       <div className="mt-8">
         <GradingSystemTable />
+      </div>
+
+      <div className="mt-8">
+        <ClassLevelsTable />
       </div>
 
       <div className="mt-8">
