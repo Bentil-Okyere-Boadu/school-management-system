@@ -96,7 +96,18 @@ export class ClassLevelService {
 
     return classLevel;
   }
+  async remove(id: string, admin: SchoolAdmin): Promise<{ message: string }> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id, school: { id: admin.school.id } },
+    });
 
+    if (!classLevel) {
+      throw new NotFoundException(`Class level with ID ${id} not found`);
+    }
+
+    await this.classLevelRepository.remove(classLevel);
+    return { message: 'Class level deleted successfully' };
+  }
   async findAll(admin: SchoolAdmin): Promise<ClassLevel[]> {
     return this.classLevelRepository.find({
       where: { school: { id: admin.school.id } },

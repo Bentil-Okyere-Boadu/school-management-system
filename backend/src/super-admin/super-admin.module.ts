@@ -17,6 +17,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { School } from 'src/school/school.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ProfileService } from 'src/profile/profile.service';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ProfileService } from 'src/profile/profile.service';
     AuthService,
     ProfileService,
     RoleService,
+    ObjectStorageServiceService,
   ],
   controllers: [SuperAdminController, SuperAdminAuthController],
   exports: [SuperAdminService, SuperAdminAuthService],

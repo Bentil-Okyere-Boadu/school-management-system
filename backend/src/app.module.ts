@@ -19,6 +19,7 @@ import { AcademicCalendarModule } from './academic-calendar/academic-calendar.mo
 import { ProfileModule } from './profile/profile.module';
 import { StudentModule } from './student/student.module';
 import { TeacherModule } from './teacher/teacher.module';
+import { ObjectStorageServiceModule } from './object-storage-service/object-storage-service.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { TeacherModule } from './teacher/teacher.module';
     ProfileModule,
     StudentModule,
     TeacherModule,
+    ObjectStorageServiceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
