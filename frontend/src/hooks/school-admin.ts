@@ -100,6 +100,51 @@ export const useInvitation = (role: string) => {
     })
 }
 
+export const useGetSchoolAdminInfo = () => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['schoolAdminInfo'],
+        queryFn: () => {
+            return customAPI.get('/school-admin/me');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const schoolAdminInfo = data?.data
+
+    return { schoolAdminInfo, isLoading }
+}
+
+export const useEditSchoolAdminInfo = () => {
+    return useMutation({
+        mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
+            return customAPI.put('/school-admin/profile/me', schoolAdminInfo);
+        }
+    })
+}
+
+export const useUploadFile = (id: string) => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post(`/profiles/school-admin/${id}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteProfileImage = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/profiles/school-admin/${id}/avatar`)
+        }
+    })
+}
+
 /**
  * FEE STRUCTURE CRUD
  * @returns 
@@ -142,27 +187,6 @@ export const useDeleteFeeStructure = () => {
     })
 }
 
-export const useGetSchoolAdminInfo = () => {
-    const { data, isLoading } = useQuery({
-        queryKey: ['schoolAdminInfo'],
-        queryFn: () => {
-            return customAPI.get('/school-admin/me');
-        },
-        refetchOnWindowFocus: true
-    })
-
-    const schoolAdminInfo = data?.data
-
-    return { schoolAdminInfo, isLoading }
-}
-
-export const useEditSchoolAdminInfo = () => {
-    return useMutation({
-        mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
-            return customAPI.put('/school-admin/profile/me', schoolAdminInfo);
-        }
-    })
-}
 
 /**
  * GRADING SYSTEM CRUD
