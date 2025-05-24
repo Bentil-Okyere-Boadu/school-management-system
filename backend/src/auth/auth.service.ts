@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { FindOptionsWhere, Repository } from 'typeorm';
@@ -54,18 +59,14 @@ export class AuthService {
       resetPasswordExpires: Date;
     },
   >(email: string, repository: Repository<T>) {
-    const successResponse = {
-      success: true,
-      message:
-        'If your email exists in our system, you will receive a password reset link',
-    };
-
     const user = await repository.findOne({
       where: { email } as FindOptionsWhere<T>,
     });
 
     if (!user) {
-      return successResponse;
+      throw new NotFoundException(
+        'No user found with the provided credentials',
+      );
     }
 
     const resetToken = uuidv4();
@@ -83,7 +84,10 @@ export class AuthService {
       this.logger.error('Error sending email:', error);
     }
 
-    return successResponse;
+    return {
+      success: true,
+      message: 'Password reset link sent to your email',
+    };
   }
 
   async handleResetPassword<

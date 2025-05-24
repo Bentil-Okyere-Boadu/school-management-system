@@ -72,10 +72,9 @@ export class TeacherService {
       relations: ['role'],
     });
     if (!teacher) {
-      return {
-        success: true,
-        message: 'If your email is registered, you will receive a PIN reset',
-      };
+      throw new NotFoundException(
+        'No user found with the provided credentials',
+      );
     }
     const pin = this.invitationService.generatePin();
     teacher.password = await bcrypt.hash(pin, 10);
