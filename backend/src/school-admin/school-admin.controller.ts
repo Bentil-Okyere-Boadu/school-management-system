@@ -8,7 +8,6 @@ import {
   Query,
   UseInterceptors,
   Put,
-  ForbiddenException,
   Param,
 } from '@nestjs/common';
 import { SchoolAdminAuthService } from './school-admin-auth.service';

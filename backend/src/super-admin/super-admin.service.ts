@@ -32,16 +32,13 @@ export class SuperAdminService {
     let isArchived = false;
     if (queryString.status === 'archived') {
       isArchived = true;
-    } else if (queryString.status === 'active' || !queryString.status) {
-      isArchived = false;
-    } else {
-      isArchived = false;
     }
 
     const baseQuery = this.adminRepository
       .createQueryBuilder('admin')
       .leftJoinAndSelect('admin.role', 'role')
       .leftJoinAndSelect('admin.school', 'school')
+      .leftJoinAndSelect('admin.profile', 'profile')
       .where('admin.isArchived = :isArchived', { isArchived });
 
     const featuresWithoutPagination = new APIFeatures(
@@ -57,6 +54,24 @@ export class SuperAdminService {
 
     const featuresWithPagination = featuresWithoutPagination.paginate();
     const data = await featuresWithPagination.getQuery().getMany();
+
+    const profileIds = data
+      .map((admin) => admin.profile?.id)
+      .filter((id): id is string => !!id);
+
+    const profilesWithUrls =
+      await this.profileService.getProfilesWithImageUrls(profileIds);
+
+    const profileUrlMap = new Map(profilesWithUrls.map((p) => [p.id, p]));
+
+    for (const admin of data) {
+      if (admin.profile?.id) {
+        const enrichedProfile = profileUrlMap.get(admin.profile.id);
+        if (enrichedProfile) {
+          admin.profile = enrichedProfile;
+        }
+      }
+    }
 
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
@@ -95,6 +110,12 @@ export class SuperAdminService {
       throw new NotFoundException(
         `Super Admin with ID ${superAdmin} not found`,
       );
+    }
+    if (superAdmin?.profile?.id) {
+      const profileWithUrl = await this.profileService.getProfileWithImageUrl(
+        superAdmin.profile.id,
+      );
+      superAdmin.profile = profileWithUrl;
     }
 
     return superAdmin;
@@ -167,5 +188,9 @@ export class SuperAdminService {
       this.superAdminRepository,
       ['role', 'profile'],
     );
+  }
+
+  getRepository(): Repository<SuperAdmin> {
+    return this.superAdminRepository;
   }
 }

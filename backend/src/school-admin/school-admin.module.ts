@@ -17,6 +17,7 @@ import { Student } from 'src/student/student.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { Profile } from 'src/profile/profile.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { Teacher } from 'src/teacher/teacher.entity';
     SchoolAdminService,
     SchoolAdminLocalStrategy,
     SchoolAdminJwtStrategy,
+    ObjectStorageServiceService,
     AuthService,
     ProfileService,
     ConfigService,

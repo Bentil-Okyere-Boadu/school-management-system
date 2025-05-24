@@ -92,6 +92,110 @@ export class SchoolAdminService {
     };
   }
 
+  /* async findAllUsers(schoolId: string, queryString: QueryString) {
+  let isArchived = false;
+  if (queryString.status === 'archived') {
+    isArchived = true;
+  } else if (queryString.status === 'active' || !queryString.status) {
+    isArchived = false;
+  }
+
+  // Build students query
+  const studentsQuery = this.studentRepository
+    .createQueryBuilder('student')
+    .leftJoinAndSelect('student.role', 'role')
+    .leftJoinAndSelect('student.school', 'school')
+    .leftJoinAndSelect('student.profile', 'profile')
+    .where('student.school.id = :schoolId', { schoolId })
+    .andWhere('student.isArchived = :isArchived', { isArchived });
+
+  const teachersQuery = this.teacherRepository
+    .createQueryBuilder('teacher')
+    .leftJoinAndSelect('teacher.role', 'role')
+    .leftJoinAndSelect('teacher.school', 'school')
+    .leftJoinAndSelect('teacher.profile', 'profile')
+    .where('teacher.school.id = :schoolId', { schoolId })
+    .andWhere('teacher.isArchived = :isArchived', { isArchived });
+
+  // Apply features
+  const [students, teachers]: [Student[], Teacher[]] = await Promise.all([
+    new APIFeatures(studentsQuery.clone(), queryString)
+      .filter()
+      .sort()
+      .search()
+      .limitFields()
+      .paginate()
+      .getQuery()
+      .getMany(),
+
+    new APIFeatures(teachersQuery.clone(), queryString)
+      .filter()
+      .sort()
+      .search()
+      .limitFields()
+      .paginate()
+      .getQuery()
+      .getMany(),
+  ]);
+
+  // Get profileIds for signed URLs
+  const profileIds = [
+    ...students.map((s) => s.profile?.id).filter(Boolean),
+    ...teachers.map((t) => t.profile?.id).filter(Boolean),
+  ];
+
+  const profilesWithUrls = await this.profileService.getProfilesWithImageUrls(profileIds);
+
+  const profileMap = new Map(profilesWithUrls.map((p) => [p.id, p]));
+
+  // Attach avatarUrl to student/teacher profiles
+  const studentsWithType = students.map((student) => ({
+    ...student,
+    userType: 'student',
+    profile: student.profile?.id ? profileMap.get(student.profile.id) : undefined,
+  }));
+
+  const teachersWithType = teachers.map((teacher) => ({
+    ...teacher,
+    userType: 'teacher',
+    profile: teacher.profile?.id ? profileMap.get(teacher.profile.id) : undefined,
+  }));
+
+  // Pagination and metadata
+  const [studentsCount, teachersCount] = await Promise.all([
+    this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoin('student.school', 'school')
+      .where('student.school.id = :schoolId', { schoolId })
+      .andWhere('student.isArchived = :isArchived', { isArchived })
+      .getCount(),
+
+    this.teacherRepository
+      .createQueryBuilder('teacher')
+      .leftJoin('teacher.school', 'school')
+      .where('teacher.school.id = :schoolId', { schoolId })
+      .andWhere('teacher.isArchived = :isArchived', { isArchived })
+      .getCount(),
+  ]);
+
+  const page = parseInt(queryString.page ?? '1', 10);
+  const limit = parseInt(queryString.limit ?? '20', 10);
+  const total = studentsCount + teachersCount;
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    data: [...studentsWithType, ...teachersWithType],
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+      studentsCount,
+      teachersCount,
+    },
+  };
+}
+*/
   async findAllUsers(schoolId: string, queryString: QueryString) {
     let isArchived = false;
     if (queryString.status === 'archived') {
@@ -225,8 +329,14 @@ export class SchoolAdminService {
 
     const adminInfo = await this.schoolAdminRepository.findOne({
       where: { id: user.id },
-      relations: ['profile'],
+      relations: ['role', 'profile'],
     });
+    if (adminInfo?.profile?.id) {
+      const profileWithUrl = await this.profileService.getProfileWithImageUrl(
+        adminInfo.profile.id,
+      );
+      adminInfo.profile = profileWithUrl;
+    }
 
     return adminInfo;
   }
@@ -256,5 +366,9 @@ export class SchoolAdminService {
       return this.teacherRepository.save(teacher);
     }
     throw new NotFoundException(`User with ID ${id} not found`);
+  }
+
+  getRepository(): Repository<SchoolAdmin> {
+    return this.schoolAdminRepository;
   }
 }

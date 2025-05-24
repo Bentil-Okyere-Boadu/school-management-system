@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -10,7 +11,6 @@ import {
 import { ClassLevelService } from './class-level.service';
 import { CreateClassLevelDto } from './dto/create-class-level.dto';
 import { UpdateClassLevelDto } from './dto/update-class-level.dto';
-import { SchoolAdminLocalAuthGuard } from 'src/school-admin/guards/school-admin-local-auth.guard';
 import { SchoolAdminSchoolGuard } from 'src/school-admin/guards/school-admin-school.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
@@ -54,5 +54,10 @@ export class ClassLevelController {
   @Roles('school_admin')
   async findAll(@CurrentUser() admin: SchoolAdmin) {
     return this.classLevelService.findAll(admin);
+  }
+  @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
+  @Delete(':id')
+  async remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    return this.classLevelService.remove(id, admin);
   }
 }

@@ -20,6 +20,7 @@ import { Student } from 'src/student/student.entity';
 import { School } from 'src/school/school.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ProfileService } from 'src/profile/profile.service';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ProfileService } from 'src/profile/profile.service';
     AuthService,
     EmailService,
     ProfileService,
+    ObjectStorageServiceService,
     TeacherAuthService,
     InvitationService,
     TeacherLocalStrategy,

@@ -7,12 +7,21 @@ import {
   Column,
   OneToOne,
   JoinColumn,
+  VirtualColumn,
 } from 'typeorm';
 
 @Entity()
 export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
+  })
+  avatarUrl: string;
+
+  @Column({ nullable: true })
+  avatarPath?: string;
 
   @Column({ nullable: true })
   firstName?: string;
