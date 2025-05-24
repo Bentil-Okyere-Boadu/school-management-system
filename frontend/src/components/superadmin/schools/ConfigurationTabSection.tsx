@@ -46,11 +46,10 @@ export const ConfigurationTabSection: React.FC<SchoolConfigProps> = ({calendars}
         {calendars?.length > 0 && <CustomSelectTag options={calendarOptions} value={selectedAcademicCalendar} onOptionItemClick={handleAcademicCalendarChange} />}
 
         <div>
-            <p className="text-xs text-[#878787] my-5">{selectedCalendarData?.name}</p>
-            <h1 className="text-md font-semibold text-neutral-800 my-2">Terms</h1>
-
             { calendars?.length > 0  && (
             <div>
+                <p className="text-xs text-[#878787] my-5">{selectedCalendarData?.name}</p>
+                <h1 className="text-md font-semibold text-neutral-800 my-2">Terms</h1>
                 {
                     selectedCalendarData?.terms?.map((term, index, arrayList) => (
                         <div key={index}>

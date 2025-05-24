@@ -13,6 +13,9 @@ export interface User {
   role: Role;
   status: string;
   school: School;
+  profile: {
+    avatarUrl?: string;
+  }
 }
 
 export type AuthCredentials = Pick<User, "email" | "password">;

@@ -12,6 +12,7 @@ import { useArchiveUser, useResendAdminInvitation } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { ErrorResponse } from "@/@types";
+import Image from "next/image";
 
 interface User {
   id: string;
@@ -28,6 +29,9 @@ interface User {
   studentId?: string;
   userType: string;
   teacherId?: string;
+  profile: {
+    avatarUrl?: string;
+  }
 }
 
 interface UserTableProps {
@@ -107,9 +111,19 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
                 <tr key={user.id}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div className="flex flex-1 items-center">
-                      <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
-                        {getInitials(user.firstName, user.lastName)}
-                      </div>
+                      {user?.profile?.avatarUrl ? (
+                        <Image
+                          width={40}
+                          height={40}
+                          alt="User Avatar"
+                          src={user?.profile?.avatarUrl}
+                          className="mr-2.5 w-10 h-10 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
+                          {getInitials(user.firstName, user.lastName)}
+                        </div>
+                      )}
                       <div className="flex flex-col">
                         <span className="text-base text-zinc-800">{user.firstName} {user.lastName}</span>
                         <span className="text-sm text-neutral-500">{user.email}</span>
