@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import InputField from "@/components/InputField";
 import SchoolCard from "@/components/common/SchoolCard";
-import CustomUnderlinedButton from "../CustomUnderlinedButton";
+import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import NoProfileImg from '@/images/no-profile-img.png' 
 import CustomButton from "@/components/Button";
 import { useEditSchoolAdminInfo } from "@/hooks/school-admin";

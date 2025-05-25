@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { CustomSelectTag } from "../../common/CustomSelectTag";
 import InputField from "@/components/InputField";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
-import CustomUnderlinedButton from "../CustomUnderlinedButton";
+import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import { Dialog } from "@/components/common/Dialog";
 import { Select } from "@mantine/core";
 import CustomButton from "@/components/Button";

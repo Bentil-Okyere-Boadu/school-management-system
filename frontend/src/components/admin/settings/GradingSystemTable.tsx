@@ -2,7 +2,7 @@
 import { Dialog } from "@/components/common/Dialog";
 import { IconPencil, IconTrashFilled } from "@tabler/icons-react";
 import React, { useState } from "react";
-import CustomUnderlinedButton from "../CustomUnderlinedButton";
+import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
 import { ErrorResponse, Grade } from "@/@types";

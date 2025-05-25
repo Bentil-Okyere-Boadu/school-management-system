@@ -1,8 +1,11 @@
+import StudentsTable from '@/components/admin/students/StudentsTable'
 import React from 'react'
 
 const Students = () => {
   return (
-    <div>Students</div>
+    <div>
+      <StudentsTable/>
+    </div>
   )
 }
 
