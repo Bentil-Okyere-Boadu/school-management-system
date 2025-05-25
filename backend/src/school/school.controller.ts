@@ -19,10 +19,22 @@ import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jw
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Teacher } from 'src/teacher/teacher.entity';
+import { Student } from 'src/student/student.entity';
+import { Repository } from 'typeorm';
 
 @Controller('schools')
 export class SchoolController {
-  constructor(private readonly schoolService: SchoolService) {}
+  constructor(
+    private readonly schoolService: SchoolService,
+    @InjectRepository(Teacher)
+    private readonly teacherRepository: Repository<Teacher>,
+    @InjectRepository(Student)
+    private readonly studentRepository: Repository<Student>,
+    @InjectRepository(School)
+    private readonly schoolRepository: Repository<School>,
+  ) {}
 
   /**
    * Create a new school
@@ -47,6 +59,57 @@ export class SchoolController {
   findAll(): Promise<School[]> {
     return this.schoolService.findAll();
   }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('dashboard')
+  async getDashboardData() {
+    const [totalSchools, totalTeachers, totalStudents] = await Promise.all([
+      this.schoolRepository.count(),
+      this.teacherRepository.count(),
+      this.studentRepository.count(),
+    ]);
+
+    // Mock attendance for now
+    const averageAttendanceRate = 82; // or fetch if you have a service
+
+    // Mock performance data for now
+    const performance = [
+      {
+        schoolName: 'Bay Christian Int. School',
+        topPerforming: 52,
+        lowPerforming: 18,
+      },
+      {
+        schoolName: 'William Paden Elementary School',
+        topPerforming: 70,
+        lowPerforming: 30,
+      },
+      {
+        schoolName: 'Jefferson Elementary School',
+        topPerforming: 42,
+        lowPerforming: 10,
+      },
+      {
+        schoolName: 'Emerson Elementary School',
+        topPerforming: 85,
+        lowPerforming: 5,
+      },
+      {
+        schoolName: 'King Child Development Center',
+        topPerforming: 92,
+        lowPerforming: 50,
+      },
+    ];
+
+    return {
+      totalSchools,
+      totalTeachers,
+      totalStudents,
+      averageAttendanceRate,
+      performance,
+    };
+  }
+
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id')
   @Roles('super_admin')
