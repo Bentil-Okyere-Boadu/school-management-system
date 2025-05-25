@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  VirtualColumn,
+} from 'typeorm';
 import { School } from '../school/school.entity';
 
 @Entity()
@@ -12,8 +18,12 @@ export class AdmissionPolicy {
   @Column({ nullable: true })
   description?: string;
 
-  @Column({ nullable: true })
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
+  })
   documentUrl?: string;
+  @Column({ nullable: true })
+  documentPath?: string;
 
   @ManyToOne(() => School, (school) => school.admissionPolicies, {
     onDelete: 'CASCADE',

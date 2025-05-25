@@ -6,9 +6,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Role } from '../role/role.entity';
+import { Profile } from 'src/profile/profile.entity';
 
 @Entity()
 export class Student {
@@ -36,6 +38,12 @@ export class Student {
     eager: true,
   })
   school: School;
+
+  @OneToOne(() => Profile, (profile) => profile.student, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  profile: Profile;
 
   @Column({ default: 'pending' })
   status: string;

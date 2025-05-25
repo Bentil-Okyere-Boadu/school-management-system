@@ -9,6 +9,7 @@ import { School } from 'src/school/school.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 @Injectable()
 export class SchoolAdminService {
   private readonly logger = new Logger(SchoolAdminService.name);
@@ -22,6 +23,7 @@ export class SchoolAdminService {
     private teacherRepository: Repository<Teacher>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
+    private readonly objectStorageService: ObjectStorageServiceService,
     private readonly profileService: ProfileService,
   ) {}
 
@@ -314,8 +316,47 @@ export class SchoolAdminService {
       throw new NotFoundException(`School with ID ${user.school.id} not found`);
     }
 
-    return school;
+    const signedAdmissionPolicies = await Promise.all(
+      school.admissionPolicies.map(async (policy) => {
+        const result = { ...policy } as typeof policy & {
+          documentUrl?: string;
+        };
+        if (policy.documentPath) {
+          try {
+            result.documentUrl = await this.objectStorageService.getSignedUrl(
+              policy.documentPath,
+              86400, // 24 hours
+            );
+          } catch {
+            // If there's an error getting the signed URL, we just continue without it
+            this.logger.warn(
+              `Failed to get signed URL for admission policy document: ${policy.id}`,
+            );
+          }
+        }
+        return result;
+      }),
+    );
+
+    const signedProfile = school.profile
+      ? {
+          ...school.profile,
+          avatarUrl: school.profile.avatarPath
+            ? await this.objectStorageService.getSignedUrl(
+                school.profile.avatarPath,
+                3600,
+              )
+            : undefined,
+        }
+      : undefined;
+
+    return {
+      ...school,
+      admissionPolicies: signedAdmissionPolicies,
+      profile: signedProfile,
+    };
   }
+
   getMySchool(user: SchoolAdmin) {
     if (!user.school) {
       throw new NotFoundException('School not found for this admin');
