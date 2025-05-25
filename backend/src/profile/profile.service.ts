@@ -82,10 +82,12 @@ export class ProfileService {
     if (!entity.profile) {
       const newProfile = this.profileRepository.create({
         avatarPath: newImagePath,
+        mediaType: file.mimetype,
       });
       entity.profile = await this.profileRepository.save(newProfile);
     } else {
       entity.profile.avatarPath = newImagePath;
+      entity.profile.mediaType = file.mimetype;
       await this.profileRepository.save(entity.profile);
     }
 
@@ -111,7 +113,6 @@ export class ProfileService {
       try {
         result.avatarUrl = await this.objectStorageService.getSignedUrl(
           profile.avatarPath,
-          86400, // 24 hours
         );
       } catch {
         // Don't throw error, just continue without avatar URL
@@ -149,6 +150,7 @@ export class ProfileService {
       );
 
       entity.profile.avatarPath = undefined;
+      entity.profile.mediaType = undefined;
 
       // Remove path from database
       await this.profileRepository.save(entity.profile);
@@ -171,9 +173,10 @@ export class ProfileService {
           try {
             result.avatarUrl = await this.objectStorageService.getSignedUrl(
               profile.avatarPath,
-              86400, // 2 hours
             );
-          } catch {}
+          } catch {
+            // Don't throw error, just continue without avatar URL
+          }
         }
 
         return result;

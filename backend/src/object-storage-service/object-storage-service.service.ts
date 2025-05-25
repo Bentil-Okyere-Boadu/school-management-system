@@ -26,7 +26,15 @@ export class ObjectStorageServiceService {
     'image/webp',
     'image/gif',
   ];
+  private readonly allowedDocumentTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ];
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB
+  private readonly maxDocumentSize = 10 * 1024 * 1024; // 10MB
 
   constructor(private configService: ConfigService) {
     const region = this.configService.get<string>('AWS_REGION');
@@ -48,6 +56,89 @@ export class ObjectStorageServiceService {
         secretAccessKey,
       },
     });
+  }
+
+  private validateDocumentFile(file: Express.Multer.File): void {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    if (!this.allowedDocumentTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed types: ${this.allowedDocumentTypes.join(', ')}`,
+      );
+    }
+
+    if (file.size > this.maxDocumentSize) {
+      throw new BadRequestException(
+        `File too large. Maximum size: ${this.maxDocumentSize / (1024 * 1024)}MB`,
+      );
+    }
+  }
+
+  private generateSchoolAssetPath(
+    schoolId: string,
+    assetType: string,
+    fileName: string,
+  ): string {
+    const extension = path.extname(fileName);
+    const uniqueId = uuidv4();
+    return `schools/${schoolId}/assets/${assetType}/${uniqueId}${extension}`;
+  }
+
+  // Upload admission policy document
+  async uploadAdmissionPolicyDocument(
+    file: Express.Multer.File,
+    schoolId: string,
+    policyId: string,
+  ): Promise<{ path: string; url: string }> {
+    this.validateDocumentFile(file);
+
+    const documentPath = this.generateSchoolAssetPath(
+      schoolId,
+      'admission-policies',
+      file.originalname,
+    );
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: documentPath,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      Metadata: {
+        schoolId,
+        policyId,
+        uploadedAt: new Date().toISOString(),
+        originalName: file.originalname,
+        assetType: 'admission-policy',
+      },
+      CacheControl: 'max-age=86400', // 24 hours
+    });
+
+    await this.s3Client.send(command);
+    const url = await this.getSignedUrl(documentPath);
+
+    return { path: documentPath, url };
+  }
+
+  // Delete admission policy document
+  async deleteAdmissionPolicyDocument(
+    schoolId: string,
+    policyId: string,
+    documentPath: string,
+  ): Promise<void> {
+    try {
+      // Verify the file belongs to the correct school and policy (security check)
+      const expectedPrefix = `schools/${schoolId}/assets/admission-policies/`;
+      if (!documentPath.startsWith(expectedPrefix)) {
+        throw new BadRequestException('Unauthorized to delete this file');
+      }
+
+      await this.deleteFile(documentPath);
+    } catch (error) {
+      console.error('Error deleting admission policy document:', error);
+      throw error;
+    }
   }
 
   // Validate file for profile image upload
@@ -98,39 +189,17 @@ export class ObjectStorageServiceService {
         uploadedAt: new Date().toISOString(),
         originalName: file.originalname,
       },
-      // Set cache control for better performance
       CacheControl: 'max-age=31536000', // 1 year
     });
 
     await this.s3Client.send(command);
-
-    // Get the public URL or signed URL
     const url = await this.getSignedUrl(imagePath);
 
     return { path: imagePath, url };
   }
 
-  // Generic file upload (your original method, enhanced)
-  async uploadFile(
-    file: Express.Multer.File,
-    customPath?: string,
-  ): Promise<string> {
-    const filePath = customPath || `uploads/${uuidv4()}-${file.originalname}`;
-
-    const command = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: filePath,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-      CacheControl: 'max-age=3600', // 1 hour
-    });
-
-    await this.s3Client.send(command);
-    return filePath;
-  }
-
   // Get signed URL with configurable expiration
-  async getSignedUrl(path: string, expiresIn: number = 3600): Promise<string> {
+  async getSignedUrl(path: string, expiresIn: number = 86400): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: path,

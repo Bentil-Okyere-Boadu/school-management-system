@@ -5,9 +5,11 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
 } from 'typeorm';
 import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
+import { Profile } from 'src/profile/profile.entity';
 
 @Entity()
 export class Teacher {
@@ -29,6 +31,11 @@ export class Teacher {
   @Column({ unique: true })
   teacherId: string;
 
+  @OneToOne(() => Profile, (profile) => profile.teacher, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  profile: Profile;
   @ManyToOne(() => Role, { eager: true })
   role: Role;
 

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  VirtualColumn,
+} from 'typeorm';
 import { School } from '../school/school.entity';
 
 @Entity()
@@ -13,6 +19,14 @@ export class AdmissionPolicy {
   description?: string;
 
   @Column({ nullable: true })
+  documentPath?: string;
+
+  @Column({ nullable: true })
+  mediaType?: string;
+
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
+  })
   documentUrl?: string;
 
   @ManyToOne(() => School, (school) => school.admissionPolicies, {

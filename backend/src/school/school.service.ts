@@ -9,6 +9,7 @@ import { School } from './school.entity';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Injectable()
 export class SchoolService {
@@ -17,6 +18,7 @@ export class SchoolService {
     private schoolRepository: Repository<School>,
     @InjectRepository(SchoolAdmin)
     private adminRepository: Repository<SchoolAdmin>,
+    private objectStorageService: ObjectStorageServiceService,
     private invitationService: InvitationService,
   ) {}
 
@@ -80,13 +82,73 @@ export class SchoolService {
       throw new NotFoundException(`School with ID ${id} not found`);
     }
 
-    const { students, teachers, ...rest } = school;
+    // Sign admission policy document URLs
+    const signedAdmissionPolicies = await Promise.all(
+      school.admissionPolicies.map(async (policy) => {
+        const result = { ...policy } as typeof policy & {
+          documentUrl?: string;
+        };
+        if (policy.documentPath) {
+          try {
+            result.documentUrl = await this.objectStorageService.getSignedUrl(
+              policy.documentPath,
+              86400,
+            );
+          } catch {
+            // skip silently
+          }
+        }
+        return result;
+      }),
+    );
 
-    const users = [...(students || []), ...(teachers || [])];
+    // Sign school profile avatar
+    const signedSchoolProfile = school.profile
+      ? {
+          ...school.profile,
+          avatarUrl: school.profile.avatarPath
+            ? await this.objectStorageService.getSignedUrl(
+                school.profile.avatarPath,
+                86400,
+              )
+            : undefined,
+        }
+      : undefined;
+
+    // Combine students and teachers
+    const users = [...(school.students || []), ...(school.teachers || [])];
+
+    // Sign avatarUrls for users (if they have profile with avatarPath)
+    const signedUsers = await Promise.all(
+      users.map(async (user) => {
+        if (user.profile?.avatarPath) {
+          try {
+            const avatarUrl = await this.objectStorageService.getSignedUrl(
+              user.profile.avatarPath,
+              86400,
+            );
+            return {
+              ...user,
+              profile: {
+                ...user.profile,
+                avatarUrl,
+              },
+            };
+          } catch {
+            return user;
+          }
+        }
+        return user;
+      }),
+    );
+
+    const { students, teachers, ...rest } = school;
 
     return {
       ...rest,
-      users,
+      admissionPolicies: signedAdmissionPolicies,
+      profile: signedSchoolProfile,
+      users: signedUsers,
     };
   }
 
