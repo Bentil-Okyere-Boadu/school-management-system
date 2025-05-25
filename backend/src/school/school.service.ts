@@ -109,7 +109,7 @@ export class SchoolService {
           avatarUrl: school.profile.avatarPath
             ? await this.objectStorageService.getSignedUrl(
                 school.profile.avatarPath,
-                3600,
+                86400,
               )
             : undefined,
         }
@@ -125,7 +125,7 @@ export class SchoolService {
           try {
             const avatarUrl = await this.objectStorageService.getSignedUrl(
               user.profile.avatarPath,
-              3600,
+              86400,
             );
             return {
               ...user,

@@ -18,12 +18,16 @@ export class AdmissionPolicy {
   @Column({ nullable: true })
   description?: string;
 
+  @Column({ nullable: true })
+  documentPath?: string;
+
+  @Column({ nullable: true })
+  mediaType?: string;
+
   @VirtualColumn({
     query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
   })
   documentUrl?: string;
-  @Column({ nullable: true })
-  documentPath?: string;
 
   @ManyToOne(() => School, (school) => school.admissionPolicies, {
     onDelete: 'CASCADE',

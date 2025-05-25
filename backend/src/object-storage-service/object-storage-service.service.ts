@@ -116,7 +116,7 @@ export class ObjectStorageServiceService {
     });
 
     await this.s3Client.send(command);
-    const url = await this.getSignedUrl(documentPath, 86400);
+    const url = await this.getSignedUrl(documentPath);
 
     return { path: documentPath, url };
   }
@@ -199,7 +199,7 @@ export class ObjectStorageServiceService {
   }
 
   // Get signed URL with configurable expiration
-  async getSignedUrl(path: string, expiresIn: number = 3600): Promise<string> {
+  async getSignedUrl(path: string, expiresIn: number = 86400): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: path,

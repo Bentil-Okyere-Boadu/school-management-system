@@ -43,6 +43,7 @@ export class AdmissionPolicyService {
           );
 
         savedPolicy.documentPath = documentPath;
+        savedPolicy.mediaType = file.mimetype;
         await this.admissionPolicyRepository.save(savedPolicy);
 
         return { ...savedPolicy, documentUrl };
@@ -74,7 +75,6 @@ export class AdmissionPolicyService {
       try {
         result.documentUrl = await this.objectStorageService.getSignedUrl(
           policy.documentPath,
-          86400, // 24 hours
         );
       } catch {
         // Don't throw error, just continue without document URL
@@ -84,7 +84,10 @@ export class AdmissionPolicyService {
     return result;
   }
 
-  async removeDocument(id: string, admin: SchoolAdmin) {
+  async removeDocument(
+    id: string,
+    admin: SchoolAdmin,
+  ): Promise<AdmissionPolicy> {
     const policy = await this.admissionPolicyRepository.findOne({
       where: { id, school: { id: admin.school.id } },
     });
@@ -99,10 +102,13 @@ export class AdmissionPolicyService {
         id,
         policy.documentPath,
       );
+
+      policy.documentPath = undefined;
+      policy.mediaType = undefined;
+      return this.admissionPolicyRepository.save(policy);
     }
 
-    await this.admissionPolicyRepository.remove(policy);
-    return { message: 'Admission policy and document deleted successfully' };
+    return policy;
   }
 
   async findAll(
@@ -122,7 +128,6 @@ export class AdmissionPolicyService {
           try {
             result.documentUrl = await this.objectStorageService.getSignedUrl(
               policy.documentPath,
-              86400, // 24 hours
             );
           } catch {
             this.logger.warn(

@@ -17,13 +17,16 @@ export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ nullable: true })
+  avatarPath?: string;
+
+  @Column({ nullable: true })
+  mediaType?: string;
+
   @VirtualColumn({
     query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
   })
   avatarUrl?: string;
-
-  @Column({ nullable: true })
-  avatarPath?: string;
 
   @Column({ nullable: true })
   firstName?: string;

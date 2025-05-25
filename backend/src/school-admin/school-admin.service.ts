@@ -344,7 +344,6 @@ export class SchoolAdminService {
           avatarUrl: school.profile.avatarPath
             ? await this.objectStorageService.getSignedUrl(
                 school.profile.avatarPath,
-                3600,
               )
             : undefined,
         }
