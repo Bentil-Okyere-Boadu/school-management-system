@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 
 @Injectable()
 export class SchoolService {
+  private readonly logger = new Logger(SchoolService.name);
   constructor(
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
@@ -80,6 +82,17 @@ export class SchoolService {
 
     if (!school) {
       throw new NotFoundException(`School with ID ${id} not found`);
+    }
+    if (school.logoPath) {
+      try {
+        school.logoUrl = await this.objectStorageService.getSignedUrl(
+          school.logoPath,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to get signed URL for school logo: ${school.id}${error}`,
+        );
+      }
     }
 
     // Sign admission policy document URLs
@@ -152,14 +165,33 @@ export class SchoolService {
     };
   }
 
+  // ... existing code ...
   async findAll(): Promise<School[]> {
-    return this.schoolRepository.find();
+    const schools = await this.schoolRepository.find();
+
+    // Sign logo URLs for all schools
+    await Promise.all(
+      schools.map(async (school) => {
+        if (school.logoPath) {
+          try {
+            school.logoUrl = await this.objectStorageService.getSignedUrl(
+              school.logoPath,
+            );
+          } catch (error) {
+            this.logger.warn(
+              `Failed to get signed URL for school logo: ${school.id}${error}`,
+            );
+          }
+        }
+      }),
+    );
+
+    return schools;
   }
 
   async findOne(id: string): Promise<School> {
     const school = await this.schoolRepository.findOne({
       where: { id },
-      relations: ['users'],
     });
 
     if (!school) {
@@ -201,5 +233,35 @@ export class SchoolService {
     // This check will be in the controller
 
     await this.schoolRepository.delete(id);
+  }
+
+  // In school.service.ts
+  async deleteLogo(schoolId: string): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+
+    if (school.logoPath) {
+      try {
+        // Delete the file from storage
+        await this.objectStorageService.deleteFile(school.logoPath);
+
+        // Clear the logo fields in the database
+        school.logoPath = null;
+        school.mediaType = null;
+        return this.schoolRepository.save(school);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete school logo: ${schoolId} - ${error}`,
+        );
+        throw error;
+      }
+    }
+
+    return school;
   }
 }
