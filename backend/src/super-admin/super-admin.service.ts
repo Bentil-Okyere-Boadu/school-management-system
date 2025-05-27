@@ -14,6 +14,7 @@ import { APIFeatures, QueryString } from '../common/api-features/api-features';
 import { School } from 'src/school/school.entity';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { ProfileService } from 'src/profile/profile.service';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Injectable()
 export class SuperAdminService {
@@ -26,6 +27,7 @@ export class SuperAdminService {
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
     private readonly profileService: ProfileService,
+    private readonly objectStorageService: ObjectStorageServiceService,
   ) {}
 
   async findAllUsers(queryString: QueryString) {
@@ -87,7 +89,6 @@ export class SuperAdminService {
       },
     };
   }
-
   async findAllSchools(queryString: QueryString) {
     const query = this.schoolRepository.createQueryBuilder('school');
 
@@ -98,7 +99,25 @@ export class SuperAdminService {
       .limitFields()
       .paginate();
 
-    return await features.getQuery().getMany();
+    const schools = await features.getQuery().getMany();
+
+    await Promise.all(
+      schools.map(async (school) => {
+        if (school.logoPath) {
+          try {
+            school.logoUrl = await this.objectStorageService.getSignedUrl(
+              school.logoPath,
+            );
+          } catch (error) {
+            this.logger.warn(
+              `Failed to get signed URL for school ${school.id}: ${error}`,
+            );
+          }
+        }
+      }),
+    );
+
+    return schools;
   }
   async getMe(user: SuperAdmin): Promise<SuperAdmin> {
     const superAdmin = await this.superAdminRepository.findOne({

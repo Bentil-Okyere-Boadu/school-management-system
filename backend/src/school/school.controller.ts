@@ -7,7 +7,11 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SchoolService } from './school.service';
 import { School } from './school.entity';
 import { RolesGuard } from 'src/auth/roles.guard';
@@ -23,6 +27,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
 import { Repository } from 'typeorm';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Controller('schools')
 export class SchoolController {
@@ -34,6 +39,7 @@ export class SchoolController {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(School)
     private readonly schoolRepository: Repository<School>,
+    private readonly objectStorageService: ObjectStorageServiceService,
   ) {}
 
   /**
@@ -110,6 +116,18 @@ export class SchoolController {
     };
   }
 
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('logo')
+  @Roles('school_admin')
+  async deleteLogo(@CurrentUser() user: SchoolAdmin) {
+    const school = await this.schoolService.deleteLogo(user.school.id);
+
+    return {
+      message: 'School logo deleted successfully',
+      school,
+    };
+  }
+
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id')
   @Roles('super_admin')
@@ -125,5 +143,43 @@ export class SchoolController {
   @Roles('super_admin')
   remove(@Param('id') id: string): Promise<void> {
     return this.schoolService.remove(id);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('logo')
+  @Roles('school_admin')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadLogo(
+    @CurrentUser() user: SchoolAdmin,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const school = await this.schoolService.findOne(user.school.id);
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    const { path: logoPath, url: logoUrl } =
+      await this.objectStorageService.uploadProfileImage(file, school.id);
+
+    if (school.logoPath) {
+      await this.objectStorageService.deleteProfileImage(
+        school.id,
+        school.logoPath,
+      );
+    }
+
+    school.logoPath = logoPath;
+    school.mediaType = file.mimetype;
+    await this.schoolRepository.save(school);
+
+    return {
+      message: 'School logo uploaded successfully',
+      logoUrl,
+      school,
+    };
   }
 }

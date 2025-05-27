@@ -356,11 +356,32 @@ export class SchoolAdminService {
     };
   }
 
-  getMySchool(user: SchoolAdmin) {
+  async getMySchool(user: SchoolAdmin) {
     if (!user.school) {
       throw new NotFoundException('School not found for this admin');
     }
-    return user.school;
+
+    const school = await this.schoolRepository.findOne({
+      where: { id: user.school.id },
+    });
+
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    if (school.logoPath) {
+      try {
+        school.logoUrl = await this.objectStorageService.getSignedUrl(
+          school.logoPath,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to get signed URL for school logo: ${school.id}${error}`,
+        );
+      }
+    }
+
+    return school;
   }
   async getMyProfile(user: SchoolAdmin) {
     if (!user) {

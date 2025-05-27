@@ -16,6 +16,7 @@ import { Profile } from 'src/profile/profile.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from '../teacher/teacher.entity';
+import { VirtualColumn } from 'typeorm/decorator/columns/VirtualColumn';
 
 @Entity()
 export class School {
@@ -33,6 +34,17 @@ export class School {
 
   @Column({ nullable: true })
   email: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  logoPath: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  mediaType: string | null;
+
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
+  })
+  logoUrl?: string;
 
   /**
    * School code used for generating IDs
