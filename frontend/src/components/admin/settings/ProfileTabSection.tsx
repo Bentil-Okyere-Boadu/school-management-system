@@ -5,7 +5,7 @@ import ProfileCard from "@/components/common/ProfileCard";
 import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import NoProfileImg from '@/images/no-profile-img.png' 
 import CustomButton from "@/components/Button";
-import { useEditSchoolAdminInfo, useUploadFile, useDeleteProfileImage } from "@/hooks/school-admin";
+import { useEditSchoolAdminInfo, useUploadProfileImage, useDeleteProfileImage } from "@/hooks/school-admin";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { ErrorResponse } from "@/@types";
@@ -90,7 +90,7 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
       }
   }
 
-  const { mutate: uploadFileMutate, isPending: isUploadPending } = useUploadFile(schoolAdminInfo?.id);
+  const { mutate: uploadFileMutate, isPending: isUploadPending } = useUploadProfileImage(schoolAdminInfo?.id);
 
   const handleFileSelect = (files: File[]) => {
     setSelectedFiles(files);

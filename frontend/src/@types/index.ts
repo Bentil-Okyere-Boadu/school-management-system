@@ -89,6 +89,7 @@ export interface School {
   users: User[]; 
   createdAt: string; 
   updatedAt: string; 
+  logoUrl: string;
 }
 
 export type BadgeVariant =
