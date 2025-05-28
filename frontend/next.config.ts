@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
         hostname: 'cdn.builder.io',
         pathname: '/api/v1/image/assets/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'school-management-system-sms-storage.s3.us-east-1.amazonaws.com',
+      },
     ],
   },
 };

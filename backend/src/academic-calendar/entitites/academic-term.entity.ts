@@ -29,6 +29,7 @@ export class AcademicTerm {
 
   @OneToMany(() => Holiday, (holiday) => holiday.term, {
     cascade: true,
+    eager: true,
   })
   holidays: Holiday[];
 }

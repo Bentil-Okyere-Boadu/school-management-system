@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading } = useQuery({
@@ -67,6 +67,23 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
     return { schoolUsers, isLoading, paginationValues, refetch }
 }
 
+export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: boolean}) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.put(`/school-admin/users/${id}/archive`, {archive: archiveState})
+        }
+    })
+}
+
+export const useResendAdminInvitation = ({id, role}: {id: string, role: string}) => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.post(`/invitations/${role}/resend/${id}`)
+        }
+    })
+}
+
+
  export const useCreateSchool = () => {
     return useMutation({ 
         mutationFn: (schoolDetails: {name: string, address: string, phone: string, email: string}) => {
@@ -79,6 +96,51 @@ export const useInvitation = (role: string) => {
     return useMutation({
         mutationFn: (inviteDetails: {firstName:string, lastName:string, email: string}) => {
             return customAPI.post(`/invitations/${role}`, inviteDetails);
+        }
+    })
+}
+
+export const useGetSchoolAdminInfo = () => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['schoolAdminInfo'],
+        queryFn: () => {
+            return customAPI.get('/school-admin/me');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const schoolAdminInfo = data?.data
+
+    return { schoolAdminInfo, isLoading }
+}
+
+export const useEditSchoolAdminInfo = () => {
+    return useMutation({
+        mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
+            return customAPI.put('/school-admin/profile/me', schoolAdminInfo);
+        }
+    })
+}
+
+export const useUploadFile = (id: string) => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post(`/profiles/school-admin/${id}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteProfileImage = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/profiles/school-admin/${id}/avatar`)
         }
     })
 }
@@ -125,27 +187,6 @@ export const useDeleteFeeStructure = () => {
     })
 }
 
-export const useGetSchoolAdminInfo = () => {
-    const { data, isLoading } = useQuery({
-        queryKey: ['schoolAdminInfo'],
-        queryFn: () => {
-            return customAPI.get('/school-admin/me');
-        },
-        refetchOnWindowFocus: true
-    })
-
-    const schoolAdminInfo = data?.data
-
-    return { schoolAdminInfo, isLoading }
-}
-
-export const useEditSchoolAdminInfo = () => {
-    return useMutation({
-        mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
-            return customAPI.put('/school-admin/profile/me', schoolAdminInfo);
-        }
-    })
-}
 
 /**
  * GRADING SYSTEM CRUD
@@ -270,6 +311,47 @@ export const useEditTerm = (id: string) => {
     return useMutation({
         mutationFn: (term: Partial<Term>) => {
             return customAPI.put(`/academic-calendar/term/${id}`, term);
+        }
+    })
+}
+
+/**
+ * CLASS LEVELS CRUD
+ */
+export const useGetClassLevels = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['myClassLevels'],
+        queryFn: () => {
+            return customAPI.get('/class-level');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const classLevels = data?.data as ClassLevel[] || [] ;
+
+    return { classLevels, isLoading, refetch }
+}
+
+export const useCreateClassLevel = () => {
+    return useMutation({
+        mutationFn: (classLevel: Partial<ClassLevel>) => {
+            return customAPI.post('/class-level', classLevel);
+        }
+    })
+}
+
+export const useDeleteClassLevel = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/class-level/${id}`)
+        }
+    })
+}
+
+export const useEditClassLevel = (id: string) => {
+    return useMutation({
+        mutationFn: (classLevel: Partial<ClassLevel>) => {
+            return customAPI.patch(`/class-level/${id}`, classLevel);
         }
     })
 }

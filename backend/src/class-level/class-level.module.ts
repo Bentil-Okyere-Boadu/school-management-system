@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClassLevel } from './class-level.entity';
+import { ClassLevelService } from './class-level.service';
+import { Teacher } from '../teacher/teacher.entity';
+import { Student } from '../student/student.entity';
+import { ClassLevelController } from './class-level.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ClassLevel])],
-  exports: [TypeOrmModule],
+  imports: [TypeOrmModule.forFeature([ClassLevel, Teacher, Student])],
+  providers: [ClassLevelService],
+  exports: [ClassLevelService],
+  controllers: [ClassLevelController],
 })
 export class ClassLevelModule {}

@@ -94,11 +94,11 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
             <Menu.Target>
               <div className="flex gap-3 cursor-pointer">
                 <Image
-                  src={NoProfileImg}
+                  src={user?.profile?.avatarUrl || NoProfileImg.src}
                   width={100}
                   height={100}
                   alt="User Avatar"
-                  className="w-11 h-11 rounded-full"
+                  className="w-11 h-11 rounded-full object-cover"
                 />
                 <div className="flex flex-col">
                   <span className="text-base text-neutral-800">{user?.firstName} {user?.lastName}</span>

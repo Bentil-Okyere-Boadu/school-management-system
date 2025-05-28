@@ -7,7 +7,11 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SchoolService } from './school.service';
 import { School } from './school.entity';
 import { RolesGuard } from 'src/auth/roles.guard';
@@ -19,10 +23,24 @@ import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jw
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Teacher } from 'src/teacher/teacher.entity';
+import { Student } from 'src/student/student.entity';
+import { Repository } from 'typeorm';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Controller('schools')
 export class SchoolController {
-  constructor(private readonly schoolService: SchoolService) {}
+  constructor(
+    private readonly schoolService: SchoolService,
+    @InjectRepository(Teacher)
+    private readonly teacherRepository: Repository<Teacher>,
+    @InjectRepository(Student)
+    private readonly studentRepository: Repository<Student>,
+    @InjectRepository(School)
+    private readonly schoolRepository: Repository<School>,
+    private readonly objectStorageService: ObjectStorageServiceService,
+  ) {}
 
   /**
    * Create a new school
@@ -47,6 +65,69 @@ export class SchoolController {
   findAll(): Promise<School[]> {
     return this.schoolService.findAll();
   }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('dashboard')
+  async getDashboardData() {
+    const [totalSchools, totalTeachers, totalStudents] = await Promise.all([
+      this.schoolRepository.count(),
+      this.teacherRepository.count(),
+      this.studentRepository.count(),
+    ]);
+
+    // Mock attendance for now
+    const averageAttendanceRate = 82; // or fetch if you have a service
+
+    // Mock performance data for now
+    const performance = [
+      {
+        schoolName: 'Bay Christian Int. School',
+        topPerforming: 52,
+        lowPerforming: 18,
+      },
+      {
+        schoolName: 'William Paden Elementary School',
+        topPerforming: 70,
+        lowPerforming: 30,
+      },
+      {
+        schoolName: 'Jefferson Elementary School',
+        topPerforming: 42,
+        lowPerforming: 10,
+      },
+      {
+        schoolName: 'Emerson Elementary School',
+        topPerforming: 85,
+        lowPerforming: 5,
+      },
+      {
+        schoolName: 'King Child Development Center',
+        topPerforming: 92,
+        lowPerforming: 50,
+      },
+    ];
+
+    return {
+      totalSchools,
+      totalTeachers,
+      totalStudents,
+      averageAttendanceRate,
+      performance,
+    };
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('logo')
+  @Roles('school_admin')
+  async deleteLogo(@CurrentUser() user: SchoolAdmin) {
+    const school = await this.schoolService.deleteLogo(user.school.id);
+
+    return {
+      message: 'School logo deleted successfully',
+      school,
+    };
+  }
+
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id')
   @Roles('super_admin')
@@ -62,5 +143,43 @@ export class SchoolController {
   @Roles('super_admin')
   remove(@Param('id') id: string): Promise<void> {
     return this.schoolService.remove(id);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('logo')
+  @Roles('school_admin')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadLogo(
+    @CurrentUser() user: SchoolAdmin,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const school = await this.schoolService.findOne(user.school.id);
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    const { path: logoPath, url: logoUrl } =
+      await this.objectStorageService.uploadProfileImage(file, school.id);
+
+    if (school.logoPath) {
+      await this.objectStorageService.deleteProfileImage(
+        school.id,
+        school.logoPath,
+      );
+    }
+
+    school.logoPath = logoPath;
+    school.mediaType = file.mimetype;
+    await this.schoolRepository.save(school);
+
+    return {
+      message: 'School logo uploaded successfully',
+      logoUrl,
+      school,
+    };
   }
 }

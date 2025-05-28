@@ -14,6 +14,7 @@ import { APIFeatures, QueryString } from '../common/api-features/api-features';
 import { School } from 'src/school/school.entity';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { ProfileService } from 'src/profile/profile.service';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Injectable()
 export class SuperAdminService {
@@ -26,22 +27,20 @@ export class SuperAdminService {
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
     private readonly profileService: ProfileService,
+    private readonly objectStorageService: ObjectStorageServiceService,
   ) {}
 
   async findAllUsers(queryString: QueryString) {
     let isArchived = false;
     if (queryString.status === 'archived') {
       isArchived = true;
-    } else if (queryString.status === 'active' || !queryString.status) {
-      isArchived = false;
-    } else {
-      isArchived = false;
     }
 
     const baseQuery = this.adminRepository
       .createQueryBuilder('admin')
       .leftJoinAndSelect('admin.role', 'role')
       .leftJoinAndSelect('admin.school', 'school')
+      .leftJoinAndSelect('admin.profile', 'profile')
       .where('admin.isArchived = :isArchived', { isArchived });
 
     const featuresWithoutPagination = new APIFeatures(
@@ -58,6 +57,24 @@ export class SuperAdminService {
     const featuresWithPagination = featuresWithoutPagination.paginate();
     const data = await featuresWithPagination.getQuery().getMany();
 
+    const profileIds = data
+      .map((admin) => admin.profile?.id)
+      .filter((id): id is string => !!id);
+
+    const profilesWithUrls =
+      await this.profileService.getProfilesWithImageUrls(profileIds);
+
+    const profileUrlMap = new Map(profilesWithUrls.map((p) => [p.id, p]));
+
+    for (const admin of data) {
+      if (admin.profile?.id) {
+        const enrichedProfile = profileUrlMap.get(admin.profile.id);
+        if (enrichedProfile) {
+          admin.profile = enrichedProfile;
+        }
+      }
+    }
+
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
     const totalPages = Math.ceil(total / limit);
@@ -72,7 +89,6 @@ export class SuperAdminService {
       },
     };
   }
-
   async findAllSchools(queryString: QueryString) {
     const query = this.schoolRepository.createQueryBuilder('school');
 
@@ -83,7 +99,25 @@ export class SuperAdminService {
       .limitFields()
       .paginate();
 
-    return await features.getQuery().getMany();
+    const schools = await features.getQuery().getMany();
+
+    await Promise.all(
+      schools.map(async (school) => {
+        if (school.logoPath) {
+          try {
+            school.logoUrl = await this.objectStorageService.getSignedUrl(
+              school.logoPath,
+            );
+          } catch (error) {
+            this.logger.warn(
+              `Failed to get signed URL for school ${school.id}: ${error}`,
+            );
+          }
+        }
+      }),
+    );
+
+    return schools;
   }
   async getMe(user: SuperAdmin): Promise<SuperAdmin> {
     const superAdmin = await this.superAdminRepository.findOne({
@@ -95,6 +129,12 @@ export class SuperAdminService {
       throw new NotFoundException(
         `Super Admin with ID ${superAdmin} not found`,
       );
+    }
+    if (superAdmin?.profile?.id) {
+      const profileWithUrl = await this.profileService.getProfileWithImageUrl(
+        superAdmin.profile.id,
+      );
+      superAdmin.profile = profileWithUrl;
     }
 
     return superAdmin;
@@ -167,5 +207,9 @@ export class SuperAdminService {
       this.superAdminRepository,
       ['role', 'profile'],
     );
+  }
+
+  getRepository(): Repository<SuperAdmin> {
+    return this.superAdminRepository;
   }
 }

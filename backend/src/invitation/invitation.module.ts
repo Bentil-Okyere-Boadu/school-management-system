@@ -19,6 +19,7 @@ import { PassportModule } from '@nestjs/passport';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { TeacherService } from 'src/teacher/teacher.service';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { TeacherService } from 'src/teacher/teacher.service';
     TeacherService,
     SchoolAdminService,
     EmailService,
+    ObjectStorageServiceService,
     ProfileService,
     SchoolAdminAuthService,
     AuthService,

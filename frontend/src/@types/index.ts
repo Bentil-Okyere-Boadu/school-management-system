@@ -13,6 +13,9 @@ export interface User {
   role: Role;
   status: string;
   school: School;
+  profile: {
+    avatarUrl?: string;
+  }
 }
 
 export type AuthCredentials = Pick<User, "email" | "password">;
@@ -77,7 +80,7 @@ export interface School {
   phone: string;
   email: string;
   schoolCode: string;
-  classLevels: string[]; 
+  classLevels: ClassLevel[]; 
   admissionPolicies: string[]; 
   gradingSystems: GradingSystem[];
   feeStructures: FeeStructure[];
@@ -125,4 +128,10 @@ export interface ErrorResponse {
       message: string;
     };
   };
+}
+
+export interface ClassLevel {
+  id: string;
+  name: string;
+  description: string;
 }

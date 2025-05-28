@@ -56,7 +56,7 @@ export const ConfigurationTabSection: React.FC = () => {
 
         setCalendarOptions(options);
 
-        if (calendars.length > 0 && isUseFirstCalendar) {
+        if ((calendars.length > 0 && isUseFirstCalendar) || calendars.length === 1) {
             setSelectedAcademicCalendar(calendars[0].id);
             setSelectedCalendarData(calendars[0]);
         } else if (!isUseFirstCalendar) {
@@ -247,7 +247,7 @@ export const ConfigurationTabSection: React.FC = () => {
         <div className="pb-8">
             <h1 className="text-md font-semibold text-neutral-800 mb-2">Academic Calendar</h1>
             <div className="flex items-center justify-between">
-                <CustomSelectTag options={calendarOptions} value={selectedAcademicCalendar} onOptionItemClick={handleAcademicCalendarChange} />
+                {calendars?.length > 0 ? <CustomSelectTag options={calendarOptions} value={selectedAcademicCalendar} onOptionItemClick={handleAcademicCalendarChange} /> : <div></div>}
                 <CustomButton variant="outline" className="!py-1" text="Create Calendar" onClick={() => onAddNewCalendar()} />
             </div>
 

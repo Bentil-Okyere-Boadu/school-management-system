@@ -9,6 +9,7 @@ import { School } from 'src/school/school.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 @Injectable()
 export class SchoolAdminService {
   private readonly logger = new Logger(SchoolAdminService.name);
@@ -22,6 +23,7 @@ export class SchoolAdminService {
     private teacherRepository: Repository<Teacher>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
+    private readonly objectStorageService: ObjectStorageServiceService,
     private readonly profileService: ProfileService,
   ) {}
 
@@ -92,6 +94,110 @@ export class SchoolAdminService {
     };
   }
 
+  /* async findAllUsers(schoolId: string, queryString: QueryString) {
+  let isArchived = false;
+  if (queryString.status === 'archived') {
+    isArchived = true;
+  } else if (queryString.status === 'active' || !queryString.status) {
+    isArchived = false;
+  }
+
+  // Build students query
+  const studentsQuery = this.studentRepository
+    .createQueryBuilder('student')
+    .leftJoinAndSelect('student.role', 'role')
+    .leftJoinAndSelect('student.school', 'school')
+    .leftJoinAndSelect('student.profile', 'profile')
+    .where('student.school.id = :schoolId', { schoolId })
+    .andWhere('student.isArchived = :isArchived', { isArchived });
+
+  const teachersQuery = this.teacherRepository
+    .createQueryBuilder('teacher')
+    .leftJoinAndSelect('teacher.role', 'role')
+    .leftJoinAndSelect('teacher.school', 'school')
+    .leftJoinAndSelect('teacher.profile', 'profile')
+    .where('teacher.school.id = :schoolId', { schoolId })
+    .andWhere('teacher.isArchived = :isArchived', { isArchived });
+
+  // Apply features
+  const [students, teachers]: [Student[], Teacher[]] = await Promise.all([
+    new APIFeatures(studentsQuery.clone(), queryString)
+      .filter()
+      .sort()
+      .search()
+      .limitFields()
+      .paginate()
+      .getQuery()
+      .getMany(),
+
+    new APIFeatures(teachersQuery.clone(), queryString)
+      .filter()
+      .sort()
+      .search()
+      .limitFields()
+      .paginate()
+      .getQuery()
+      .getMany(),
+  ]);
+
+  // Get profileIds for signed URLs
+  const profileIds = [
+    ...students.map((s) => s.profile?.id).filter(Boolean),
+    ...teachers.map((t) => t.profile?.id).filter(Boolean),
+  ];
+
+  const profilesWithUrls = await this.profileService.getProfilesWithImageUrls(profileIds);
+
+  const profileMap = new Map(profilesWithUrls.map((p) => [p.id, p]));
+
+  // Attach avatarUrl to student/teacher profiles
+  const studentsWithType = students.map((student) => ({
+    ...student,
+    userType: 'student',
+    profile: student.profile?.id ? profileMap.get(student.profile.id) : undefined,
+  }));
+
+  const teachersWithType = teachers.map((teacher) => ({
+    ...teacher,
+    userType: 'teacher',
+    profile: teacher.profile?.id ? profileMap.get(teacher.profile.id) : undefined,
+  }));
+
+  // Pagination and metadata
+  const [studentsCount, teachersCount] = await Promise.all([
+    this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoin('student.school', 'school')
+      .where('student.school.id = :schoolId', { schoolId })
+      .andWhere('student.isArchived = :isArchived', { isArchived })
+      .getCount(),
+
+    this.teacherRepository
+      .createQueryBuilder('teacher')
+      .leftJoin('teacher.school', 'school')
+      .where('teacher.school.id = :schoolId', { schoolId })
+      .andWhere('teacher.isArchived = :isArchived', { isArchived })
+      .getCount(),
+  ]);
+
+  const page = parseInt(queryString.page ?? '1', 10);
+  const limit = parseInt(queryString.limit ?? '20', 10);
+  const total = studentsCount + teachersCount;
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    data: [...studentsWithType, ...teachersWithType],
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+      studentsCount,
+      teachersCount,
+    },
+  };
+}
+*/
   async findAllUsers(schoolId: string, queryString: QueryString) {
     let isArchived = false;
     if (queryString.status === 'archived') {
@@ -197,7 +303,12 @@ export class SchoolAdminService {
         'feeStructures',
         'profile',
         'academicCalendars',
+        'academicCalendars.terms.holidays',
         'classLevels',
+        'classLevels.teachers',
+        'classLevels.students',
+        'students',
+        'teachers',
       ],
     });
 
@@ -205,13 +316,72 @@ export class SchoolAdminService {
       throw new NotFoundException(`School with ID ${user.school.id} not found`);
     }
 
-    return school;
+    const signedAdmissionPolicies = await Promise.all(
+      school.admissionPolicies.map(async (policy) => {
+        const result = { ...policy } as typeof policy & {
+          documentUrl?: string;
+        };
+        if (policy.documentPath) {
+          try {
+            result.documentUrl = await this.objectStorageService.getSignedUrl(
+              policy.documentPath,
+              86400, // 24 hours
+            );
+          } catch {
+            // If there's an error getting the signed URL, we just continue without it
+            this.logger.warn(
+              `Failed to get signed URL for admission policy document: ${policy.id}`,
+            );
+          }
+        }
+        return result;
+      }),
+    );
+
+    const signedProfile = school.profile
+      ? {
+          ...school.profile,
+          avatarUrl: school.profile.avatarPath
+            ? await this.objectStorageService.getSignedUrl(
+                school.profile.avatarPath,
+              )
+            : undefined,
+        }
+      : undefined;
+
+    return {
+      ...school,
+      admissionPolicies: signedAdmissionPolicies,
+      profile: signedProfile,
+    };
   }
-  getMySchool(user: SchoolAdmin) {
+
+  async getMySchool(user: SchoolAdmin) {
     if (!user.school) {
       throw new NotFoundException('School not found for this admin');
     }
-    return user.school;
+
+    const school = await this.schoolRepository.findOne({
+      where: { id: user.school.id },
+    });
+
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    if (school.logoPath) {
+      try {
+        school.logoUrl = await this.objectStorageService.getSignedUrl(
+          school.logoPath,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to get signed URL for school logo: ${school.id}${error}`,
+        );
+      }
+    }
+
+    return school;
   }
   async getMyProfile(user: SchoolAdmin) {
     if (!user) {
@@ -220,8 +390,14 @@ export class SchoolAdminService {
 
     const adminInfo = await this.schoolAdminRepository.findOne({
       where: { id: user.id },
-      relations: ['profile'],
+      relations: ['role', 'profile'],
     });
+    if (adminInfo?.profile?.id) {
+      const profileWithUrl = await this.profileService.getProfileWithImageUrl(
+        adminInfo.profile.id,
+      );
+      adminInfo.profile = profileWithUrl;
+    }
 
     return adminInfo;
   }
@@ -251,5 +427,9 @@ export class SchoolAdminService {
       return this.teacherRepository.save(teacher);
     }
     throw new NotFoundException(`User with ID ${id} not found`);
+  }
+
+  getRepository(): Repository<SchoolAdmin> {
+    return this.schoolAdminRepository;
   }
 }

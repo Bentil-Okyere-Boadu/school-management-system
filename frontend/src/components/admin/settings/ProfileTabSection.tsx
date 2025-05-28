@@ -1,15 +1,16 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import InputField from "@/components/InputField";
-import SchoolCard from "@/components/common/SchoolCard";
-import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
+import ProfileCard from "@/components/common/ProfileCard";
+import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import NoProfileImg from '@/images/no-profile-img.png' 
 import CustomButton from "@/components/Button";
-import { useEditSchoolAdminInfo } from "@/hooks/school-admin";
+import { useEditSchoolAdminInfo, useUploadFile, useDeleteProfileImage } from "@/hooks/school-admin";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { ErrorResponse } from "@/@types";
-
+import { Dialog } from "@/components/common/Dialog";
+import FileUploadArea from "@/components/common/FileUploadArea";;
 
 interface ProfileTabSectionProps {
   schoolAdminInfo: {
@@ -17,6 +18,7 @@ interface ProfileTabSectionProps {
     name: string;
     firstName: string;
     lastName: string;
+    id: string;
     role: {
       label: string;
     }
@@ -25,6 +27,7 @@ interface ProfileTabSectionProps {
       phoneContact: string;
       streetAddress: string;
       optionalPhoneContact: string;
+      avatarUrl: string;
     }
   };
 }
@@ -39,6 +42,9 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
   const [address, setAddress] = useState("");
   const [phoneContact, setPhoneContact] = useState("");
   const [optionalPhoneContact, setOptionalPhoneContact] = useState("");
+  const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isConfirmDeleteProfileImageDialogOpen, setIsConfirmDeleteProfileImageDialogOpen] = useState(false);
 
   const prepopulateProfileSettings = () => {
     setFirstName(schoolAdminInfo?.firstName);
@@ -55,36 +61,78 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
     prepopulateProfileSettings()
   }, [])
 
-    const queryClient = useQueryClient();
-    
-    const { mutate: editMutation, isPending } = useEditSchoolAdminInfo();
+  const queryClient = useQueryClient();
+  
+  const { mutate: editMutation, isPending } = useEditSchoolAdminInfo();
 
 
-    const editSchoolAdminInfo = () => {
-      if(firstName && lastName && email) {
-        editMutation({
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          phoneContact: phoneContact,
-          address: address,
-          streetAddress: streetAddress,
-          optionalPhoneContact: optionalPhoneContact,
-        }, {
+  const editSchoolAdminInfo = () => {
+    if(firstName && lastName && email) {
+      editMutation({
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phoneContact: phoneContact,
+        address: address,
+        streetAddress: streetAddress,
+        optionalPhoneContact: optionalPhoneContact,
+      }, {
+        onSuccess: () => {
+          toast.success('Saved successfully.');
+          queryClient.invalidateQueries({ queryKey: ['schoolAdminMe']})
+        },
+        onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+        }
+      })
+    } else {
+        toast.error('Some fields can not be left empty');
+      }
+  }
+
+  const { mutate: uploadFileMutate, isPending: isUploadPending } = useUploadFile(schoolAdminInfo?.id);
+
+  const handleFileSelect = (files: File[]) => {
+    setSelectedFiles(files);
+  };
+
+  const handleUpload = () => {
+    if (selectedFiles?.length > 0) {
+      uploadFileMutate(selectedFiles[0], {
+        onSuccess: () => {
+          toast.success('File uploaded successfully');
+          setIsFileUploadOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['schoolAdminMe']});
+          queryClient.invalidateQueries({ queryKey: ['schoolAdminInfo']});
+        },
+        onError: (error: unknown) => {
+          toast.error(
+            JSON.stringify((error as ErrorResponse)?.response?.data?.message)
+          );
+        }
+      });
+    }
+  };
+
+  const { mutate: deleteProfileImageMutation, isPending: pendingProfileImageDelete } = useDeleteProfileImage();
+
+  const deleteProfileImage = () => {
+      deleteProfileImageMutation(schoolAdminInfo?.id, {
           onSuccess: () => {
-            toast.success('Saved successfully.');
-            queryClient.invalidateQueries({ queryKey: ['schoolAdminMe']})
+            toast.success('Deleted successfully.');
+            setIsConfirmDeleteProfileImageDialogOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['schoolAdminMe']});
+            queryClient.invalidateQueries({ queryKey: ['schoolAdminInfo']});
           },
           onError: (error: unknown) => {
-            toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+              toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
           }
-        })
-      } else {
-          toast.error('Some fields can not be left empty');
-        }
-    }
-
-
+      })
+  }
+  
+  const onDeleteProfileImageClick = () => {
+    setIsConfirmDeleteProfileImageDialogOpen(true);
+  }
 
   return (
     <div className="pb-8">
@@ -95,23 +143,23 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
         <h1 className="text-md font-semibold text-neutral-800 mb-2">My Profile</h1>
         <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-3">
           <div className="flex flex-col w-auto">
-            <SchoolCard
-              key="school-1"
-              logoUrl={NoProfileImg.src}
+            <ProfileCard
+              key="profile-admin-1"
+              logoUrl={schoolAdminInfo?.profile?.avatarUrl || NoProfileImg.src}
               backgroundColor="bg-[#FFF]"
             />
 
-            <div className="flex justify-center gap-2 mt-3">
+            <div className="flex justify-center gap-6 mt-3">
               <CustomUnderlinedButton
                 text="Change Image"
                 textColor="text-gray-500"
-                onClick={() => {}}
+                onClick={() => {setIsFileUploadOpen(true)}}
                 showIcon={true}
               />
               <CustomUnderlinedButton
                 text="Delete"
                 textColor="text-gray-500"
-                onClick={() => {}}
+                onClick={() => {onDeleteProfileImageClick()}}
                 showIcon={true}
               />
             </div>
@@ -168,6 +216,41 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
                 onChange={(e) => {setOptionalPhoneContact(e.target.value)}}
             />
         </div>
+
+        {/* Confirm Upload Profile Dialog */}
+        <Dialog 
+          isOpen={isFileUploadOpen}
+          busy={isUploadPending}
+          dialogTitle="File Upload"
+          saveButtonText="Upload"
+          onClose={() => {setIsFileUploadOpen(false)}} 
+          onSave={() => {handleUpload()}}
+        >
+          <div className="flex flex-col gap-4 my-5">
+            <FileUploadArea onFileSelect={handleFileSelect} accept="image/*" />
+            {selectedFiles.length > 0 && (
+              <div className="text-sm text-gray-700">
+                Selected: <strong>{selectedFiles.map(f => f.name).join(', ')}</strong>
+              </div>
+            )}
+          </div>
+        </Dialog>
+
+        {/* Confirm Delete Profile Dialog */}
+        <Dialog 
+          isOpen={isConfirmDeleteProfileImageDialogOpen}
+          busy={pendingProfileImageDelete}
+          dialogTitle="Confirm Delete"
+          saveButtonText="Delete Image"
+          onClose={() => { setIsConfirmDeleteProfileImageDialogOpen(false)}} 
+          onSave={deleteProfileImage}
+        >
+          <div className="my-3 flex flex-col gap-4">
+            <p className="mt-3 mb-6">
+              Are you sure you want to delete this profile Image? 
+            </p>
+          </div>
+        </Dialog>
     </div>
   );
 };

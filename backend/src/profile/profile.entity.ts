@@ -1,18 +1,32 @@
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { School } from 'src/school/school.entity';
+import { Student } from 'src/student/student.entity';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   OneToOne,
   JoinColumn,
+  VirtualColumn,
 } from 'typeorm';
 
 @Entity()
 export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ nullable: true })
+  avatarPath?: string;
+
+  @Column({ nullable: true })
+  mediaType?: string;
+
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
+  })
+  avatarUrl?: string;
 
   @Column({ nullable: true })
   firstName?: string;
@@ -38,6 +52,14 @@ export class Profile {
   @OneToOne(() => SchoolAdmin, (admin) => admin.profile)
   @JoinColumn()
   schoolAdmin: SchoolAdmin;
+
+  @OneToOne(() => Student, (student) => student.profile)
+  @JoinColumn()
+  student: Student;
+
+  @OneToOne(() => Teacher, (teacher) => teacher.profile)
+  @JoinColumn()
+  teacher: Teacher;
 
   @OneToOne(() => SuperAdmin, (admin) => admin.profile)
   @JoinColumn()

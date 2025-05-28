@@ -24,36 +24,33 @@ export class APIFeatures<T extends ObjectLiteral> {
 
     Object.entries(queryObj).forEach(([key, value]) => {
       if (value !== undefined) {
-        // Check for comparison operators (e.g., createdAt_ge)
-        const match = key.match(/^([a-zA-Z]+)_(ge|le|gt|lt)$/); // regex to match _ge, _le, _gt, _lt
-
+        // Match comparison operators (e.g., createdAt_ge)
+        const match = key.match(/^([a-zA-Z]+)_(ge|le|gt|lt)$/);
         if (match) {
           const [_, field, operator] = match;
-          let conditionValue = value;
+          const conditionValue = value;
 
-          // Construct the operator string (>=, <=, >, <)
-          let operatorString: string;
-          switch (operator) {
-            case 'ge':
-              operatorString = '>=';
-              break;
-            case 'le':
-              operatorString = '<=';
-              break;
-            case 'gt':
-              operatorString = '>';
-              break;
-            case 'lt':
-              operatorString = '<';
-              break;
-            default:
-              operatorString = '=';
-          }
+          const operatorMap: Record<string, string> = {
+            ge: '>=',
+            le: '<=',
+            gt: '>',
+            lt: '<',
+          };
+
+          const operatorString = operatorMap[operator] ?? '=';
 
           this.query = this.query.andWhere(
             `${this.query.alias}.${field} ${operatorString} :${field}`,
             { [field]: conditionValue },
           );
+        } else if (key === 'role') {
+          this.query = this.query.andWhere(`role.id = :roleId`, {
+            roleId: value,
+          });
+        } else if (key === 'roleLabel') {
+          this.query = this.query.andWhere(`role.label = :roleLabel`, {
+            roleLabel: value,
+          });
         } else {
           this.query = this.query.andWhere(
             `${this.query.alias}.${key} = :${key}`,

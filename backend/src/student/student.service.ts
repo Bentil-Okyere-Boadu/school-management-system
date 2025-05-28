@@ -101,11 +101,9 @@ export class StudentService {
     });
 
     if (!student) {
-      // For security reasons, don't reveal that the user doesn't exist
-      return {
-        success: true,
-        message: 'If your email is registered, you will receive a PIN reset',
-      };
+      throw new NotFoundException(
+        'No user found with the provided credentials',
+      );
     }
 
     // Generate new PIN
