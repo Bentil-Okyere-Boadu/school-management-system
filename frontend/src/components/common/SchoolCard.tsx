@@ -30,10 +30,10 @@ const SchoolCard: React.FC<SchoolCardProps> = ({
       <div className="flex relative flex-col px-3.5 py-2.5 aspect-[1.065] w-[164px] max-md:px-5">
         <Image
           src={logoUrl}
-          width={100}
-          height={100}
+          width={300}
+          height={300}
           alt={`${schoolName} logo`}
-          className="object-contain w-full rounded-full aspect-[1.03]"
+          className="object-cover w-full rounded-full aspect-[1.03]"
         />
         {showSchoolName && <h3 className="relative mt-1">{schoolName}</h3>}
       </div>
