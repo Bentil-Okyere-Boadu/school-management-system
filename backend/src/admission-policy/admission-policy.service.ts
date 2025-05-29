@@ -103,8 +103,8 @@ export class AdmissionPolicyService {
         policy.documentPath,
       );
 
-      policy.documentPath = undefined;
-      policy.mediaType = undefined;
+      policy.documentPath = null;
+      policy.mediaType = null;
       return this.admissionPolicyRepository.save(policy);
     }
 
