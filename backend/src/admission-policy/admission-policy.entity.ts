@@ -18,11 +18,11 @@ export class AdmissionPolicy {
   @Column({ nullable: true })
   description?: string;
 
-  @Column({ nullable: true })
-  documentPath?: string;
+  @Column({ type: 'varchar', nullable: true })
+  documentPath?: string | null;
 
-  @Column({ nullable: true })
-  mediaType?: string;
+  @Column({ type: 'varchar', nullable: true })
+  mediaType?: string | null;
 
   @VirtualColumn({
     query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
