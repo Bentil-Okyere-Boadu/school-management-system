@@ -30,9 +30,9 @@ export const useGetMe = () => {
     return { me, isPending }
 }
 
-export const useGetSchoolUsers = (page=1,search: string = "", status: string = "", role: string = "", limit?: number ) => {
+export const useGetSchoolUsers = (page=1,search: string = "", status: string = "", role: string = "", roleLabel?: string,  limit?: number ) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allSchoolUsers', { page, search, status, role, limit }],
+        queryKey: ['allSchoolUsers', { page, search, status, role, roleLabel, limit }],
         queryFn: () => {
             const queryBuilder = [];
             if(search) {
@@ -51,6 +51,10 @@ export const useGetSchoolUsers = (page=1,search: string = "", status: string = "
                 queryBuilder.push(`page=${page}`);
             }
             
+            if(roleLabel) {
+                queryBuilder.push(`roleLabel=${roleLabel}`);
+            }
+
             if(limit) {
                 queryBuilder.push(`limit=${limit}`);
             }
