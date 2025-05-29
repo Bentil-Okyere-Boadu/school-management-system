@@ -4,7 +4,7 @@ import SchoolCard from "../../common/SchoolCard";
 import { FeeStructureTable } from "./FeeStructureTable";
 import { GradingSystemTable } from "./GradingSystemTable";
 import DocumentItem from "../../common/DocumentItem";
-import { School } from "@/@types";
+import { AdmissionPolicy, School } from "@/@types";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 import { ClassLevelTable } from "./ClassLevelsTable";
 
@@ -13,12 +13,17 @@ interface SchoolSettingsTabProps {
 }
 
 export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabProps> = ({ schoolData }) => {
-  const documents: {
-    id: number;
-    name: string;
-    width: string;
-}[] = [];
 
+  const onHandleDocumentClick = (doc: AdmissionPolicy) => {
+    const link = document.createElement("a");
+    link.href = doc.documentUrl;
+    link.download = doc.name;
+    link.target = "_blank"; 
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+    
   return (
     <div className="pb-8">
       <h1 className="text-md font-semibold text-neutral-800 mb-2">School Logo</h1>
@@ -46,15 +51,15 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabProps> = ({ sch
       <div className="mt-8">
         <h1 className="text-md font-semibold text-neutral-800 mb-2">Admission Policies</h1>
         <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800">
-          {documents.map((doc) => (
+          {schoolData?.admissionPolicies?.map((doc) => (
             <DocumentItem
               key={doc.id}
               name={doc.name}
-              width={doc.width}
+              onCardClick={() => {onHandleDocumentClick(doc)}}
             />
           ))}
         </section>
-          {documents?.length === 0 && (
+          {schoolData?.admissionPolicies?.length === 0 && (
             <NoAvailableEmptyState message="No admission policies available." />
           )}
       </div>
