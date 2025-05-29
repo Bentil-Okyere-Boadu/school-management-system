@@ -18,6 +18,12 @@ export interface User {
   }
 }
 
+export interface Student extends User {
+  studentId: string;
+  isInvitationAccepted: boolean;
+  isArchived: boolean;
+}
+
 export type AuthCredentials = Pick<User, "email" | "password">;
 export type SignUpPayload = Pick<User, "email" | "password" | "name" | "role">;
 
