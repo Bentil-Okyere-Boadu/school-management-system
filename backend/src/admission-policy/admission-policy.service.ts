@@ -84,10 +84,7 @@ export class AdmissionPolicyService {
     return result;
   }
 
-  async removeDocument(
-    id: string,
-    admin: SchoolAdmin,
-  ): Promise<AdmissionPolicy> {
+  async removeDocument(id: string, admin: SchoolAdmin) {
     const policy = await this.admissionPolicyRepository.findOne({
       where: { id, school: { id: admin.school.id } },
     });
@@ -105,10 +102,9 @@ export class AdmissionPolicyService {
 
       policy.documentPath = null;
       policy.mediaType = null;
-      return this.admissionPolicyRepository.save(policy);
     }
-
-    return policy;
+    await this.admissionPolicyRepository.remove(policy);
+    return { message: 'Policy deleted successfully' };
   }
 
   async findAll(
