@@ -81,7 +81,7 @@ export interface School {
   email: string;
   schoolCode: string;
   classLevels: ClassLevel[]; 
-  admissionPolicies: string[]; 
+  admissionPolicies: AdmissionPolicy[]; 
   gradingSystems: GradingSystem[];
   feeStructures: FeeStructure[];
   profile: object | null;
@@ -135,4 +135,13 @@ export interface ClassLevel {
   id: string;
   name: string;
   description: string;
+}
+
+export interface AdmissionPolicy {
+  id: string;
+  name: string;
+  description: string | null;
+  documentPath: string;
+  mediaType: string;
+  documentUrl: string;
 }

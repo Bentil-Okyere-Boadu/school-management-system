@@ -130,11 +130,13 @@ export const ConfigurationTabSection: React.FC = () => {
 
     const createCalendar = () => {
         createCalendarMutation({ name: calendarName}, {
-            onSuccess: () => {
+            onSuccess: (data: {data: {id: string}}) => {
                 toast.success('Successfully created calendar.')
                 setIsAcademicCalendarOpen(false);
                 setIsUseFirstCalendar(false);
                 refetchCalendars();
+                const newCalendarId = data.data.id;
+                setSelectedAcademicCalendar(newCalendarId);
             },
             onError: (error: unknown) => {
                 toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
