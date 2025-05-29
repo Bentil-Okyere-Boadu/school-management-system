@@ -7,7 +7,6 @@ import CustomUnderlinedButton from "../CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import { GradingSystemTable } from "./GradingSystemTable";
 import SchoolCard from "@/components/common/SchoolCard";
-// import DocumentItem from "@/components/common/DocumentItem";
 import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
 import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUploadSchoolLogoFile } from "@/hooks/school-admin";
@@ -17,8 +16,8 @@ import { EmailItem } from "./EmailItem";
 import { ClassLevelsTable } from "./ClassLevelsTable";
 import FileUploadArea from "@/components/common/FileUploadArea";
 // import { FeeStructureTable } from "./FeeStructureTable";
-// import { GradingSystemTable } from "./GradingSystemTable";
 import { useQueryClient } from "@tanstack/react-query";
+import { AdmissionPoliciesSection } from "./AdmissionPoliesSection";
 
 interface SchoolSettingsTabSectionProps {
   schoolData: School;
@@ -299,28 +298,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       </div>
 
       <div className="mt-8">
-        <h1 className="text-md font-semibold text-neutral-800">
-          Admission Policies
-        </h1>
-        <CustomUnderlinedButton
-          text="Upload Document"
-          textColor="text-purple-500"
-          onClick={() => {}}
-          icon={<IconUpload size={10} />}
-          showIcon={true}
-        />
-        <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-2">
-          {/* {documents.map((doc) => (
-            <DocumentItem
-              key={doc.id}
-              name={doc.name}
-              width={doc.width}
-              onClose={() => {
-                console.log("clicked");
-              }}
-            />
-          ))} */}
-        </section>
+        <AdmissionPoliciesSection />
       </div>
 
       <div className="mt-8">

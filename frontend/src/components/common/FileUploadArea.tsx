@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
-import { IconX } from '@tabler/icons-react';
+import { IconFile, IconX } from '@tabler/icons-react';
+import Image from "next/image";
 
 interface FileUploadAreaProps {
   onFileSelect: (files: File[]) => void;
@@ -21,9 +22,11 @@ const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   const handleFiles = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
 
-    const fileArray = Array.from(selectedFiles).filter(file =>
-      file.type.startsWith('image/')
-    );
+    
+    // const fileArray = Array.from(selectedFiles).filter(file =>
+    //   file.type.startsWith('image/')
+    // );
+    const fileArray = Array.from(selectedFiles);
 
     const newFiles = multiple ? [...files, ...fileArray] : fileArray;
 
@@ -82,26 +85,41 @@ const FileUploadArea: React.FC<FileUploadAreaProps> = ({
 
       {files.length > 0 ? (
         <div className="flex flex-wrap gap-4 justify-center">
-          {files.map((file, index) => (
-            <div key={index} className="relative w-24 h-24">
-              <img
-                src={URL.createObjectURL(file)}
-                alt={`preview-${index}`}
-                className="w-full h-full object-cover rounded-md"
-              />
-              <button
-                type="button"
-                aria-label="Remove image"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemove(index);
-                }}
-                className="absolute top-1 right-1 bg-white rounded-full p-1 text-gray-700 shadow hover:text-red-500"
-              >
-                <IconX size={18} />
-              </button>
-            </div>
-          ))}
+          {files.map((file, index) => {
+            const isImage = file.type.startsWith('image/');
+            const previewUrl = isImage ? URL.createObjectURL(file) : null;
+
+            return (
+              <div key={index} className="relative w-24 h-24 border rounded-md flex items-center justify-center bg-gray-50">
+                {isImage ? (
+                  <Image
+                    width={100}
+                    height={100}
+                    alt="User Avatar"
+                    src={previewUrl!}
+                    className="w-full h-full object-cover rounded-md shrink-0"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-gray-500">
+                    <IconFile className='h-8 w-8 mb-1' />
+                    <span className="text-xs text-center break-all px-1">{file.name?.slice(0, 40)}</span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  aria-label="Remove file"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(index);
+                  }}
+                  className="absolute top-1 right-1 bg-white rounded-full p-1 text-gray-700 shadow hover:text-red-500"
+                >
+                  <IconX size={18} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className="text-gray-600 text-sm py-5">

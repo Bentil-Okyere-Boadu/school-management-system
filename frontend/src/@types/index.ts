@@ -136,3 +136,12 @@ export interface ClassLevel {
   name: string;
   description: string;
 }
+
+export interface AdmissionPolicy {
+  id: string;
+  name: string;
+  description: string | null;
+  documentPath: string;
+  mediaType: string;
+  documentUrl: string;
+}

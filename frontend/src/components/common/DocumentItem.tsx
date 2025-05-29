@@ -5,16 +5,19 @@ interface DocumentItemProps {
   name: string;
   width?: string;
   onClose?: () => void;
+  onCardClick?: () => void; 
 }
 
 const DocumentItem: React.FC<DocumentItemProps> = ({
   name,
   width = "auto",
   onClose,
+  onCardClick,
 }) => {
   return (
     <article
-      className="flex justify-between items-center gap-2 self-stretch px-2 py-2 my-auto bg-gray-200 rounded"
+      onClick={onCardClick}
+      className={`flex justify-between items-center gap-2 self-stretch px-2 py-2 my-auto bg-gray-200 rounded ${onCardClick ? 'cursor-pointer hover:shadow-sm': ''}`}
       style={{ width }}
     >
       <div className="flex items-center gap-2 overflow-hidden">
@@ -34,8 +37,11 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
 
       {onClose && (
         <button
-          onClick={onClose}
-          className="cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose?.();
+          }}
+          className="cursor-pointer rounded-full p-0.5 bg-[#dadde4]"
           aria-label="Remove document"
         >
          <IconX size={15} className="text-red-600" />
