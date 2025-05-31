@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { DashboardIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
+import NotificationCard from "@/components/common/NotificationCard";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -13,6 +14,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [activeMenuItem, setActiveMenuItem] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
+  const [showNotification, setShowNotification] = useState(false);
 
   const {me} = useGetMe();
 
@@ -127,10 +129,13 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         </div>
       )}
 
-      <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden">
-        <HeaderSection user={me} isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} onToggleSidebar={() => setIsSidebarOpen(true)} />
+      <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden relative">
+        <HeaderSection user={me} isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} 
+        onToggleSidebar={() => setIsSidebarOpen(true)}
+        onNotificationClick={() => {setShowNotification(!showNotification)}} />
         <main className="flex-1 pt-8 overflow-auto">
           {children}
+          {showNotification && <NotificationCard onClose={() => setShowNotification(false)} />}
         </main>
       </section>
     </div>
