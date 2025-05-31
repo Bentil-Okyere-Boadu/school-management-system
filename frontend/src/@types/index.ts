@@ -16,6 +16,7 @@ export interface User {
   profile: {
     avatarUrl?: string;
   }
+  date: string;
 }
 
 export type AuthCredentials = Pick<User, "email" | "password">;
@@ -144,4 +145,18 @@ export interface AdmissionPolicy {
   documentPath: string;
   mediaType: string;
   documentUrl: string;
+}
+
+export interface SchoolPerformance {
+  schoolName: string;
+  topPerforming: number;
+  lowPerforming: number;
+}
+
+export interface SuperAdminDashStats {
+  totalSchools: number;
+  totalTeachers: number;
+  totalStudents: number;
+  averageAttendanceRate: number;
+  performance: SchoolPerformance[];
 }

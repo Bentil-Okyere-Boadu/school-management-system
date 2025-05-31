@@ -2,17 +2,20 @@
 
 import React from "react";
 import { BarChart } from '@mantine/charts';
+import { SchoolPerformance } from "@/@types";
 
-const CustomBarChart: React.FC = () => {
+interface CustomBarChartProp {
+  barChartData: SchoolPerformance[]
+}
 
-    const data = [
-        { name: 'Bay Christian Int. Sch', 'Top-performing': 1200, 'Low-performing': 200 },
-        { name: 'William Paden Sch', 'Top-performing': 1900,  'Low-performing': 400 },
-        { name: 'Jefferson Elemen Sch', 'Top-performing': 400,  'Low-performing': 200 },
-        { name: 'Emerson Elem Sch', 'Top-performing': 1000, 'Low-performing': 800 },
-        { name: 'King Child Dev Sch', 'Top-performing': 800,  'Low-performing': 1200 },
-        { name: 'Hopeful Data Sch', 'Top-performing': 750, 'Low-performing': 1000 },
-    ];
+const CustomBarChart: React.FC<CustomBarChartProp> = ({barChartData = []}) => {
+
+  // restructure backend data to for barchart consumption
+  const data = barChartData?.map((school) => ({
+    name: school?.schoolName,
+    'Top-performing': school?.topPerforming,
+    'Low-performing': school?.lowPerforming,
+  }));
 
   return (
     <div className="bg-[#fff] p-4 rounded-lg relative">
