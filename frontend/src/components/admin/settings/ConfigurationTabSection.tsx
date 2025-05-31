@@ -302,26 +302,26 @@ export const ConfigurationTabSection: React.FC = () => {
 
                             <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
                                 <InputField
-                                    label="Team Name"
-                                    isTransulent={false}
+                                    label="Term Name"
+                                    isTransulent={true}
                                     value={term.termName}
                                     onChange={() => {}}
                                 />
                                 <InputField
                                     label="Start Date"
-                                    isTransulent={false}
+                                    isTransulent={true}
                                     value={term.startDate}
                                     onChange={() => {}}
                                 />
                                 <InputField
                                     label="End Date"
-                                    isTransulent={false}
+                                    isTransulent={true}
                                     value={term.endDate}
                                     onChange={() => {}}
                                 />
                                  <InputField
                                     label="Are there holidays in this term?"
-                                    isTransulent={false}
+                                    isTransulent={true}
                                     value={term.holidays?.length > 0 ? "Yes" : "No"}
                                     onChange={() => {}}
                                 />
@@ -330,13 +330,13 @@ export const ConfigurationTabSection: React.FC = () => {
                                         <div key={hIndex} className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <InputField
                                                 label="Holiday Name"
-                                                isTransulent={false}
+                                                isTransulent={true}
                                                 value={holiday.name}
                                                 onChange={() => {}}
                                             />
                                             <InputField
                                                 label="Holiday Date"
-                                                isTransulent={false}
+                                                isTransulent={true}
                                                 value={holiday.date}
                                                 onChange={() => {}}
                                             />
