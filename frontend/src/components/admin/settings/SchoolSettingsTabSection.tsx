@@ -3,7 +3,7 @@
 import { IconUpload } from "@tabler/icons-react";
 import React, { useState } from "react";
 import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
-import CustomUnderlinedButton from "../CustomUnderlinedButton";
+import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import { GradingSystemTable } from "./GradingSystemTable";
 import SchoolCard from "@/components/common/SchoolCard";
