@@ -105,7 +105,16 @@ export class SchoolAdminController {
   getMySchool(@CurrentUser() user: SchoolAdmin) {
     return this.schoolAdminService.getMySchool(user);
   }
-
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('users/:id')
+  @Roles('school_admin')
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
+  async getUserById(
+    @Param('id') id: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.schoolAdminService.getUserById(id, admin.school.id);
+  }
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('users/:id/archive')
   @Roles('school_admin')

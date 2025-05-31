@@ -12,6 +12,11 @@ import { School } from '../school/school.entity';
 import { Role } from '../role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
+
 @Entity()
 export class Student {
   @PrimaryGeneratedColumn('uuid')
@@ -25,6 +30,13 @@ export class Student {
 
   @Column({ unique: true })
   email: string;
+
+  @Column({
+    type: 'enum',
+    enum: Gender,
+    nullable: true,
+  })
+  gender: Gender;
 
   @Column()
   password: string; // For PIN storage

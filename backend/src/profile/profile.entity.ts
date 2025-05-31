@@ -35,10 +35,22 @@ export class Profile {
   lastName?: string;
 
   @Column({ nullable: true })
+  otherName?: string;
+
+  @Column({ nullable: true })
   email?: string;
 
   @Column({ nullable: true })
   address?: string;
+
+  @Column({ nullable: true })
+  DateOfBirth?: string;
+
+  @Column({ nullable: true })
+  PlaceOfBirth?: string;
+
+  @Column({ nullable: true })
+  BoxAddress?: string;
 
   @Column({ nullable: true })
   streetAddress?: string;
@@ -48,6 +60,9 @@ export class Profile {
 
   @Column({ nullable: true })
   optionalPhoneContact?: string;
+
+  @Column({ nullable: true })
+  optionalPhoneContactTwo?: string;
 
   @OneToOne(() => SchoolAdmin, (admin) => admin.profile)
   @JoinColumn()
