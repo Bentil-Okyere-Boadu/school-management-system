@@ -59,6 +59,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
       setIsOverviewPage(true);
+    } else if (pathname === "/admin/students") {
+      setActiveMenuItem("Students");
+      setIsOverviewPage(true);
     } 
     
     // Detail Pages
@@ -70,6 +73,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(false);
     } else if (pathname.startsWith("/admin/settings/")) {
       setActiveMenuItem("Settings");
+      setIsOverviewPage(false);
+    } else if (pathname.startsWith("/admin/students/")) {
+      setActiveMenuItem("Students");
       setIsOverviewPage(false);
     } 
     

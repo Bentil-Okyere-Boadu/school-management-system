@@ -8,11 +8,13 @@ import {
   IconSend,
   IconTrashFilled,
 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 import React from "react";
 interface StudentsTableProps {
   students: Student[];
 }
 const StudentsTable = ({ students }: StudentsTableProps) => {
+    const router = useRouter()
   return (
     <section className="bg-white">
       <div className="overflow-x-auto">
@@ -67,6 +69,7 @@ const StudentsTable = ({ students }: StudentsTableProps) => {
                             leftSection={
                               <IconEyeFilled size={18} color="#AB58E7" />
                             }
+                            onClick={() => router.push(`/admin/students/${student.id}`)}
                           >
                             Full View
                           </Menu.Item>
