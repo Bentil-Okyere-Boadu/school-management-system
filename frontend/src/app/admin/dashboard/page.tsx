@@ -121,7 +121,7 @@ const AdminDashboard = () => {
     setCurrentPage(1);
   };
 
-  const { schoolUsers, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), "", "", 6);
+  const { schoolUsers, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), "", "", "", 6);
 
   return (
     <div>

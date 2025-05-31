@@ -28,7 +28,7 @@ const UsersPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  const { schoolUsers, paginationValues, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "", 10);
+  const { schoolUsers, paginationValues, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "","",  10);
 
   const statusOptions = [
     { value: "", label: "Status" },
