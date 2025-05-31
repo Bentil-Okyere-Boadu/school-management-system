@@ -383,6 +383,52 @@ export class SchoolAdminService {
 
     return school;
   }
+  async getUserById(userId: string, schoolId: string) {
+    // Try finding a student first
+    const student = await this.studentRepository.findOne({
+      where: {
+        id: userId,
+        school: { id: schoolId },
+      },
+      relations: ['profile'],
+    });
+
+    if (student) {
+      const profileWithUrl = student.profile?.id
+        ? await this.profileService.getProfileWithImageUrl(student.profile.id)
+        : null;
+
+      return {
+        ...student,
+        userType: 'student',
+        profile: profileWithUrl,
+      };
+    }
+
+    // If not a student, try finding a teacher
+    const teacher = await this.teacherRepository.findOne({
+      where: {
+        id: userId,
+        school: { id: schoolId },
+      },
+      relations: ['role', 'profile', 'school'],
+    });
+
+    if (teacher) {
+      const profileWithUrl = teacher.profile?.id
+        ? await this.profileService.getProfileWithImageUrl(teacher.profile.id)
+        : null;
+
+      return {
+        ...teacher,
+        userType: 'teacher',
+        profile: profileWithUrl,
+      };
+    }
+
+    throw new NotFoundException(`User with ID ${userId} not found`);
+  }
+
   async getMyProfile(user: SchoolAdmin) {
     if (!user) {
       throw new NotFoundException('no admin found');
