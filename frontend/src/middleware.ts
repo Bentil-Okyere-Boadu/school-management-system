@@ -59,7 +59,7 @@ export function handleLoginRedirectAndToken(
     super_admin: "/superadmin/dashboard",
     school_admin: "/admin/dashboard",
     teacher: "/teacher/dashboard",
-    student: "/student/dashboard",
+    student: "/student/profile",
   };
 
   const route = roleToRouteMap[data.data.role.name];
