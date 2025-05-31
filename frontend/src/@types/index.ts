@@ -16,6 +16,7 @@ export interface User {
   profile: {
     avatarUrl?: string;
   }
+  date: string;
 }
 
 export interface Student extends User {
@@ -87,7 +88,7 @@ export interface School {
   email: string;
   schoolCode: string;
   classLevels: ClassLevel[]; 
-  admissionPolicies: string[]; 
+  admissionPolicies: AdmissionPolicy[]; 
   gradingSystems: GradingSystem[];
   feeStructures: FeeStructure[];
   profile: object | null;
@@ -95,6 +96,7 @@ export interface School {
   users: User[]; 
   createdAt: string; 
   updatedAt: string; 
+  logoUrl: string;
 }
 
 export type BadgeVariant =
@@ -140,4 +142,27 @@ export interface ClassLevel {
   id: string;
   name: string;
   description: string;
+}
+
+export interface AdmissionPolicy {
+  id: string;
+  name: string;
+  description: string | null;
+  documentPath: string;
+  mediaType: string;
+  documentUrl: string;
+}
+
+export interface SchoolPerformance {
+  schoolName: string;
+  topPerforming: number;
+  lowPerforming: number;
+}
+
+export interface SuperAdminDashStats {
+  totalSchools: number;
+  totalTeachers: number;
+  totalStudents: number;
+  averageAttendanceRate: number;
+  performance: SchoolPerformance[];
 }

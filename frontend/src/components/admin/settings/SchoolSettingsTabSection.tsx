@@ -7,18 +7,24 @@ import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import { GradingSystemTable } from "./GradingSystemTable";
 import SchoolCard from "@/components/common/SchoolCard";
-// import DocumentItem from "@/components/common/DocumentItem";
 import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
-import { useDeleteFeeStructure, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure } from "@/hooks/school-admin";
+import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUploadSchoolLogoFile } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
-import { ErrorResponse, FeeStructure } from "@/@types";
+import { ErrorResponse, FeeStructure, School } from "@/@types";
 import { EmailItem } from "./EmailItem";
 import { ClassLevelsTable } from "./ClassLevelsTable";
+import FileUploadArea from "@/components/common/FileUploadArea";
 // import { FeeStructureTable } from "./FeeStructureTable";
-// import { GradingSystemTable } from "./GradingSystemTable";
+import { useQueryClient } from "@tanstack/react-query";
+import { AdmissionPoliciesSection } from "./AdmissionPoliesSection";
 
-export const SchoolSettingsTabSection: React.FC = () => {
+interface SchoolSettingsTabSectionProps {
+  schoolData: School;
+}
+
+
+export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> = ({schoolData}) => {
   const [isFeeStructureDialogOpen, setIsFeeStructureDialogOpen] =
     useState(false);
   const [selectedDuration, setSelectedDuration] = useState<string>("daily");
@@ -31,9 +37,12 @@ export const SchoolSettingsTabSection: React.FC = () => {
     isConfirmDeleteFeeStructureDialogOpen,
     setIsConfirmDeleteFeeStructureDialogOpen,
   ] = useState(false);
-    const [feeId, setFeeId] = useState('');
-    const [editMode, setEditMode] = useState(false);
-    const [isSendReminderDialogOpen, setIsSendReminderDialogOpen] = useState(false);
+  const [feeId, setFeeId] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [isSendReminderDialogOpen, setIsSendReminderDialogOpen] = useState(false);
+  const [isSchoolLogoUploadOpen, setIsSchoolLogoUploadOpen] = useState(false);
+  const [selectedSchoolLogoFiles, setSelectedSchoolLogoFiles] = useState<File[]>([]);
+  const [isConfirmDeleteSchoolLogoDialogOpen, setIsConfirmDeleteSchoolLogoDialogOpen] = useState(false);
 
 
   const appliesTo = [
@@ -173,6 +182,45 @@ export const SchoolSettingsTabSection: React.FC = () => {
     setSelectedClasses(value);
   };
 
+  const { mutate: uploadSchoolLogoFileMutate, isPending: isSchoolLogoUploadPending } = useUploadSchoolLogoFile();
+  const queryClient = useQueryClient();
+  
+  const handleSchoolLogoFileSelect = (files: File[]) => {
+    setSelectedSchoolLogoFiles(files);
+  };
+
+  const handleSchoolLogoUpload = () => {
+    if (selectedSchoolLogoFiles?.length > 0) {
+      uploadSchoolLogoFileMutate(selectedSchoolLogoFiles[0], {
+        onSuccess: () => {
+          toast.success('File uploaded successfully');
+          setIsSchoolLogoUploadOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['mySchool']});
+        },
+        onError: (error: unknown) => {
+          toast.error(
+            JSON.stringify((error as ErrorResponse)?.response?.data?.message)
+          );
+        }
+      });
+    }
+  };
+
+  const { mutate: deleteSchoolLogoMutation, isPending: pendingSchoolLogoDelete } = useDeleteSchoolLogo();
+
+  const deleteSchoolLogo = () => {
+    deleteSchoolLogoMutation(null as unknown as void, {
+      onSuccess: () => {
+        toast.success('Deleted successfully.');
+        setIsConfirmDeleteSchoolLogoDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['mySchool']});
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      }
+    })
+  }
+
   return (
     <div className="pb-16">
       {/* <div className="flex justify-end">
@@ -250,64 +298,48 @@ export const SchoolSettingsTabSection: React.FC = () => {
       </div>
 
       <div className="mt-8">
-        <h1 className="text-md font-semibold text-neutral-800">
-          Admission Policies
-        </h1>
-        <CustomUnderlinedButton
-          text="Upload Document"
-          textColor="text-purple-500"
-          onClick={() => {}}
-          icon={<IconUpload size={10} />}
-          showIcon={true}
-        />
-        <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-2">
-          {/* {documents.map((doc) => (
-            <DocumentItem
-              key={doc.id}
-              name={doc.name}
-              width={doc.width}
-              onClose={() => {
-                console.log("clicked");
-              }}
-            />
-          ))} */}
-        </section>
+        <AdmissionPoliciesSection />
       </div>
 
       <div className="mt-8">
         <h1 className="text-md font-semibold text-neutral-800">School Logo</h1>
 
-        <CustomUnderlinedButton
-          text="Upload Logo"
-          textColor="text-purple-500"
-          onClick={() => {}}
-          icon={<IconUpload size={10} />}
-          showIcon={true}
-        />
+        {!schoolData?.logoUrl &&
+          <CustomUnderlinedButton
+            text="Upload Logo"
+            textColor="text-purple-500"
+            onClick={() => {setIsSchoolLogoUploadOpen(true)}}
+            icon={<IconUpload size={10} />}
+            showIcon={true}
+          />
+        }
 
-        <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-3">
-          <div className="flex flex-col w-auto">
-            <SchoolCard
-              key="school-1"
-              logoUrl="https://cdn.builder.io/api/v1/image/assets/TEMP/f33b143daa0a988b8358b2dd952c60f8aadfc974?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
-              backgroundColor="bg-[#FFF]"
-            />
-            <div className="flex justify-between mt-3">
-              <CustomUnderlinedButton
-                text="Delete Logo"
-                textColor="text-gray-500"
-                onClick={() => {}}
-                showIcon={true}
+        {schoolData?.logoUrl && (
+          <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-3">
+            <div className="flex flex-col w-auto">
+              <SchoolCard
+                key="school-1"
+                logoUrl={schoolData?.logoUrl}
+                backgroundColor="bg-[#FFF]"
               />
-              <CustomUnderlinedButton
-                text="Change Logo"
-                textColor="text-gray-500"
-                onClick={() => {}}
-                showIcon={true}
-              />
+              <div className="flex justify-between mt-3">
+                <CustomUnderlinedButton
+                  text="Delete Logo"
+                  textColor="text-gray-500"
+                  onClick={() => {setIsConfirmDeleteSchoolLogoDialogOpen(true)}}
+                  showIcon={true}
+                />
+                <CustomUnderlinedButton
+                  text="Change Logo"
+                  textColor="text-gray-500"
+                  onClick={() => {setIsSchoolLogoUploadOpen(true)}}
+                  showIcon={true}
+                />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+          )
+        }
       </div>
 
       {/* Fee structure dialog */}
@@ -454,6 +486,41 @@ export const SchoolSettingsTabSection: React.FC = () => {
           />
         </div>
       </Dialog>
+
+        {/* School Logo Upload Dialog */}
+        <Dialog 
+          isOpen={isSchoolLogoUploadOpen}
+          busy={isSchoolLogoUploadPending}
+          dialogTitle="School Logo Upload"
+          saveButtonText="Upload"
+          onClose={() => {setIsSchoolLogoUploadOpen(false)}} 
+          onSave={() => {handleSchoolLogoUpload()}}
+        >
+          <div className="flex flex-col gap-4 my-5">
+            <FileUploadArea onFileSelect={handleSchoolLogoFileSelect} accept="image/*" />
+            {selectedSchoolLogoFiles?.length > 0 && (
+              <div className="text-sm text-gray-700">
+                Selected: <strong>{selectedSchoolLogoFiles?.map(f => f.name).join(', ')}</strong>
+              </div>
+            )}
+          </div>
+        </Dialog>
+
+        {/* Confirm Delete School logo Dialog */}
+        <Dialog 
+          isOpen={isConfirmDeleteSchoolLogoDialogOpen}
+          busy={pendingSchoolLogoDelete}
+          dialogTitle="Confirm Delete"
+          saveButtonText="Delete Logo"
+          onClose={() => { setIsConfirmDeleteSchoolLogoDialogOpen(false)}} 
+          onSave={deleteSchoolLogo}
+        >
+          <div className="my-3 flex flex-col gap-4">
+            <p className="mt-3 mb-6">
+              Are you sure you want to delete this school logo? 
+            </p>
+          </div>
+        </Dialog>
     </div>
   );
 };

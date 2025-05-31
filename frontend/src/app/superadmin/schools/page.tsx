@@ -34,7 +34,7 @@ const SchoolsPage: React.FC = () => {
             key={school.id}
             schoolName={school.name}
             schoolId={school.id}
-            logoUrl={'https://cdn.builder.io/api/v1/image/assets/TEMP/f33b143daa0a988b8358b2dd952c60f8aadfc974?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab'}
+            logoUrl={school?.logoUrl}
             backgroundColor={index%2 === 0 ? 'bg-violet-200': 'bg-red-100'}
             textColor={index%2 === 0 ? 'text-zinc-600': ''}
           />

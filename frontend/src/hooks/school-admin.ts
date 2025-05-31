@@ -1,9 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy } from "@/@types";
 
 export const useGetMySchool = () => {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, refetch } = useQuery({
         queryKey: ['mySchool'],
         queryFn: () => {
             return customAPI.get('/school-admin/my-school');
@@ -13,7 +13,7 @@ export const useGetMySchool = () => {
 
     const school = data?.data
 
-    return { school, isLoading }
+    return { school, isLoading, refetch }
 }
 
 export const useGetMe = () => {
@@ -126,7 +126,7 @@ export const useEditSchoolAdminInfo = () => {
     })
 }
 
-export const useUploadFile = (id: string) => {
+export const useUploadProfileImage = (id: string) => {
   return useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
@@ -141,10 +141,33 @@ export const useUploadFile = (id: string) => {
   });
 };
 
+export const useUploadSchoolLogoFile = () => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post('/schools/logo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
 export const useDeleteProfileImage = () => {
     return useMutation({
         mutationFn: (id: string) => {
             return customAPI.delete(`/profiles/school-admin/${id}/avatar`)
+        }
+    })
+}
+
+export const useDeleteSchoolLogo = () => {
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.delete('/schools/logo')
         }
     })
 }
@@ -356,6 +379,47 @@ export const useEditClassLevel = (id: string) => {
     return useMutation({
         mutationFn: (classLevel: Partial<ClassLevel>) => {
             return customAPI.patch(`/class-level/${id}`, classLevel);
+        }
+    })
+}
+
+/**
+ * ADMISSION POLICY CRUD
+ */
+export const useGetAdmissionPolicies = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['myAdmissionPolicies'],
+        queryFn: () => {
+            return customAPI.get('/admission-policies');
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const admissionPolicies = data?.data as AdmissionPolicy[] || [] ;
+
+    return { admissionPolicies, isLoading, refetch }
+}
+
+export const useCreateAdmissionPolicy = () => {
+  return useMutation({
+    mutationFn: ({name, file}: {name: string, file: File}) => {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('file', file);
+
+      return customAPI.post('/admission-policies', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteAdmissionPolicy = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/admission-policies/${id}/document`)
         }
     })
 }

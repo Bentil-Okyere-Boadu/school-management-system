@@ -58,14 +58,14 @@ export const Dialog: React.FC<DialogProps> = ({
       style={{ backgroundColor: `rgba(217, 217, 217, ${backdropOpacity})` }}
       onClick={handleBackdropClick}
     >
-      <div className="bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg p-5 z-50 max-h-[90vh] flex flex-col w-[568px] max-w-[569px] mx-2 relative">
+      <div className="bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg py-5 px-1 z-50 max-h-[90vh] flex flex-col w-[568px] max-w-[569px] mx-2 relative">
         {busy && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10 dialogOpacity">
             <HashLoader color="#AB58E7" size={40} />
           </div>
         )}
         {/* Dialog Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-4">
           <h1 className="font-semibold text-xl">{dialogTitle}</h1>
           <button
             aria-label="Close"
@@ -77,12 +77,12 @@ export const Dialog: React.FC<DialogProps> = ({
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto flex-1 mb-2">
+        <div className="overflow-y-auto flex-1 mb-2 px-4">
           {children} {/* Large content goes here */}
         </div>
 
         {/* Dialog Footer */}
-        <div className="flex justify-end items-center gap-4">
+        <div className="flex justify-end items-center gap-4 px-4">
           <button
             aria-label="Close"
             onClick={onClose}

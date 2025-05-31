@@ -2,6 +2,9 @@
 import React from "react";
 import { MetricCard } from "./MetricCard";
 import CustomCompositeChart from "./CustomCompositeChart ";
+import CustomDonutChart from "./CustomDonutChart";
+import CustomLineChart from "./CustomLineChart";
+import ApplicationStatsTable from "./ApplicationsStatsTable";
 
 export interface MetricCardProps {
   value: string;
@@ -69,6 +72,21 @@ export const AdmissionsAnalyticsTabSection: React.FC = () => {
       </section>
 
       <CustomCompositeChart />
+
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-7 mt-8">
+        <div className="col-span-1 lg:col-span-4">
+          <div className="bg-[#fff] p-4 rounded-lg relative pt-16">
+            <p className="top-2 lg:top-4 absolute font-semibold">Application Status Breakdown</p>
+            <div className="flex justify-between gap-4">
+              <CustomDonutChart />
+              <ApplicationStatsTable />
+            </div>
+          </div>
+        </div>
+        <div className="col-span-1 lg:col-span-3">
+          <CustomLineChart />
+        </div>
+      </div>
     </div>
   );
 };
