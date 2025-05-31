@@ -15,7 +15,6 @@ import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
 import { InvitationService } from 'src/invitation/invitation.service';
-import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 @Injectable()
@@ -27,7 +26,6 @@ export class StudentService {
     private studentRepository: Repository<Student>,
     private emailService: EmailService,
     private invitationService: InvitationService,
-    private readonly objectStorageService: ObjectStorageServiceService,
     private readonly profileService: ProfileService,
   ) {}
 
@@ -158,5 +156,9 @@ export class StudentService {
       this.studentRepository,
       ['role', 'school', 'profile'],
     );
+  }
+
+  getRepository(): Repository<Student> {
+    return this.studentRepository;
   }
 }

@@ -94,125 +94,15 @@ export class SchoolAdminService {
     };
   }
 
-  /* async findAllUsers(schoolId: string, queryString: QueryString) {
-  let isArchived = false;
-  if (queryString.status === 'archived') {
-    isArchived = true;
-  } else if (queryString.status === 'active' || !queryString.status) {
-    isArchived = false;
-  }
-
-  // Build students query
-  const studentsQuery = this.studentRepository
-    .createQueryBuilder('student')
-    .leftJoinAndSelect('student.role', 'role')
-    .leftJoinAndSelect('student.school', 'school')
-    .leftJoinAndSelect('student.profile', 'profile')
-    .where('student.school.id = :schoolId', { schoolId })
-    .andWhere('student.isArchived = :isArchived', { isArchived });
-
-  const teachersQuery = this.teacherRepository
-    .createQueryBuilder('teacher')
-    .leftJoinAndSelect('teacher.role', 'role')
-    .leftJoinAndSelect('teacher.school', 'school')
-    .leftJoinAndSelect('teacher.profile', 'profile')
-    .where('teacher.school.id = :schoolId', { schoolId })
-    .andWhere('teacher.isArchived = :isArchived', { isArchived });
-
-  // Apply features
-  const [students, teachers]: [Student[], Teacher[]] = await Promise.all([
-    new APIFeatures(studentsQuery.clone(), queryString)
-      .filter()
-      .sort()
-      .search()
-      .limitFields()
-      .paginate()
-      .getQuery()
-      .getMany(),
-
-    new APIFeatures(teachersQuery.clone(), queryString)
-      .filter()
-      .sort()
-      .search()
-      .limitFields()
-      .paginate()
-      .getQuery()
-      .getMany(),
-  ]);
-
-  // Get profileIds for signed URLs
-  const profileIds = [
-    ...students.map((s) => s.profile?.id).filter(Boolean),
-    ...teachers.map((t) => t.profile?.id).filter(Boolean),
-  ];
-
-  const profilesWithUrls = await this.profileService.getProfilesWithImageUrls(profileIds);
-
-  const profileMap = new Map(profilesWithUrls.map((p) => [p.id, p]));
-
-  // Attach avatarUrl to student/teacher profiles
-  const studentsWithType = students.map((student) => ({
-    ...student,
-    userType: 'student',
-    profile: student.profile?.id ? profileMap.get(student.profile.id) : undefined,
-  }));
-
-  const teachersWithType = teachers.map((teacher) => ({
-    ...teacher,
-    userType: 'teacher',
-    profile: teacher.profile?.id ? profileMap.get(teacher.profile.id) : undefined,
-  }));
-
-  // Pagination and metadata
-  const [studentsCount, teachersCount] = await Promise.all([
-    this.studentRepository
-      .createQueryBuilder('student')
-      .leftJoin('student.school', 'school')
-      .where('student.school.id = :schoolId', { schoolId })
-      .andWhere('student.isArchived = :isArchived', { isArchived })
-      .getCount(),
-
-    this.teacherRepository
-      .createQueryBuilder('teacher')
-      .leftJoin('teacher.school', 'school')
-      .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('teacher.isArchived = :isArchived', { isArchived })
-      .getCount(),
-  ]);
-
-  const page = parseInt(queryString.page ?? '1', 10);
-  const limit = parseInt(queryString.limit ?? '20', 10);
-  const total = studentsCount + teachersCount;
-  const totalPages = Math.ceil(total / limit);
-
-  return {
-    data: [...studentsWithType, ...teachersWithType],
-    meta: {
-      total,
-      page,
-      limit,
-      totalPages,
-      studentsCount,
-      teachersCount,
-    },
-  };
-}
-*/
   async findAllUsers(schoolId: string, queryString: QueryString) {
-    let isArchived = false;
-    if (queryString.status === 'archived') {
-      isArchived = true;
-    } else if (queryString.status === 'active' || !queryString.status) {
-      isArchived = false;
-    } else {
-      isArchived = false;
-    }
+    const isArchived = queryString.status === 'archived' ? true : false;
 
-    // Get students
+    // --- Students Query ---
     const studentsQuery = this.studentRepository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('student.profile', 'profile')
       .where('student.school.id = :schoolId', { schoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived });
 
@@ -225,11 +115,12 @@ export class SchoolAdminService {
 
     const students = await studentsFeatures.getQuery().getMany();
 
-    // Get teachers
+    // --- Teachers Query ---
     const teachersQuery = this.teacherRepository
       .createQueryBuilder('teacher')
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
+      .leftJoinAndSelect('teacher.profile', 'profile') // added profile
       .where('teacher.school.id = :schoolId', { schoolId })
       .andWhere('teacher.isArchived = :isArchived', { isArchived });
 
@@ -242,44 +133,56 @@ export class SchoolAdminService {
 
     const teachers = await teachersFeatures.getQuery().getMany();
 
-    // Count total records for pagination
-    const studentsCount = await this.studentRepository
-      .createQueryBuilder('student')
-      .leftJoinAndSelect('student.school', 'school')
-      .where('student.school.id = :schoolId', { schoolId })
-      .andWhere('student.isArchived = :isArchived', { isArchived })
-      .getCount();
+    // --- Sign Profile URLs ---
+    const signedStudents = await Promise.all(
+      students.map(async (student) => {
+        if (student.profile?.id) {
+          student.profile = await this.profileService.getProfileWithImageUrl(
+            student.profile.id,
+          );
+        }
+        return {
+          ...student,
+          userType: 'student',
+        };
+      }),
+    );
 
-    const teachersCount = await this.teacherRepository
-      .createQueryBuilder('teacher')
-      .leftJoinAndSelect('teacher.role', 'role')
-      .leftJoinAndSelect('teacher.school', 'school')
-      .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('teacher.isArchived = :isArchived', { isArchived })
-      .getCount();
+    const signedTeachers = await Promise.all(
+      teachers.map(async (teacher) => {
+        if (teacher.profile?.id) {
+          teacher.profile = await this.profileService.getProfileWithImageUrl(
+            teacher.profile.id,
+          );
+        }
+        return {
+          ...teacher,
+          userType: 'teacher',
+        };
+      }),
+    );
 
-    // Add userType to each entity
-    const studentsWithType = students.map((student) => ({
-      ...student,
-      userType: 'student',
-    }));
+    // --- Pagination Count ---
+    const [studentsCount, teachersCount] = await Promise.all([
+      this.studentRepository
+        .createQueryBuilder('student')
+        .where('student.school.id = :schoolId', { schoolId })
+        .andWhere('student.isArchived = :isArchived', { isArchived })
+        .getCount(),
+      this.teacherRepository
+        .createQueryBuilder('teacher')
+        .where('teacher.school.id = :schoolId', { schoolId })
+        .andWhere('teacher.isArchived = :isArchived', { isArchived })
+        .getCount(),
+    ]);
 
-    const teachersWithType = teachers.map((teacher) => ({
-      ...teacher,
-      userType: 'teacher',
-    }));
-
-    // Combine data
-    const combinedData = [...studentsWithType, ...teachersWithType];
-
-    // Pagination metadata
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
     const total = studentsCount + teachersCount;
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: combinedData,
+      data: [...signedStudents, ...signedTeachers],
       meta: {
         total,
         page,
@@ -290,6 +193,7 @@ export class SchoolAdminService {
       },
     };
   }
+
   async getMySchoolWithRelations(user: SchoolAdmin) {
     if (!user.school) {
       throw new NotFoundException('School not found for this admin');
