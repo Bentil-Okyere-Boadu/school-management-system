@@ -2,17 +2,11 @@
 import React from "react";
 import InputField from "@/components/InputField";
 import SchoolCard from "../../common/SchoolCard";
+import { School } from "@/@types";
 
 interface ProfileTabSectionProps {
-  schoolData: {
-    email: string;
-    name: string;
-    address: string;
-    phone: string;
-    schoolCode: string;
-  };
+  schoolData: School
 }
-
 
 export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolData }) => {
 
@@ -21,7 +15,7 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolData
         <h1 className="text-md font-semibold text-neutral-800 mb-2">School Profile</h1>
         <SchoolCard
             key="school-1"
-            logoUrl="https://cdn.builder.io/api/v1/image/assets/TEMP/f33b143daa0a988b8358b2dd952c60f8aadfc974?placeholderIfAbsent=true&apiKey=61b68a6030a244f09df9bfa72093b1ab"
+            logoUrl={schoolData?.logoUrl}
             backgroundColor="bg-[#FFF]"
         />
 

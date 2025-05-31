@@ -5,35 +5,38 @@ import { SearchBar } from "@/components/common/SearchBar";
 import CustomBarChart from "@/components/superadmin/dashboard/CustomBarChart";
 import { DashboardTable } from "@/components/superadmin/dashboard/DashboardTable";
 import { useDebouncer } from "@/hooks/generalHooks";
-import { useGetAdminUsers } from "@/hooks/super-admin";
+import { useGetAdminUsers, useGetDashboardInfo } from "@/hooks/super-admin";
 
 const DashboardPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { dashboardStats } = useGetDashboardInfo();
+
   const stats = [
     {
-      value: "15, 430",
+      value: `${dashboardStats?.totalSchools}`,
       label: "Total Schools",
       iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/c3d541059700afe9fbaad586ff43480ff7d93786?placeholderIfAbsent=true",
       iconAlt: "School Icon",
       valueColor: "#F081AE",
     },
     {
-      value: "2, 347",
+      value: `${dashboardStats?.totalTeachers}`,
       label: "Total Teachers",
       iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/36a067b5f7f8490f5bc5c8962136645a32f17f39?placeholderIfAbsent=true",
       iconAlt: "Teacher Icon",
       valueColor: "#597AE8",
     },
     {
-      value: "5, 192",
+      value: `${dashboardStats?.totalStudents}`,
       label: "Total Students",
       iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/5cdc8e15cdd19351c9962680fff3b3636cd00e80?placeholderIfAbsent=true",
       iconAlt: "Student Icon",
       valueColor: "#BD7CEB",
     },
     {
-      value: "82%",
+      value: `${dashboardStats?.totalStudents}`,
       label: "Average Attendance Rate",
       iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/ba656832819e22052f838d66aeb1b30662f1df92?placeholderIfAbsent=true",
       iconAlt: "Attendance Icon",
@@ -66,7 +69,7 @@ const DashboardPage: React.FC = () => {
         ))}
       </section>
 
-      <CustomBarChart />
+      <CustomBarChart barChartData={dashboardStats?.performance} />
 
       <div className="mt-10 p-6 bg-white rounded-lg">
         <DashboardTable adminUsers={adminUsers} refetch={refetch}  />

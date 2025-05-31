@@ -118,7 +118,7 @@ export const AdmissionPoliciesSection: React.FC = () => {
         />
         
         <div>
-            <p className="text-xs mb-1 text-[#52525c]">File Uplod</p>
+            <p className="text-xs mb-1 text-[#52525c]">File Upload</p>
             <div className="flex flex-col gap-4 mb-5">
                 <FileUploadArea onFileSelect={handleFileSelect} accept=".pdf,.doc,.docx,.xls,.xlsx" />
                 {selectedFiles.length > 0 && (
