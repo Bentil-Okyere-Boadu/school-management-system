@@ -1,11 +1,9 @@
 import {
   Controller,
   Post,
-  Put,
   Delete,
   Get,
   Param,
-  Body,
   UploadedFile,
   UseInterceptors,
   BadRequestException,
@@ -20,6 +18,8 @@ import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-a
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
+import { StudentJwtAuthGuard } from 'src/student/guards/student-jwt-auth.guard';
+import { StudentService } from 'src/student/student.service';
 
 export class ProfileImageUploadDto {
   file: Express.Multer.File;
@@ -30,6 +30,7 @@ export class ProfileController {
     private readonly profileService: ProfileService,
     private readonly schoolAdminService: SchoolAdminService,
     private readonly superAdminService: SuperAdminService,
+    private readonly studentService: StudentService,
   ) {}
 
   // Upload profile image for school admin
@@ -82,7 +83,30 @@ export class ProfileController {
       profile: result.entity.profile,
     };
   }
+  // Upload profile image for super admin
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('student/:id/avatar')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadStudentAvatar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
 
+    const result = await this.profileService.updateProfileImage(
+      id,
+      file,
+      this.studentService.getRepository(),
+    );
+
+    return {
+      message: 'Profile image uploaded successfully',
+      avatarUrl: result.imageUrl,
+      profile: result.entity.profile,
+    };
+  }
   // Get profile with avatar URL
   @Get(':id')
   async getProfile(@Param('id', ParseUUIDPipe) id: string) {
@@ -115,6 +139,20 @@ export class ProfileController {
     const result = await this.profileService.removeProfileImage(
       id,
       this.superAdminService.getRepository(),
+    );
+
+    return {
+      message: 'Profile image removed successfully',
+      data: result,
+    };
+  }
+  // Remove profile image for super admin
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('student/:id/avatar')
+  async removeStudentAvatar(@Param('id', ParseUUIDPipe) id: string) {
+    const result = await this.profileService.removeProfileImage(
+      id,
+      this.studentService.getRepository(),
     );
 
     return {
