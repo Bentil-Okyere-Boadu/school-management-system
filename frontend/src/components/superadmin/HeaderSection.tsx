@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Menu } from '@mantine/core';
 import {
@@ -8,8 +8,9 @@ import {
 import Cookies from "js-cookie";
 import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
-import { User } from "@/@types";
+import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
+import { useGetSchoolUserById } from "@/hooks/school-admin";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -23,11 +24,36 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   const pathName = usePathname();
   const params = useParams();
   const schoolId = params.id;
+
+  const getSignedInRole = () => {
+    if(pathName.startsWith('/admin')) {
+      return Roles.SCHOOL_ADMIN;
+    } else if(pathName.startsWith('/superadmin')) {
+      return Roles.SUPER_ADMIN;
+    }
+  }
+
+  const {schoolUser} = useGetSchoolUserById(params.id as string)
+
   const { school } = useGetSchoolById(schoolId as string);
+
+  useEffect(() => {
+    
+  }, [])
+
+  
+  
 
   const onHandleBreadCrumbPress = () => {
     console.log(pathName);
-    router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
+    switch (getSignedInRole()) {
+      case Roles.SCHOOL_ADMIN:
+        router.push(`/admin/${activeMenuItem?.toLowerCase()}`)
+        break;
+      case Roles.SUPER_ADMIN:
+        router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
+        break;
+    }
   };
 
   const onHandleLogout = () => {
@@ -66,9 +92,9 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
             ) : (
               <div className="flex flex-col">
                 <div className="text-xs text-zinc-600">
-                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{school?.name}</span>
+                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{getSignedInRole() === Roles.SUPER_ADMIN? school?.name :  `${schoolUser?.firstName} ${schoolUser?.lastName}`}</span>
                 </div>
-                <h2 className="text-2xl text-neutral-800 mt-2">{school?.name}</h2>
+                <h2 className="text-2xl text-neutral-800 mt-2">{getSignedInRole() === Roles.SUPER_ADMIN? school?.name : `${schoolUser?.firstName} ${schoolUser?.lastName}`}</h2>
               </div>
             ) 
           }
