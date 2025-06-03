@@ -6,6 +6,9 @@ import {
   Body,
   Put,
   Get,
+  Param,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 
 import { StudentAuthService } from './student.auth.service';
@@ -19,12 +22,16 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { ParentService } from 'src/parent/parent.service';
+import { CreateParentDto } from 'src/parent/dto/create-parent-dto';
+import { UpdateParentDto } from 'src/parent/dto/update-parent-dto';
 
 @Controller('student')
 export class StudentController {
   constructor(
     private readonly studentAuthService: StudentAuthService,
     private readonly studentService: StudentService,
+    private readonly parentService: ParentService,
   ) {}
 
   @UseGuards(StudentLocalAuthGuard)
@@ -46,6 +53,39 @@ export class StudentController {
     @Body() updateDto: UpdateProfileDto,
   ) {
     return this.studentService.updateProfile(admin.id, updateDto);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get(':id/parents')
+  @Roles('student')
+  findOne(@Param('id') id: string) {
+    return this.parentService.findOne(id);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post(':studentId/parents')
+  @Roles('student')
+  createParent(
+    @Param('studentId') studentId: string,
+    @Body() createParentDto: CreateParentDto,
+  ) {
+    return this.parentService.create(createParentDto, studentId);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch(':id/parents')
+  @Roles('student')
+  updateParent(
+    @Param('id') id: string,
+    @Body() updateParentDto: UpdateParentDto,
+  ) {
+    return this.parentService.update(id, updateParentDto);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete(':id/parents')
+  remove(@Param('id') id: string) {
+    return this.parentService.remove(id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
