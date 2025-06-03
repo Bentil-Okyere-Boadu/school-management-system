@@ -7,10 +7,12 @@ import {
   UpdateDateColumn,
   JoinColumn,
   OneToOne,
+  OneToMany,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Role } from '../role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
+import { Parent } from '../parent/parent.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -86,4 +88,10 @@ export class Student {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => Parent, (parent) => parent.student, {
+    cascade: true,
+    eager: true,
+  })
+  parents: Parent[];
 }

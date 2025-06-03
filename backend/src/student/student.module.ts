@@ -20,6 +20,8 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { Parent } from 'src/parent/parent.entity';
+import { ParentService } from 'src/parent/parent.service';
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       SchoolAdmin,
       Teacher,
       Profile,
+      Parent,
     ]),
     EmailModule,
     JwtModule.registerAsync({
@@ -51,6 +54,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
     ProfileService,
     InvitationService,
     ObjectStorageServiceService,
+    ParentService,
     StudentAuthService,
     StudentLocalStrategy,
     StudentLocalAuthGuard,

@@ -135,7 +135,7 @@ export class StudentService {
 
     const studentInfo = await this.studentRepository.findOne({
       where: { id: user.id },
-      relations: ['role', 'profile'],
+      relations: ['role', 'profile', 'parents'],
     });
     if (studentInfo?.profile?.id) {
       const profileWithUrl = await this.profileService.getProfileWithImageUrl(
