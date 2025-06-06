@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Pagination } from "@/components/common/Pagination";
 import { UserTable } from "@/components/superadmin/users/UsersTable";
 import { SearchBar } from "@/components/common/SearchBar";
@@ -31,7 +31,9 @@ const UsersPage: React.FC = () => {
   const statusOptions = [
     { value: "", label: "Status" },
     { value: "active", label: "Active" },
-    { value: "pending", label: "Pending" }
+    { value: "pending", label: "Pending" },
+    { value: "archived", label: "Archived" }
+
   ];
   const roles = [
     { value: "school_admin", label: "School Admin" },
@@ -55,6 +57,10 @@ const UsersPage: React.FC = () => {
     const selectedValue = event.target.value;
     setSelectedStatus(selectedValue);
   };
+
+  useEffect(() => {
+    refetch();
+  }, [selectedStatus]);
 
   const { roles: Roles } = useAppContext();
 

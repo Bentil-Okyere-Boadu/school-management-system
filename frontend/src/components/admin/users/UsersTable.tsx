@@ -166,7 +166,7 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
                             <Menu.Item 
                               onClick={() => onArchiveUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>
-                              Archive User
+                              {user.isArchived ? 'Unarchive User' : 'Archive User'}
                             </Menu.Item>
                           </Menu.Dropdown>
                         </Menu>
@@ -194,14 +194,18 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
       <Dialog 
         isOpen={isConfirmArchiveDialogOpen}
         busy={isPending}
-        dialogTitle="Confirm Archive"
-        saveButtonText="Archive User"
+        dialogTitle={selectedUser.isArchived ? "Confirm Unarchive" : "Confirm Archive"}
+        saveButtonText={selectedUser.isArchived ? "Unarchive User" : "Archive User"}
         onClose={() => setIsConfirmArchiveDialogOpen(false)} 
         onSave={() =>handleArchiveUser()}
       >
         <div className="my-3 flex flex-col gap-4">
           <p>
-            Are you sure you want to archive this user? Their account will be deactivated, but their data will be kept.
+            {selectedUser.isArchived ? 
+              'Are you sure you want to unarchive this user? Their account will be activated, and their data will be restored.'
+              :
+              'Are you sure you want to archive this user? Their account will be deactivated, but their data will be kept.'
+            }
           </p>
         </div>
       </Dialog>
