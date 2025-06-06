@@ -19,11 +19,22 @@ export class FeeStructureService {
   /**
    * Find all fee structures for a specific school
    */
-  async findAllBySchool(schoolId: string): Promise<FeeStructure[]> {
-    return this.feeStructureRepository.find({
-      where: { school: { id: schoolId } },
-      relations: ['classLevels'],
-    });
+  async findAllBySchool(schoolId: string): Promise<any[]> {
+    const feeStructures = await this.feeStructureRepository
+      .createQueryBuilder('fee')
+      .leftJoinAndSelect('fee.classLevels', 'classLevel')
+      .where('fee.schoolId = :schoolId', { schoolId })
+      .getMany();
+
+    return feeStructures.map((fee) => ({
+      id: fee.id,
+      feeTitle: fee.feeTitle,
+      feeType: fee.feeType,
+      amount: fee.amount,
+      appliesTo: fee.appliesTo,
+      dueDate: fee.dueDate,
+      classLevels: fee.classLevels?.map((cl) => cl.id) ?? [],
+    }));
   }
 
   /**
