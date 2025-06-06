@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { School } from '../school/school.entity';
 import { ClassLevel } from '../class-level/class-level.entity';
 
@@ -23,11 +30,11 @@ export class FeeStructure {
   dueDate?: string;
 
   @ManyToOne(() => School, (school) => school.feeStructures, {
-    //onDelete: 'CASCADE',
+    onDelete: 'CASCADE',
   })
   school: School;
 
-  // This field links the fee to a specific class/level, or null for all classes
-  @ManyToOne(() => ClassLevel, { nullable: true })
-  classLevel?: ClassLevel;
+  @ManyToMany(() => ClassLevel)
+  @JoinTable()
+  classLevels?: ClassLevel[];
 }
