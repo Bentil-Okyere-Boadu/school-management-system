@@ -25,38 +25,31 @@ const Admissions = () => {
     { tabLabel: "Admissions List", tabKey: "admissions-list" },
   ];
   const [activeTabKey, setActiveTabKey] = useState('admissions-analytics');
-  const [alreadyDone] = useState(true);
 
   const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
   };
 
   return (
-    <>
-      {alreadyDone && <div>Admissions</div>}
-      {!alreadyDone && (
-      <div>
-        <TabBar 
-          items={defaultNavItems} 
-          activeTabKey={activeTabKey} 
-          onItemClick={handleItemClick}
-        />
+    <div>
+      <TabBar 
+        items={defaultNavItems} 
+        activeTabKey={activeTabKey} 
+        onItemClick={handleItemClick}
+      />
 
-        {activeTabKey === "admissions-analytics" && (
-          <div>
-            <AdmissionsAnalyticsTabSection  />
-          </div>
-        )}
-
-        {activeTabKey === "admissions-list" && (
-          <div>
-            <AdmissionsListTabSection  />
-          </div>
-        )}
-      </div>
+      {activeTabKey === "admissions-analytics" && (
+        <div>
+          <AdmissionsAnalyticsTabSection  />
+        </div>
       )}
 
-    </>
+      {activeTabKey === "admissions-list" && (
+        <div>
+          <AdmissionsListTabSection  />
+        </div>
+      )}
+    </div>
   )
 }
 
