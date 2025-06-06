@@ -33,7 +33,7 @@ export class FeeStructureService {
       amount: fee.amount,
       appliesTo: fee.appliesTo,
       dueDate: fee.dueDate,
-      classLevels: fee.classLevels?.map((cl) => cl.id) ?? [],
+      classLevelIds: fee.classLevels?.map((cl) => cl.id) ?? [],
     }));
   }
 
