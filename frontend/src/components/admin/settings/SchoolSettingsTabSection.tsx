@@ -171,7 +171,9 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       setFeesAppliesTo('');
       setDueDate('');
       setFeesTitle('');
+      setAmount(0);
       setSelectedClasses([]);
+      setEditMode(false);
   }
 
   const handleDurationChange = (value: string | null) => {
