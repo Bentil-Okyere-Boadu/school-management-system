@@ -119,7 +119,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
      amount: amount,
      appliesTo: feesAppliesTo,
      dueDate: dueDate,
-     classLevel: selectedClasses
+     classLevelIds: selectedClasses
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');
@@ -140,6 +140,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
      amount: amount,
      appliesTo: feesAppliesTo,
      dueDate: dueDate,
+     classLevelIds: selectedClasses
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');
@@ -160,7 +161,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     setDueDate(fee.dueDate);
     setFeesTitle(fee.feeTitle);
     setFeesAppliesTo(fee.appliesTo);
-    setSelectedClasses(fee.classLevel);
+    setSelectedClasses(fee.classLevelIds);
     setSelectedDuration(fee.feeType);
     setIsFeeStructureDialogOpen(true);
   }

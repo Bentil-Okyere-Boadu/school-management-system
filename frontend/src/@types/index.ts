@@ -48,7 +48,7 @@ export type FeeStructure = {
   amount: number;
   appliesTo: string;
   dueDate: string;
-  classLevel: string[];
+  classLevelIds: string[];
 }
 
 export type Grade = {
