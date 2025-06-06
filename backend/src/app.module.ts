@@ -21,6 +21,7 @@ import { StudentModule } from './student/student.module';
 import { TeacherModule } from './teacher/teacher.module';
 import { ObjectStorageServiceModule } from './object-storage-service/object-storage-service.module';
 import { ParentModule } from './parent/parent.module';
+import { AdmissionModule } from './admission/admission.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { ParentModule } from './parent/parent.module';
     TeacherModule,
     ObjectStorageServiceModule,
     ParentModule,
+    AdmissionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
