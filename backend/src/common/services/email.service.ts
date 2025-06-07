@@ -19,6 +19,7 @@ export enum EmailTemplate {
   TEACHER_INVITATION = 'teacher_invitation',
   STUDENT_PIN_RESET = 'student_pin_reset',
   TEACHER_PIN_RESET = 'teacher_pin_reset',
+  ADMISSION_APPLICATION_CONFIRMATION = 'admission_application_confirmation',
 }
 
 /**
@@ -297,6 +298,38 @@ export class EmailService {
     }
   }
 
+  async sendAdmissionApplicationConfirmation(
+    to: string,
+    name: string,
+    schoolName: string,
+    applicationId: string,
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject: `Your Application to ${schoolName} was received!`,
+        html: this.getEmailTemplate(
+          EmailTemplate.ADMISSION_APPLICATION_CONFIRMATION,
+          {
+            name,
+            schoolName,
+            applicationId,
+          },
+        ),
+      });
+      this.logger.log(`Admission application confirmation email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send admission application confirmation email to ${to}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send admission application confirmation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
   /**
    * Send PIN reset email to a teacher
    * @param user The teacher user
@@ -490,7 +523,22 @@ export class EmailService {
             <p>Thank you,<br>School Management System</p>
           </div>
         `;
-
+      case EmailTemplate.ADMISSION_APPLICATION_CONFIRMATION:
+        return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+      <h2 style="color: #333;">Admission Application Received</h2>
+      <p>Dear ${data.name},</p>
+      <p>Thank you for applying to <strong>${data.schoolName}</strong>!</p>
+      <p>Your application has been received successfully. Our admissions team will review your submission and contact you soon with the next steps.</p>
+      <p>If you have any questions, feel free to reply to this email or contact the school directly.</p>
+      <p style="margin: 25px 0;">
+        <span style="background-color: #AB58E7; color: white; padding: 10px 20px; border-radius: 4px; display: inline-block;">Application ID: ${data.applicationId}</span>
+      </p>
+      <p>We appreciate your interest and look forward to welcoming you!</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+      <p style="color: #777; font-size: 12px;">School Management System</p>
+    </div>
+     `;
       default:
         return `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">

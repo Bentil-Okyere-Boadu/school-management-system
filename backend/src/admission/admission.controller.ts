@@ -4,30 +4,39 @@ import {
   Body,
   UploadedFiles,
   UseInterceptors,
-  BadRequestException,
+  Get,
+  Param,
+  UseGuards,
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { CreateAdmissionDto } from './dto/create-admission.dto';
 import { AdmissionService } from './admission.service';
-import { ObjectStorageServiceService } from '../object-storage-service/object-storage-service.service';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 
 @Controller('admissions')
 export class AdmissionController {
-  constructor(
-    private readonly admissionService: AdmissionService,
-    private readonly objectStorageService: ObjectStorageServiceService,
-  ) {}
+  constructor(private readonly admissionService: AdmissionService) {}
 
   @Post()
   @UseInterceptors(AnyFilesInterceptor())
   async createAdmission(
     @Body() createAdmissionDto: CreateAdmissionDto,
-    @UploadedFiles() files: Array<Express.Multer.File>,
+    @UploadedFiles() files: Express.Multer.File[],
   ) {
-    // File handling logic: match files to DTO fields by fieldname
-    // (e.g., studentHeadshot, studentBirthCert, guardianHeadshot_0, previousSchoolResult)
-    // Upload files to object storage and set path/mediaType in DTO
-    // (Implementation details can be filled in as needed)
     return this.admissionService.createAdmission(createAdmissionDto, files);
+  }
+
+  @Get('class-levels/:schoolId')
+  getClassLevelsBySchool(@Param('schoolId') schoolId: string) {
+    return this.admissionService.findAllNamesBySchool(schoolId);
+  }
+  @UseGuards(SchoolAdminJwtAuthGuard)
+  @Roles('school_admin')
+  @Get('url/me')
+  getAdmissionUrlForAdmin(@CurrentUser() admin: SchoolAdmin) {
+    return this.admissionService.getAdmissionUrlForAdmin(admin);
   }
 }

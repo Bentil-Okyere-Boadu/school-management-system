@@ -10,18 +10,15 @@ import {
 } from 'typeorm';
 import { ClassLevel } from '../class-level/class-level.entity';
 import { Guardian } from './guardian.entity';
+import { School } from 'src/school/school.entity';
 
 @Entity()
 export class Admission {
   @PrimaryGeneratedColumn('uuid')
   applicationId: string; // Used for anonymous tracking
 
-  @Column()
-  schoolId: string;
-
-  // Stepper progress
-  @Column({ default: 1 })
-  step: number;
+  @ManyToOne(() => School, { eager: true, onDelete: 'CASCADE' })
+  school: School;
 
   @Column({ default: 'in_progress' })
   status: 'in_progress' | 'submitted';
@@ -64,6 +61,12 @@ export class Admission {
   studentPhone: string;
 
   @Column({ nullable: true })
+  studentOtherPhone: string;
+
+  @Column({ nullable: true })
+  studentOtherPhoneOptional: string;
+
+  @Column({ nullable: true })
   studentPhotoUrl: string;
 
   @Column({ nullable: true })
@@ -101,23 +104,23 @@ export class Admission {
   @Column({ nullable: true })
   homeOtherLanguage: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: false })
   hasPreviousSchool: boolean;
 
   @Column({ nullable: true })
   previousSchoolName: string;
 
   @Column({ nullable: true })
-  previousSchoolStudentId: string;
-
-  @Column({ nullable: true })
-  previousSchoolEmail: string;
+  previousSchoolUrl: string;
 
   @Column({ nullable: true })
   previousSchoolStreetAddress: string;
 
   @Column({ nullable: true })
   previousSchoolCity: string;
+
+  @Column({ nullable: true })
+  previousSchoolState: string;
 
   @Column({ nullable: true })
   previousSchoolCountry: string;
