@@ -8,6 +8,7 @@ import CustomButton from '@/components/Button';
 import Stepper from '@/components/common/Stepper';
 import { StudentInformation, Guardian, AdditionalInformation } from '@/@types/index';
 import { Dialog } from '@/components/common/Dialog';
+import { toast } from 'react-toastify';
 
 
 const AdmissionFormsPage = () => {
@@ -36,6 +37,33 @@ const AdmissionFormsPage = () => {
     headshotFile: undefined,
   });
 
+  const validateStudentData = () => {
+    if (
+      !studentData.firstName.trim() ||
+      !studentData.lastName.trim() ||
+      !studentData.email.trim() ||
+      !studentData.dateOfBirth ||
+      !studentData.placeOfBirth.trim() ||
+      !studentData.gender ||
+      !studentData.nationality.trim() ||
+      !studentData.birthCertificateFile ||
+      !studentData.religion.trim() ||
+      studentData.languagesSpoken.length === 0 ||
+      !studentData.streetAddress.trim() ||
+      !studentData.boxAddress.trim() ||
+      !studentData.phone.trim() ||
+      !studentData.academicYear ||
+      !studentData.classFor ||
+      !studentData.headshotFile
+    ) {
+      return false; // At least one required field is missing
+    }
+
+    return true;
+  };
+
+
+
   const [guardians, setGuardians] = useState<Guardian[]>([{
     firstName: "",
     lastName: "",
@@ -51,6 +79,28 @@ const AdmissionFormsPage = () => {
     headshotFile: undefined,
   }]);
 
+  const validateGuardians = (): boolean => {
+  for (const guardian of guardians) {
+    if (
+      !guardian.firstName.trim() ||
+      !guardian.lastName.trim() ||
+      !guardian.relationship.trim() ||
+      !guardian.email.trim() ||
+      !guardian.nationality.trim() ||
+      !guardian.occupation.trim() ||
+      !guardian.company.trim() ||
+      !guardian.streetAddress.trim() ||
+      !guardian.boxAddress.trim() ||
+      !guardian.phone.trim() ||
+      !guardian.headshotFile
+    ) {
+      return false; // At least one required field is missing
+    }
+  }
+  return true; // All guardians are valid
+};
+
+
   const [additionalInfo, setAdditionalInfo] = useState<AdditionalInformation>({
     primaryHomeLanguage: "",
     studentPrimaryLanguage: "",
@@ -58,7 +108,51 @@ const AdmissionFormsPage = () => {
     previousSchool: undefined,
   });
 
+  const validateAdditionalInfo = () => {
+    const { primaryHomeLanguage, studentPrimaryLanguage, hasAcademicHistory, previousSchool } = additionalInfo;
+
+    if (!primaryHomeLanguage.trim() || !studentPrimaryLanguage.trim()) {
+      return false;
+    }
+
+    if (hasAcademicHistory === "yes") {
+      if (
+        !previousSchool?.name.trim() ||
+        // !previousSchool.url.trim() ||
+        !previousSchool.street.trim() ||
+        !previousSchool.city.trim() ||
+        !previousSchool.state.trim() ||
+        !previousSchool.country.trim() ||
+        // !previousSchool.attendedFrom.trim() ||
+        // !previousSchool.attendedTo.trim() ||
+        !previousSchool.grade.trim() ||
+        !previousSchool.reportCards ||
+        previousSchool.reportCards.length < 1
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+
   const handleStepMove = (direction: string) => {
+    if(currentStep == 1 && direction == 'forward' && !validateStudentData() ){
+      toast.error('Please ensure all required fields are filled.');
+      return;
+    }
+
+    if(currentStep == 2 && direction == 'forward' && !validateGuardians() ){
+      toast.error('Please ensure all required fields are filled.');
+      return;
+    }
+
+    if(currentStep == 3 && direction == 'forward' && !validateAdditionalInfo()){
+      toast.error('Please ensure all required fields are filled.');
+      return;
+    }
+
     if(direction === 'forward'){
       setCurrentStep(currentStep + 1);
     } else if (direction === 'backward') {
@@ -69,18 +163,12 @@ const AdmissionFormsPage = () => {
       scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
 
-    handleSubmit()
   }
 
   const onStepClick = (num: number) => {
+    if(num) return // remove this condition when validation for the stepper is clicked
     setCurrentStep(num)
   }
-
-  const handleSubmit = () => {
-    console.log('Submitting form:', studentData);
-    console.log('Submitting form:', guardians);
-    console.log('Submitting form:', additionalInfo);
-  };
 
   return (
     <div className="min-h-screen bg-white w-full" ref={scrollRef}>

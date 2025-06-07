@@ -344,7 +344,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                         value={additionalInfo?.previousSchool?.grade}
                     />
                     <div>
-                        <p className="text-xs mb-1.5 text-[#52525c]">Upload Previous Report Cards (at least 3 in pdf, png or jpeg)<span className="text-red-500 ml-0.5">*</span></p>
+                        <p className="text-xs mb-1.5 text-[#52525c]">Upload Previous Report Cards (at least 1 in pdf, png or jpeg)<span className="text-red-500 ml-0.5">*</span></p>
                         <div className="flex gap-3 flex-wrap">
                             {additionalInfo?.previousSchool?.reportCards?.map((doc) => (
                                 <DocumentItem
