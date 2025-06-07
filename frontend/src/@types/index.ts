@@ -166,3 +166,56 @@ export interface SuperAdminDashStats {
   averageAttendanceRate: number;
   performance: SchoolPerformance[];
 }
+
+export interface StudentInformation {
+  firstName: string;
+  lastName: string;
+  otherNames: string;
+  email: string;
+  dateOfBirth: string;
+  placeOfBirth: string;
+  gender: string;
+  nationality: string;
+  religion: string;
+  languagesSpoken: string[];
+  streetAddress: string;
+  boxAddress: string;
+  phone: string;
+  academicYear: string;
+  classFor: string;
+  headshotFile?: File;
+  birthCertificateFile?: File;
+}
+
+export interface Guardian {
+  firstName: string;
+  lastName: string;
+  relationship: string;
+  email: string;
+  nationality: string;
+  occupation: string;
+  company: string;
+  streetAddress: string;
+  boxAddress: string;
+  phone: string;
+  optionalPhone: string;
+  headshotFile?: File;
+}
+
+export interface AdditionalInformation {
+  primaryHomeLanguage: string;
+  studentPrimaryLanguage: string;
+  hasAcademicHistory: "yes" | "no";
+  previousSchool?: {
+    name: string;
+    url: string;
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    attendedFrom: string;
+    attendedTo: string;
+    grade: string;
+    reportCards: File[];
+  };
+}
