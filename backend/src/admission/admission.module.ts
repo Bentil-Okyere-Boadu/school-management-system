@@ -5,10 +5,15 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 import { Guardian } from './guardian.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Admission } from './admission.entity';
+import { School } from 'src/school/school.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+import { EmailService } from 'src/common/services/email.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Admission, Guardian])],
+  imports: [
+    TypeOrmModule.forFeature([Admission, Guardian, School, ClassLevel]),
+  ],
   controllers: [AdmissionController],
-  providers: [AdmissionService, ObjectStorageServiceService],
+  providers: [AdmissionService, ObjectStorageServiceService, EmailService],
 })
 export class AdmissionModule {}

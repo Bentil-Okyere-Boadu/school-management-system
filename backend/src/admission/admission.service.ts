@@ -1,19 +1,31 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admission } from './admission.entity';
 import { Guardian } from './guardian.entity';
 import { CreateAdmissionDto } from './dto/create-admission.dto';
 import { ObjectStorageServiceService } from '../object-storage-service/object-storage-service.service';
+import { School } from 'src/school/school.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { EmailService } from 'src/common/services/email.service';
 
 @Injectable()
 export class AdmissionService {
   constructor(
     @InjectRepository(Admission)
     private readonly admissionRepository: Repository<Admission>,
+    @InjectRepository(School)
+    private readonly schoolRepository: Repository<School>,
     @InjectRepository(Guardian)
     private readonly guardianRepository: Repository<Guardian>,
+
+    @InjectRepository(ClassLevel)
+    private readonly classLevelRepository: Repository<ClassLevel>,
+
     private readonly objectStorageService: ObjectStorageServiceService,
+
+    private readonly emailService: EmailService,
   ) {}
 
   async createAdmission(
@@ -39,24 +51,24 @@ export class AdmissionService {
     // 2. Handle student birth cert
     const studentBirthCertFile = findFile('studentBirthCert');
     if (studentBirthCertFile) {
-      const { path } =
-        await this.objectStorageService.uploadAdmissionPolicyDocument(
-          studentBirthCertFile,
-          createAdmissionDto.schoolId,
-          'birth-cert',
-        );
+      const { path } = await this.objectStorageService.uploadAdmissionDocument(
+        studentBirthCertFile,
+        createAdmissionDto.schoolId,
+        createAdmissionDto.studentEmail || createAdmissionDto.studentFirstName,
+        'birth-cert',
+      );
       createAdmissionDto.studentBirthCertUrl = path;
     }
 
     // 3. Handle previous school result
     const previousSchoolResultFile = findFile('previousSchoolResult');
     if (previousSchoolResultFile) {
-      const { path } =
-        await this.objectStorageService.uploadAdmissionPolicyDocument(
-          previousSchoolResultFile,
-          createAdmissionDto.schoolId,
-          'prev-result',
-        );
+      const { path } = await this.objectStorageService.uploadAdmissionDocument(
+        previousSchoolResultFile,
+        createAdmissionDto.schoolId,
+        createAdmissionDto.studentEmail || createAdmissionDto.studentFirstName,
+        'prev-result',
+      );
       createAdmissionDto.previousSchoolResultPath = path;
       createAdmissionDto.previousSchoolResultMediaType =
         previousSchoolResultFile.mimetype;
@@ -80,9 +92,16 @@ export class AdmissionService {
     }
 
     // 5. Create Admission entity
-    const { guardians, forClassId, ...admissionData } = createAdmissionDto;
+    const { guardians, forClassId, schoolId, ...admissionData } =
+      createAdmissionDto;
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) throw new NotFoundException('School not found');
+
     const admission = this.admissionRepository.create({
       ...admissionData,
+      school,
       forClass: forClassId ? { id: forClassId } : undefined,
     });
     await this.admissionRepository.save(admission);
@@ -97,11 +116,36 @@ export class AdmissionService {
         await this.guardianRepository.save(guardian);
       }
     }
-
-    // 7. Return the created admission with guardians
+    if (admission.studentEmail) {
+      await this.emailService.sendAdmissionApplicationConfirmation(
+        admission.studentEmail,
+        `${admission.studentFirstName} ${admission.studentLastName}`,
+        school.name,
+        admission.applicationId,
+      );
+    }
     return this.admissionRepository.findOne({
       where: { applicationId: admission.applicationId },
       relations: ['guardians', 'forClass'],
     });
+  }
+  getAdmissionUrlForAdmin(admin: SchoolAdmin): { admissionUrl: string } {
+    if (!admin.school || !admin.school.id) {
+      throw new NotFoundException('School not found for this admin');
+    }
+    const baseUrl =
+      process.env.ADMISSION_BASE_URL ?? 'https://your-frontend.com/admissions';
+    return {
+      admissionUrl: `${baseUrl}?schoolId=${admin.school.id}`,
+    };
+  }
+  async findAllNamesBySchool(
+    schoolId: string,
+  ): Promise<{ id: string; name: string }[]> {
+    const classLevels = await this.classLevelRepository.find({
+      where: { school: { id: schoolId } },
+      select: ['id', 'name'],
+    });
+    return classLevels;
   }
 }

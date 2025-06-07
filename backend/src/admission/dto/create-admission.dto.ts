@@ -40,6 +40,10 @@ class GuardianDto {
 
   @IsOptional()
   @IsString()
+  company?: string;
+
+  @IsOptional()
+  @IsString()
   streetAddress?: string;
 
   @IsOptional()
@@ -48,7 +52,15 @@ class GuardianDto {
 
   @IsOptional()
   @IsString()
-  phone?: string;
+  guardianPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  guardianOtherPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  guardianOtherPhoneOptional?: string;
 
   @IsOptional()
   @IsString()
@@ -113,6 +125,14 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
+  studentOtherPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  studentOtherPhoneOptional?: string;
+
+  @IsOptional()
+  @IsString()
   studentHeadshotPath?: string;
 
   @IsOptional()
@@ -148,7 +168,7 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsBoolean()
-  hasPreviousSchool?: boolean;
+  hasPreviousSchool?: boolean = false;
 
   @IsOptional()
   @IsString()
@@ -156,11 +176,7 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
-  previousSchoolStudentId?: string;
-
-  @IsOptional()
-  @IsString()
-  previousSchoolEmail?: string;
+  previousSchoolUrl?: string;
 
   @IsOptional()
   @IsString()
@@ -169,6 +185,10 @@ export class CreateAdmissionDto {
   @IsOptional()
   @IsString()
   previousSchoolCity?: string;
+
+  @IsOptional()
+  @IsString()
+  previousSchoolState?: string;
 
   @IsOptional()
   @IsString()
