@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { FeeStructure } from './fee-structure.entity';
 import { CreateFeeStructureDto } from './dto/create-fee-structure.dto';
 import { School } from '../school/school.entity';
@@ -19,11 +19,22 @@ export class FeeStructureService {
   /**
    * Find all fee structures for a specific school
    */
-  async findAllBySchool(schoolId: string): Promise<FeeStructure[]> {
-    return this.feeStructureRepository.find({
-      where: { school: { id: schoolId } },
-      relations: ['classLevel'],
-    });
+  async findAllBySchool(schoolId: string): Promise<any[]> {
+    const feeStructures = await this.feeStructureRepository
+      .createQueryBuilder('fee')
+      .leftJoinAndSelect('fee.classLevels', 'classLevel')
+      .where('fee.schoolId = :schoolId', { schoolId })
+      .getMany();
+
+    return feeStructures.map((fee) => ({
+      id: fee.id,
+      feeTitle: fee.feeTitle,
+      feeType: fee.feeType,
+      amount: fee.amount,
+      appliesTo: fee.appliesTo,
+      dueDate: fee.dueDate,
+      classLevelIds: fee.classLevels?.map((cl) => cl.id) ?? [],
+    }));
   }
 
   /**
@@ -33,28 +44,29 @@ export class FeeStructureService {
     createFeeStructureDto: CreateFeeStructureDto,
     school: School,
   ): Promise<FeeStructure> {
-    const { classLevelId, ...feeData } = createFeeStructureDto;
+    const { classLevelIds, ...feeData } = createFeeStructureDto;
 
     const newFeeStructure = this.feeStructureRepository.create({
       ...feeData,
       school,
     });
 
-    // If classLevelId is provided, fetch and associate the ClassLevel
-    //Todo find a way to link to student category entity
-
-    if (classLevelId) {
-      const classLevel = await this.classLevelRepository.findOne({
-        where: { id: classLevelId, school: { id: school.id } },
+    // If classLevelIds are provided, fetch and associate the ClassLevels
+    if (classLevelIds && classLevelIds.length > 0) {
+      const classLevels = await this.classLevelRepository.findBy({
+        id: In(classLevelIds),
+        school: { id: school.id },
       });
 
-      if (!classLevel) {
+      if (classLevels.length !== classLevelIds.length) {
+        const foundIds = classLevels.map((cl) => cl.id);
+        const missingIds = classLevelIds.filter((id) => !foundIds.includes(id));
         throw new NotFoundException(
-          `Class level with ID ${classLevelId} not found in this school`,
+          `Class levels not found in this school: ${missingIds.join(', ')}`,
         );
       }
 
-      newFeeStructure.classLevel = classLevel;
+      newFeeStructure.classLevels = classLevels;
     }
 
     return this.feeStructureRepository.save(newFeeStructure);
@@ -67,7 +79,7 @@ export class FeeStructureService {
   ): Promise<FeeStructure> {
     const existingFee = await this.feeStructureRepository.findOne({
       where: { id, school: { id: schoolId } },
-      relations: ['classLevel'],
+      relations: ['classLevels'],
     });
 
     if (!existingFee) {
@@ -76,25 +88,31 @@ export class FeeStructureService {
       );
     }
 
-    const { classLevelId, ...feeData } = updateFeeStructureDto;
+    const { classLevelIds, ...feeData } = updateFeeStructureDto;
 
     Object.assign(existingFee, feeData);
 
-    if (classLevelId) {
-      const classLevel = await this.classLevelRepository.findOne({
-        where: { id: classLevelId, school: { id: schoolId } },
-      });
+    if (classLevelIds) {
+      if (classLevelIds.length > 0) {
+        const classLevels = await this.classLevelRepository.findBy({
+          id: In(classLevelIds),
+          school: { id: schoolId },
+        });
 
-      if (!classLevel) {
-        throw new NotFoundException(
-          `Class level with ID ${classLevelId} not found in this school`,
-        );
+        if (classLevels.length !== classLevelIds.length) {
+          const foundIds = classLevels.map((cl) => cl.id);
+          const missingIds = classLevelIds.filter(
+            (id) => !foundIds.includes(id),
+          );
+          throw new NotFoundException(
+            `Class levels not found in this school: ${missingIds.join(', ')}`,
+          );
+        }
+
+        existingFee.classLevels = classLevels;
+      } else {
+        existingFee.classLevels = [];
       }
-
-      existingFee.classLevel = classLevel;
-    } else if (classLevelId === null) {
-      // If classLevelId is explicitly set to null, remove the association
-      existingFee.classLevel = undefined;
     }
 
     return this.feeStructureRepository.save(existingFee);
