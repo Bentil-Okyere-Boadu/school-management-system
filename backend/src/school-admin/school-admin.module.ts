@@ -1,3 +1,4 @@
+import { Admission } from './../admission/admission.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
@@ -18,6 +19,9 @@ import { ProfileService } from 'src/profile/profile.service';
 import { Profile } from 'src/profile/profile.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { AdmissionService } from 'src/admission/admission.service';
+import { Guardian } from 'src/admission/guardian.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
 
 @Module({
   imports: [
@@ -28,6 +32,9 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       Student,
       Teacher,
       Profile,
+      Admission,
+      Guardian,
+      ClassLevel,
     ]),
     PassportModule,
     JwtModule.registerAsync({
@@ -50,6 +57,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
     AuthService,
     ProfileService,
     ConfigService,
+    AdmissionService,
   ],
   exports: [SchoolAdminAuthService, SchoolAdminService],
 })

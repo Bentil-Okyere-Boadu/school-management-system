@@ -71,7 +71,7 @@ export class SchoolAdminService {
     )
       .filter()
       .sort()
-      .search()
+      .search(['firstName', 'lastName', 'email'])
       .limitFields();
 
     const total = await featuresWithoutPagination.getQuery().getCount();
@@ -109,7 +109,7 @@ export class SchoolAdminService {
     const studentsFeatures = new APIFeatures(studentsQuery, queryString)
       .filter()
       .sort()
-      .search()
+      .search(['firstName', 'lastName', 'email'])
       .limitFields()
       .paginate();
 
@@ -127,7 +127,7 @@ export class SchoolAdminService {
     const teachersFeatures = new APIFeatures(teachersQuery, queryString)
       .filter()
       .sort()
-      .search()
+      .search(['firstName', 'lastName', 'email'])
       .limitFields()
       .paginate();
 

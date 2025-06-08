@@ -26,6 +26,7 @@ import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sa
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { SchoolAdminSchoolGuard } from './guards/school-admin-school.guard';
+import { AdmissionService } from 'src/admission/admission.service';
 
 @Controller('school-admin')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -33,6 +34,7 @@ export class SchoolAdminController {
   constructor(
     private readonly schoolAdminAuthService: SchoolAdminAuthService,
     private readonly schoolAdminService: SchoolAdminService,
+    private readonly admissionService: AdmissionService,
   ) {}
 
   @UseGuards(SchoolAdminLocalAuthGuard)
@@ -114,6 +116,16 @@ export class SchoolAdminController {
     @CurrentUser() admin: SchoolAdmin,
   ) {
     return this.schoolAdminService.getUserById(id, admin.school.id);
+  }
+
+  @Get('admissions')
+  @UseGuards(SchoolAdminJwtAuthGuard)
+  @Roles('school_admin')
+  getAdmissionsBySchool(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
+  ) {
+    return this.admissionService.findAllBySchool(admin.school.id, query);
   }
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('users/:id/archive')
