@@ -12,6 +12,14 @@ import { ClassLevel } from '../class-level/class-level.entity';
 import { Guardian } from './guardian.entity';
 import { School } from 'src/school/school.entity';
 
+export enum AdmissionStatus {
+  SUBMITTED = 'Application Submitted',
+  Interview_Completed = 'Interview Completed',
+  Interview_Pending = 'Interview Pending',
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected',
+  WAITLISTED = 'Waitlisted',
+}
 @Entity()
 export class Admission {
   @PrimaryGeneratedColumn('uuid')
@@ -20,8 +28,8 @@ export class Admission {
   @ManyToOne(() => School, { eager: true, onDelete: 'CASCADE' })
   school: School;
 
-  @Column({ default: 'in_progress' })
-  status: 'in_progress' | 'submitted';
+  @Column({ default: 'Application Submitted' })
+  status: AdmissionStatus;
 
   // --- Student Information ---
   @Column({ nullable: true })

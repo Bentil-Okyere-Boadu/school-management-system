@@ -9,7 +9,8 @@ import { School } from 'src/school/school.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { EmailService } from 'src/common/services/email.service';
-
+import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
+import { format } from 'date-fns';
 @Injectable()
 export class AdmissionService {
   constructor(
@@ -147,5 +148,54 @@ export class AdmissionService {
       select: ['id', 'name'],
     });
     return classLevels;
+  }
+
+  async findAllBySchool(
+    schoolId: string,
+    queryString: QueryString,
+  ): Promise<any> {
+    const baseQuery = this.admissionRepository
+      .createQueryBuilder('admission')
+      .leftJoinAndSelect('admission.school', 'school')
+      .where('admission.school.id = :schoolId', { schoolId });
+
+    const featuresWithoutPagination = new APIFeatures(
+      baseQuery.clone(),
+      queryString,
+    )
+      .filter()
+      .sort()
+      .search(['studentFirstName', 'studentLastName', 'studentEmail'])
+      .limitFields();
+
+    const total = await featuresWithoutPagination.getQuery().getCount();
+
+    const featuresWithPagination = featuresWithoutPagination.paginate();
+    const admissions = await featuresWithPagination.getQuery().getMany();
+
+    const page = parseInt(queryString.page ?? '1', 10);
+    const limit = parseInt(queryString.limit ?? '20', 10);
+    const totalPages = Math.ceil(total / limit);
+
+    // Format the result
+    const data = admissions.map((admission) => ({
+      fullName:
+        `${admission.studentFirstName ?? ''} ${admission.studentLastName ?? ''}`.trim(),
+      email: admission.studentEmail,
+      submittedAt: admission.createdAt
+        ? format(admission.createdAt, "MMM dd, yyyy 'at' hh:mm a")
+        : null,
+      enrollmentStatus: admission.status,
+    }));
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
   }
 }
