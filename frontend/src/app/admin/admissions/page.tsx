@@ -1,7 +1,9 @@
 "use client";
 import { AdmissionsAnalyticsTabSection } from '@/components/admin/admissions/AdmissionsAnalyticsTabSection';
 import { AdmissionsListTabSection } from '@/components/admin/admissions/AdmissionsListTabSection';
+import CustomButton from '@/components/Button';
 import TabBar from '@/components/common/TabBar';
+import { useGetSchoolAdminInfo } from '@/hooks/school-admin';
 import React, { useState } from 'react'
 
 export interface MetricCardProps {
@@ -30,8 +32,21 @@ const Admissions = () => {
     setActiveTabKey(item.tabKey);
   };
 
+  const { schoolAdminInfo } = useGetSchoolAdminInfo();
+
+  const goToAdmissionFormsPage = () => {
+    const frontendBaseUrl = process.env.NEXT_PUBLIC_FRONEND_URL;
+    const schoolId = schoolAdminInfo?.school?.id;
+    const admissionsLink = `${frontendBaseUrl}/admission-forms/${schoolId}`;
+
+    window.open(admissionsLink, "_blank");
+  }
+
   return (
     <div>
+      <div className="flex justify-end mb-1">
+        <CustomButton text="Get Admission Link" className='!py-1.5' onClick={goToAdmissionFormsPage} />
+      </div>
       <TabBar 
         items={defaultNavItems} 
         activeTabKey={activeTabKey} 

@@ -6,16 +6,23 @@ import AdditionalInformationStep from '@/components/admission-forms/AdditionalIn
 import PreviewStep from '@/components/admission-forms/PreviewStep';
 import CustomButton from '@/components/Button';
 import Stepper from '@/components/common/Stepper';
-import { StudentInformation, Guardian, AdditionalInformation } from '@/@types/index';
+import { StudentInformation, Guardian, AdditionalInformation, ErrorResponse } from '@/@types/index';
 import { Dialog } from '@/components/common/Dialog';
 import { toast } from 'react-toastify';
+import { useParams, useRouter } from 'next/navigation';
+import { useGetAdmissionClassLevels, useSubmitAdmissionForm } from '@/hooks/school-admin';
 
 
 const AdmissionFormsPage = () => {
 
+  const {id: schoolId } = useParams();
+  const router = useRouter();
+
   const [currentStep, setCurrentStep] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isConfirmApplicationSubmissionDialogOpen, setIsConfirmApplicationSubmissionDialogOpen] = useState(false);
+
+  const {classLevels} = useGetAdmissionClassLevels(schoolId as string);
 
   const [studentData, setStudentData] = useState<StudentInformation>({
     firstName: '',
@@ -63,7 +70,6 @@ const AdmissionFormsPage = () => {
   };
 
 
-
   const [guardians, setGuardians] = useState<Guardian[]>([{
     firstName: "",
     lastName: "",
@@ -80,25 +86,25 @@ const AdmissionFormsPage = () => {
   }]);
 
   const validateGuardians = (): boolean => {
-  for (const guardian of guardians) {
-    if (
-      !guardian.firstName.trim() ||
-      !guardian.lastName.trim() ||
-      !guardian.relationship.trim() ||
-      !guardian.email.trim() ||
-      !guardian.nationality.trim() ||
-      !guardian.occupation.trim() ||
-      !guardian.company.trim() ||
-      !guardian.streetAddress.trim() ||
-      !guardian.boxAddress.trim() ||
-      !guardian.phone.trim() ||
-      !guardian.headshotFile
-    ) {
-      return false; // At least one required field is missing
+    for (const guardian of guardians) {
+      if (
+        !guardian.firstName.trim() ||
+        !guardian.lastName.trim() ||
+        !guardian.relationship.trim() ||
+        !guardian.email.trim() ||
+        !guardian.nationality.trim() ||
+        !guardian.occupation.trim() ||
+        !guardian.company.trim() ||
+        !guardian.streetAddress.trim() ||
+        !guardian.boxAddress.trim() ||
+        !guardian.phone.trim() ||
+        !guardian.headshotFile
+      ) {
+        return false; // At least one required field is missing
+      }
     }
-  }
-  return true; // All guardians are valid
-};
+    return true; // All guardians are valid
+  };
 
 
   const [additionalInfo, setAdditionalInfo] = useState<AdditionalInformation>({
@@ -170,6 +176,37 @@ const AdmissionFormsPage = () => {
     setCurrentStep(num)
   }
 
+  const {mutate: submitMutation, isPending: pendingCreate} = useSubmitAdmissionForm();
+
+  const handleAdmissionFormSubmit = () => {
+    if (validateStudentData() && validateGuardians() && validateAdditionalInfo()) {
+      submitMutation(
+        {
+          studentData,
+          guardians,
+          additionalInfo,
+          schoolId: schoolId as string,
+        },
+        {
+          onSuccess: () => {
+            toast.success('Admission submitted successfully.');
+            setIsConfirmApplicationSubmissionDialogOpen(false);
+            setTimeout(() => {
+              router.push(`/admission-forms/${schoolId}/success`);
+            }, 200)
+          },
+          onError: (error: unknown) => {
+            toast.error(
+              JSON.stringify((error as ErrorResponse)?.response?.data?.message || 'Something went wrong.')
+            );
+          }
+        }
+      );
+    }
+  };
+
+
+
   return (
     <div className="min-h-screen bg-white w-full" ref={scrollRef}>
       <div className="lg:max-w-[54rem] mx-auto my-6 px-3">
@@ -181,7 +218,8 @@ const AdmissionFormsPage = () => {
           {currentStep === 1 && (
             <StudentInformationStep   
               data={studentData}
-              setData={setStudentData} />
+              setData={setStudentData}
+              classLevels={classLevels} />
           )}
 
           {currentStep === 2 && (
@@ -222,11 +260,11 @@ const AdmissionFormsPage = () => {
       {/* Confirm Application Submission Dialog */}
       <Dialog 
         isOpen={isConfirmApplicationSubmissionDialogOpen}
-        busy={false}
+        busy={pendingCreate}
         dialogTitle="Submit Application"
         saveButtonText="Submit Application"
         onClose={() => { setIsConfirmApplicationSubmissionDialogOpen(false)}} 
-        onSave={() => {}}
+        onSave={handleAdmissionFormSubmit}
       >
         <div className="my-6 flex flex-col gap-4 text-center">
           <p>

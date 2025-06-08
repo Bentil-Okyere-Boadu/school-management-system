@@ -4,31 +4,35 @@ import Image from "next/image";
 import ProfileLogo from '@/images/admission-profile-logo.svg'
 import InputField from '../InputField';
 import CustomButton from '../Button';
-import { StudentInformation } from '@/@types/index'
+import { StudentInformation, ClassLevel } from '@/@types/index'
 import { Select, TagsInput } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 
 interface StudentInfoProps {
   data: StudentInformation;
   setData: (data: StudentInformation) => void;
+  classLevels: ClassLevel[]
 }
 
 
-const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData }) => {
+const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, classLevels }) => {
   const genderOptions = [
     { value: "male", label: "Male" },
     { value: "female", label: "Female" },
   ];
+  
   const academicYearOptions = [
-    { value: "2025/2026", label: "2025/2026" },
-    { value: "2023/2024", label: "2023/2024" },
-    { value: "2021/2022", label: "2021/2022" },
+    { value: "2027", label: "2027" },
+    { value: "2026", label: "2026" },
+    { value: "2025", label: "2025" },
+    { value: "2024", label: "2024" },
+    { value: "2023", label: "2023" },
   ];
-    const classLevelOptions = [
-    { value: "class-4", label: "Class 4" },
-    { value: "class-5", label: "Class 5" },
-    { value: "class-6", label: "Class 6" },
-  ];
+
+  const classLevelOptions = classLevels?.map((cl) => ({
+    value: cl.id,
+    label: cl.name
+  }))
 
   const handleChange = (field: keyof StudentInformation, value: string | string[] | File) => {
     setData({ ...data, [field]: value });
