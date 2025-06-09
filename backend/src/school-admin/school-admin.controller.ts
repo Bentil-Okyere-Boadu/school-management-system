@@ -119,7 +119,7 @@ export class SchoolAdminController {
   }
 
   @Get('admissions')
-  @UseGuards(SchoolAdminJwtAuthGuard)
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles('school_admin')
   getAdmissionsBySchool(
     @CurrentUser() admin: SchoolAdmin,
@@ -127,7 +127,7 @@ export class SchoolAdminController {
   ) {
     return this.admissionService.findAllBySchool(admin.school.id, query);
   }
-  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+
   @Put('users/:id/archive')
   @Roles('school_admin')
   async archiveUser(
@@ -135,5 +135,11 @@ export class SchoolAdminController {
     @Body() body: { archive: boolean },
   ) {
     return this.schoolAdminService.archiveUser(id, body.archive);
+  }
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('admissions/:applicationId')
+  @Roles('school_admin')
+  getAdmissionById(@Param('applicationId') applicationId: string) {
+    return this.admissionService.getAdmissionById(applicationId);
   }
 }

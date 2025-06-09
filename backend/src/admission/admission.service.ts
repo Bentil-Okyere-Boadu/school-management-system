@@ -58,7 +58,9 @@ export class AdmissionService {
         createAdmissionDto.studentEmail || createAdmissionDto.studentFirstName,
         'birth-cert',
       );
-      createAdmissionDto.studentBirthCertUrl = path;
+      createAdmissionDto.studentBirthCertPath = path;
+      createAdmissionDto.studentBirthCertMediaType =
+        studentBirthCertFile.mimetype;
     }
 
     // 3. Handle previous school result
@@ -79,15 +81,18 @@ export class AdmissionService {
     if (Array.isArray(createAdmissionDto.guardians)) {
       for (let i = 0; i < createAdmissionDto.guardians.length; i++) {
         const guardian = createAdmissionDto.guardians[i];
-        const field = `guardianHeadshot_${i}`;
+        const field = `guardianHeadshot${i}`;
         const guardianHeadshotFile = findFile(field);
         if (guardianHeadshotFile) {
+          console.log('hellp');
           const { path } = await this.objectStorageService.uploadProfileImage(
             guardianHeadshotFile,
             guardian.email || guardian.firstName,
           );
           guardian.headshotPath = path;
           guardian.headshotMediaType = guardianHeadshotFile.mimetype;
+        } else {
+          console.log('jude');
         }
       }
     }
@@ -179,6 +184,7 @@ export class AdmissionService {
 
     // Format the result
     const data = admissions.map((admission) => ({
+      id: admission.applicationId,
       fullName:
         `${admission.studentFirstName ?? ''} ${admission.studentLastName ?? ''}`.trim(),
       email: admission.studentEmail,
@@ -197,5 +203,43 @@ export class AdmissionService {
         totalPages,
       },
     };
+  }
+
+  async getAdmissionById(applicationId: string): Promise<any> {
+    const admission = await this.admissionRepository.findOne({
+      where: { applicationId },
+      relations: ['guardians', 'forClass', 'school'],
+    });
+
+    if (!admission) {
+      throw new NotFoundException('Admission not found');
+    }
+
+    // Sign student file URLs
+    admission.studentHeadshotUrl = admission.studentHeadshotPath
+      ? await this.objectStorageService.getSignedUrl(
+          admission.studentHeadshotPath,
+        )
+      : undefined;
+    admission.studentBirthCertUrl = admission.studentBirthCertPath
+      ? await this.objectStorageService.getSignedUrl(
+          admission.studentBirthCertPath,
+        )
+      : undefined;
+    admission.previousSchoolResultUrl = admission.previousSchoolResultPath
+      ? await this.objectStorageService.getSignedUrl(
+          admission.previousSchoolResultPath,
+        )
+      : undefined;
+
+    // Sign guardian headshot URLs
+    if (admission.guardians && Array.isArray(admission.guardians)) {
+      for (const guardian of admission.guardians) {
+        guardian.headshotUrl = guardian.headshotPath
+          ? await this.objectStorageService.getSignedUrl(guardian.headshotPath)
+          : undefined;
+      }
+    }
+    return admission;
   }
 }

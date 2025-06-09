@@ -63,7 +63,7 @@ export class CreateAdmissionStudentInfoDto {
 
   @IsOptional()
   @IsString()
-  studentBirthCertUrl?: string;
+  studentBirthCertPath?: string;
 
   @IsOptional()
   @IsString()
@@ -72,4 +72,4 @@ export class CreateAdmissionStudentInfoDto {
   @IsOptional()
   @IsString()
   forClassId?: string;
-} 
+}
