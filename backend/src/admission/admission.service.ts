@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admission } from './admission.entity';
@@ -11,6 +15,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { format } from 'date-fns';
+import { PreviousSchoolResult } from './previous-school-result.entity';
 @Injectable()
 export class AdmissionService {
   constructor(
@@ -23,7 +28,8 @@ export class AdmissionService {
 
     @InjectRepository(ClassLevel)
     private readonly classLevelRepository: Repository<ClassLevel>,
-
+    @InjectRepository(PreviousSchoolResult)
+    private readonly previousSchoolResultRepository: Repository<PreviousSchoolResult>,
     private readonly objectStorageService: ObjectStorageServiceService,
 
     private readonly emailService: EmailService,
@@ -97,7 +103,18 @@ export class AdmissionService {
       }
     }
 
-    // 5. Create Admission entity
+    // Find all previous school result files (e.g., fieldname: previousSchoolResult0, previousSchoolResult1, ...)
+    const previousSchoolResultFiles = files.filter((f) =>
+      f.fieldname.startsWith('previousSchoolResult'),
+    );
+
+    if (previousSchoolResultFiles.length < 3) {
+      throw new BadRequestException(
+        'At least 3 previous school result files are required.',
+      );
+    }
+
+    // Save admission first (without previousSchoolResults)
     const { guardians, forClassId, schoolId, ...admissionData } =
       createAdmissionDto;
     const school = await this.schoolRepository.findOne({
@@ -111,6 +128,22 @@ export class AdmissionService {
       forClass: forClassId ? { id: forClassId } : undefined,
     });
     await this.admissionRepository.save(admission);
+
+    // Save previous school results
+    for (const file of previousSchoolResultFiles) {
+      const { path } = await this.objectStorageService.uploadAdmissionDocument(
+        file,
+        createAdmissionDto.schoolId,
+        createAdmissionDto.studentEmail || createAdmissionDto.studentFirstName,
+        'prev-result',
+      );
+      const result = this.previousSchoolResultRepository.create({
+        filePath: path,
+        mediaType: file.mimetype,
+        admission,
+      });
+      await this.previousSchoolResultRepository.save(result);
+    }
 
     // 6. Create Guardian entities
     if (Array.isArray(guardians)) {
@@ -226,12 +259,16 @@ export class AdmissionService {
           admission.studentBirthCertPath,
         )
       : undefined;
-    admission.previousSchoolResultUrl = admission.previousSchoolResultPath
-      ? await this.objectStorageService.getSignedUrl(
-          admission.previousSchoolResultPath,
-        )
-      : undefined;
-
+    if (
+      admission.previousSchoolResults &&
+      Array.isArray(admission.previousSchoolResults)
+    ) {
+      for (const result of admission.previousSchoolResults) {
+        result.fileUrl = result.filePath
+          ? await this.objectStorageService.getSignedUrl(result.filePath)
+          : undefined;
+      }
+    }
     // Sign guardian headshot URLs
     if (admission.guardians && Array.isArray(admission.guardians)) {
       for (const guardian of admission.guardians) {

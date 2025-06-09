@@ -11,6 +11,7 @@ import {
 import { ClassLevel } from '../class-level/class-level.entity';
 import { Guardian } from './guardian.entity';
 import { School } from 'src/school/school.entity';
+import { PreviousSchoolResult } from './previous-school-result.entity';
 
 export enum AdmissionStatus {
   SUBMITTED = 'Application Submitted',
@@ -152,17 +153,11 @@ export class Admission {
   @Column({ nullable: true })
   previousSchoolGradeClass: string;
 
-  // Previous School Result
-  @Column({ nullable: true })
-  previousSchoolResultPath: string;
-
-  @Column({ nullable: true })
-  previousSchoolResultMediaType: string;
-
-  @VirtualColumn({
-    query: (alias) => `(NULL)`, // Placeholder, handled in code
+  @OneToMany(() => PreviousSchoolResult, (result) => result.admission, {
+    cascade: true,
+    eager: true,
   })
-  previousSchoolResultUrl?: string;
+  previousSchoolResults: PreviousSchoolResult[];
 
   // --- Timestamps ---
   @CreateDateColumn()
