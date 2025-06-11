@@ -22,6 +22,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 import { AdmissionService } from 'src/admission/admission.service';
 import { Guardian } from 'src/admission/guardian.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { PreviousSchoolResult } from 'src/admission/previous-school-result.entity';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ClassLevel } from 'src/class-level/class-level.entity';
       Admission,
       Guardian,
       ClassLevel,
+      PreviousSchoolResult,
     ]),
     PassportModule,
     JwtModule.registerAsync({
