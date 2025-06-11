@@ -15,8 +15,8 @@ import { PreviousSchoolResult } from './previous-school-result.entity';
 
 export enum AdmissionStatus {
   SUBMITTED = 'Application Submitted',
-  Interview_Completed = 'Interview Completed',
-  Interview_Pending = 'Interview Pending',
+  INTERVIEW_COMPLETED = 'Interview Completed',
+  INTERVIEW_PENDING = 'Interview Pending',
   ACCEPTED = 'Accepted',
   REJECTED = 'Rejected',
   WAITLISTED = 'Waitlisted',

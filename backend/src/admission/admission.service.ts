@@ -69,20 +69,6 @@ export class AdmissionService {
         studentBirthCertFile.mimetype;
     }
 
-    // 3. Handle previous school result
-    const previousSchoolResultFile = findFile('previousSchoolResult');
-    if (previousSchoolResultFile) {
-      const { path } = await this.objectStorageService.uploadAdmissionDocument(
-        previousSchoolResultFile,
-        createAdmissionDto.schoolId,
-        createAdmissionDto.studentEmail || createAdmissionDto.studentFirstName,
-        'prev-result',
-      );
-      createAdmissionDto.previousSchoolResultPath = path;
-      createAdmissionDto.previousSchoolResultMediaType =
-        previousSchoolResultFile.mimetype;
-    }
-
     // 4. Handle guardian headshots
     if (Array.isArray(createAdmissionDto.guardians)) {
       for (let i = 0; i < createAdmissionDto.guardians.length; i++) {
@@ -90,15 +76,12 @@ export class AdmissionService {
         const field = `guardianHeadshot${i}`;
         const guardianHeadshotFile = findFile(field);
         if (guardianHeadshotFile) {
-          console.log('hellp');
           const { path } = await this.objectStorageService.uploadProfileImage(
             guardianHeadshotFile,
-            guardian.email || guardian.firstName,
+            guardian.email ?? guardian.firstName,
           );
           guardian.headshotPath = path;
           guardian.headshotMediaType = guardianHeadshotFile.mimetype;
-        } else {
-          console.log('jude');
         }
       }
     }
@@ -108,9 +91,13 @@ export class AdmissionService {
       f.fieldname.startsWith('previousSchoolResult'),
     );
 
-    if (previousSchoolResultFiles.length < 3) {
+    // Only validate if the student has previous school experience
+    if (
+      createAdmissionDto.hasPreviousSchool &&
+      previousSchoolResultFiles.length === 0
+    ) {
       throw new BadRequestException(
-        'At least 3 previous school result files are required.',
+        'Previous school result files are required when student has previous school experience.',
       );
     }
 
@@ -125,24 +112,37 @@ export class AdmissionService {
     const admission = this.admissionRepository.create({
       ...admissionData,
       school,
+      hasPreviousSchool: previousSchoolResultFiles.length > 0,
       forClass: forClassId ? { id: forClassId } : undefined,
     });
     await this.admissionRepository.save(admission);
 
-    // Save previous school results
-    for (const file of previousSchoolResultFiles) {
-      const { path } = await this.objectStorageService.uploadAdmissionDocument(
-        file,
-        createAdmissionDto.schoolId,
-        createAdmissionDto.studentEmail || createAdmissionDto.studentFirstName,
-        'prev-result',
-      );
-      const result = this.previousSchoolResultRepository.create({
-        filePath: path,
-        mediaType: file.mimetype,
-        admission,
-      });
-      await this.previousSchoolResultRepository.save(result);
+    // Save previous school results if any exist
+    if (previousSchoolResultFiles.length > 0) {
+      try {
+        for (const file of previousSchoolResultFiles) {
+          const { path } =
+            await this.objectStorageService.uploadAdmissionDocument(
+              file,
+              createAdmissionDto.schoolId,
+              createAdmissionDto.studentEmail ??
+                createAdmissionDto.studentFirstName,
+              'prev-result',
+            );
+          const result = this.previousSchoolResultRepository.create({
+            filePath: path,
+            mediaType: file.mimetype,
+            admission,
+          });
+          await this.previousSchoolResultRepository.save(result);
+        }
+      } catch (error) {
+        // If file upload fails, we should clean up the admission record
+        await this.admissionRepository.remove(admission);
+        throw new BadRequestException(
+          `Failed to upload previous school result files: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
     }
 
     // 6. Create Guardian entities
@@ -169,7 +169,7 @@ export class AdmissionService {
     });
   }
   getAdmissionUrlForAdmin(admin: SchoolAdmin): { admissionUrl: string } {
-    if (!admin.school || !admin.school.id) {
+    if (!admin.school?.id) {
       throw new NotFoundException('School not found for this admin');
     }
     const baseUrl =
@@ -241,7 +241,7 @@ export class AdmissionService {
   async getAdmissionById(applicationId: string): Promise<any> {
     const admission = await this.admissionRepository.findOne({
       where: { applicationId },
-      relations: ['guardians', 'forClass', 'school'],
+      relations: ['guardians', 'forClass', 'school', 'previousSchoolResults'],
     });
 
     if (!admission) {

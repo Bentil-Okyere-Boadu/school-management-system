@@ -6,6 +6,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PreviousSchoolResult } from '../previous-school-result.entity';
 
 class GuardianDto {
   @IsString()
@@ -191,6 +192,9 @@ export class CreateAdmissionDto {
   previousSchoolCity?: string;
 
   @IsOptional()
+  previousSchoolResults?: PreviousSchoolResult[];
+
+  @IsOptional()
   @IsString()
   previousSchoolState?: string;
 
@@ -217,12 +221,4 @@ export class CreateAdmissionDto {
   @IsOptional()
   @IsString()
   previousSchoolGradeClass?: string;
-
-  @IsOptional()
-  @IsString()
-  previousSchoolResultPath?: string;
-
-  @IsOptional()
-  @IsString()
-  previousSchoolResultMediaType?: string;
 }
