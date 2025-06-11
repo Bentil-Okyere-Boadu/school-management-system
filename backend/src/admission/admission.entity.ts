@@ -75,12 +75,6 @@ export class Admission {
   studentOtherPhoneOptional: string;
 
   @Column({ nullable: true })
-  studentPhotoUrl: string;
-
-  @Column({ nullable: true })
-  studentBirthCertUrl: string;
-
-  @Column({ nullable: true })
   academicYear: string;
 
   @ManyToOne(() => ClassLevel, { nullable: true })
@@ -93,11 +87,21 @@ export class Admission {
   @Column({ nullable: true })
   studentHeadshotMediaType: string;
 
+  @Column({ nullable: true })
+  studentBirthCertPath: string;
+
+  @Column({ nullable: true })
+  studentBirthCertMediaType: string;
+
   @VirtualColumn({
     query: (alias) => `(NULL)`, // Placeholder, handled in code
   })
   studentHeadshotUrl?: string;
 
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder, handled in code
+  })
+  studentBirthCertUrl?: string;
   // --- Family Information (Guardian 1, can be extended for more) ---
   @OneToMany(() => Guardian, (guardian) => guardian.admission, {
     cascade: true,

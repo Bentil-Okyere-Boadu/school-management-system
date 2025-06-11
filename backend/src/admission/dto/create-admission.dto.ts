@@ -141,7 +141,11 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
-  studentBirthCertUrl?: string;
+  studentBirthCertPath?: string;
+
+  @IsOptional()
+  @IsString()
+  studentBirthCertMediaType?: string;
 
   @IsOptional()
   @IsString()

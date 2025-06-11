@@ -5,7 +5,6 @@ import TabBar from '@/components/common/TabBar';
 import { useGetMe } from '@/hooks/school-admin';
 import { Button } from '@mantine/core';
 import { IconCopy } from '@tabler/icons-react';
-import { usePathname } from 'next/navigation';
 import React, { useState } from 'react'
 import { toast } from 'react-toastify';
 
@@ -26,7 +25,6 @@ export type TabListItem = {
 
 const Admissions = () => {
   const [isCopied, setIsCopied] = useState(false);
-  const {} = usePathname();
 
   const defaultNavItems: TabListItem[] = [
     { tabLabel: "Admissions Analytics", tabKey: "admissions-analytics" },
@@ -38,10 +36,18 @@ const Admissions = () => {
     setActiveTabKey(item.tabKey);
   };
 
-  const {me} = useGetMe();
+    const {me} = useGetMe();
+
+  const goToAdmissionFormsPage = () => {
+    const frontendBaseUrl = process.env.NEXT_PUBLIC_FRONEND_URL;
+    const schoolId = me.school.id;
+    const admissionsLink = `${frontendBaseUrl}/admission-forms/${schoolId}`;
+
+    window.open(admissionsLink, "_blank");
+  }
 
   const copyText = async (schoolId: string) => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const baseUrl = process.env.NEXT_PUBLIC_FRONEND_URL;
     const textToCopy = baseUrl + '/admission-forms/' + schoolId;
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -68,11 +74,19 @@ const Admissions = () => {
           onItemClick={handleItemClick}
         />
 
-        <Button 
-          leftSection={<IconCopy size={24}/>}
-          onClick={() => copyText(`${me.school.id}`)}
-          
-          >Copy Admissions link</Button> 
+        <div>
+          <Button 
+            leftSection={<IconCopy size={24}/>}
+            onClick={() => copyText(`${me.school.id}`)}>
+              Copy Admissions link
+            </Button> 
+
+          <Button className='ml-2'
+            onClick={() => goToAdmissionFormsPage()}>
+              Go to Admissions Form
+            </Button> 
+
+        </div>
       </div>
 
       {activeTabKey === "admissions-analytics" && (

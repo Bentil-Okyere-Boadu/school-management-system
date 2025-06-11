@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation } from "@/@types";
 
 export const useGetMySchool = () => {
     const { data, isLoading, refetch } = useQuery({
@@ -439,3 +439,101 @@ export const useGetSchoolUserById = (id: string) => {
     return { schoolUser, isLoading, refetch }
 }
 
+
+/**
+ * ADMISSION FORMS
+ */
+export const useSubmitAdmissionForm = () => {
+  return useMutation({
+    mutationFn: ({
+      studentData,
+      guardians,
+      additionalInfo,
+      schoolId,
+    }: {
+      studentData: StudentInformation;
+      guardians: Guardian[];
+      additionalInfo: AdditionalInformation;
+      schoolId: string;
+    }) => {
+      const formData = new FormData();
+
+      // Flat student data
+      formData.append('schoolId', schoolId);
+      formData.append('studentFirstName', studentData.firstName);
+      formData.append('studentLastName', studentData.lastName);
+      formData.append('studentEmail', studentData.email);
+      formData.append('studentPhone', studentData.phone);
+      formData.append('studentOtherPhone', studentData.boxAddress);
+    //   formData.append('studentOtherPhoneOptional', studentData.optionalPhone || '');
+      formData.append('academicYear', studentData.academicYear);
+      formData.append('forClassId', studentData.classFor);
+      formData.append('homePrimaryLanguage', additionalInfo.primaryHomeLanguage);
+    //   formData.append('studentPrimaryLanguage', additionalInfo.studentPrimaryLanguage);
+    //   formData.append('hasPreviousSchool', additionalInfo.hasAcademicHistory === "yes" ? true : false);
+
+      // Previous School
+      if (additionalInfo.hasAcademicHistory === 'yes' && additionalInfo.previousSchool) {
+        const ps = additionalInfo.previousSchool;
+        formData.append('previousSchoolName', ps.name);
+        formData.append('previousSchoolUrl', ps.url);
+        formData.append('previousSchoolStreet', ps.street);
+        formData.append('previousSchoolCity', ps.city);
+        formData.append('previousSchoolState', ps.state);
+        formData.append('previousSchoolCountry', ps.country);
+        formData.append('previousSchoolAttendedFrom', ps.attendedFrom);
+        formData.append('previousSchoolAttendedTo', ps.attendedTo);
+        formData.append('previousSchoolGradeClass', ps.grade);
+
+        ps.reportCards?.forEach((file, index) => {
+          formData.append(`previousSchoolReportCards[${index}]`, file);
+        });
+      }
+
+      // Student files
+      if (studentData.birthCertificateFile)
+        formData.append('birthCertificateFile', studentData.birthCertificateFile);
+      if (studentData.headshotFile)
+        formData.append('headshotFile', studentData.headshotFile);
+
+      // Guardians
+      guardians.forEach((guardian, index) => {
+        formData.append(`guardians[${index}][firstName]`, guardian.firstName);
+        formData.append(`guardians[${index}][lastName]`, guardian.lastName);
+        formData.append(`guardians[${index}][email]`, guardian.email);
+        formData.append(`guardians[${index}][relationship]`, guardian.relationship);
+        // formData.append(`guardians[${index}][phone]`, guardian.phone);
+        // formData.append(`guardians[${index}][optionalPhone]`, guardian.optionalPhone || '');
+        formData.append(`guardians[${index}][occupation]`, guardian.occupation);
+        formData.append(`guardians[${index}][company]`, guardian.company);
+        formData.append(`guardians[${index}][nationality]`, guardian.nationality);
+        formData.append(`guardians[${index}][streetAddress]`, guardian.streetAddress);
+        formData.append(`guardians[${index}][boxAddress]`, guardian.boxAddress);
+
+        if (guardian.headshotFile) {
+          formData.append(`guardians[${index}][headshotFile]`, guardian.headshotFile);
+        }
+      });
+
+      return customAPI.post('/admissions', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useGetAdmissionClassLevels = (id: string) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['admissionClassLevel'],
+        queryFn: () => {
+            return customAPI.get(`/admissions/class-levels/${id}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const classLevels = data?.data as ClassLevel[] || [] ;
+
+    return { classLevels, isLoading, refetch }
+}
