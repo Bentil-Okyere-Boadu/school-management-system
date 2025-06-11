@@ -1,10 +1,12 @@
 "use client";
 import { AdmissionsAnalyticsTabSection } from '@/components/admin/admissions/AdmissionsAnalyticsTabSection';
 import { AdmissionsListTabSection } from '@/components/admin/admissions/AdmissionsListTabSection';
-import CustomButton from '@/components/Button';
 import TabBar from '@/components/common/TabBar';
-import { useGetSchoolAdminInfo } from '@/hooks/school-admin';
+import { useGetMe } from '@/hooks/school-admin';
+import { Button } from '@mantine/core';
+import { IconCopy } from '@tabler/icons-react';
 import React, { useState } from 'react'
+import { toast } from 'react-toastify';
 
 export interface MetricCardProps {
   value: string;
@@ -22,6 +24,8 @@ export type TabListItem = {
 };
 
 const Admissions = () => {
+  const [isCopied, setIsCopied] = useState(false);
+
   const defaultNavItems: TabListItem[] = [
     { tabLabel: "Admissions Analytics", tabKey: "admissions-analytics" },
     { tabLabel: "Admissions List", tabKey: "admissions-list" },
@@ -32,26 +36,58 @@ const Admissions = () => {
     setActiveTabKey(item.tabKey);
   };
 
-  const { schoolAdminInfo } = useGetSchoolAdminInfo();
+    const {me} = useGetMe();
 
   const goToAdmissionFormsPage = () => {
     const frontendBaseUrl = process.env.NEXT_PUBLIC_FRONEND_URL;
-    const schoolId = schoolAdminInfo?.school?.id;
+    const schoolId = me.school.id;
     const admissionsLink = `${frontendBaseUrl}/admission-forms/${schoolId}`;
 
     window.open(admissionsLink, "_blank");
   }
 
+  const copyText = async (schoolId: string) => {
+    const baseUrl = process.env.NEXT_PUBLIC_FRONEND_URL;
+    const textToCopy = baseUrl + '/admission-forms/' + schoolId;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setIsCopied(true);
+      setTimeout(() =>{
+        if(isCopied) {
+          toast.success('Admission link copied to clipboard.')
+        }
+
+        setIsCopied(false)
+      }, 1500); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+
   return (
     <div>
-      <div className="flex justify-end mb-1">
-        <CustomButton text="Get Admission Link" className='!py-1.5' onClick={goToAdmissionFormsPage} />
+      <div className='flex justify-between'>
+        <TabBar 
+          items={defaultNavItems} 
+          activeTabKey={activeTabKey} 
+          onItemClick={handleItemClick}
+        />
+
+        <div>
+          <Button 
+            leftSection={<IconCopy size={24}/>}
+            onClick={() => copyText(`${me.school.id}`)}>
+              Copy Admissions link
+            </Button> 
+
+          <Button className='ml-2'
+            onClick={() => goToAdmissionFormsPage()}>
+              Go to Admissions Form
+            </Button> 
+
+        </div>
       </div>
-      <TabBar 
-        items={defaultNavItems} 
-        activeTabKey={activeTabKey} 
-        onItemClick={handleItemClick}
-      />
 
       {activeTabKey === "admissions-analytics" && (
         <div>

@@ -15,14 +15,14 @@ import { useGetAdmissionClassLevels, useSubmitAdmissionForm } from '@/hooks/scho
 
 const AdmissionFormsPage = () => {
 
-  const {id: schoolId } = useParams();
+  const {id} = useParams();
   const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isConfirmApplicationSubmissionDialogOpen, setIsConfirmApplicationSubmissionDialogOpen] = useState(false);
 
-  const {classLevels} = useGetAdmissionClassLevels(schoolId as string);
+  const {classLevels} = useGetAdmissionClassLevels(id as string);
 
   const [studentData, setStudentData] = useState<StudentInformation>({
     firstName: '',
@@ -185,14 +185,14 @@ const AdmissionFormsPage = () => {
           studentData,
           guardians,
           additionalInfo,
-          schoolId: schoolId as string,
+          schoolId: id as string,
         },
         {
           onSuccess: () => {
             toast.success('Admission submitted successfully.');
             setIsConfirmApplicationSubmissionDialogOpen(false);
             setTimeout(() => {
-              router.push(`/admission-forms/${schoolId}/success`);
+              router.push(`/admission-forms/${id}/success`);
             }, 200)
           },
           onError: (error: unknown) => {
