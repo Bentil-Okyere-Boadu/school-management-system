@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Admission } from './admission.entity';
+import { Admission, AdmissionStatus } from './admission.entity';
 import { Guardian } from './guardian.entity';
 import { CreateAdmissionDto } from './dto/create-admission.dto';
 import { ObjectStorageServiceService } from '../object-storage-service/object-storage-service.service';
@@ -278,5 +278,33 @@ export class AdmissionService {
       }
     }
     return admission;
+  }
+  async sendInterviewInvitation(
+    applicationId: string,
+    interviewDate: string,
+    interviewTime: string,
+  ) {
+    const admission = await this.admissionRepository.findOne({
+      where: { applicationId },
+      relations: ['school'],
+    });
+    if (!admission) {
+      throw new NotFoundException('Admission not found');
+    }
+    if (!admission.studentEmail) {
+      throw new BadRequestException('applicant email not found');
+    }
+    await this.emailService.sendInterviewInvitation(
+      admission.studentEmail,
+      `${admission.studentFirstName} ${admission.studentLastName}`,
+      admission.school.name,
+      applicationId,
+      interviewDate,
+      interviewTime,
+    );
+    admission.status = AdmissionStatus.INTERVIEW_PENDING;
+    await this.admissionRepository.save(admission);
+
+    return { message: 'Interview invitation sent successfully' };
   }
 }

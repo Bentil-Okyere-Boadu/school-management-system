@@ -146,4 +146,23 @@ export class SchoolAdminController {
   ) {
     return this.schoolAdminService.archiveUser(id, body.archive);
   }
+
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Post('admissions/:applicationId/interview')
+  @Roles('school_admin')
+  async sendInterviewInvitation(
+    @Param('applicationId') applicationId: string,
+    @Body() interviewData: { interviewDate: string; interviewTime: string },
+  ) {
+    return this.admissionService.sendInterviewInvitation(
+      applicationId,
+      interviewData.interviewDate,
+      interviewData.interviewTime,
+    );
+  }
 }

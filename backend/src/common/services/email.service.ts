@@ -20,6 +20,7 @@ export enum EmailTemplate {
   STUDENT_PIN_RESET = 'student_pin_reset',
   TEACHER_PIN_RESET = 'teacher_pin_reset',
   ADMISSION_APPLICATION_CONFIRMATION = 'admission_application_confirmation',
+  INTERVIEW_INVITATION = 'interview_invitation',
 }
 
 /**
@@ -360,6 +361,40 @@ export class EmailService {
     }
   }
 
+  async sendInterviewInvitation(
+    to: string,
+    name: string,
+    schoolName: string,
+    applicationId: string,
+    interviewDate: string,
+    interviewTime: string,
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject: `Interview Invitation for Application ID ${applicationId}`,
+        html: this.getEmailTemplate(EmailTemplate.INTERVIEW_INVITATION, {
+          name,
+          schoolName,
+          applicationId,
+          interviewDate,
+          interviewTime,
+        }),
+      });
+      this.logger.log(`Interview invitation email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send interview invitation email to ${to}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send interview invitation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   /**
    * Get the HTML template for a specific email type
    * @param template The email template to use
@@ -535,6 +570,22 @@ export class EmailService {
         <span style="background-color: #AB58E7; color: white; padding: 10px 20px; border-radius: 4px; display: inline-block;">Application ID: ${data.applicationId}</span>
       </p>
       <p>We appreciate your interest and look forward to welcoming you!</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+      <p style="color: #777; font-size: 12px;">School Management System</p>
+    </div>
+     `;
+      case EmailTemplate.INTERVIEW_INVITATION:
+        return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+      <h2 style="color: #333;">Interview Invitation</h2>
+      <p>Dear ${data.name},</p>
+      <p>We are pleased to invite you for an interview as part of the admission process for <strong>${data.schoolName}</strong>.</p>
+           <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Date:</strong> ${data.interviewDate}</p>
+              <p><strong>Time:</strong> ${data.interviewTime}</p>
+            </div>
+      <p>Please make sure to arrive 10 minutes before the scheduled time.</p>
+      <p>If you have any questions, feel free to reply to this email or contact the school directly.</p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
       <p style="color: #777; font-size: 12px;">School Management System</p>
     </div>
