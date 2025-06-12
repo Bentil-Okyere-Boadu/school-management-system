@@ -117,7 +117,17 @@ export class SchoolAdminController {
   ) {
     return this.schoolAdminService.getUserById(id, admin.school.id);
   }
-
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Get('admissions/:applicationId')
+  @Roles('school_admin')
+  getAdmissionById(@Param('applicationId') applicationId: string) {
+    return this.admissionService.getAdmissionById(applicationId);
+  }
   @Get('admissions')
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles('school_admin')
@@ -136,10 +146,23 @@ export class SchoolAdminController {
   ) {
     return this.schoolAdminService.archiveUser(id, body.archive);
   }
-  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Get('admissions/:applicationId')
+
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Post('admissions/:applicationId/interview')
   @Roles('school_admin')
-  getAdmissionById(@Param('applicationId') applicationId: string) {
-    return this.admissionService.getAdmissionById(applicationId);
+  async sendInterviewInvitation(
+    @Param('applicationId') applicationId: string,
+    @Body() interviewData: { interviewDate: string; interviewTime: string },
+  ) {
+    return this.admissionService.sendInterviewInvitation(
+      applicationId,
+      interviewData.interviewDate,
+      interviewData.interviewTime,
+    );
   }
 }
