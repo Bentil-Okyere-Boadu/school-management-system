@@ -2,12 +2,14 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData } from "@/@types";
 
-export const useGetMySchool = () => {
+export const useGetMySchool = (enable?: string) => {
+    const enabled = Boolean(enable);
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['mySchool'],
         queryFn: () => {
             return customAPI.get('/school-admin/my-school');
         },
+        enabled,
         refetchOnWindowFocus: true
     })
 
@@ -426,11 +428,13 @@ export const useDeleteAdmissionPolicy = () => {
 
 // View student/teacher  
 export const useGetSchoolUserById = (id: string) => {
+     const enabled = Boolean(id);
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['schoolUser', id],
         queryFn: () => {
             return customAPI.get(`/school-admin/users/${id}`);
         },
+        enabled,
         refetchOnWindowFocus: true
     })
 
