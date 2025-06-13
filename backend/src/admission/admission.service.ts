@@ -379,4 +379,178 @@ export class AdmissionService {
 
     return { message: `Admission status updated to ${status}` };
   }
+
+  async getAdmissionAnalytics(schoolId: string) {
+    // Get all admissions for the school
+    const admissions = await this.admissionRepository.find({
+      where: { school: { id: schoolId } },
+    });
+
+    // Calculate summary metrics
+    const totalApplications = admissions.length;
+    const acceptedApplications = admissions.filter(
+      (a) => a.status === AdmissionStatus.ACCEPTED,
+    ).length;
+    const rejectedApplications = admissions.filter(
+      (a) => a.status === AdmissionStatus.REJECTED,
+    ).length;
+    const pendingApplications = admissions.filter(
+      (a) =>
+        a.status === AdmissionStatus.INTERVIEW_PENDING ||
+        a.status === AdmissionStatus.WAITLISTED ||
+        a.status === AdmissionStatus.INTERVIEW_COMPLETED,
+    ).length;
+
+    // Calculate monthly trends
+    const currentYear = new Date().getFullYear();
+    const monthlyTrends = Array(12)
+      .fill(0)
+      .map((_, index) => {
+        const month = index + 1;
+        const applicationsInMonth = admissions.filter((admission) => {
+          const createdAt = new Date(admission.createdAt);
+          return (
+            createdAt.getMonth() + 1 === month &&
+            createdAt.getFullYear() === currentYear
+          );
+        }).length;
+        return {
+          month: new Date(currentYear, index).toLocaleString('default', {
+            month: 'short',
+          }),
+          value: applicationsInMonth,
+        };
+      });
+
+    // Calculate weekly trends (last 7 days)
+    const weeklyTrends = Array(7)
+      .fill(0)
+      .map((_, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - index));
+        const applicationsOnDay = admissions.filter((admission) => {
+          const createdAt = new Date(admission.createdAt);
+          return (
+            createdAt.getDate() === date.getDate() &&
+            createdAt.getMonth() === date.getMonth() &&
+            createdAt.getFullYear() === date.getFullYear()
+          );
+        }).length;
+        return {
+          date: date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            day: 'numeric',
+          }),
+          value: applicationsOnDay,
+        };
+      });
+
+    // Calculate status breakdown for donut chart
+    const statusBreakdown = [
+      {
+        name: 'Applications Received',
+        value: totalApplications,
+        rate: '100%',
+      },
+      {
+        name: 'Applications Accepted',
+        value: acceptedApplications,
+        rate: totalApplications
+          ? `${Math.round((acceptedApplications / totalApplications) * 100)}%`
+          : '0%',
+      },
+      {
+        name: 'Applications Rejected',
+        value: rejectedApplications,
+        rate: totalApplications
+          ? `${Math.round((rejectedApplications / totalApplications) * 100)}%`
+          : '0%',
+      },
+      {
+        name: 'Applications Pending',
+        value: pendingApplications,
+        rate: totalApplications
+          ? `${Math.round((pendingApplications / totalApplications) * 100)}%`
+          : '0%',
+      },
+    ];
+
+    // Calculate applications this year
+    const applicationsThisYear = admissions.filter((admission) => {
+      const createdAt = new Date(admission.createdAt);
+      return createdAt.getFullYear() === currentYear;
+    }).length;
+
+    return {
+      summary: {
+        totalApplications,
+        acceptedApplications,
+        rejectedApplications,
+        pendingApplications,
+      },
+      monthlyTrends,
+      weeklyTrends,
+      statusBreakdown,
+      applicationsThisYear,
+    };
+  }
+
+  async deleteAdmission(
+    applicationId: string,
+    schoolId: string,
+  ): Promise<{ message: string }> {
+    const admission = await this.admissionRepository.findOne({
+      where: { applicationId, school: { id: schoolId } },
+      relations: ['guardians', 'previousSchoolResults'],
+    });
+
+    if (!admission) {
+      throw new NotFoundException('Admission not found or not authorized');
+    }
+
+    try {
+      if (admission.studentHeadshotPath) {
+        await this.objectStorageService.deleteFile(
+          admission.studentHeadshotPath,
+        );
+      }
+
+      if (admission.studentBirthCertPath) {
+        await this.objectStorageService.deleteFile(
+          admission.studentBirthCertPath,
+        );
+      }
+
+      if (admission.guardians && Array.isArray(admission.guardians)) {
+        for (const guardian of admission.guardians) {
+          if (guardian.headshotPath) {
+            await this.objectStorageService.deleteFile(guardian.headshotPath);
+          }
+        }
+      }
+
+      if (
+        admission.previousSchoolResults &&
+        Array.isArray(admission.previousSchoolResults)
+      ) {
+        for (const result of admission.previousSchoolResults) {
+          if (result.filePath) {
+            await this.objectStorageService.deleteFile(result.filePath);
+          }
+        }
+      }
+
+      await this.admissionRepository.remove(admission);
+
+      return { message: 'Admission application deleted successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete admission application: ${applicationId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new BadRequestException(
+        `Failed to delete admission application: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
 }

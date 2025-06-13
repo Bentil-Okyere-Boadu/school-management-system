@@ -10,6 +10,7 @@ import {
   Put,
   Param,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
@@ -96,6 +97,12 @@ export class SchoolAdminController {
   ) {
     return this.schoolAdminService.updateProfile(admin.id, updateDto);
   }
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles('school_admin')
+  @Get('admissions/analytics')
+  async getAdmissionAnalytics(@CurrentUser() admin: SchoolAdmin) {
+    return this.admissionService.getAdmissionAnalytics(admin.school.id);
+  }
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Get('my-school/details')
   @Roles('school_admin')
@@ -175,6 +182,23 @@ export class SchoolAdminController {
       applicationId,
       interviewData.interviewDate,
       interviewData.interviewTime,
+    );
+  }
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Delete('admissions/:applicationId')
+  @Roles('school_admin')
+  async deleteAdmission(
+    @Param('applicationId') applicationId: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.admissionService.deleteAdmission(
+      applicationId,
+      admin.school.id,
     );
   }
 }
