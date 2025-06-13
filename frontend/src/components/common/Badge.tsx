@@ -2,15 +2,17 @@
 
 import { BadgeVariant } from "@/@types";
 import React from "react";
+import { IconChevronDown } from "@tabler/icons-react";
 
 interface BadgeProps {
   text: string;
   variant: BadgeVariant;
   showDot?: boolean;
   width?: string;
+  showArrow?: boolean;
 }
 
-const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false }) => {
+const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false, showArrow = false }) => {
     const getVariantStyles = (): { textColor: string; bgColor: string, dotColor: string } => {
         switch (variant) {
           case "purple":
@@ -83,6 +85,9 @@ const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false }) 
             </svg>
         )}
         <span>{text}</span>
+        {showArrow && (
+          <IconChevronDown className="object-contain w-6 aspect-square pl-2" />
+        )}
       </div>
     </div>
   );

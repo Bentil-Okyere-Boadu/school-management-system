@@ -219,3 +219,77 @@ export interface AdditionalInformation {
     reportCards: File[];
   };
 }
+
+export interface AdmissionTableData {
+  id: string;
+  fullName: string;
+  email: string;
+  submittedAt: string;
+  enrollmentStatus: string;
+}
+
+export interface AdmissionData {
+  applicationId: string;
+  school: School;
+  status: string;
+  studentFirstName: string;
+  studentLastName: string;
+  studentOtherNames: string;
+  studentEmail: string;
+  studentDOB: string;
+  studentGender: string;
+  studentNationality: string;
+  studentReligion: string;
+  studentLanguages: string[];
+  studentStreetAddress: string;
+  studentBoxAddress: string;
+  studentPhone: string;
+  studentOtherPhone: string;
+  studentOtherPhoneOptional: string;
+  studentBirthCertUrl: string;
+  academicYear: string;
+  forClass: ClassLevel;
+  studentHeadshotPath: string;
+  studentHeadshotMediaType: string;
+  studentHeadshotUrl: string;
+  studentBirthCertPath: string;
+  studentBirthCertMediaType: string;
+  guardians: GuardianData[];
+  homePrimaryLanguage: string;
+  homeOtherLanguage: string;
+  hasPreviousSchool: boolean;
+  previousSchoolName: string;
+  previousSchoolUrl: string;
+  previousSchoolStreetAddress: string;
+  previousSchoolCity: string;
+  previousSchoolState: string;
+  previousSchoolCountry: string;
+  previousSchoolBoxAddress: string;
+  previousSchoolPhone: string;
+  previousSchoolAttendedFrom: string;
+  previousSchoolAttendedTo: string;
+  previousSchoolGradeClass: string;
+  previousSchoolResultPath: string;
+  previousSchoolResultMediaType: string;
+}
+
+export interface GuardianData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  relationship: string;
+  email: string;
+  dob: string;
+  nationality: string;
+  company: string;
+  gender: string;
+  occupation: string;
+  streetAddress: string;
+  boxAddress: string;
+  guardianPhone: string;
+  guardianOtherPhone: string;
+  guardianOtherPhoneOptional: string;
+  headshotPath: string;
+  headshotMediaType: string;
+  headshotUrl: string;
+}

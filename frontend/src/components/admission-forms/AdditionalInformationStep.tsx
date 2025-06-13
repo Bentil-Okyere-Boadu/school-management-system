@@ -181,19 +181,17 @@ interface AdditionalInfoProps {
             />
             <InputField
                 label="Attended From"
+                type="Date"
                 isTransulent={false}
-                value={additionalInfo?.previousSchool?.attendedFrom}
-                onChange={(e) =>
-                  handlePreviousSchoolChange("attendedFrom", e.target.value)
-                }
+                value={additionalInfo?.previousSchool?.attendedFrom} 
+                onChange={(e) => handlePreviousSchoolChange('attendedFrom', e.target.value)}
             />
             <InputField
                 label="Attended To"
+                type="Date"
                 isTransulent={false}
-                value={additionalInfo?.previousSchool?.attendedTo}
-                onChange={(e) =>
-                  handlePreviousSchoolChange("attendedTo", e.target.value)
-                }
+                value={additionalInfo?.previousSchool?.attendedTo} 
+                onChange={(e) => handlePreviousSchoolChange('attendedTo', e.target.value)}
             />
             <InputField
                 label="Grade / Class"

@@ -93,13 +93,14 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                     readOnly={true}
                     value={studentData.nationality}
                 />
-                <InputField
-                    label="Upload Birth Certificate"
-                    required
-                    isTransulent={true}
-                    readOnly={true}
-                    value={''}
-                />
+                <div>
+                    <p className="text-xs mb-1.5 text-[#52525c]">Upload Birth Certificate<span className="text-red-500 ml-0.5">*</span></p>
+                    <div className="flex gap-3 flex-wrap flex-1">
+                        {studentData?.birthCertificateFile &&
+                            (<DocumentItem name="Birth Cert" />)
+                        }
+                    </div>
+                </div>
                 <InputField
                     label="Religion"
                     required
@@ -186,7 +187,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                             value={guardian.lastName}
                         />
                         <InputField
-                            label="Relationshop to applicant"
+                            label="Relationship to applicant"
                             required
                             isTransulent={true}
                             readOnly={true}

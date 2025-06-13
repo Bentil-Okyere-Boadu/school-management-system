@@ -1,12 +1,14 @@
 "use client";
+import React, { useState } from 'react'
 import { AdmissionsAnalyticsTabSection } from '@/components/admin/admissions/AdmissionsAnalyticsTabSection';
 import { AdmissionsListTabSection } from '@/components/admin/admissions/AdmissionsListTabSection';
 import TabBar from '@/components/common/TabBar';
-import { useGetMe } from '@/hooks/school-admin';
+import { useGetMe, useGetSchoolAdmissions } from '@/hooks/school-admin';
 import { Button } from '@mantine/core';
 import { IconCopy, IconExternalLink } from '@tabler/icons-react';
-import React, { useState } from 'react'
 import { toast } from 'react-toastify';
+import { useDebouncer } from "@/hooks/generalHooks";
+import { Pagination } from "@/components/common/Pagination";
 
 export interface MetricCardProps {
   value: string;
@@ -31,15 +33,18 @@ const Admissions = () => {
     { tabLabel: "Admissions List", tabKey: "admissions-list" },
   ];
   const [activeTabKey, setActiveTabKey] = useState('admissions-analytics');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
   };
 
-    const {me} = useGetMe();
+  const {me} = useGetMe();
 
   const goToAdmissionFormsPage = () => {
-    const frontendBaseUrl = process.env.NEXT_PUBLIC_FRONEND_URL;
+    const frontendBaseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
     const schoolId = me.school.id;
     const admissionsLink = `${frontendBaseUrl}/admission-forms/${schoolId}`;
 
@@ -47,7 +52,7 @@ const Admissions = () => {
   }
 
   const copyText = async (schoolId: string) => {
-    const baseUrl = process.env.NEXT_PUBLIC_FRONEND_URL;
+    const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
     const textToCopy = baseUrl + '/admission-forms/' + schoolId;
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -64,10 +69,25 @@ const Admissions = () => {
     }
   };
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleStatusChange = (query: string) => {
+    setSelectedStatus(query);
+    setCurrentPage(1);
+  };
+
+  const { admissionsList, paginationValues } = useGetSchoolAdmissions(currentPage, useDebouncer(searchQuery), selectedStatus, "", "", 10);
 
   return (
     <div>
-      <div className='flex justify-between'>
+       <div className='flex justify-between'>
         <TabBar 
           items={defaultNavItems} 
           activeTabKey={activeTabKey} 
@@ -83,7 +103,7 @@ const Admissions = () => {
 
           <IconCopy 
             className='ml-2 cursor-pointer' 
-            onClick={async() => await copyText(`${me.school.id}`)} 
+            onClick={async() => await copyText(`${me?.school?.id}`)} 
             size={24}
             color='#BE4BDB'
             textAnchor='Copy link'
@@ -99,7 +119,17 @@ const Admissions = () => {
 
       {activeTabKey === "admissions-list" && (
         <div>
-          <AdmissionsListTabSection  />
+          <AdmissionsListTabSection 
+            handleSearch={handleSearch} 
+            handleStatusChange={handleStatusChange}
+            selectedStatus={selectedStatus}
+            admissionsList={admissionsList} 
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={paginationValues?.totalPages || 1}
+            onPageChange={handlePageChange}
+          />
         </div>
       )}
     </div>
