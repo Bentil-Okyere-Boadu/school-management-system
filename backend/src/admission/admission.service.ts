@@ -366,7 +366,6 @@ export class AdmissionService {
               studentName,
               schoolName,
               applicationId,
-              '2 weeks',
             );
             break;
         }

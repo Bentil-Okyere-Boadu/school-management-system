@@ -641,7 +641,7 @@ export class EmailService {
             <p>Dear ${data.name},</p>
             <p>Thank you for attending your interview with <strong>${data.schoolName}</strong>.</p>
             <p>We appreciate the time you took to meet with our admissions team. Your interview has been marked as completed in our system.</p>
-            <p>Our team is now reviewing all applications and interviews. You will receive a decision on your application status within the next ${data.decisionTimeframe || '2 weeks'}.</p>
+            <p>Our team is now reviewing all applications and interviews. You will receive a decision on your application status within the next few weeks.</p>
             <p>If you have any questions, please don't hesitate to contact us.</p>
             <p>Best regards,<br>${data.schoolName} Admissions Team</p>
           </div>
@@ -783,7 +783,6 @@ export class EmailService {
     name: string,
     schoolName: string,
     applicationId: string,
-    decisionTimeframe?: string,
   ): Promise<void> {
     try {
       await this.transporter.sendMail({
@@ -794,7 +793,6 @@ export class EmailService {
           name,
           schoolName,
           applicationId,
-          decisionTimeframe,
         }),
       });
       this.logger.log(`Interview completed email sent to ${to}`);
