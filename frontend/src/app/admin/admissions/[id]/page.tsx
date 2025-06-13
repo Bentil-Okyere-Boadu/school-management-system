@@ -39,7 +39,7 @@ const SingleAdmissionPage: React.FC = () => {
           <Image
             src={admissionData?.studentHeadshotUrl ? (admissionData.studentHeadshotUrl as string) : NoProfileImg.src}
             width={150}
-            height={300}
+            height={130}
             alt="studentProfilePic"
             className="rounded-[8px]"
           />
@@ -62,6 +62,7 @@ const SingleAdmissionPage: React.FC = () => {
         <InputField
           className="!py-0"
           label="Other Names"
+          value={admissionData?.studentOtherNames}
           isTransulent={true}
         />
         <InputField
