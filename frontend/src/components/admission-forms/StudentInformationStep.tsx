@@ -54,7 +54,7 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
             </div>
 
             <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2 mt-10">
-                <div>
+                <div className="mb-4">
                     <p className="text-xs mb-1 text-[#52525c]">Upload Recent Headshot<span className="text-red-500 ml-0.5">*</span></p>
                     {!data?.headshotFile ? (
                         <>

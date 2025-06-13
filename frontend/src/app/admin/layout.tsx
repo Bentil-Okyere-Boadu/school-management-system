@@ -59,10 +59,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
       setIsOverviewPage(true);
-    } else if (pathname === "/admin/students") {
-      setActiveMenuItem("Students");
-      setIsOverviewPage(true);
-    } 
+    }
     
     // Detail Pages
     else if (pathname.startsWith("/admin/schools/")) {
@@ -77,7 +74,13 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname.startsWith("/admin/students/")) {
       setActiveMenuItem("Students");
       setIsOverviewPage(false);
-    } 
+    } else if (pathname.startsWith("/admin/admissions/")) {
+      setActiveMenuItem("Admissions");
+      setIsOverviewPage(false);
+    } else if (pathname.startsWith("/admin/attendance/")) {
+      setActiveMenuItem("Attendance");
+      setIsOverviewPage(false);
+    }
     
     // Default
     else {

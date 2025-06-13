@@ -4,79 +4,50 @@ import React, { useState } from "react";
 import { SearchBar } from "@/components/common/SearchBar";
 import FilterButton from "@/components/common/FilterButton";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
-import Badge from "@/components/common/Badge";
-import { capitalizeFirstLetter } from "@/utils/helpers";
-import { BadgeVariant } from "@/@types";
+import { AdmissionTableData } from "@/@types";
+import { AdmissionStatusMenu } from "./AdmissionStatusMenu";
+import { Menu } from "@mantine/core";
+import { IconDots, IconEyeFilled, IconTrashFilled } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 
-export const AdmissionsListTabSection: React.FC= () => {
+interface AdmissionsListTabProps {
+  handleSearch: (term: string) => void;
+  admissionsList: AdmissionTableData[];
+  selectedStatus: string;
+  handleStatusChange: (status: string) => void;
+}
 
-  const users =  [
-    {
-        "id": "4a4aab00-a0a0-4649-a903-516d100d704d",
-        "firstName": "polivox",
-        "lastName": "frisbook",
-        "email": "polivox201@frisbook.com",
-        "status": "active",
-        "date": "Mar 25, 2024 at 04:50 PM"
-    },
-    {
-        "id": "2a1d1bae-967b-4d83-8a01-85beec41efd1",
-        "firstName": "sibiro",
-        "lastName": "betzenn",
-        "email": "sibiro3056@betzenn.com",
-        "status": "pending",
-        "date": "Mar 25, 2024 at 04:50 PM"
-    },
-    {
-        "id": "95a5af8a-8fd6-433b-88f9-cb4ab7c682e3",
-        "firstName": "jihebiw",
-        "lastName": "ofular",
-        "email": "jihebiw294@ofular.com",
-        "status": "active",
-        "date": "Mar 25, 2024 at 04:50 PM"
-    },
-    {
-        "id": "180fd60a-cedf-42b2-96a0-8216b3ec6fd0",
-        "firstName": "nileyi",
-        "lastName": "neuraxo",
-        "email": "nileyi3109@neuraxo.com",
-        "status": "pending",
-        "date": "Mar 25, 2024 at 04:50 PM"
-    }
-  ];
-  
+
+export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({handleSearch, admissionsList, selectedStatus, handleStatusChange}) => {
+  const router = useRouter();
+
   const statusOptions = [
     { value: "", label: "Status" },
-    { value: "active", label: "Active" },
+    { value: "in_progress", label: "In Progress" },
     { value: "pending", label: "Pending" }
   ];
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
   const [showFilterOptions, setShowFilterOptions] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('');
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-    console.log(currentPage, searchQuery);
-  };
-
-  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const onOptionItemClick = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = event.target.value;
-    setSelectedStatus(selectedValue);
+    handleStatusChange(selectedValue);
   };
+
+  const onAdmissionStatusClick = (item: object) => {
+    console.log(item, "item");
+  }
 
   return (
-    <div className="pb-8">
+    <div>
 
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full ml-1" />
 
       <div className="flex flex-col items-end mb-4 px-1">
         <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
         {showFilterOptions && (
           <div className="flex gap-3 mt-3">
-            <CustomSelectTag value={selectedStatus} options={statusOptions} onOptionItemClick={handleStatusChange} />
+            <CustomSelectTag value={selectedStatus} options={statusOptions} onOptionItemClick={onOptionItemClick} />
           </div>
         )}
       </div>
@@ -98,28 +69,46 @@ export const AdmissionsListTabSection: React.FC= () => {
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div>Status</div>
                 </th>
+                <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[50px]"></th>
               </tr>
             </thead>
             <tbody>
-              {users?.length > 0 ? (users.map((user) => (
-                <tr key={user.id}>
+              {admissionsList?.length > 0 ? (admissionsList.map((admission, index) => (
+                <tr key={index}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    {user.firstName} {user.lastName}
+                    {admission.fullName}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {user.email}
+                    {admission.email}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {user.date}
+                    {admission.submittedAt}
                   </td>
                   <td
                     className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
                   >
                     <div className="flex items-center justity-start">
-                      <Badge 
-                        text={capitalizeFirstLetter(user.status)}
-                        showDot={true} 
-                        variant={user.status as BadgeVariant} />
+                      <AdmissionStatusMenu status={admission.enrollmentStatus} onStatusClick={onAdmissionStatusClick} /> 
+                    </div>
+                  </td>
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                    <div className="flex items-center justify-end pr-6">
+                      <Menu shadow="md" width={200}>
+                        <Menu.Target>
+                          <IconDots className="cursor-pointer" />
+                        </Menu.Target>
+                        <Menu.Dropdown className="!-ml-12 !-mt-2">
+                          <Menu.Item leftSection={<IconEyeFilled size={18} color="#AB58E7" />}
+                            onClick={() => router.push(`/admin/admissions/${admission.id}`)}
+                          >
+                            Full View
+                          </Menu.Item>
+                          <Menu.Item leftSection={<IconTrashFilled size={18} color="#AB58E7" /> }
+                          >
+                            Delete Records
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
                     </div>
                   </td>
                 </tr>
