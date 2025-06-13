@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useMemo } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Menu } from '@mantine/core';
 import {
@@ -10,7 +10,7 @@ import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
-import { useGetSchoolUserById } from "@/hooks/school-admin";
+import { useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -37,16 +37,15 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
   const { school } = useGetSchoolById(schoolId as string);
 
-  useEffect(() => {
-    
-  }, [])
+  const { school: mySchool } = useGetMySchool();
 
+  const schoolData = useMemo(() => { return school }, [school])
+  const mySchoolData = useMemo(() => { return mySchool }, [mySchool])
   
   
 
   const onHandleBreadCrumbPress = () => {
-    console.log(pathName);
-    switch (getSignedInRole()) {
+     switch (getSignedInRole()) {
       case Roles.SCHOOL_ADMIN:
         router.push(`/admin/${activeMenuItem?.toLowerCase()}`)
         break;
@@ -86,15 +85,21 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
           { isOverviewPage ? 
             (
               <div className="flex flex-col">
-                <h1 className="text-2xl text-neutral-800">Hello, {user?.firstName} {user?.lastName}</h1>
+                { getSignedInRole() === Roles.SCHOOL_ADMIN? (
+                  <h1 className="text-2xl text-neutral-800">{mySchoolData?.name}</h1>
+                ) : (
+                  <h1 className="text-2xl text-neutral-800">Hello, {user?.firstName} {user?.lastName}</h1>
+                )
+                }
+                
                 <p className="text-base text-zinc-600">Welcome to your {activeMenuItem} Overview</p>
               </div>
             ) : (
               <div className="flex flex-col">
                 <div className="text-xs text-zinc-600">
-                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{getSignedInRole() === Roles.SUPER_ADMIN? school?.name :  `${schoolUser?.firstName} ${schoolUser?.lastName}`}</span>
+                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{getSignedInRole() === Roles.SUPER_ADMIN? schoolData?.name :  `${schoolUser?.firstName} ${schoolUser?.lastName}`}</span>
                 </div>
-                <h2 className="text-2xl text-neutral-800 mt-2">{getSignedInRole() === Roles.SUPER_ADMIN? school?.name : `${schoolUser?.firstName} ${schoolUser?.lastName}`}</h2>
+                <h2 className="text-2xl text-neutral-800 mt-2">{getSignedInRole() === Roles.SUPER_ADMIN? schoolData?.name : `${schoolUser?.firstName} ${schoolUser?.lastName}`}</h2>
               </div>
             ) 
           }
