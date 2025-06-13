@@ -21,6 +21,10 @@ export enum EmailTemplate {
   TEACHER_PIN_RESET = 'teacher_pin_reset',
   ADMISSION_APPLICATION_CONFIRMATION = 'admission_application_confirmation',
   INTERVIEW_INVITATION = 'interview_invitation',
+  ADMISSION_ACCEPTED = 'admission_accepted',
+  ADMISSION_REJECTED = 'admission_rejected',
+  ADMISSION_WAITLISTED = 'admission_waitlisted',
+  INTERVIEW_COMPLETED = 'interview_completed',
 }
 
 /**
@@ -590,6 +594,58 @@ export class EmailService {
       <p style="color: #777; font-size: 12px;">School Management System</p>
     </div>
      `;
+      case EmailTemplate.ADMISSION_ACCEPTED:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Application Accepted</h2>
+            <p>Dear ${data.name},</p>
+            <p>Congratulations! We are pleased to inform you that your application to <strong>${data.schoolName}</strong> has been accepted.</p>
+            <p>We are excited to welcome you to our school community and look forward to your academic journey with us.</p>
+            <p>You will soon receive another email with your student ID and PIN that will allow you to log in to the student portal.</p>
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            <p>Best regards,<br>${data.schoolName} Admissions Team</p>
+          </div>
+        `;
+
+      case EmailTemplate.ADMISSION_REJECTED:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Application Status Update</h2>
+            <p>Dear ${data.name},</p>
+            <p>Thank you for your interest in <strong>${data.schoolName}</strong> and for taking the time to apply.</p>
+            <p>After careful consideration of all applications, we regret to inform you that we are unable to offer you admission at this time.</p>
+            <p>This decision does not reflect on your abilities or potential. We receive many qualified applicants each year and have limited spaces available.</p>
+            <p>We wish you all the best in your future academic endeavors.</p>
+            <p>Sincerely,<br>${data.schoolName} Admissions Team</p>
+          </div>
+        `;
+
+      case EmailTemplate.ADMISSION_WAITLISTED:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Application Waitlisted</h2>
+            <p>Dear ${data.name},</p>
+            <p>Thank you for your application to <strong>${data.schoolName}</strong>.</p>
+            <p>We have reviewed your application and would like to inform you that you have been placed on our waitlist.</p>
+            <p>This means that while we are unable to offer you immediate admission, you may be offered a place if one becomes available.</p>
+            <p>We will contact you as soon as possible if a place becomes available.</p>
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            <p>Best regards,<br>${data.schoolName} Admissions Team</p>
+          </div>
+        `;
+
+      case EmailTemplate.INTERVIEW_COMPLETED:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Interview Completed</h2>
+            <p>Dear ${data.name},</p>
+            <p>Thank you for attending your interview with <strong>${data.schoolName}</strong>.</p>
+            <p>We appreciate the time you took to meet with our admissions team. Your interview has been marked as completed in our system.</p>
+            <p>Our team is now reviewing all applications and interviews. You will receive a decision on your application status within the next ${data.decisionTimeframe || '2 weeks'}.</p>
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            <p>Best regards,<br>${data.schoolName} Admissions Team</p>
+          </div>
+        `;
       default:
         return `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
@@ -600,6 +656,157 @@ export class EmailService {
             <p style="color: #777; font-size: 12px;">School Management System</p>
           </div>
         `;
+    }
+  }
+
+  /**
+   * Send an email notification for accepted admission
+   * @param to Email address to send to
+   * @param name Student's name
+   * @param schoolName School name
+   * @param applicationId Application ID
+   */
+  async sendAdmissionAcceptedEmail(
+    to: string,
+    name: string,
+    schoolName: string,
+    applicationId: string,
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject: `Congratulations! Your Application to ${schoolName} has been Accepted`,
+        html: this.getEmailTemplate(EmailTemplate.ADMISSION_ACCEPTED, {
+          name,
+          schoolName,
+          applicationId,
+        }),
+      });
+      this.logger.log(`Admission accepted email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send admission accepted email to ${to}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send admission accepted email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Send an email notification for rejected admission
+   * @param to Email address to send to
+   * @param name Student's name
+   * @param schoolName School name
+   * @param applicationId Application ID
+   */
+  async sendAdmissionRejectedEmail(
+    to: string,
+    name: string,
+    schoolName: string,
+    applicationId: string,
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject: `Update on Your Application to ${schoolName}`,
+        html: this.getEmailTemplate(EmailTemplate.ADMISSION_REJECTED, {
+          name,
+          schoolName,
+          applicationId,
+        }),
+      });
+      this.logger.log(`Admission rejected email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send admission rejected email to ${to}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send admission rejected email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Send an email notification for waitlisted admission
+   * @param to Email address to send to
+   * @param name Student's name
+   * @param schoolName School name
+   * @param applicationId Application ID
+   */
+  async sendAdmissionWaitlistedEmail(
+    to: string,
+    name: string,
+    schoolName: string,
+    applicationId: string,
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject: `Your Application to ${schoolName} has been Waitlisted`,
+        html: this.getEmailTemplate(EmailTemplate.ADMISSION_WAITLISTED, {
+          name,
+          schoolName,
+          applicationId,
+        }),
+      });
+      this.logger.log(`Admission waitlisted email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send admission waitlisted email to ${to}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send admission waitlisted email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Send an email notification for completed interview
+   * @param to Email address to send to
+   * @param name Student's name
+   * @param schoolName School name
+   * @param applicationId Application ID
+   * @param decisionTimeframe Timeframe for decision
+   */
+  async sendInterviewCompletedEmail(
+    to: string,
+    name: string,
+    schoolName: string,
+    applicationId: string,
+    decisionTimeframe?: string,
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject: `Interview Completed - ${schoolName}`,
+        html: this.getEmailTemplate(EmailTemplate.INTERVIEW_COMPLETED, {
+          name,
+          schoolName,
+          applicationId,
+          decisionTimeframe,
+        }),
+      });
+      this.logger.log(`Interview completed email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send interview completed email to ${to}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send interview completed email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

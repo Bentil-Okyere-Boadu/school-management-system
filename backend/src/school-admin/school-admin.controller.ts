@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   Put,
   Param,
+  Patch,
 } from '@nestjs/common';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
@@ -27,6 +28,7 @@ import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { SchoolAdminSchoolGuard } from './guards/school-admin-school.guard';
 import { AdmissionService } from 'src/admission/admission.service';
+import { UpdateAdmissionStatusDto } from 'src/admission/dto/create-admission-student-info.dto';
 
 @Controller('school-admin')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -137,7 +139,17 @@ export class SchoolAdminController {
   ) {
     return this.admissionService.findAllBySchool(admin.school.id, query);
   }
-
+  @Patch('admissions/:applicationId/status')
+  @Roles('school_admin')
+  updateAdmissionStatus(
+    @Param('applicationId') applicationId: string,
+    @Body() dto: UpdateAdmissionStatusDto,
+  ) {
+    return this.admissionService.updateAdmissionStatus(
+      applicationId,
+      dto.status,
+    );
+  }
   @Put('users/:id/archive')
   @Roles('school_admin')
   async archiveUser(

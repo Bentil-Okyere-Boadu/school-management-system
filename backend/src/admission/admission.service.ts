@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +19,7 @@ import { format } from 'date-fns';
 import { PreviousSchoolResult } from './previous-school-result.entity';
 @Injectable()
 export class AdmissionService {
+  private readonly logger = new Logger(AdmissionService.name);
   constructor(
     @InjectRepository(Admission)
     private readonly admissionRepository: Repository<Admission>,
@@ -306,5 +308,76 @@ export class AdmissionService {
     await this.admissionRepository.save(admission);
 
     return { message: 'Interview invitation sent successfully' };
+  }
+
+  async updateAdmissionStatus(
+    applicationId: string,
+    status: AdmissionStatus,
+  ): Promise<{ message: string }> {
+    const admission = await this.admissionRepository.findOne({
+      where: { applicationId },
+      relations: ['school'],
+    });
+
+    if (!admission) {
+      throw new NotFoundException('Admission not found');
+    }
+
+    admission.status = status;
+    await this.admissionRepository.save(admission);
+
+    // Send appropriate email based on the new status
+    if (admission.studentEmail) {
+      const studentName = `${admission.studentFirstName} ${admission.studentLastName}`;
+      const schoolName = admission.school?.name || 'School';
+
+      try {
+        switch (status) {
+          case AdmissionStatus.ACCEPTED:
+            await this.emailService.sendAdmissionAcceptedEmail(
+              admission.studentEmail,
+              studentName,
+              schoolName,
+              applicationId,
+            );
+            break;
+
+          case AdmissionStatus.REJECTED:
+            await this.emailService.sendAdmissionRejectedEmail(
+              admission.studentEmail,
+              studentName,
+              schoolName,
+              applicationId,
+            );
+            break;
+
+          case AdmissionStatus.WAITLISTED:
+            await this.emailService.sendAdmissionWaitlistedEmail(
+              admission.studentEmail,
+              studentName,
+              schoolName,
+              applicationId,
+            );
+            break;
+
+          case AdmissionStatus.INTERVIEW_COMPLETED:
+            await this.emailService.sendInterviewCompletedEmail(
+              admission.studentEmail,
+              studentName,
+              schoolName,
+              applicationId,
+              '2 weeks',
+            );
+            break;
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to send status update email to ${admission.studentEmail}`,
+          error,
+        );
+      }
+    }
+
+    return { message: `Admission status updated to ${status}` };
   }
 }
