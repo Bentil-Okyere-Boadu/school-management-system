@@ -4,7 +4,7 @@ import { AdmissionsListTabSection } from '@/components/admin/admissions/Admissio
 import TabBar from '@/components/common/TabBar';
 import { useGetMe } from '@/hooks/school-admin';
 import { Button } from '@mantine/core';
-import { IconCopy } from '@tabler/icons-react';
+import { IconCopy, IconExternalLink } from '@tabler/icons-react';
 import React, { useState } from 'react'
 import { toast } from 'react-toastify';
 
@@ -52,15 +52,15 @@ const Admissions = () => {
     try {
       await navigator.clipboard.writeText(textToCopy);
       setIsCopied(true);
-      setTimeout(() =>{
-        if(isCopied) {
-          toast.success('Admission link copied to clipboard.')
-        }
+      if(isCopied) {
+        toast.success('Admission link copied to clipboard.')
+      }
 
-        setIsCopied(false)
-      }, 1500); // Reset after 2 seconds
+      setIsCopied(false)
+      
     } catch (err) {
       console.error('Failed to copy text: ', err);
+      toast.error('copy failed');
     }
   };
 
@@ -74,18 +74,20 @@ const Admissions = () => {
           onItemClick={handleItemClick}
         />
 
-        <div>
+        <div className='flex row items-center'>
           <Button 
-            leftSection={<IconCopy size={24}/>}
-            onClick={() => copyText(`${me.school.id}`)}>
-              Copy Admissions link
-            </Button> 
-
-          <Button className='ml-2'
+            leftSection={<IconExternalLink/>}
             onClick={() => goToAdmissionFormsPage()}>
               Go to Admissions Form
-            </Button> 
+          </Button>
 
+          <IconCopy 
+            className='ml-2 cursor-pointer' 
+            onClick={async() => await copyText(`${me.school.id}`)} 
+            size={24}
+            color='#BE4BDB'
+            textAnchor='Copy link'
+            />
         </div>
       </div>
 
