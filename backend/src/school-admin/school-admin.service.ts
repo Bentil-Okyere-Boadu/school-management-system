@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -362,12 +367,18 @@ export class SchoolAdminService {
       ['role', 'school', 'profile'],
     );
   }
+  async findStudentById(id: string, schoolId: string): Promise<Student | null> {
+    return this.studentRepository.findOne({
+      where: { id, school: { id: schoolId } },
+    });
+  }
+
   async archiveUser(id: string, archive: boolean) {
-    const user = await this.studentRepository.findOne({ where: { id } });
-    if (user) {
-      user.isArchived = archive;
-      user.status = archive ? 'archived' : 'active';
-      return this.studentRepository.save(user);
+    const student = await this.studentRepository.findOne({ where: { id } });
+    if (student) {
+      student.isArchived = archive;
+      student.status = archive ? 'archived' : 'active';
+      return this.studentRepository.save(student);
     }
 
     const teacher = await this.teacherRepository.findOne({ where: { id } });
@@ -376,10 +387,124 @@ export class SchoolAdminService {
       teacher.status = archive ? 'archived' : 'active';
       return this.teacherRepository.save(teacher);
     }
+
     throw new NotFoundException(`User with ID ${id} not found`);
   }
 
   getRepository(): Repository<SchoolAdmin> {
     return this.schoolAdminRepository;
+  }
+
+  /**
+   * Delete a user record (student or teacher)
+   */
+  async deleteUser(
+    userId: string,
+    schoolId: string,
+  ): Promise<{ message: string }> {
+    const student = await this.studentRepository.findOne({
+      where: { id: userId, school: { id: schoolId } },
+    });
+
+    if (student) {
+      return this.deleteStudent(userId, schoolId);
+    }
+
+    const teacher = await this.teacherRepository.findOne({
+      where: { id: userId, school: { id: schoolId } },
+    });
+
+    if (teacher) {
+      return this.deleteTeacher(userId, schoolId);
+    }
+
+    throw new NotFoundException(
+      `User with ID ${userId} not found in school ${schoolId}`,
+    );
+  }
+
+  async deleteTeacher(
+    teacherId: string,
+    schoolId: string,
+  ): Promise<{ message: string }> {
+    const teacher = await this.teacherRepository.findOne({
+      where: { id: teacherId, school: { id: schoolId } },
+      relations: ['profile'],
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found or not authorized');
+    }
+
+    try {
+      if (teacher.profile?.avatarPath) {
+        await this.objectStorageService.deleteFile(teacher.profile.avatarPath);
+      }
+
+      await this.teacherRepository.remove(teacher);
+
+      this.logger.log(
+        `Teacher ${teacherId} deleted successfully from school ${schoolId}`,
+      );
+      return { message: 'Teacher record deleted successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete teacher: ${teacherId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new BadRequestException(
+        `Failed to delete teacher: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Delete a student record completely
+   */
+  async deleteStudent(
+    studentId: string,
+    schoolId: string,
+  ): Promise<{ message: string }> {
+    const student = await this.studentRepository.findOne({
+      where: { id: studentId, school: { id: schoolId } },
+      relations: ['profile', 'parents'],
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found or not authorized');
+    }
+
+    try {
+      if (student.profile?.avatarPath) {
+        await this.objectStorageService.deleteFile(student.profile.avatarPath);
+      }
+
+      // Delete parent profile images if they exist
+      // if (student.parents && Array.isArray(student.parents)) {
+      //   for (const parent of student.parents) {
+      //     if (parent.profile?.avatarPath) {
+      //       await this.objectStorageService.deleteFile(
+      //         parent.profile.avatarPath,
+      //       );
+      //     }
+      //   }
+      // }
+
+      // Delete the student record and its related entities
+      await this.studentRepository.remove(student);
+
+      this.logger.log(
+        `Student ${studentId} deleted successfully from school ${schoolId}`,
+      );
+      return { message: 'Student record deleted successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete student: ${studentId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new BadRequestException(
+        `Failed to delete student: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }
