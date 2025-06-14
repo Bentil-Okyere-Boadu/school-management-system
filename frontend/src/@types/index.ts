@@ -21,8 +21,20 @@ export interface User {
 
 export interface Student extends User {
   studentId: string;
+  parents: Parent[];
   isInvitationAccepted: boolean;
   isArchived: boolean;
+}
+
+export interface Parent {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  occupation: string;
+  email: string;
+  address: string;
+  phone: string;
+  relationship: string;
 }
 
 export type AuthCredentials = Pick<User, "email" | "password">;

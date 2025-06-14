@@ -6,11 +6,11 @@ import React from 'react'
 
 const StudentDashboard = () => {
 
-   const {me} = useStudentGetMe();
+   const {me, refetch} = useStudentGetMe();
 
   return (
     <div>
-      <StudentProfile studentData={me as Student} viewMode={false}/>
+      <StudentProfile studentData={me as Student} viewMode={false} refetch={refetch}/>
     </div>
   )
 }
