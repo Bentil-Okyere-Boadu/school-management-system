@@ -469,6 +469,7 @@ export const useSubmitAdmissionForm = () => {
       formData.append('studentEmail', studentData.email);
       formData.append('studentGender', studentData.gender)
       formData.append('studentDOB', studentData.dateOfBirth);
+      formData.append('studentPlaceOfBirth', studentData.placeOfBirth)
       formData.append('studentNationality', studentData.nationality);
       formData.append('studentReligion', studentData.religion);
       formData.append('studentPhone', studentData.phone);

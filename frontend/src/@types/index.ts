@@ -247,6 +247,7 @@ export interface AdmissionData {
   studentOtherNames: string;
   studentEmail: string;
   studentDOB: string;
+  studentPlaceOfBirth: string;
   studentGender: string;
   studentNationality: string;
   studentReligion: string;
