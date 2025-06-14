@@ -591,7 +591,7 @@ export const useGetSchoolAdmissions = (page=1, search: string = "", status: stri
 export const useGetAdmissionById = (id: string) => {
     const enabled = Boolean(id);
 
-    const { data, isPending} = useQuery({
+    const { data, isPending, refetch} = useQuery({
         queryKey: ['admission', id],
         queryFn: () => {
             return customAPI.get(`/school-admin/admissions/${id}`)
@@ -601,5 +601,29 @@ export const useGetAdmissionById = (id: string) => {
     })
 
     const admissionData = data?.data as AdmissionData;
-    return { admissionData, isPending }
+    return { admissionData, isPending, refetch }
+}
+
+export const useDeleteAdmission = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/school-admin/admissions/${id}`)
+        }
+    })
+}
+
+export const useEditAdmission = (id: string) => {
+    return useMutation({
+        mutationFn: (statusData: Partial<AdmissionData>) => {
+            return customAPI.patch(`/school-admin/admissions/${id}/status`, statusData);
+        }
+    })
+}
+
+export const useInterviewInvitation = (id: string) => {
+    return useMutation({
+        mutationFn: (inviteDetails: {interviewDate:string, interviewTime:string}) => {
+            return customAPI.post(`/school-admin/admissions/${id}/interview`, inviteDetails);
+        }
+    })
 }
