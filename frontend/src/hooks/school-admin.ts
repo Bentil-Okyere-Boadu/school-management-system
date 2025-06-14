@@ -2,8 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData } from "@/@types";
 
-export const useGetMySchool = (enable?: string) => {
-    const enabled = Boolean(enable);
+export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['mySchool'],
         queryFn: () => {
