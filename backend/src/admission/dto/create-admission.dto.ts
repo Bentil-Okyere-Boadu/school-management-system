@@ -97,6 +97,10 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
+  studentPlaceOfBrith?: string;
+
+  @IsOptional()
+  @IsString()
   studentGender?: string;
 
   @IsOptional()

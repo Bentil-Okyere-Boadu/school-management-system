@@ -49,6 +49,9 @@ export class Admission {
   studentDOB: string;
 
   @Column({ nullable: true })
+  studentPlaceOfBrith: string;
+
+  @Column({ nullable: true })
   studentGender: string;
 
   @Column({ nullable: true })
