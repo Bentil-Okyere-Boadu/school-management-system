@@ -37,7 +37,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
   const { school } = useGetSchoolById(schoolId as string);
 
-  const { school: mySchool } = useGetMySchool();
+  const { school: mySchool } = useGetMySchool(getSignedInRole() === Roles.SCHOOL_ADMIN? true : false );
 
   const schoolData = useMemo(() => { return school }, [school])
   const mySchoolData = useMemo(() => { return mySchool }, [mySchool])
