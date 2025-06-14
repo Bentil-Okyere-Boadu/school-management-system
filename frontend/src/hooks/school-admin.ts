@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData } from "@/@types";
 
@@ -426,18 +426,18 @@ export const useDeleteAdmissionPolicy = () => {
 }
 
 // View student/teacher  
-export const useGetSchoolUserById = (id: string) => {
-     const enabled = Boolean(id);
+export const useGetSchoolUserById = (id: string, options?: UseQueryOptions) => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['schoolUser', id],
         queryFn: () => {
             return customAPI.get(`/school-admin/users/${id}`);
         },
-        enabled,
-        refetchOnWindowFocus: true
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+         ...options,
     })
 
-    const schoolUser = data?.data as User | Student ;
+    const schoolUser = (data as {data: User | Student})?.data ;
 
     return { schoolUser, isLoading, refetch }
 }
@@ -587,19 +587,19 @@ export const useGetSchoolAdmissions = (page=1, search: string = "", status: stri
     return { admissionsList, isLoading, paginationValues, refetch }
 }
 
-export const useGetAdmissionById = (id: string) => {
-    const enabled = Boolean(id);
+export const useGetAdmissionById = (id: string, options?: UseQueryOptions) => {
 
     const { data, isPending, refetch} = useQuery({
         queryKey: ['admission', id],
         queryFn: () => {
             return customAPI.get(`/school-admin/admissions/${id}`)
         },
-        enabled,
-        refetchOnWindowFocus: true
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+        ...options,
     })
 
-    const admissionData = data?.data as AdmissionData;
+    const admissionData = (data as {data:  AdmissionData})?.data;
     return { admissionData, isPending, refetch }
 }
 
