@@ -140,7 +140,7 @@ const SingleAdmissionPage: React.FC = () => {
           className="!py-0"
           label="Place of Birth"
           isTransulent={true}
-          value={''}
+          value={admissionData?.studentPlaceOfBirth}
         />
         <InputField 
           className="!py-0" 

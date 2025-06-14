@@ -10,7 +10,7 @@ import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
-import { useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
+import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -33,16 +33,55 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     }
   }
 
-  const {schoolUser} = useGetSchoolUserById(params.id as string)
+  const isStudentDetailPage = pathName.includes(`/admin/students/${params.id}`);
+  const {schoolUser} = useGetSchoolUserById(params.id as string, {
+    enabled: isStudentDetailPage,
+    queryKey: ['schoolUser', params.id],
+  })
 
-  const { school } = useGetSchoolById(schoolId as string);
+  const isSchoolDetailPage = pathName.includes(`/superadmin/schools/${params.id}`);
+  const { school } = useGetSchoolById(schoolId as string, {
+    enabled: isSchoolDetailPage,
+    queryKey: [schoolId]
+  });
 
   const { school: mySchool } = useGetMySchool(getSignedInRole() === Roles.SCHOOL_ADMIN? true : false );
 
   const schoolData = useMemo(() => { return school }, [school])
   const mySchoolData = useMemo(() => { return mySchool }, [mySchool])
   
-  
+  const isAdmissionDetailPage = pathName.includes(`/admin/admissions/${params.id}`);
+  const { admissionData } = useGetAdmissionById(params.id as string, {
+    enabled: isAdmissionDetailPage,
+    queryKey: ['admission', params.id]
+  });
+
+  const signedInRole = getSignedInRole();
+
+  const displayTitle: string = useMemo(() => {
+    if (isOverviewPage) {
+      if (signedInRole === Roles.SCHOOL_ADMIN) {
+        return mySchoolData?.name;
+      }
+      return `Hello, ${user?.firstName} ${user?.lastName}`;
+    }
+
+    // Detail view
+    if (admissionData) {
+      return `${admissionData.studentFirstName} ${admissionData.studentLastName}`;
+    }
+
+    if (signedInRole === Roles.SUPER_ADMIN) {
+      return schoolData?.name;
+    }
+
+    if (signedInRole === Roles.SCHOOL_ADMIN) {
+      return `${schoolUser?.firstName ?? ''} ${schoolUser?.lastName ?? ''}`;
+    }
+
+    // Default fallback (e.g., teacher, student)
+    return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
+  }, [isOverviewPage, signedInRole, user, schoolData, schoolUser, mySchoolData, admissionData]);
 
   const onHandleBreadCrumbPress = () => {
      switch (getSignedInRole()) {
@@ -97,9 +136,9 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
             ) : (
               <div className="flex flex-col">
                 <div className="text-xs text-zinc-600">
-                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{getSignedInRole() === Roles.SUPER_ADMIN? schoolData?.name :  `${schoolUser?.firstName} ${schoolUser?.lastName}`}</span>
+                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{displayTitle}</span>
                 </div>
-                <h2 className="text-2xl text-neutral-800 mt-2">{getSignedInRole() === Roles.SUPER_ADMIN? schoolData?.name : `${schoolUser?.firstName} ${schoolUser?.lastName}`}</h2>
+                <h2 className="text-2xl text-neutral-800 mt-2">{displayTitle}</h2>
               </div>
             ) 
           }
