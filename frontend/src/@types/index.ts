@@ -21,8 +21,20 @@ export interface User {
 
 export interface Student extends User {
   studentId: string;
+  parents: Parent[];
   isInvitationAccepted: boolean;
   isArchived: boolean;
+}
+
+export interface Parent {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  occupation: string;
+  email: string;
+  address: string;
+  phone: string;
+  relationship: string;
 }
 
 export type AuthCredentials = Pick<User, "email" | "password">;
@@ -99,6 +111,15 @@ export interface School {
   logoUrl: string;
 }
 
+export enum AdmissionStatus {
+  SUBMITTED = 'Application Submitted',
+  INTERVIEW_COMPLETED = 'Interview Completed',
+  INTERVIEW_PENDING = 'Interview Pending',
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected',
+  WAITLISTED = 'Waitlisted',
+}
+
 export type BadgeVariant =
   | "purple"
   | "red"
@@ -106,7 +127,8 @@ export type BadgeVariant =
   | "blue"
   | "green"
   | "yellow"
-  | "gray" | "active" | "inactive" | "pending";
+  | "gray" | "active" | "inactive" | "pending"
+  | AdmissionStatus;
 
 export interface Calendar {
   id: string;
@@ -165,4 +187,136 @@ export interface SuperAdminDashStats {
   totalStudents: number;
   averageAttendanceRate: number;
   performance: SchoolPerformance[];
+}
+
+export interface StudentInformation {
+  firstName: string;
+  lastName: string;
+  otherNames: string;
+  email: string;
+  dateOfBirth: string;
+  placeOfBirth: string;
+  gender: string;
+  nationality: string;
+  religion: string;
+  languagesSpoken: string[];
+  streetAddress: string;
+  boxAddress: string;
+  phone: string;
+  academicYear: string;
+  classFor: string;
+  headshotFile?: File;
+  birthCertificateFile?: File;
+}
+
+export interface Guardian {
+  firstName: string;
+  lastName: string;
+  relationship: string;
+  email: string;
+  nationality: string;
+  occupation: string;
+  company: string;
+  streetAddress: string;
+  boxAddress: string;
+  phone: string;
+  optionalPhone: string;
+  headshotFile?: File;
+}
+
+export interface AdditionalInformation {
+  primaryHomeLanguage: string;
+  studentPrimaryLanguage: string;
+  hasAcademicHistory: "yes" | "no";
+  previousSchool?: {
+    name: string;
+    url: string;
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    attendedFrom: string;
+    attendedTo: string;
+    grade: string;
+    reportCards: File[];
+  };
+}
+
+export interface AdmissionTableData {
+  id: string;
+  fullName: string;
+  email: string;
+  submittedAt: string;
+  enrollmentStatus: string;
+}
+
+export interface AdmissionData {
+  applicationId: string;
+  school: School;
+  status: string;
+  studentFirstName: string;
+  studentLastName: string;
+  studentOtherNames: string;
+  studentEmail: string;
+  studentDOB: string;
+  studentPlaceOfBirth: string;
+  studentGender: string;
+  studentNationality: string;
+  studentReligion: string;
+  studentLanguages: string[];
+  studentStreetAddress: string;
+  studentBoxAddress: string;
+  studentPhone: string;
+  studentOtherPhone: string;
+  studentOtherPhoneOptional: string;
+  studentBirthCertUrl: string;
+  academicYear: string;
+  forClass: ClassLevel;
+  studentHeadshotPath: string;
+  studentHeadshotMediaType: string;
+  studentHeadshotUrl: string;
+  studentBirthCertPath: string;
+  studentBirthCertMediaType: string;
+  guardians: GuardianData[];
+  homePrimaryLanguage: string;
+  homeOtherLanguage: string;
+  hasPreviousSchool: boolean;
+  previousSchoolName: string;
+  previousSchoolUrl: string;
+  previousSchoolStreetAddress: string;
+  previousSchoolCity: string;
+  previousSchoolState: string;
+  previousSchoolCountry: string;
+  previousSchoolBoxAddress: string;
+  previousSchoolPhone: string;
+  previousSchoolAttendedFrom: string;
+  previousSchoolAttendedTo: string;
+  previousSchoolGradeClass: string;
+  previousSchoolResultPath: string;
+  previousSchoolResultMediaType: string;
+  previousSchoolResults: {
+    id: string;
+    fileUrl: string;
+  }[]
+}
+
+export interface GuardianData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  relationship: string;
+  email: string;
+  dob: string;
+  nationality: string;
+  company: string;
+  gender: string;
+  occupation: string;
+  streetAddress: string;
+  boxAddress: string;
+  guardianPhone: string;
+  guardianOtherPhone: string;
+  guardianOtherPhoneOptional: string;
+  headshotPath: string;
+  headshotMediaType: string;
+  headshotUrl: string;
 }

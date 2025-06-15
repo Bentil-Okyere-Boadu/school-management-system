@@ -10,21 +10,27 @@ import {
 } from 'typeorm';
 import { ClassLevel } from '../class-level/class-level.entity';
 import { Guardian } from './guardian.entity';
+import { School } from 'src/school/school.entity';
+import { PreviousSchoolResult } from './previous-school-result.entity';
 
+export enum AdmissionStatus {
+  SUBMITTED = 'Application Submitted',
+  INTERVIEW_COMPLETED = 'Interview Completed',
+  INTERVIEW_PENDING = 'Interview Pending',
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected',
+  WAITLISTED = 'Waitlisted',
+}
 @Entity()
 export class Admission {
   @PrimaryGeneratedColumn('uuid')
   applicationId: string; // Used for anonymous tracking
 
-  @Column()
-  schoolId: string;
+  @ManyToOne(() => School, { eager: true, onDelete: 'CASCADE' })
+  school: School;
 
-  // Stepper progress
-  @Column({ default: 1 })
-  step: number;
-
-  @Column({ default: 'in_progress' })
-  status: 'in_progress' | 'submitted';
+  @Column({ default: 'Application Submitted' })
+  status: AdmissionStatus;
 
   // --- Student Information ---
   @Column({ nullable: true })
@@ -41,6 +47,9 @@ export class Admission {
 
   @Column({ nullable: true })
   studentDOB: string;
+
+  @Column({ nullable: true })
+  studentPlaceOfBirth: string;
 
   @Column({ nullable: true })
   studentGender: string;
@@ -64,10 +73,10 @@ export class Admission {
   studentPhone: string;
 
   @Column({ nullable: true })
-  studentPhotoUrl: string;
+  studentOtherPhone: string;
 
   @Column({ nullable: true })
-  studentBirthCertUrl: string;
+  studentOtherPhoneOptional: string;
 
   @Column({ nullable: true })
   academicYear: string;
@@ -82,11 +91,21 @@ export class Admission {
   @Column({ nullable: true })
   studentHeadshotMediaType: string;
 
+  @Column({ nullable: true })
+  studentBirthCertPath: string;
+
+  @Column({ nullable: true })
+  studentBirthCertMediaType: string;
+
   @VirtualColumn({
     query: (alias) => `(NULL)`, // Placeholder, handled in code
   })
   studentHeadshotUrl?: string;
 
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder, handled in code
+  })
+  studentBirthCertUrl?: string;
   // --- Family Information (Guardian 1, can be extended for more) ---
   @OneToMany(() => Guardian, (guardian) => guardian.admission, {
     cascade: true,
@@ -101,23 +120,23 @@ export class Admission {
   @Column({ nullable: true })
   homeOtherLanguage: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: false })
   hasPreviousSchool: boolean;
 
   @Column({ nullable: true })
   previousSchoolName: string;
 
   @Column({ nullable: true })
-  previousSchoolStudentId: string;
-
-  @Column({ nullable: true })
-  previousSchoolEmail: string;
+  previousSchoolUrl: string;
 
   @Column({ nullable: true })
   previousSchoolStreetAddress: string;
 
   @Column({ nullable: true })
   previousSchoolCity: string;
+
+  @Column({ nullable: true })
+  previousSchoolState: string;
 
   @Column({ nullable: true })
   previousSchoolCountry: string;
@@ -137,17 +156,11 @@ export class Admission {
   @Column({ nullable: true })
   previousSchoolGradeClass: string;
 
-  // Previous School Result
-  @Column({ nullable: true })
-  previousSchoolResultPath: string;
-
-  @Column({ nullable: true })
-  previousSchoolResultMediaType: string;
-
-  @VirtualColumn({
-    query: (alias) => `(NULL)`, // Placeholder, handled in code
+  @OneToMany(() => PreviousSchoolResult, (result) => result.admission, {
+    cascade: true,
+    eager: true,
   })
-  previousSchoolResultUrl?: string;
+  previousSchoolResults: PreviousSchoolResult[];
 
   // --- Timestamps ---
   @CreateDateColumn()

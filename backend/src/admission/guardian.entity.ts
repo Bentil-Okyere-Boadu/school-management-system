@@ -33,6 +33,9 @@ export class Guardian {
   nationality: string;
 
   @Column({ nullable: true })
+  company: string;
+
+  @Column({ nullable: true })
   gender: string;
 
   @Column({ nullable: true })
@@ -45,7 +48,13 @@ export class Guardian {
   boxAddress: string;
 
   @Column({ nullable: true })
-  phone: string;
+  guardianPhone: string;
+
+  @Column({ nullable: true })
+  guardianOtherPhone: string;
+
+  @Column({ nullable: true })
+  guardianOtherPhoneOptional: string;
 
   // Headshot fields
   @Column({ nullable: true })

@@ -6,6 +6,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PreviousSchoolResult } from '../previous-school-result.entity';
 
 class GuardianDto {
   @IsString()
@@ -40,6 +41,10 @@ class GuardianDto {
 
   @IsOptional()
   @IsString()
+  company?: string;
+
+  @IsOptional()
+  @IsString()
   streetAddress?: string;
 
   @IsOptional()
@@ -48,7 +53,15 @@ class GuardianDto {
 
   @IsOptional()
   @IsString()
-  phone?: string;
+  guardianPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  guardianOtherPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  guardianOtherPhoneOptional?: string;
 
   @IsOptional()
   @IsString()
@@ -84,6 +97,10 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
+  studentPlaceOfBirth?: string;
+
+  @IsOptional()
+  @IsString()
   studentGender?: string;
 
   @IsOptional()
@@ -113,6 +130,14 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
+  studentOtherPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  studentOtherPhoneOptional?: string;
+
+  @IsOptional()
+  @IsString()
   studentHeadshotPath?: string;
 
   @IsOptional()
@@ -121,7 +146,11 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
-  studentBirthCertUrl?: string;
+  studentBirthCertPath?: string;
+
+  @IsOptional()
+  @IsString()
+  studentBirthCertMediaType?: string;
 
   @IsOptional()
   @IsString()
@@ -148,7 +177,7 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsBoolean()
-  hasPreviousSchool?: boolean;
+  hasPreviousSchool?: boolean = false;
 
   @IsOptional()
   @IsString()
@@ -156,11 +185,7 @@ export class CreateAdmissionDto {
 
   @IsOptional()
   @IsString()
-  previousSchoolStudentId?: string;
-
-  @IsOptional()
-  @IsString()
-  previousSchoolEmail?: string;
+  previousSchoolUrl?: string;
 
   @IsOptional()
   @IsString()
@@ -169,6 +194,13 @@ export class CreateAdmissionDto {
   @IsOptional()
   @IsString()
   previousSchoolCity?: string;
+
+  @IsOptional()
+  previousSchoolResults?: PreviousSchoolResult[];
+
+  @IsOptional()
+  @IsString()
+  previousSchoolState?: string;
 
   @IsOptional()
   @IsString()
@@ -193,12 +225,4 @@ export class CreateAdmissionDto {
   @IsOptional()
   @IsString()
   previousSchoolGradeClass?: string;
-
-  @IsOptional()
-  @IsString()
-  previousSchoolResultPath?: string;
-
-  @IsOptional()
-  @IsString()
-  previousSchoolResultMediaType?: string;
 }

@@ -18,13 +18,17 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
       isPasswordField = false,
       isTransulent = false,
       rightButton,
+      required,
       ...props
     },
     ref
   ) => {
     return (
       <div className="mb-4">
-        <label className="mb-1.5 text-xs text-zinc-600 block">{label}</label>
+        <label className="mb-1.5 text-xs text-zinc-600 block">
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
         <div className="relative">
           <input
             ref={ref}

@@ -1,13 +1,14 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData } from "@/@types";
 
-export const useGetMySchool = () => {
+export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['mySchool'],
         queryFn: () => {
             return customAPI.get('/school-admin/my-school');
         },
+        enabled,
         refetchOnWindowFocus: true
     })
 
@@ -425,17 +426,204 @@ export const useDeleteAdmissionPolicy = () => {
 }
 
 // View student/teacher  
-export const useGetSchoolUserById = (id: string) => {
+export const useGetSchoolUserById = (id: string, options?: UseQueryOptions) => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['schoolUser', id],
         queryFn: () => {
             return customAPI.get(`/school-admin/users/${id}`);
         },
-        refetchOnWindowFocus: true
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+         ...options,
     })
 
-    const schoolUser = data?.data as User | Student ;
+    const schoolUser = (data as {data: User | Student})?.data ;
 
     return { schoolUser, isLoading, refetch }
 }
 
+
+/**
+ * ADMISSION FORMS
+ */
+export const useSubmitAdmissionForm = () => {
+  return useMutation({
+    mutationFn: ({
+      studentData,
+      guardians,
+      additionalInfo,
+      schoolId,
+    }: {
+      studentData: StudentInformation;
+      guardians: Guardian[];
+      additionalInfo: AdditionalInformation;
+      schoolId: string;
+    }) => {
+      const formData = new FormData();
+
+      // Flat student data
+      formData.append('schoolId', schoolId);
+      formData.append('studentFirstName', studentData.firstName);
+      formData.append('studentLastName', studentData.lastName);
+      formData.append('studentOtherNames', studentData.otherNames);
+      formData.append('studentEmail', studentData.email);
+      formData.append('studentGender', studentData.gender)
+      formData.append('studentDOB', studentData.dateOfBirth);
+      formData.append('studentPlaceOfBirth', studentData.placeOfBirth)
+      formData.append('studentNationality', studentData.nationality);
+      formData.append('studentReligion', studentData.religion);
+      formData.append('studentPhone', studentData.phone);
+      formData.append('studentStreetAddress', studentData.streetAddress)
+      formData.append('studentBoxAddress', studentData.boxAddress);
+      formData.append('academicYear', studentData.academicYear);
+      formData.append('forClassId', studentData.classFor);
+      studentData.languagesSpoken.forEach(lang => {
+        formData.append('studentLanguages[]', lang); // format for sending a array of strings
+      });
+      formData.append('homePrimaryLanguage', additionalInfo.primaryHomeLanguage);
+      formData.append('homeOtherLanguage', additionalInfo.studentPrimaryLanguage);
+      if (studentData.birthCertificateFile)
+        formData.append('studentBirthCert', studentData.birthCertificateFile);
+      if (studentData.headshotFile)
+        formData.append('studentHeadshot', studentData.headshotFile);
+
+      // Previous School
+      if (additionalInfo.hasAcademicHistory === 'yes' && additionalInfo.previousSchool) {
+        const ps = additionalInfo.previousSchool;
+        formData.append('previousSchoolName', ps.name);
+        formData.append('previousSchoolUrl', ps.url);
+        formData.append('previousSchoolStreetAddress', ps.street);
+        formData.append('previousSchoolCity', ps.city);
+        formData.append('previousSchoolState', ps.state);
+        formData.append('previousSchoolCountry', ps.country);
+        formData.append('previousSchoolAttendedFrom', ps.attendedFrom);
+        formData.append('previousSchoolAttendedTo', ps.attendedTo);
+        formData.append('previousSchoolGradeClass', ps.grade);
+
+        ps.reportCards?.forEach((file, index) => {
+          formData.append(`previousSchoolResult${index}`, file);
+        });
+      }
+
+      // Guardians
+      guardians.forEach((guardian, index) => {
+        formData.append(`guardians[${index}][firstName]`, guardian.firstName);
+        formData.append(`guardians[${index}][lastName]`, guardian.lastName);
+        formData.append(`guardians[${index}][email]`, guardian.email);
+        formData.append(`guardians[${index}][relationship]`, guardian.relationship);
+        formData.append(`guardians[${index}][guardianPhone]`, guardian.phone);
+        formData.append(`guardians[${index}][guardianOtherPhone]`, guardian.optionalPhone);
+        formData.append(`guardians[${index}][occupation]`, guardian.occupation);
+        formData.append(`guardians[${index}][company]`, guardian.company);
+        formData.append(`guardians[${index}][nationality]`, guardian.nationality);
+        formData.append(`guardians[${index}][streetAddress]`, guardian.streetAddress);
+        formData.append(`guardians[${index}][boxAddress]`, guardian.boxAddress);
+
+        if (guardian.headshotFile) {
+          formData.append(`guardianHeadshot${index}`, guardian.headshotFile);
+        }
+      });
+
+      return customAPI.post('/admissions', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useGetAdmissionClassLevels = (id: string) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['admissionClassLevel'],
+        queryFn: () => {
+            return customAPI.get(`/admissions/class-levels/${id}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const classLevels = data?.data as ClassLevel[] || [] ;
+
+    return { classLevels, isLoading, refetch }
+}
+
+export const useGetSchoolAdmissions = (page=1, search: string = "", status: string = "", role: string = "", roleLabel?: string,  limit?: number) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['allSchoolAdmissions', { page, search, status, role, roleLabel, limit }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+
+            if(status) {
+                queryBuilder.push(`status=${status}`);
+            }
+            
+            if(role) {
+                queryBuilder.push(`role=${role}`);
+            }
+            
+            if(page) {
+                queryBuilder.push(`page=${page}`);
+            }
+            
+            if(roleLabel) {
+                queryBuilder.push(`roleLabel=${roleLabel}`);
+            }
+
+            if(limit) {
+                queryBuilder.push(`limit=${limit}`);
+            }
+            
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+            
+            return customAPI.get(`/school-admin/admissions?${params}`);
+        },
+        refetchOnWindowFocus: true
+    });
+
+    const admissionsList = data?.data?.data;
+    const paginationValues = data?.data.meta;
+    return { admissionsList, isLoading, paginationValues, refetch }
+}
+
+export const useGetAdmissionById = (id: string, options?: UseQueryOptions) => {
+
+    const { data, isPending, refetch} = useQuery({
+        queryKey: ['admission', id],
+        queryFn: () => {
+            return customAPI.get(`/school-admin/admissions/${id}`)
+        },
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+        ...options,
+    })
+
+    const admissionData = (data as {data:  AdmissionData})?.data;
+    return { admissionData, isPending, refetch }
+}
+
+export const useDeleteAdmission = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/school-admin/admissions/${id}`)
+        }
+    })
+}
+
+export const useEditAdmission = (id: string) => {
+    return useMutation({
+        mutationFn: (statusData: Partial<AdmissionData>) => {
+            return customAPI.patch(`/school-admin/admissions/${id}/status`, statusData);
+        }
+    })
+}
+
+export const useInterviewInvitation = (id: string) => {
+    return useMutation({
+        mutationFn: (inviteDetails: {interviewDate:string, interviewTime:string}) => {
+            return customAPI.post(`/school-admin/admissions/${id}/interview`, inviteDetails);
+        }
+    })
+}

@@ -1,16 +1,18 @@
 "use client";
 
-import { BadgeVariant } from "@/@types";
+import { BadgeVariant, AdmissionStatus } from "@/@types";
 import React from "react";
+import { IconChevronDown } from "@tabler/icons-react";
 
 interface BadgeProps {
   text: string;
   variant: BadgeVariant;
   showDot?: boolean;
   width?: string;
+  showArrow?: boolean;
 }
 
-const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false }) => {
+const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false, showArrow = false }) => {
     const getVariantStyles = (): { textColor: string; bgColor: string, dotColor: string } => {
         switch (variant) {
           case "purple":
@@ -20,8 +22,9 @@ const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false }) 
               dotColor: "#7C3AED",
             };
           case "red":
+          case AdmissionStatus.REJECTED:
             return {
-              textColor: "text-red-300",
+              textColor: "text-red-600",
               bgColor: "bg-red-50",
               dotColor: "#F43F5E",
             };
@@ -33,13 +36,15 @@ const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false }) 
             };
           case "green":
           case "active":
+          case AdmissionStatus.ACCEPTED:
             return {
               textColor: "text-green-700",
               bgColor: "bg-green-50",
               dotColor: "#12B76A",
             };
           case "yellow":
-          case "pending":            
+          case "pending":
+          case AdmissionStatus.SUBMITTED:          
             return {
               textColor: "text-yellow-700",
               bgColor: "bg-yellow-50",
@@ -51,6 +56,12 @@ const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false }) 
               textColor: "text-gray-500",
               bgColor: "bg-gray-200",
               dotColor: "#79747E",
+            };
+          case AdmissionStatus.WAITLISTED:
+            return {
+              textColor: "text-orange-700",
+              bgColor: "bg-orange-50",
+              dotColor: "#D67825",
             };
           default:
             return {
@@ -83,6 +94,9 @@ const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false }) 
             </svg>
         )}
         <span>{text}</span>
+        {showArrow && (
+          <IconChevronDown className="object-contain w-6 aspect-square pl-2" />
+        )}
       </div>
     </div>
   );
