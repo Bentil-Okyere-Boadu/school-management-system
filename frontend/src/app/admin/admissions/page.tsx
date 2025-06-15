@@ -35,7 +35,7 @@ const Admissions = () => {
   const [activeTabKey, setActiveTabKey] = useState('admissions-analytics');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedFilterStatus, setSelectedFilterStatus] = useState("");
 
   const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
@@ -78,12 +78,12 @@ const Admissions = () => {
     setCurrentPage(page);
   };
 
-  const handleStatusChange = (query: string) => {
-    setSelectedStatus(query);
+  const handleFilterStatusChange = (query: string) => {
+    setSelectedFilterStatus(query);
     setCurrentPage(1);
   };
 
-  const { admissionsList, paginationValues } = useGetSchoolAdmissions(currentPage, useDebouncer(searchQuery), selectedStatus, "", "", 10);
+  const { admissionsList, paginationValues, refetch: refetchAdmissionList } = useGetSchoolAdmissions(currentPage, useDebouncer(searchQuery), selectedFilterStatus, "", "", 10);
 
   return (
     <div>
@@ -121,9 +121,10 @@ const Admissions = () => {
         <div>
           <AdmissionsListTabSection 
             handleSearch={handleSearch} 
-            handleStatusChange={handleStatusChange}
-            selectedStatus={selectedStatus}
+            handleFilterStatusChange={handleFilterStatusChange}
+            selectedFilterStatus={selectedFilterStatus}
             admissionsList={admissionsList} 
+            refetchAdmissionList={refetchAdmissionList}
           />
           <Pagination
             currentPage={currentPage}

@@ -111,6 +111,15 @@ export interface School {
   logoUrl: string;
 }
 
+export enum AdmissionStatus {
+  SUBMITTED = 'Application Submitted',
+  INTERVIEW_COMPLETED = 'Interview Completed',
+  INTERVIEW_PENDING = 'Interview Pending',
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected',
+  WAITLISTED = 'Waitlisted',
+}
+
 export type BadgeVariant =
   | "purple"
   | "red"
@@ -118,7 +127,8 @@ export type BadgeVariant =
   | "blue"
   | "green"
   | "yellow"
-  | "gray" | "active" | "inactive" | "pending";
+  | "gray" | "active" | "inactive" | "pending"
+  | AdmissionStatus;
 
 export interface Calendar {
   id: string;
@@ -249,6 +259,7 @@ export interface AdmissionData {
   studentOtherNames: string;
   studentEmail: string;
   studentDOB: string;
+  studentPlaceOfBirth: string;
   studentGender: string;
   studentNationality: string;
   studentReligion: string;
@@ -283,6 +294,10 @@ export interface AdmissionData {
   previousSchoolGradeClass: string;
   previousSchoolResultPath: string;
   previousSchoolResultMediaType: string;
+  previousSchoolResults: {
+    id: string;
+    fileUrl: string;
+  }[]
 }
 
 export interface GuardianData {

@@ -184,6 +184,12 @@ export class SchoolAdminController {
       interviewData.interviewTime,
     );
   }
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('users/:id')
+  @Roles('school_admin')
+  async deleteUser(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    return this.schoolAdminService.deleteUser(id, admin.school.id);
+  }
   @UseGuards(
     SchoolAdminJwtAuthGuard,
     ActiveUserGuard,

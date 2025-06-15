@@ -4,7 +4,7 @@ import React from "react";
 import { capitalizeFirstLetter } from "@/utils/helpers";
 import { Menu } from "@mantine/core";
 import Badge from "@/components/common/Badge";
-import { BadgeVariant } from "@/@types";
+import { BadgeVariant, AdmissionStatus } from "@/@types";
 
 export interface OptionProps {
   label: string;
@@ -13,43 +13,38 @@ export interface OptionProps {
 
 export interface StatusMenuProps {
   status: string;
-  onStatusClick?: (item: OptionProps) => void
+  admissionId: string;
+  onStatusClick?: (item: OptionProps, admissionId: string) => void
 }
 
-export const AdmissionStatusMenu: React.FC<StatusMenuProps> = ({ status, onStatusClick}) => {
+export const AdmissionStatusMenu: React.FC<StatusMenuProps> = ({ status, admissionId, onStatusClick}) => {
 
   const getOptionsByStatus = (status: string): OptionProps[] => {
     switch (status) {
-      case "in_progress":
+      case AdmissionStatus.SUBMITTED:
         return [
-            { label: "Mark Completed", value: "mark-completed" },
-            { label: "Accept Application", value: "accept-application" },
-            { label: "Reject Application", value: "reject-appplication" },
+            { label: "Send Interview Invite", value: "interview-invite" },
+            { label: "Accept Application", value: AdmissionStatus.ACCEPTED},
+            { label: "Reject Application", value: AdmissionStatus.REJECTED },
+            { label: "Waitlist Application", value: AdmissionStatus.WAITLISTED},
         ];
-      case "app-submitted":
+      case AdmissionStatus.INTERVIEW_PENDING:
         return [
-            { label: "Send Interview Invite", value: "send-interview-invite" },
-            { label: "Accept Application", value: "accept-application" },
-            { label: "Reject Application", value: "reject-appplication" },
-            { label: "Waitlist Application", value: "waitlist-application" },
+            { label: "Mark Completed", value: AdmissionStatus.INTERVIEW_COMPLETED },
+            { label: "Accept Application", value: AdmissionStatus.ACCEPTED },
+            { label: "Reject Application", value: AdmissionStatus.REJECTED },
+            { label: "Waitlist Application", value: AdmissionStatus.WAITLISTED },
         ];
-      case "interview-pending":
+      case AdmissionStatus.INTERVIEW_COMPLETED:
         return [
-            { label: "Mark Completed", value: "mark-completed" },
-            { label: "Accept Application", value: "accept-application" },
-            { label: "Reject Application", value: "reject-appplication" },
-            { label: "Waitlist Application", value: "waitlist-application" },
+            { label: "Accept Application", value: AdmissionStatus.ACCEPTED },
+            { label: "Reject Application", value: AdmissionStatus.REJECTED },
+            { label: "Waitlist Application", value: AdmissionStatus.WAITLISTED },
         ];
-      case "interview-completed":
+      case AdmissionStatus.WAITLISTED:
         return [
-            { label: "Accept Application", value: "accept-application" },
-            { label: "Reject Application", value: "reject-appplication" },
-            { label: "Waitlist Application", value: "waitlist-application" },
-        ];
-      case "waitlisted":
-        return [
-            { label: "Accept Application", value: "accept-application" },
-            { label: "Reject Application", value: "reject-appplication" },
+            { label: "Accept Application", value: AdmissionStatus.ACCEPTED },
+            { label: "Reject Application", value: AdmissionStatus.REJECTED },
         ];
       default:
         return [{label: "No results", value: ""}];
@@ -57,29 +52,34 @@ export const AdmissionStatusMenu: React.FC<StatusMenuProps> = ({ status, onStatu
   };
 
   const statusOptionsList = getOptionsByStatus(status);
+  const canOpenDropdown = ![AdmissionStatus.ACCEPTED, AdmissionStatus.REJECTED].includes(status as AdmissionStatus);
 
   return (
     <Menu shadow="md" width={190} position="bottom-start">
       <Menu.Target>
-        <div className={`${onStatusClick ? 'cursor-pointer' : ''}`}>
+        <div className={`${onStatusClick && canOpenDropdown ? 'cursor-pointer' : ''}`}>
           <Badge
             text={capitalizeFirstLetter(status)}
             showDot={true}
-            showArrow={true}
+            showArrow={canOpenDropdown}
             variant={status as BadgeVariant}
           />
         </div>
       </Menu.Target>
-      <Menu.Dropdown className="!-mt-1">
-        {statusOptionsList.map((option, index) => (
-          <Menu.Item
-            key={index}
-            onClick={() => onStatusClick?.(option)}
-          >
-            {option.label}
-          </Menu.Item>
-        ))}
-      </Menu.Dropdown>
+
+      {/* Only show dropdown if status is not ACCEPTED or REJECTED */}
+      {canOpenDropdown && (
+        <Menu.Dropdown className="!-mt-1">
+          {statusOptionsList.map((option, index) => (
+            <Menu.Item
+              key={index}
+              onClick={() => onStatusClick?.(option, admissionId)}
+            >
+              {option.label}
+            </Menu.Item>
+          ))}
+        </Menu.Dropdown>
+      )}
     </Menu>
   );
 };

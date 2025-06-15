@@ -49,7 +49,7 @@ export class Admission {
   studentDOB: string;
 
   @Column({ nullable: true })
-  studentPlaceOfBrith: string;
+  studentPlaceOfBirth: string;
 
   @Column({ nullable: true })
   studentGender: string;
