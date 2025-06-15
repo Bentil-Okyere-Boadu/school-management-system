@@ -16,7 +16,7 @@ export type TabListItem = {
 const ViewStudentPage = () => {
     const {id} = useParams();
 
-    const {schoolUser} = useGetSchoolUserById(id as string)
+    const {schoolUser, refetch} = useGetSchoolUserById(id as string)
 
     const [activeTabKey, setActiveTabKey] = useState('student-profile');
     
@@ -40,7 +40,7 @@ const ViewStudentPage = () => {
 
         { activeTabKey === "student-profile" && (
             <div>
-                <StudentProfile viewMode={true} studentData={schoolUser as Student}/>
+                <StudentProfile viewMode={true} studentData={schoolUser as Student} refetch={refetch}/>
             </div>
         )}
         { activeTabKey === "attendance" && (

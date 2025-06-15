@@ -153,12 +153,12 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
         <div className="mt-15 mb-10">
           <div className="flex justify-between items-center">
             <h3 className="font-bold mb-3">Parent/Guardian Information</h3>
-            <CustomUnderlinedButton
-              text="Add New"
+            {!id && (<CustomUnderlinedButton
+              text="Add New Guardian"
               textColor="text-purple-500"
               onClick={() => setDialogOpen(true)}
               showIcon={false}
-            />
+            />)}
           </div>
           {student?.parents.map((parent, index) => {
             return <Guardian key={index} parent={parent} viewMode={true} count={index+1} refetchStudentData={refetch}/>

@@ -2,6 +2,7 @@ import { Parent } from "@/@types";
 import InputField from "@/components/InputField";
 import { useDeleteGuardian } from "@/hooks/student";
 import { IconPencil, IconTrashFilled } from "@tabler/icons-react";
+import { useParams } from "next/navigation";
 import React from "react";
 import { toast } from "react-toastify";
 
@@ -14,6 +15,8 @@ interface GuardianProps {
 
 const Guardian = ({ parent, count, viewMode, refetchStudentData }: GuardianProps) => {
     const { mutate: deleteGuardianMutation } = useDeleteGuardian(parent?.id as string);
+    const {id} = useParams();
+
     const deleteGuardian = () => {
         deleteGuardianMutation( undefined, {
             onSuccess: () => {
@@ -30,7 +33,7 @@ const Guardian = ({ parent, count, viewMode, refetchStudentData }: GuardianProps
     <div>
       {viewMode && (<div className="flex justify-between">
         <h4 className="font-bold mb-3">Guardian #{count}</h4>
-        <div className="flex items-center gap-3">
+        { !id && (<div className="flex items-center gap-3">
             <IconPencil
               size={18}
               className="cursor-pointer"
@@ -41,7 +44,7 @@ const Guardian = ({ parent, count, viewMode, refetchStudentData }: GuardianProps
               className="text-red-600 cursor-pointer"
               onClick={() => deleteGuardian()}
             />
-        </div>
+        </div>)}
       </div>)}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
