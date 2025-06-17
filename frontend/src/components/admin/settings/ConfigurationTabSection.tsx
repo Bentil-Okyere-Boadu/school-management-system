@@ -67,7 +67,7 @@ export const ConfigurationTabSection: React.FC = () => {
             }
         }
         
-    }, [calendars]);
+    }, [calendars, isUseFirstCalendar, selectedAcademicCalendar]);
 
 
 
