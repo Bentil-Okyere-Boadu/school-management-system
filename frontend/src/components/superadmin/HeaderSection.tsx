@@ -46,9 +46,6 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   });
 
   const { school: mySchool } = useGetMySchool(getSignedInRole() === Roles.SCHOOL_ADMIN? true : false );
-
-  const schoolData = useMemo(() => { return school }, [school])
-  const mySchoolData = useMemo(() => { return mySchool }, [mySchool])
   
   const isAdmissionDetailPage = pathName.includes(`/admin/admissions/${params.id}`);
   const { admissionData } = useGetAdmissionById(params.id as string, {
@@ -61,7 +58,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   const displayTitle: string = useMemo(() => {
     if (isOverviewPage) {
       if (signedInRole === Roles.SCHOOL_ADMIN) {
-        return mySchoolData?.name;
+        return mySchool?.name;
       }
       return `Hello, ${user?.firstName} ${user?.lastName}`;
     }
@@ -72,7 +69,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     }
 
     if (signedInRole === Roles.SUPER_ADMIN) {
-      return schoolData?.name;
+      return school?.name;
     }
 
     if (signedInRole === Roles.SCHOOL_ADMIN) {
@@ -81,7 +78,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
     // Default fallback (e.g., teacher, student)
     return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
-  }, [isOverviewPage, signedInRole, user, schoolData, schoolUser, mySchoolData, admissionData]);
+  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData]);
 
   const onHandleBreadCrumbPress = () => {
      switch (getSignedInRole()) {
@@ -125,7 +122,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
             (
               <div className="flex flex-col">
                 { getSignedInRole() === Roles.SCHOOL_ADMIN? (
-                  <h1 className="text-2xl text-neutral-800">{mySchoolData?.name}</h1>
+                  <h1 className="text-2xl text-neutral-800">{mySchool?.name}</h1>
                 ) : (
                   <h1 className="text-2xl text-neutral-800">Hello, {user?.firstName} {user?.lastName}</h1>
                 )
