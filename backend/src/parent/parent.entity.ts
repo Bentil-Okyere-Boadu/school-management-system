@@ -26,6 +26,9 @@ export class Parent {
   email: string;
 
   @Column({ nullable: true })
+  relationship: string;
+
+  @Column({ nullable: true })
   address: string;
 
   @Column({ nullable: true })

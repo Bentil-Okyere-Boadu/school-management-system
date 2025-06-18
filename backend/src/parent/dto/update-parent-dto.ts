@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsEmail } from 'class-validator';
 
 export class UpdateParentDto {
   @IsOptional()
@@ -28,7 +28,4 @@ export class UpdateParentDto {
   @IsOptional()
   @IsString()
   relationship?: string;
-
-  @IsUUID()
-  studentId: string;
 }
