@@ -32,10 +32,10 @@ export const useCreateGuardian = (studentId: string) => {
     });
 }
 
-export const useUpdateGuardian = (studentId: string) => {
+export const useUpdateGuardian = (parentId: string) => {
     return useMutation({
-        mutationFn: (guardianDetails) => {
-            return customAPI.patch(`/student/${studentId}/parents`, guardianDetails);
+        mutationFn: (guardianDetails: Partial<Parent>) => {
+            return customAPI.patch(`/student/${parentId}/parents`, guardianDetails);
         }
     });
 }
