@@ -72,7 +72,16 @@ export class ParentService {
       );
     }
 
-    // Update parent fields
+    if (updateParentDto.email && updateParentDto.email !== parent.email) {
+      const existingParent = await this.parentRepository.findOne({
+        where: { email: updateParentDto.email },
+      });
+
+      if (existingParent && existingParent.id !== id) {
+        throw new ForbiddenException('A parent with this email already exists');
+      }
+    }
+
     Object.assign(parent, updateParentDto);
 
     return this.parentRepository.save(parent);
