@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToOne
 } from 'typeorm';
 import { Student } from '../student/student.entity';
+import { Profile } from 'src/profile/profile.entity';
 
 @Entity()
 export class Parent {
@@ -38,6 +40,12 @@ export class Parent {
     onDelete: 'CASCADE',
   })
   student: Student;
+
+  @OneToOne(() => Profile, (profile) => profile.parent, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  profile: Profile;
 
   @CreateDateColumn()
   createdAt: Date;

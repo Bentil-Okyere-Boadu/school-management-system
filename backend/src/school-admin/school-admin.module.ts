@@ -23,6 +23,8 @@ import { AdmissionService } from 'src/admission/admission.service';
 import { Guardian } from 'src/admission/guardian.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { PreviousSchoolResult } from 'src/admission/previous-school-result.entity';
+import { Parent } from 'src/parent/parent.entity';
+import { InvitationService } from 'src/invitation/invitation.service';
 
 @Module({
   imports: [
@@ -37,6 +39,7 @@ import { PreviousSchoolResult } from 'src/admission/previous-school-result.entit
       Guardian,
       ClassLevel,
       PreviousSchoolResult,
+      Parent,
     ]),
     PassportModule,
     JwtModule.registerAsync({
@@ -60,6 +63,7 @@ import { PreviousSchoolResult } from 'src/admission/previous-school-result.entit
     ProfileService,
     ConfigService,
     AdmissionService,
+    InvitationService,
   ],
   exports: [SchoolAdminAuthService, SchoolAdminService],
 })
