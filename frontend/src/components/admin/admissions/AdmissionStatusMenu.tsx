@@ -14,10 +14,11 @@ export interface OptionProps {
 export interface StatusMenuProps {
   status: string;
   admissionId: string;
+  isStatusChangePending?: boolean;
   onStatusClick?: (item: OptionProps, admissionId: string) => void
 }
 
-export const AdmissionStatusMenu: React.FC<StatusMenuProps> = ({ status, admissionId, onStatusClick}) => {
+export const AdmissionStatusMenu: React.FC<StatusMenuProps> = ({ status, admissionId, isStatusChangePending = false, onStatusClick}) => {
 
   const getOptionsByStatus = (status: string): OptionProps[] => {
     switch (status) {
@@ -52,7 +53,7 @@ export const AdmissionStatusMenu: React.FC<StatusMenuProps> = ({ status, admissi
   };
 
   const statusOptionsList = getOptionsByStatus(status);
-  const canOpenDropdown = ![AdmissionStatus.ACCEPTED, AdmissionStatus.REJECTED].includes(status as AdmissionStatus);
+  const canOpenDropdown = ![AdmissionStatus.ACCEPTED, AdmissionStatus.REJECTED].includes(status as AdmissionStatus) && !isStatusChangePending
 
   return (
     <Menu shadow="md" width={190} position="bottom-start">
@@ -60,6 +61,7 @@ export const AdmissionStatusMenu: React.FC<StatusMenuProps> = ({ status, admissi
         <div className={`${onStatusClick && canOpenDropdown ? 'cursor-pointer' : ''}`}>
           <Badge
             text={capitalizeFirstLetter(status)}
+            loading={isStatusChangePending}
             showDot={true}
             showArrow={canOpenDropdown}
             variant={status as BadgeVariant}
