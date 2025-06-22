@@ -217,13 +217,19 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                     value={data.academicYear}
                     onChange={(value) =>  handleChange('academicYear', value ?? '')}
                 />
-                <Select
-                    required
-                    label="For Class"
-                    data={classLevelOptions}
-                    value={data.classFor}
-                    onChange={(value) =>  handleChange('classFor', value ?? '')}
-                />
+                <div>
+                    <Select
+                        required
+                        label="For Class"
+                        data={classLevelOptions}
+                        value={data.classFor}
+                        onChange={(value) =>  handleChange('classFor', value ?? '')}
+                    />
+                    {classLevelOptions?.length === 0 && (
+                        <p className='text-purple-500 text-sm'>No classes available, you can not proceed</p>
+                    )}
+                </div>
+
             </div>
         </div>
     </div>

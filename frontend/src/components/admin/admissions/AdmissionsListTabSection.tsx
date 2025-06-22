@@ -31,6 +31,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [interviewDate, setInterviewDate] = useState("");
   const [interviewTime, setInterviewTime] = useState("");
+  const [statusChangePendingId, setStatusChangePendingId] = useState<string | null>(null);
 
   const statusFilterOptions = [
     { value: "", label: "Status" },
@@ -56,7 +57,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
       setInterviewDate("");
       setIsInterviewInviteDialogOpen(true);
     } else {
-      updateAdmissionStatus(sSelectedStatus);
+      updateAdmissionStatus(sSelectedStatus, admissionId);
     }
   }
 
@@ -81,7 +82,9 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
     setAdmissionId(sId);
   }
 
-  const updateAdmissionStatus = (sSelectedStatus: string) => {
+  const updateAdmissionStatus = (sSelectedStatus: string, id: string) => {
+    setStatusChangePendingId(id);
+
     editMutation({ status: sSelectedStatus}, {
       onSuccess: () => {
         toast.success('Successfully updated admission status.')
@@ -89,6 +92,9 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+      onSettled: () => {
+        setStatusChangePendingId(null);
       }
     })
   }
@@ -165,6 +171,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
                     <div className="flex items-center justity-start">
                       <AdmissionStatusMenu 
                         status={admission.enrollmentStatus} 
+                        isStatusChangePending={ statusChangePendingId === admission.id }
                         admissionId={admission.id}
                         onStatusClick={(option, admissionId) => onHandleAdmissionStatusChange(option, admissionId)} /> 
                     </div>

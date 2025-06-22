@@ -320,3 +320,26 @@ export interface GuardianData {
   headshotMediaType: string;
   headshotUrl: string;
 }
+
+export interface AdmissionDashboardInfo {
+  summary: {
+    totalApplications: number;
+    acceptedApplications: number;
+    rejectedApplications: number;
+    pendingApplications: number;
+  }
+  monthlyTrends: {
+    month: string;
+    value: number;
+  }[];
+  weeklyTrends: {
+    date: string;
+    value: number;
+  }[];
+  statusBreakdown: {
+    name: string;
+    value: number;
+    rate: string;
+  }[];
+  applicationsThisYear: number;
+}

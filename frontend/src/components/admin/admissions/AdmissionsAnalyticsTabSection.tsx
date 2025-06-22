@@ -5,62 +5,45 @@ import CustomCompositeChart from "./CustomCompositeChart ";
 import CustomDonutChart from "./CustomDonutChart";
 import CustomLineChart from "./CustomLineChart";
 import ApplicationStatsTable from "./ApplicationsStatsTable";
+import { useGetAdmisssionDashboardInfo } from "@/hooks/school-admin";
 
 export interface MetricCardProps {
-  value: string;
+  value: number;
   label: string;
   icon: string;
-  trend: {
-    direction: 'up' | 'down';
-    percentage: string;
-  };
 }
 
 export const AdmissionsAnalyticsTabSection: React.FC = () => {
+    const { dashboardStats } = useGetAdmisssionDashboardInfo();
+    const dashCardData = dashboardStats?.summary;
 
     const metrics: MetricCardProps[] = [
-    {
-        value: "89,935",
+      {
+        value: dashCardData?.totalApplications || 0,
         label: "Total applications",
         icon: `<svg width="24" height="25" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px"> <path fill-rule="evenodd" clip-rule="evenodd" d="M8.89318 6.7906C8.95984 6.32517 9.10206 6.06847 9.30356 5.89576C9.63888 5.60835 10.3633 5.35039 12.0004 5.35039C13.6374 5.35039 14.3619 5.60835 14.6972 5.89576C14.899 6.06874 15.0414 6.32598 15.1079 6.7928C14.2017 6.68983 13.169 6.65039 12.0004 6.65039C10.8304 6.65039 9.79814 6.68996 8.89318 6.7906ZM7.15928 7.10357C7.20322 6.17804 7.42709 5.26513 8.19722 4.60502C9.02857 3.89243 10.3041 3.65039 12.0004 3.65039C13.6967 3.65039 14.9722 3.89243 15.8036 4.60502C16.5767 5.26769 16.7993 6.18512 16.842 7.11434C17.7276 7.36132 18.478 7.73459 19.0808 8.29809C20.2618 9.40197 20.6882 11.0598 20.8095 13.2393C20.8361 13.3216 20.8504 13.4093 20.8504 13.5004C20.8504 13.6581 20.8473 13.8172 20.8391 13.977C20.847 14.2797 20.8504 14.5914 20.8504 14.9122C20.8504 17.347 20.5325 19.345 19.0667 20.6545C17.6397 21.9294 15.3378 22.3504 12.0004 22.3504C10.3156 22.3504 8.9164 22.2683 7.77163 22.04C6.62261 21.8109 5.67061 21.423 4.93507 20.768C3.45564 19.4503 3.15039 17.3226 3.15039 14.5004C3.15039 14.2802 3.15225 14.0643 3.15638 13.8526C3.15213 13.7346 3.15039 13.6171 3.15039 13.5004C3.15039 13.4335 3.15812 13.3684 3.17274 13.3059C3.26493 11.0725 3.67223 9.35754 4.93507 8.23283C5.53568 7.69791 6.2806 7.34121 7.15928 7.10357ZM4.85739 13.8414C4.91133 11.4196 5.28007 10.202 6.06572 9.50233C6.49683 9.11836 7.12817 8.82257 8.10415 8.62792C9.08438 8.43241 10.3519 8.35039 12.0004 8.35039C13.6497 8.35039 14.9146 8.43255 15.8918 8.63337C16.8627 8.83289 17.4896 9.13775 17.92 9.54001C18.6921 10.2618 19.065 11.5156 19.1372 13.9594C19.114 14.3257 19.059 14.6217 18.9617 14.8699C18.8374 15.1871 18.6286 15.4662 18.2266 15.7156C17.3438 16.2634 15.5696 16.6504 12.0064 16.6504C8.44362 16.6504 6.66562 16.2635 5.77934 15.7151C5.37542 15.4651 5.1654 15.1855 5.04035 14.8683C4.93234 14.5944 4.87591 14.2621 4.85739 13.8414ZM18.983 17.2434C18.8018 18.2427 18.4651 18.9123 17.9341 19.3867C17.0278 20.1964 15.3297 20.6504 12.0004 20.6504C10.3519 20.6504 9.08438 20.5684 8.10415 20.3729C7.12817 20.1782 6.49683 19.8824 6.06572 19.4985C5.54809 19.0374 5.21144 18.3516 5.02656 17.2448C6.3761 18.012 8.56879 18.3504 12.0064 18.3504C15.4451 18.3504 17.6361 18.0118 18.983 17.2434ZM9.15039 14.5004C9.15039 14.0309 9.53095 13.6504 10.0004 13.6504H14.0004C14.4698 13.6504 14.8504 14.0309 14.8504 14.5004C14.8504 14.9698 14.4698 15.3504 14.0004 15.3504L10.0004 15.3504C9.53095 15.3504 9.15039 14.9698 9.15039 14.5004Z" fill="#FF6E6D"></path> </svg>`,
-        trend: {
-        direction: "up",
-        percentage: "1.01%"
-        }
-    },
-    {
-        value: "23,283.5",
+      },
+      {
+        value: dashCardData?.acceptedApplications || 0,
         label: "Applications accepted",
         icon: `<svg width="24" height="25" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px"> <path fill-rule="evenodd" clip-rule="evenodd" d="M3.85039 12.5004C3.85039 7.99927 7.49927 4.35039 12.0004 4.35039C12.8913 4.35039 13.7472 4.49303 14.5475 4.75607C14.9934 4.90265 15.4738 4.65995 15.6204 4.21398C15.767 3.76801 15.5243 3.28765 15.0783 3.14107C14.1088 2.82242 13.0739 2.65039 12.0004 2.65039C6.56039 2.65039 2.15039 7.06039 2.15039 12.5004C2.15039 17.9404 6.56039 22.3504 12.0004 22.3504C17.4404 22.3504 21.8504 17.9404 21.8504 12.5004C21.8504 12.0309 21.4698 11.6504 21.0004 11.6504C20.5309 11.6504 20.1504 12.0309 20.1504 12.5004C20.1504 17.0015 16.5015 20.6504 12.0004 20.6504C7.49927 20.6504 3.85039 17.0015 3.85039 12.5004ZM19.6027 8.10013C19.934 7.76746 19.9328 7.22927 19.6001 6.89805C19.2675 6.56682 18.7293 6.56799 18.398 6.90065L12.05 13.2763L9.62132 10.6784C9.30073 10.3355 8.76284 10.3174 8.41992 10.638C8.07699 10.9586 8.05888 11.4965 8.37946 11.8394L11.4098 15.0809C11.5673 15.2494 11.7866 15.3467 12.0173 15.3503C12.248 15.3539 12.4703 15.2636 12.633 15.1001L19.6027 8.10013Z" fill="#967FF2"></path> </svg>`,
-        trend: {
-        direction: "up",
-        percentage: "0.49%"
-        }
-    },
-    {
-        value: "46,827",
+      },
+      {
+        value: dashCardData?.rejectedApplications || 0,
         label: "Applications rejected",
         icon: `<svg width="24" height="25" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px"> <path fill-rule="evenodd" clip-rule="evenodd" d="M7.15766 6.38348L18.1149 17.3407C19.3024 15.8411 19.8974 13.9574 19.7869 12.0477C19.6763 10.1381 18.8679 8.33559 17.5153 6.983C16.1628 5.63041 14.3603 4.822 12.4506 4.71147C10.541 4.60094 8.65728 5.19598 7.15766 6.38348ZM16.8417 18.6139L5.88446 7.65669C4.69696 9.1563 4.10191 11.04 4.21245 12.9497C4.32298 14.8593 5.13139 16.6618 6.48398 18.0144C7.83657 19.367 9.63903 20.1754 11.5487 20.2859C13.4583 20.3964 15.342 19.8014 16.8417 18.6139ZM5.21126 5.71028C6.10273 4.81882 7.16105 4.11167 8.32581 3.62921C9.49056 3.14676 10.7389 2.89844 11.9997 2.89844C13.2604 2.89844 14.5088 3.14676 15.6735 3.62921C16.8383 4.11167 17.8966 4.81882 18.7881 5.71028C19.6795 6.60175 20.3867 7.66007 20.8691 8.82483C21.3516 9.98958 21.5999 11.238 21.5999 12.4987C21.5999 13.7594 21.3516 15.0078 20.8691 16.1725C20.3867 17.3373 19.6795 18.3956 18.7881 19.2871C16.9877 21.0875 14.5458 22.0989 11.9997 22.0989C9.45352 22.0989 7.01166 21.0875 5.21126 19.2871C3.41087 17.4867 2.39941 15.0448 2.39941 12.4987C2.39941 9.95254 3.41087 7.51068 5.21126 5.71028Z" fill="#2FD4C9"></path> </svg>`,
-        trend: {
-        direction: "down",
-        percentage: "0.91%"
-        }
-    },
-    {
-        value: "124,854",
+      },
+      {
+        value: dashCardData?.pendingApplications || 0,
         label: "Applications pending",
         icon: `<svg width="24" height="25" viewBox="0 0 24 25" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px"> <path d="M12 2.5C6.48 2.5 2 6.98 2 12.5C2 18.02 6.48 22.5 12 22.5C17.52 22.5 22 18.02 22 12.5C22 6.98 17.52 2.5 12 2.5ZM12 20.5C7.58 20.5 4 16.92 4 12.5C4 8.08 7.58 4.5 12 4.5C16.42 4.5 20 8.08 20 12.5C20 16.92 16.42 20.5 12 20.5Z" fill="#FD981F"></path> <path d="M7 14C7.82843 14 8.5 13.3284 8.5 12.5C8.5 11.6716 7.82843 11 7 11C6.17157 11 5.5 11.6716 5.5 12.5C5.5 13.3284 6.17157 14 7 14Z" fill="#FD981F"></path> <path d="M12 14C12.8284 14 13.5 13.3284 13.5 12.5C13.5 11.6716 12.8284 11 12 11C11.1716 11 10.5 11.6716 10.5 12.5C10.5 13.3284 11.1716 14 12 14Z" fill="#FD981F"></path> <path d="M17 14C17.8284 14 18.5 13.3284 18.5 12.5C18.5 11.6716 17.8284 11 17 11C16.1716 11 15.5 11.6716 15.5 12.5C15.5 13.3284 16.1716 14 17 14Z" fill="#FD981F"></path> </svg>`,
-        trend: {
-        direction: "up",
-        percentage: "1.51%"
-        }
-    }
+      }
     ];
 
 
   return (
     <div className="pb-8">
-    <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
+      <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
         {metrics.map((metric, index) => (
           <MetricCard
             key={index}
@@ -71,20 +54,23 @@ export const AdmissionsAnalyticsTabSection: React.FC = () => {
         ))}
       </section>
 
-      <CustomCompositeChart />
+      <CustomCompositeChart monthlyTrends={dashboardStats?.monthlyTrends || []} />
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-7 mt-8">
         <div className="col-span-1 lg:col-span-4">
           <div className="bg-[#fff] p-4 rounded-lg relative pt-16">
             <p className="top-2 lg:top-4 absolute font-semibold">Application Status Breakdown</p>
             <div className="flex justify-between gap-4">
-              <CustomDonutChart />
-              <ApplicationStatsTable />
+              <CustomDonutChart 
+                totalApplicationsCount={dashboardStats?.applicationsThisYear} 
+                statusBreakdown={dashboardStats?.statusBreakdown || []}
+              />
+              <ApplicationStatsTable statusBreakdown={dashboardStats?.statusBreakdown || []} />
             </div>
           </div>
         </div>
         <div className="col-span-1 lg:col-span-3">
-          <CustomLineChart />
+          <CustomLineChart weeklyTrends={dashboardStats?.weeklyTrends || []} />
         </div>
       </div>
     </div>

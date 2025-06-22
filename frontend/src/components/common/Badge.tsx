@@ -3,6 +3,7 @@
 import { BadgeVariant, AdmissionStatus } from "@/@types";
 import React from "react";
 import { IconChevronDown } from "@tabler/icons-react";
+import Loader from "../Loader";
 
 interface BadgeProps {
   text: string;
@@ -10,9 +11,10 @@ interface BadgeProps {
   showDot?: boolean;
   width?: string;
   showArrow?: boolean;
+  loading?: boolean;
 }
 
-const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false, showArrow = false }) => {
+const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false, showArrow = false, loading=false }) => {
     const getVariantStyles = (): { textColor: string; bgColor: string, dotColor: string } => {
         switch (variant) {
           case "purple":
@@ -80,8 +82,8 @@ const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false, sh
       className={`flex items-start ${textColor} bg-blend-multiply ${widthClass}`}
     >
       <div
-        className={`text-sm self-stretch px-3 py-1.5 ${bgColor} flex items-center rounded-xl min-h-[27px] ${widthClass} text-nowrap`}
-      > {showDot && (
+        className={`text-sm self-stretch px-3 py-1.5 ${bgColor} flex items-center rounded-xl min-h-[27px] ${widthClass} text-nowrap`}> 
+        {showDot && (
             <svg
                 width="9"
                 height="8"
@@ -93,6 +95,7 @@ const Badge: React.FC<BadgeProps> = ({ text, variant, width, showDot = false, sh
                 <circle cx="4.5" cy="4" r="3" fill={dotColor}></circle>
             </svg>
         )}
+        {loading && <Loader color="" /> }
         <span>{text}</span>
         {showArrow && (
           <IconChevronDown className="object-contain w-6 aspect-square pl-2" />

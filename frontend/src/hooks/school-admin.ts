@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -626,4 +626,18 @@ export const useInterviewInvitation = (id: string) => {
             return customAPI.post(`/school-admin/admissions/${id}/interview`, inviteDetails);
         }
     })
+}
+
+export const useGetAdmisssionDashboardInfo = () => {
+    const { data, isPending} = useQuery({
+        queryKey: ['admissionDasbhoard'],
+        queryFn: () => {
+            return customAPI.get('school-admin/admissions/analytics')
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const dashboardStats = data?.data as AdmissionDashboardInfo;
+
+    return { dashboardStats, isPending }
 }
