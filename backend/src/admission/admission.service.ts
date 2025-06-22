@@ -343,59 +343,59 @@ export class AdmissionService {
     admission.status = status;
     await this.admissionRepository.save(admission);
 
-    // Send appropriate email based on the new status
     if (admission.studentEmail) {
       const studentName = `${admission.studentFirstName} ${admission.studentLastName}`;
       const schoolName = admission.school?.name || 'School';
 
-      try {
-        switch (status) {
-          case AdmissionStatus.ACCEPTED:
-            // Send acceptance email
-            await this.emailService.sendAdmissionAcceptedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
-            );
+      setImmediate(() => {
+        void (async () => {
+          try {
+            switch (status) {
+              case AdmissionStatus.ACCEPTED:
+                await this.emailService.sendAdmissionAcceptedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                await this.createStudentFromAdmission(admission);
+                break;
 
-            // Create student account from admission data
-            await this.createStudentFromAdmission(admission);
-            break;
+              case AdmissionStatus.REJECTED:
+                await this.emailService.sendAdmissionRejectedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
 
-          case AdmissionStatus.REJECTED:
-            await this.emailService.sendAdmissionRejectedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
-            );
-            break;
+              case AdmissionStatus.WAITLISTED:
+                await this.emailService.sendAdmissionWaitlistedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
 
-          case AdmissionStatus.WAITLISTED:
-            await this.emailService.sendAdmissionWaitlistedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
+              case AdmissionStatus.INTERVIEW_COMPLETED:
+                await this.emailService.sendInterviewCompletedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
+            }
+          } catch (error) {
+            this.logger.error(
+              `Failed to send status update email to ${admission.studentEmail}`,
+              error,
             );
-            break;
-
-          case AdmissionStatus.INTERVIEW_COMPLETED:
-            await this.emailService.sendInterviewCompletedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
-            );
-            break;
-        }
-      } catch (error) {
-        this.logger.error(
-          `Failed to send status update email to ${admission.studentEmail}`,
-          error,
-        );
-      }
+          }
+        })();
+      });
     }
 
     return { message: `Admission status updated to ${status}` };
@@ -505,7 +505,7 @@ export class AdmissionService {
             relationship: guardian.relationship,
             student: savedStudent,
           });
-
+          await this.parentRepository.save(parent);
           // Create parent profile with headshot if available
           if (guardian.headshotPath) {
             const parentProfile = this.profileRepository.create({
@@ -513,10 +513,9 @@ export class AdmissionService {
               mediaType: guardian.headshotMediaType,
               parent,
             });
+            await this.parentRepository.save(parent);
             parent.profile = parentProfile;
           }
-
-          await this.parentRepository.save(parent);
         }
       }
 
@@ -537,9 +536,7 @@ export class AdmissionService {
         `Failed to create student from admission: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
       );
-      throw new BadRequestException(
-        `Failed to create student account: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      throw new BadRequestException(`Failed to create student account`);
     }
   }
 

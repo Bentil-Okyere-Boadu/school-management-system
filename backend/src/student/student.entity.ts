@@ -92,6 +92,7 @@ export class Student {
   @OneToMany(() => Parent, (parent) => parent.student, {
     cascade: true,
     eager: true,
+    onDelete: 'CASCADE',
   })
   parents: Parent[];
 }

@@ -69,11 +69,15 @@ export class Profile {
   @JoinColumn()
   schoolAdmin: SchoolAdmin;
 
-  @OneToOne(() => Student, (student) => student.profile)
+  @OneToOne(() => Student, (student) => student.profile, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   student: Student;
 
-  @OneToOne(() => Teacher, (teacher) => teacher.profile)
+  @OneToOne(() => Teacher, (teacher) => teacher.profile, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   teacher: Teacher;
 
