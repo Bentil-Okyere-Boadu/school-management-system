@@ -16,11 +16,12 @@ import { Dialog } from "@/components/common/Dialog";
 
 const SingleAdmissionPage: React.FC = () => {
   const params = useParams();
-  const applicationId = params.id; 
+  const applicationId = params.id as string; 
 
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [interviewDate, setInterviewDate] = useState("");
   const [interviewTime, setInterviewTime] = useState("");
+  const [statusChangePendingId, setStatusChangePendingId] = useState<string | null>(null);
 
   const onHandleDocumentClick = (docUrl: string) => {
     const link = document.createElement("a");
@@ -32,7 +33,7 @@ const SingleAdmissionPage: React.FC = () => {
     document.body.removeChild(link);
   }
 
-  const { admissionData, refetch: admissionRefetch } = useGetAdmissionById(applicationId as string);
+  const { admissionData, refetch: admissionRefetch } = useGetAdmissionById(applicationId);
 
 
   const onHandleAdmissionStatusChange = (optionItem: OptionItem) => {
@@ -43,13 +44,15 @@ const SingleAdmissionPage: React.FC = () => {
       setInterviewDate("");
       setIsInterviewInviteDialogOpen(true);
     } else {
-      updateAdmissionStatus(sSelectedStatus);
+      updateAdmissionStatus(sSelectedStatus, applicationId);
     }
   }
 
   const { mutate: editMutation } = useEditAdmission(applicationId as string);
 
-  const updateAdmissionStatus = (sSelectedStatus: string) => {
+  const updateAdmissionStatus = (sSelectedStatus: string, applicationId: string) => {
+    setStatusChangePendingId(applicationId);
+
     editMutation({ status: sSelectedStatus}, {
       onSuccess: () => {
         toast.success('Successfully updated admission status.')
@@ -57,6 +60,9 @@ const SingleAdmissionPage: React.FC = () => {
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+      onSettled: () => {
+        setStatusChangePendingId(null);
       }
     })
   }
@@ -91,6 +97,7 @@ const SingleAdmissionPage: React.FC = () => {
             <h3 className="font-bold mb-3">Student Information</h3>
             <AdmissionStatusMenu 
               status={admissionData?.status} 
+              isStatusChangePending={ statusChangePendingId === applicationId }
               admissionId={admissionData?.applicationId}
               onStatusClick={(option) => onHandleAdmissionStatusChange(option)} /> 
           </div>
