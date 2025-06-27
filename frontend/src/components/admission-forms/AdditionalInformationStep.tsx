@@ -127,7 +127,7 @@ interface AdditionalInfoProps {
         {additionalInfo?.hasAcademicHistory === "yes" && (
           <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2 mt-8">
             <InputField
-                label="School Name"
+                label="Name of Previous School"
                 required
                 isTransulent={false}
                 value={additionalInfo?.previousSchool?.name}
@@ -136,7 +136,7 @@ interface AdditionalInfoProps {
                 }
             />
             <InputField
-                label="School URL"
+                label="Previous School URL"
                 isTransulent={false}
                 value={additionalInfo?.previousSchool?.url}
                 onChange={(e) =>

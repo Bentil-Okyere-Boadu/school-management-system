@@ -173,7 +173,6 @@ interface FamilyInfoProps {
             />
             <InputField
               label="Company"
-              required
               isTransulent={false}
               value={guardian.company}
               onChange={(e) =>

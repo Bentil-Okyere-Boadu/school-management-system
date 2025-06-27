@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon } from "@/utils/icons";
+import { DashboardIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, ClassesIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
 
@@ -37,6 +37,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: AttendanceIcon,      
       label: "Attendance",
     },
+    {
+      icon: ClassesIcon,      
+      label: "Classes",
+    },
   ];
 
   useEffect(() => {
@@ -55,6 +59,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/admin/attendance") {
       setActiveMenuItem("Attendance");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/classes") {
+      setActiveMenuItem("Classes");
       setIsOverviewPage(true);
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
@@ -80,6 +87,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname.startsWith("/admin/attendance/")) {
       setActiveMenuItem("Attendance");
       setIsOverviewPage(false);
+    } else if (pathname.startsWith("/admin/classes/")) {
+      setActiveMenuItem("Classes");
+      setIsOverviewPage(false);
     }
     
     // Default
@@ -104,6 +114,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Attendance":
         router.push("/admin/attendance");
+        break;
+      case "Classes":
+        router.push("/admin/classes");
         break;
       case "Settings":
         router.push("/admin/settings");

@@ -164,6 +164,10 @@ export interface ClassLevel {
   id: string;
   name: string;
   description: string;
+  teacherIds: string[];
+  studentIds: string[];
+  students: User[];
+  teachers: User[];
 }
 
 export interface AdmissionPolicy {

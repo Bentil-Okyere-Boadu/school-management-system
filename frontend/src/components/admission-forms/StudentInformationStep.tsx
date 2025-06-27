@@ -107,7 +107,6 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                 />
                 <InputField
                     label="Other Names"
-                    required
                     isTransulent={false}
                     value={data.otherNames} onChange={(e) => handleChange('otherNames', e.target.value)}
                 />
@@ -180,7 +179,6 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                 </div>
                 <InputField
                     label="Religion"
-                    required
                     isTransulent={false}
                     value={data.religion} onChange={(e) => handleChange('religion', e.target.value)}
                 />
@@ -211,7 +209,6 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                     value={data.phone} onChange={(e) => handleChange('phone', e.target.value)}
                 />
                 <Select
-                    required
                     label="Anticipated Academic Year"
                     data={academicYearOptions}
                     value={data.academicYear}
@@ -229,7 +226,6 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                         <p className='text-purple-500 text-sm'>No classes available, you can not proceed</p>
                     )}
                 </div>
-
             </div>
         </div>
     </div>

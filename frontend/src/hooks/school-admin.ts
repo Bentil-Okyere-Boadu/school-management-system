@@ -346,11 +346,17 @@ export const useEditTerm = (id: string) => {
 /**
  * CLASS LEVELS CRUD
  */
-export const useGetClassLevels = () => {
+export const useGetClassLevels = (search: string = "") => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['myClassLevels'],
+        queryKey: ['myClassLevels', { search }],
         queryFn: () => {
-            return customAPI.get('/class-level');
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/class-level?${params}`);
         },
         refetchOnWindowFocus: true
     })
