@@ -67,7 +67,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
   const deleteAdmission = () => {
     deleteAdmissionMutation(admissionId, {
       onSuccess: () => {
-        toast.success('Deleted successfully.');
+        toast.success('Archived successfully.');
         setIsConfirmDeleteAdmissionDialogOpen(false);
         refetchAdmissionList();
       },
@@ -191,7 +191,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
                           <Menu.Item leftSection={<IconTrashFilled size={18} color="#AB58E7" /> }
                             onClick={() => onDeleteAdmissionClick(admission.id)}
                           >
-                            Delete Admission
+                            Archive Admission
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
@@ -218,14 +218,14 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
       <Dialog 
         isOpen={isConfirmDeleteAdmissionDialogOpen}
         busy={pendingAdmissionDelete}
-        dialogTitle="Confirm Delete"
-        saveButtonText="Delete Admission"
+        dialogTitle="Confirm Archive"
+        saveButtonText="Archive Admission"
         onClose={() => { setIsConfirmDeleteAdmissionDialogOpen(false)}} 
         onSave={deleteAdmission}
       >
         <div className="my-3 flex flex-col gap-4">
           <p>
-            Are you sure you want to delete this admission? You will loose all related information
+            Are you sure you want to archive this admission? You will loose all related information
           </p>
         </div>
       </Dialog>

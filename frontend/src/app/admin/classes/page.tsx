@@ -64,10 +64,6 @@ const ClassesPage = () => {
     console.log(searchQuery);
   };
 
-  const onNavigateToClassDetails = (classId: string) => {
-    console.log(`Navigating to class details for class ID: ${classId}`);
-  };
-  
   const onEditClassLevelClick = (data: Partial<ClassLevel>) => {
     console.log(data);
     setEditMode(true);
@@ -89,7 +85,7 @@ const ClassesPage = () => {
         studentIds: selectedStudents
       }, {
       onSuccess: () => {
-        toast.success('Successfully updated classLevel.')
+        toast.success('Successfully updated class.')
         setIsClassLevelDialogOpen(false);
         refetch();
       },
@@ -108,7 +104,7 @@ const ClassesPage = () => {
         studentIds: selectedStudents
       }, {
       onSuccess: () => {
-        toast.success('Successfully created classLevel.')
+        toast.success('Successfully created class.')
         setIsClassLevelDialogOpen(false);
         refetch();
       },
@@ -162,7 +158,6 @@ const ClassesPage = () => {
             <ClassCard
               key={index + "12"}
               classData={data}
-              onNavigateClick={() => onNavigateToClassDetails(data.id as string)}
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
             />
@@ -170,16 +165,16 @@ const ClassesPage = () => {
         </section>
             {
               classLevels.length === 0 && (
-                  <NoAvailableEmptyState message="No classLevel available, click ‘Add Class to create one." />
+                  <NoAvailableEmptyState message="No class available, click ‘Add Class to create one." />
                 )
             }
       </div>
 
-      {/* Creating/Editing ClassLevel Dialog */}
+      {/* Creating/Editing Class Dialog */}
       <Dialog 
         isOpen={isClassLevelDialogOpen}
         busy={editMode? pendingEdit : pendingCreate}
-        dialogTitle={`${editMode ? 'Edit' : 'Add New'} ClassLevel`}
+        dialogTitle={`${editMode ? 'Edit' : 'Add New'} Class`}
         saveButtonText="Save"
         onClose={() => setIsClassLevelDialogOpen(false)} 
         onSave={editMode? editClassLevel : createClassLevel }
@@ -232,7 +227,7 @@ const ClassesPage = () => {
       >
         <div className="my-3 flex flex-col gap-4">
           <p>
-            Are you sure you want to delete this classLevel? You will loose all related information
+            Are you sure you want to delete this class? You will loose all related information
           </p>
         </div>
       </Dialog>

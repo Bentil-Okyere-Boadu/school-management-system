@@ -241,7 +241,8 @@ const AdmissionFormsPage = () => {
                 formData={{
                   studentData,
                   guardians,
-                  additionalInfo
+                  additionalInfo,
+                  classLevels,
                 }} />
             </>
           )}

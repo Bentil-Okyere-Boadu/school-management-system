@@ -6,14 +6,14 @@ import { ClassLevel } from "@/@types";
 
 interface ClassCardProps {
   classData: ClassLevel;
-  onNavigateClick?: () => void;
+  // onNavigateClick?: () => void;
   onEditClick?: (item: ClassLevel) => void;
   onDeleteClick?: (id: string) => void;
 }
 
 export const ClassCard: React.FC<ClassCardProps> = ({
   classData,
-  onNavigateClick,
+  // onNavigateClick,
   onEditClick,
   onDeleteClick,
 }) => {
@@ -54,9 +54,9 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       </div>
 
       <div className="mt-4 pt-2 border-t border-gray-100">
-        <span onClick={onNavigateClick} className="inline-block text-xs font-medium text-purple-800 bg-purple-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
+        {/* <span onClick={onNavigateClick} className="inline-block text-xs font-medium text-purple-800 bg-purple-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
           Go to details
-        </span>
+        </span> */}
       </div>
     </div>
   );
