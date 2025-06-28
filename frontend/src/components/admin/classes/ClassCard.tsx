@@ -53,11 +53,11 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         </div>
       </div>
 
-      <div className="mt-4 pt-2 border-t border-gray-100">
-        {/* <span onClick={onNavigateClick} className="inline-block text-xs font-medium text-purple-800 bg-purple-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
+      {/*<div className="mt-4 pt-2 border-t border-gray-100">
+         <span onClick={onNavigateClick} className="inline-block text-xs font-medium text-purple-800 bg-purple-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
           Go to details
-        </span> */}
-      </div>
+        </span> 
+      </div>*/}
     </div>
   );
 };
