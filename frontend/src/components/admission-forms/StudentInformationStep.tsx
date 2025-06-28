@@ -1,5 +1,5 @@
 "use client";
-import React from 'react'
+import React, {useMemo } from 'react'
 import Image from "next/image";
 import ProfileLogo from '@/images/admission-profile-logo.svg'
 import InputField from '../InputField';
@@ -7,6 +7,7 @@ import CustomButton from '../Button';
 import { StudentInformation, ClassLevel } from '@/@types/index'
 import { Select, TagsInput } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
+import countryList from 'react-select-country-list'
 
 interface StudentInfoProps {
   data: StudentInformation;
@@ -20,14 +21,17 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
     { value: "male", label: "Male" },
     { value: "female", label: "Female" },
   ];
-  
-  const academicYearOptions = [
-    { value: "2027", label: "2027" },
-    { value: "2026", label: "2026" },
-    { value: "2025", label: "2025" },
-    { value: "2024", label: "2024" },
-    { value: "2023", label: "2023" },
-  ];
+
+  // Retrieve a list of countries [label: 'Ghana', value: 'GH']
+  const countryOptions = useMemo(() => countryList().getData(), []);
+
+  // Generates year options based on current year plus/minus 3
+  const currentYear = new Date().getFullYear();
+  const range = 3;
+  const academicYearOptions = Array.from({ length: range * 2 + 1 }, (_, i) => {
+  const year = currentYear - range + i;
+    return { value: String(year), label: String(year) };
+  });
 
   const classLevelOptions = classLevels?.map((cl) => ({
     value: cl.id,
@@ -137,12 +141,17 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                     className="-mt-2 mb-2 sm:mb-0"
                     onChange={(value) =>  handleChange('gender', value ?? '')}
                 />
-                <InputField
-                    label="Nationality"
-                    className='mt-4'
+                <Select
                     required
-                    isTransulent={false}
-                    value={data.nationality} onChange={(e) => handleChange('nationality', e.target.value)} 
+                    label="Nationality"
+                    data={countryOptions}
+                    value={data.nationality}
+                    searchable
+                    className="-mt-2 mb-2 sm:mb-0"
+                      onChange={(value) => {
+                        const selected = countryOptions.find((option) => option.value === value);
+                        handleChange('nationality', selected?.label ?? '');
+                    }}
                 />
                 <div className='mb-1'>
                     <p className="text-xs mb-1 text-[#52525c]">Upload Birth Certification<span className="text-red-500 ml-0.5">*</span></p>
