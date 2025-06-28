@@ -54,7 +54,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                 />
                 <InputField
                     label="Other Names"
-                    required
                     isTransulent={true}
                     readOnly={true}
                     value={studentData.otherNames}
@@ -104,7 +103,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                 </div>
                 <InputField
                     label="Religion"
-                    required
                     isTransulent={true}
                     readOnly={true}
                     value={studentData.religion}
@@ -143,7 +141,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                 />
                 <InputField
                     label="Anticipated Academic Year"
-                    required
                     isTransulent={true}
                     readOnly={true}
                     value={studentData.academicYear}
@@ -217,7 +214,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                         />
                         <InputField
                             label="Company"
-                            required
                             isTransulent={true}
                             readOnly={true}
                             value={guardian.company}
@@ -293,7 +289,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                     />
                     <InputField
                         label="Previous School URL"
-                        required
                         isTransulent={true}
                         readOnly={true}
                         value={additionalInfo?.previousSchool?.url}
@@ -340,7 +335,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                     />
                     <InputField
                         label="Grade / Class"
-                        required
                         isTransulent={true}
                         readOnly={true}
                         value={additionalInfo?.previousSchool?.grade}
