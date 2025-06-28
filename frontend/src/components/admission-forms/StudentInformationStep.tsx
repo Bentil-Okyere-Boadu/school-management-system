@@ -1,5 +1,5 @@
 "use client";
-import React, {useMemo } from 'react'
+import React, { useMemo } from 'react'
 import Image from "next/image";
 import ProfileLogo from '@/images/admission-profile-logo.svg'
 import InputField from '../InputField';
@@ -7,7 +7,7 @@ import CustomButton from '../Button';
 import { StudentInformation, ClassLevel } from '@/@types/index'
 import { Select, TagsInput } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
-import countryList from 'react-select-country-list'
+import countryList from 'react-select-country-list';
 
 interface StudentInfoProps {
   data: StudentInformation;
@@ -23,7 +23,14 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
   ];
 
   // Retrieve a list of countries [label: 'Ghana', value: 'GH']
-  const countryOptions = useMemo(() => countryList().getData(), []);
+  const countryOptions = useMemo(() => {
+    return countryList()
+        .getData()
+        .map((option) => ({
+            value: option.label, // use label as value
+            label: option.label,
+        }));
+    }, []);
 
   // Generates year options based on current year plus/minus 3
   const currentYear = new Date().getFullYear();
@@ -148,10 +155,7 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                     value={data.nationality}
                     searchable
                     className="-mt-2 mb-2 sm:mb-0"
-                      onChange={(value) => {
-                        const selected = countryOptions.find((option) => option.value === value);
-                        handleChange('nationality', selected?.label ?? '');
-                    }}
+                      onChange={(value) => handleChange('nationality', value ?? '')}
                 />
                 <div className='mb-1'>
                     <p className="text-xs mb-1 text-[#52525c]">Upload Birth Certification<span className="text-red-500 ml-0.5">*</span></p>

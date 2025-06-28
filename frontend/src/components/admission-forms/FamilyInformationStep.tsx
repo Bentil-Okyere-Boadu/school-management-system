@@ -1,11 +1,13 @@
 "use client";
-import React from "react";
+import React,  { useMemo } from "react";
 import InputField from "../InputField";
 import CustomButton from "../Button";
 import Image from "next/image";
 import HomeIcon from "@/images/admission-home-logo.svg";
 import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { Guardian } from "@/@types/index";
+import countryList from 'react-select-country-list';
+import { Select } from '@mantine/core';
 
 interface FamilyInfoProps {
   guardians: Guardian[];
@@ -13,6 +15,16 @@ interface FamilyInfoProps {
 }
 
   const FamilyInformationStep: React.FC<FamilyInfoProps> = ({ guardians, setGuardians }) => {
+
+  // Retrieve a list of countries [label: 'Ghana', value: 'GH']
+  const countryOptions = useMemo(() => {
+    return countryList()
+        .getData()
+        .map((option) => ({
+            value: option.label, // use label as value
+            label: option.label,
+        }));
+    }, []);
 
   const handleFieldChange = (index: number, field: keyof Guardian, value: string | File) => {
     setGuardians((prev) => {
@@ -153,14 +165,14 @@ interface FamilyInfoProps {
                 handleFieldChange(index, "email", e.target.value)
               }
             />
-            <InputField
-              label="Nationality"
+            <Select
               required
-              isTransulent={false}
+              label="Nationality"
+              data={countryOptions}
               value={guardian.nationality}
-              onChange={(e) =>
-                handleFieldChange(index, "nationality", e.target.value)
-              }
+              searchable
+              className="-mt-2 mb-2 sm:mb-0"
+              onChange={(value) => handleFieldChange(index, 'nationality', value ?? '')}
             />
             <InputField
               label="Occupation"
