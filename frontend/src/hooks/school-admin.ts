@@ -610,10 +610,10 @@ export const useGetAdmissionById = (id: string, options?: UseQueryOptions) => {
     return { admissionData, isPending, refetch }
 }
 
-export const useDeleteAdmission = () => {
+export const useArchiveAdmission = (id: string) => {
     return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/school-admin/admissions/${id}`)
+        mutationFn: (archive: {archive: boolean}) => {
+            return customAPI.put(`/school-admin/admissions/${id}/archive`, archive)
         }
     })
 }

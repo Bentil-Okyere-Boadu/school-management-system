@@ -10,7 +10,7 @@ import { Menu } from "@mantine/core";
 import { IconDots, IconEyeFilled, IconTrashFilled } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
-import { useDeleteAdmission, useEditAdmission, useInterviewInvitation } from "@/hooks/school-admin";
+import { useArchiveAdmission, useEditAdmission, useInterviewInvitation } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import InputField from "@/components/InputField";
 
@@ -61,11 +61,11 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
     }
   }
 
-  const { mutate: deleteAdmissionMutation, isPending: pendingAdmissionDelete } = useDeleteAdmission();
+  const { mutate: archiveAdmissionMutation, isPending: pendingAdmissionDelete } = useArchiveAdmission(admissionId);
   const { mutate: editMutation } = useEditAdmission(admissionId);
 
-  const deleteAdmission = () => {
-    deleteAdmissionMutation(admissionId, {
+  const archiveAdmission = () => {
+    archiveAdmissionMutation({ archive: true }, {
       onSuccess: () => {
         toast.success('Archived successfully.');
         setIsConfirmDeleteAdmissionDialogOpen(false);
@@ -77,7 +77,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
     })
   }
 
-  const onDeleteAdmissionClick = (sId: string) => {
+  const onArchiveAdmissionClick = (sId: string) => {
     setIsConfirmDeleteAdmissionDialogOpen(true);
     setAdmissionId(sId);
   }
@@ -189,7 +189,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
                             Full View
                           </Menu.Item>
                           <Menu.Item leftSection={<IconTrashFilled size={18} color="#AB58E7" /> }
-                            onClick={() => onDeleteAdmissionClick(admission.id)}
+                            onClick={() => onArchiveAdmissionClick(admission.id)}
                           >
                             Archive Admission
                           </Menu.Item>
@@ -221,7 +221,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
         dialogTitle="Confirm Archive"
         saveButtonText="Archive Admission"
         onClose={() => { setIsConfirmDeleteAdmissionDialogOpen(false)}} 
-        onSave={deleteAdmission}
+        onSave={archiveAdmission}
       >
         <div className="my-3 flex flex-col gap-4">
           <p>
