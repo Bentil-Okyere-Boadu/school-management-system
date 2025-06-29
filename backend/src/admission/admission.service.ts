@@ -216,6 +216,9 @@ export class AdmissionService {
       .leftJoinAndSelect('admission.school', 'school')
       .where('admission.school.id = :schoolId', { schoolId });
 
+    const isArchived = queryString.status === 'archived' ? true : false;
+    baseQuery.andWhere('admission.isArchived = :isArchived', { isArchived });
+
     const featuresWithoutPagination = new APIFeatures(
       baseQuery.clone(),
       queryString,
@@ -244,6 +247,7 @@ export class AdmissionService {
         ? format(admission.createdAt, "MMM dd, yyyy 'at' hh:mm a")
         : null,
       enrollmentStatus: admission.status,
+      isArchived: admission.isArchived,
     }));
 
     return {
@@ -654,7 +658,40 @@ export class AdmissionService {
       applicationsThisYear,
     };
   }
+  async archiveAdmission(
+    applicationId: string,
+    schoolId: string,
+    archive: boolean,
+  ): Promise<{ message: string }> {
+    const admission = await this.admissionRepository.findOne({
+      where: { applicationId, school: { id: schoolId } },
+    });
 
+    if (!admission) {
+      throw new NotFoundException('Admission not found or not authorized');
+    }
+
+    try {
+      admission.isArchived = archive;
+      admission.status = archive
+        ? AdmissionStatus.ARCHIVED
+        : AdmissionStatus.SUBMITTED;
+
+      await this.admissionRepository.save(admission);
+
+      return {
+        message: `Admission application ${archive ? 'archived' : 'unarchived'} successfully`,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to ${archive ? 'archive' : 'unarchive'} admission application: ${applicationId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new BadRequestException(
+        `Failed to ${archive ? 'archive' : 'unarchive'} admission application: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
   async deleteAdmission(
     applicationId: string,
     schoolId: string,

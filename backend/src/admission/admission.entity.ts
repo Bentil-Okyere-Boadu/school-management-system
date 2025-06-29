@@ -20,6 +20,7 @@ export enum AdmissionStatus {
   ACCEPTED = 'Accepted',
   REJECTED = 'Rejected',
   WAITLISTED = 'Waitlisted',
+  ARCHIVED = 'Archived',
 }
 @Entity()
 export class Admission {
@@ -32,6 +33,8 @@ export class Admission {
   @Column({ default: 'Application Submitted' })
   status: AdmissionStatus;
 
+  @Column({ default: false })
+  isArchived: boolean;
   // --- Student Information ---
   @Column({ nullable: true })
   studentFirstName: string;
