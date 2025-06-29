@@ -347,3 +347,10 @@ export interface AdmissionDashboardInfo {
   }[];
   applicationsThisYear: number;
 }
+
+export interface AdminDashboardStats {
+  averageAttendanceRate: number;
+  totalApplications: number;
+  totalStudents: number;
+  totalTeachers: number;
+}

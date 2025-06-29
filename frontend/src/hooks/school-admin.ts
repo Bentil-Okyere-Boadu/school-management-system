@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -636,7 +636,7 @@ export const useInterviewInvitation = (id: string) => {
 
 export const useGetAdmisssionDashboardInfo = () => {
     const { data, isPending} = useQuery({
-        queryKey: ['admissionDasbhoard'],
+        queryKey: ['admissionDashboard'],
         queryFn: () => {
             return customAPI.get('school-admin/admissions/analytics')
         },
@@ -644,6 +644,20 @@ export const useGetAdmisssionDashboardInfo = () => {
     })
 
     const dashboardStats = data?.data as AdmissionDashboardInfo;
+
+    return { dashboardStats, isPending }
+}
+
+export const useGetAdminDashboardStats = () => {
+    const { data, isPending} = useQuery({
+        queryKey: ['adminDashboardStats'],
+        queryFn: () => {
+            return customAPI.get('school-admin/dashboard/stats')
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const dashboardStats = data?.data as AdminDashboardStats;
 
     return { dashboardStats, isPending }
 }
