@@ -13,7 +13,7 @@ import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGet
 import { toast } from "react-toastify";
 import { ClassLevel, ErrorResponse, FeeStructure, School } from "@/@types";
 import { EmailItem } from "./EmailItem";
-import { ClassLevelsTable } from "./ClassLevelsTable";
+// import { ClassLevelsTable } from "./ClassLevelsTable";
 import FileUploadArea from "@/components/common/FileUploadArea";
 // import { FeeStructureTable } from "./FeeStructureTable";
 import { useQueryClient } from "@tanstack/react-query";
@@ -299,9 +299,9 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
         <GradingSystemTable />
       </div>
 
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <ClassLevelsTable />
-      </div>
+      </div> */}
 
       <div className="mt-8">
         <AdmissionPoliciesSection />

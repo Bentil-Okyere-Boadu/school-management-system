@@ -17,24 +17,41 @@ import { EmailService } from 'src/common/services/email.service';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { format } from 'date-fns';
 import { PreviousSchoolResult } from './previous-school-result.entity';
+import { Student } from 'src/student/student.entity';
+import { Role } from 'src/role/role.entity';
+import { Profile } from 'src/profile/profile.entity';
+import { Parent } from 'src/parent/parent.entity';
+
+import * as bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
+import { InvitationService } from 'src/invitation/invitation.service';
+
 @Injectable()
 export class AdmissionService {
   private readonly logger = new Logger(AdmissionService.name);
+
   constructor(
     @InjectRepository(Admission)
-    private readonly admissionRepository: Repository<Admission>,
-    @InjectRepository(School)
-    private readonly schoolRepository: Repository<School>,
+    private admissionRepository: Repository<Admission>,
     @InjectRepository(Guardian)
-    private readonly guardianRepository: Repository<Guardian>,
-
-    @InjectRepository(ClassLevel)
-    private readonly classLevelRepository: Repository<ClassLevel>,
+    private guardianRepository: Repository<Guardian>,
     @InjectRepository(PreviousSchoolResult)
-    private readonly previousSchoolResultRepository: Repository<PreviousSchoolResult>,
-    private readonly objectStorageService: ObjectStorageServiceService,
-
-    private readonly emailService: EmailService,
+    private previousSchoolResultRepository: Repository<PreviousSchoolResult>,
+    @InjectRepository(School)
+    private schoolRepository: Repository<School>,
+    @InjectRepository(ClassLevel)
+    private classLevelRepository: Repository<ClassLevel>,
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
+    @InjectRepository(Parent)
+    private parentRepository: Repository<Parent>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
+    @InjectRepository(Role)
+    private roleRepository: Repository<Role>,
+    private objectStorageService: ObjectStorageServiceService,
+    private emailService: EmailService,
+    private invitationService: InvitationService,
   ) {}
 
   async createAdmission(
@@ -316,7 +333,7 @@ export class AdmissionService {
   ): Promise<{ message: string }> {
     const admission = await this.admissionRepository.findOne({
       where: { applicationId },
-      relations: ['school'],
+      relations: ['school', 'forClass'],
     });
 
     if (!admission) {
@@ -326,58 +343,201 @@ export class AdmissionService {
     admission.status = status;
     await this.admissionRepository.save(admission);
 
-    // Send appropriate email based on the new status
     if (admission.studentEmail) {
       const studentName = `${admission.studentFirstName} ${admission.studentLastName}`;
       const schoolName = admission.school?.name || 'School';
 
-      try {
-        switch (status) {
-          case AdmissionStatus.ACCEPTED:
-            await this.emailService.sendAdmissionAcceptedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
-            );
-            break;
+      setImmediate(() => {
+        void (async () => {
+          try {
+            switch (status) {
+              case AdmissionStatus.ACCEPTED:
+                await this.emailService.sendAdmissionAcceptedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                await this.createStudentFromAdmission(admission);
+                break;
 
-          case AdmissionStatus.REJECTED:
-            await this.emailService.sendAdmissionRejectedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
-            );
-            break;
+              case AdmissionStatus.REJECTED:
+                await this.emailService.sendAdmissionRejectedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
 
-          case AdmissionStatus.WAITLISTED:
-            await this.emailService.sendAdmissionWaitlistedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
-            );
-            break;
+              case AdmissionStatus.WAITLISTED:
+                await this.emailService.sendAdmissionWaitlistedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
 
-          case AdmissionStatus.INTERVIEW_COMPLETED:
-            await this.emailService.sendInterviewCompletedEmail(
-              admission.studentEmail,
-              studentName,
-              schoolName,
-              applicationId,
+              case AdmissionStatus.INTERVIEW_COMPLETED:
+                await this.emailService.sendInterviewCompletedEmail(
+                  admission.studentEmail,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
+            }
+          } catch (error) {
+            this.logger.error(
+              `Failed to send status update email to ${admission.studentEmail}`,
+              error,
             );
-            break;
-        }
-      } catch (error) {
-        this.logger.error(
-          `Failed to send status update email to ${admission.studentEmail}`,
-          error,
-        );
-      }
+          }
+        })();
+      });
     }
 
     return { message: `Admission status updated to ${status}` };
+  }
+
+  /**
+   * Create a student account from an accepted admission application
+   * @param admission The admission application data
+   * @returns The created student
+   */
+  private async createStudentFromAdmission(
+    admission: Admission,
+  ): Promise<Student> {
+    try {
+      // Get student role
+      const studentRole = await this.roleRepository.findOne({
+        where: { name: 'student' },
+      });
+
+      if (!studentRole) {
+        throw new NotFoundException('Student role not found');
+      }
+
+      // Check if student with this email already exists
+      const existingStudent = await this.studentRepository.findOne({
+        where: { email: admission.studentEmail },
+      });
+
+      if (existingStudent) {
+        this.logger.warn(
+          `Student with email ${admission.studentEmail} already exists. Skipping student creation.`,
+        );
+        return existingStudent;
+      }
+
+      // Generate PIN and student ID
+      const pin = this.invitationService.generatePin();
+      const studentId = await this.invitationService.generateStudentId(
+        admission.school,
+      );
+
+      // Set invitation expiration
+      const invitationExpires = new Date();
+      invitationExpires.setHours(invitationExpires.getHours() + 24);
+
+      // Create student record
+      const student = this.studentRepository.create({
+        firstName: admission.studentFirstName,
+        lastName: admission.studentLastName,
+        email: admission.studentEmail,
+        password: await bcrypt.hash(pin, 10),
+        role: studentRole,
+        school: admission.school,
+        invitationToken: uuidv4(),
+        invitationExpires,
+        isInvitationAccepted: false,
+        studentId,
+      });
+
+      // Save student first
+      const savedStudent = await this.studentRepository.save(student);
+
+      // Create profile with student information
+      const profile = this.profileRepository.create({
+        // Set headshot if available
+        avatarPath: admission.studentHeadshotPath,
+        mediaType: admission.studentHeadshotMediaType,
+        DateOfBirth: admission.studentDOB,
+        PlaceOfBirth: admission.studentPlaceOfBirth,
+        address: admission.studentStreetAddress,
+        BoxAddress: admission.studentBoxAddress,
+        phoneContact: admission.studentPhone,
+        optionalPhoneContact: admission.studentOtherPhone,
+        optionalPhoneContactTwo: admission.studentOtherPhoneOptional,
+        student: savedStudent,
+      });
+
+      await this.profileRepository.save(profile);
+
+      // If a class level is specified, add the student to that class
+      if (admission.forClass) {
+        const classLevel = await this.classLevelRepository.findOne({
+          where: { id: admission.forClass.id },
+          relations: ['students'],
+        });
+
+        if (classLevel) {
+          // Initialize students array if it doesn't exist
+          if (!classLevel.students) {
+            classLevel.students = [];
+          }
+
+          // Add student to class
+          classLevel.students.push(savedStudent);
+          await this.classLevelRepository.save(classLevel);
+        }
+      }
+
+      // Create parents from guardians
+      if (admission.guardians && Array.isArray(admission.guardians)) {
+        for (const guardian of admission.guardians) {
+          const parent = this.parentRepository.create({
+            firstName: guardian.firstName,
+            lastName: guardian.lastName,
+            email: guardian.email,
+            phone: guardian.guardianPhone,
+            relationship: guardian.relationship,
+            student: savedStudent,
+          });
+          await this.parentRepository.save(parent);
+          // Create parent profile with headshot if available
+          if (guardian.headshotPath) {
+            const parentProfile = this.profileRepository.create({
+              avatarPath: guardian.headshotPath,
+              mediaType: guardian.headshotMediaType,
+              parent,
+            });
+            await this.parentRepository.save(parent);
+            parent.profile = parentProfile;
+          }
+        }
+      }
+
+      // Send invitation email
+      await this.emailService.sendStudentInvitation(
+        savedStudent,
+        studentId,
+        pin,
+      );
+
+      this.logger.log(
+        `Student account created from admission application ${admission.applicationId}`,
+      );
+
+      return savedStudent;
+    } catch (error) {
+      this.logger.error(
+        `Failed to create student from admission: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new BadRequestException(`Failed to create student account`);
+    }
   }
 
   async getAdmissionAnalytics(schoolId: string) {

@@ -3,7 +3,7 @@ import React from 'react'
 import InputField from '../InputField';
 import Image from "next/image";
 import DocumentItem from '../common/DocumentItem';
-import { Guardian, StudentInformation, AdditionalInformation } from '@/@types';
+import { Guardian, StudentInformation, AdditionalInformation, ClassLevel } from '@/@types';
 import { TagsInput } from '@mantine/core';
 
 interface PreviewStepProps {
@@ -11,13 +11,14 @@ interface PreviewStepProps {
     studentData: StudentInformation;
     guardians: Guardian[];
     additionalInfo: AdditionalInformation;
+    classLevels: ClassLevel[];
   };
 }
 
 
 const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
 
-  const { studentData, guardians, additionalInfo } = formData;
+  const { studentData, guardians, additionalInfo, classLevels } = formData;
 
   return (
     <div>
@@ -53,7 +54,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                 />
                 <InputField
                     label="Other Names"
-                    required
                     isTransulent={true}
                     readOnly={true}
                     value={studentData.otherNames}
@@ -103,7 +103,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                 </div>
                 <InputField
                     label="Religion"
-                    required
                     isTransulent={true}
                     readOnly={true}
                     value={studentData.religion}
@@ -142,7 +141,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                 />
                 <InputField
                     label="Anticipated Academic Year"
-                    required
                     isTransulent={true}
                     readOnly={true}
                     value={studentData.academicYear}
@@ -152,7 +150,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                     required
                     isTransulent={true}
                     readOnly={true}
-                    value={studentData.classFor}
+                    value={classLevels?.find((cl) => cl.id === studentData.classFor)?.name}
                 />
             </div>
 
@@ -216,7 +214,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                         />
                         <InputField
                             label="Company"
-                            required
                             isTransulent={true}
                             readOnly={true}
                             value={guardian.company}
@@ -284,15 +281,14 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
             {additionalInfo.hasAcademicHistory === 'yes' && (
                 <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
                     <InputField
-                        label="School Name"
+                        label="Name of Previous School"
                         required
                         isTransulent={true}
                         readOnly={true}
                         value={additionalInfo?.previousSchool?.name}
                     />
                     <InputField
-                        label="School URL"
-                        required
+                        label="Previous School URL"
                         isTransulent={true}
                         readOnly={true}
                         value={additionalInfo?.previousSchool?.url}
@@ -339,7 +335,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                     />
                     <InputField
                         label="Grade / Class"
-                        required
                         isTransulent={true}
                         readOnly={true}
                         value={additionalInfo?.previousSchool?.grade}

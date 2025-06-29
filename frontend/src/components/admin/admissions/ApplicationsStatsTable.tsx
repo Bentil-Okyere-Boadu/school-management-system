@@ -2,14 +2,29 @@
 
 import React from "react";
 
-const ApplicationStatsTable: React.FC = () => {
+interface ApplicationStatsTableProps {
+    statusBreakdown: {
+        name: string;
+        value: number;
+        rate: string;
+    }[];
+}
 
-    const data = [
-        { label: "Applications Recieved", value: "57,914", rate: "81.94%", color: "bg-blue-600" },
-        { label: "Applications Accepted", value: "54,914", rate: "81.94%", color: "bg-green-600" },
-        { label: "Applications Rejected", value: "47,914", rate: "81.94%", color: "bg-red-400" },
-        { label: "Applications Pending", value: "27,914", rate: "81.94%", color: "bg-orange-400" },
-    ];
+const ApplicationStatsTable: React.FC<ApplicationStatsTableProps> = ({statusBreakdown}) => {
+
+    const colorMap: Record<string, string> = {
+        "Applications Received": "#0088F0", // blue
+        "Applications Accepted": "#3DD598", // green
+        "Applications Rejected": "#EF2A82", // red
+        "Applications Pending": "#FF9500",   // orange
+    };
+
+    const data = statusBreakdown?.map(item => ({
+        label: item.name,
+        value: item?.value?.toLocaleString(), // formats 7491 → "7,491"
+        rate: item.rate,
+        color: colorMap[item.name] || "#000000",
+    }));
 
     return (
         <div className="overflow-x-auto w-[500px] bg-white">
@@ -25,7 +40,7 @@ const ApplicationStatsTable: React.FC = () => {
                     {data.map((item, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                             <td className="px-2 py-3 flex items-center gap-2">
-                                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.color}`} />
+                                <span className={`w-2.5 h-2.5 rounded-full shrink-0`} style={{ backgroundColor: item.color }} />
                                 <span>{item.label}</span>
                             </td>
                             <td className="px-2 py-3 text-center">{item.value}</td>

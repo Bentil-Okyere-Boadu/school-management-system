@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -346,11 +346,17 @@ export const useEditTerm = (id: string) => {
 /**
  * CLASS LEVELS CRUD
  */
-export const useGetClassLevels = () => {
+export const useGetClassLevels = (search: string = "") => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['myClassLevels'],
+        queryKey: ['myClassLevels', { search }],
         queryFn: () => {
-            return customAPI.get('/class-level');
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/class-level?${params}`);
         },
         refetchOnWindowFocus: true
     })
@@ -626,4 +632,18 @@ export const useInterviewInvitation = (id: string) => {
             return customAPI.post(`/school-admin/admissions/${id}/interview`, inviteDetails);
         }
     })
+}
+
+export const useGetAdmisssionDashboardInfo = () => {
+    const { data, isPending} = useQuery({
+        queryKey: ['admissionDasbhoard'],
+        queryFn: () => {
+            return customAPI.get('school-admin/admissions/analytics')
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const dashboardStats = data?.data as AdmissionDashboardInfo;
+
+    return { dashboardStats, isPending }
 }

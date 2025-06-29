@@ -54,12 +54,10 @@ const AdmissionFormsPage = () => {
       !studentData.gender ||
       !studentData.nationality.trim() ||
       !studentData.birthCertificateFile ||
-      !studentData.religion.trim() ||
       studentData.languagesSpoken.length === 0 ||
       !studentData.streetAddress.trim() ||
       !studentData.boxAddress.trim() ||
       !studentData.phone.trim() ||
-      !studentData.academicYear ||
       !studentData.classFor ||
       !studentData.headshotFile
     ) {
@@ -94,7 +92,6 @@ const AdmissionFormsPage = () => {
         !guardian.email.trim() ||
         !guardian.nationality.trim() ||
         !guardian.occupation.trim() ||
-        !guardian.company.trim() ||
         !guardian.streetAddress.trim() ||
         !guardian.boxAddress.trim() ||
         !guardian.phone.trim() ||
@@ -244,7 +241,8 @@ const AdmissionFormsPage = () => {
                 formData={{
                   studentData,
                   guardians,
-                  additionalInfo
+                  additionalInfo,
+                  classLevels,
                 }} />
             </>
           )}

@@ -164,6 +164,10 @@ export interface ClassLevel {
   id: string;
   name: string;
   description: string;
+  teacherIds: string[];
+  studentIds: string[];
+  students: User[];
+  teachers: User[];
 }
 
 export interface AdmissionPolicy {
@@ -319,4 +323,27 @@ export interface GuardianData {
   headshotPath: string;
   headshotMediaType: string;
   headshotUrl: string;
+}
+
+export interface AdmissionDashboardInfo {
+  summary: {
+    totalApplications: number;
+    acceptedApplications: number;
+    rejectedApplications: number;
+    pendingApplications: number;
+  }
+  monthlyTrends: {
+    month: string;
+    value: number;
+  }[];
+  weeklyTrends: {
+    date: string;
+    value: number;
+  }[];
+  statusBreakdown: {
+    name: string;
+    value: number;
+    rate: string;
+  }[];
+  applicationsThisYear: number;
 }

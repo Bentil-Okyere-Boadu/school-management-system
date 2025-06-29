@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Parent } from './parent.entity';
@@ -48,29 +52,38 @@ export class ParentService {
     return parent;
   }
 
-  async update(id: string, updateParentDto: UpdateParentDto): Promise<Parent> {
+  async update(
+    id: string,
+    updateParentDto: UpdateParentDto,
+    studentId?: string,
+  ) {
     const parent = await this.parentRepository.findOne({
       where: { id },
       relations: ['student'],
     });
 
     if (!parent) {
-      throw new NotFoundException('Parent not found');
+      throw new NotFoundException(`Parent with ID ${id} not found`);
     }
 
-    if (updateParentDto.studentId) {
-      const student = await this.studentRepository.findOne({
-        where: { id: updateParentDto.studentId },
+    if (studentId && parent.student?.id !== studentId) {
+      throw new ForbiddenException(
+        'You do not have permission to update this parent',
+      );
+    }
+
+    if (updateParentDto.email && updateParentDto.email !== parent.email) {
+      const existingParent = await this.parentRepository.findOne({
+        where: { email: updateParentDto.email },
       });
 
-      if (!student) {
-        throw new NotFoundException(`Student not found`);
+      if (existingParent && existingParent.id !== id) {
+        throw new ForbiddenException('A parent with this email already exists');
       }
-
-      parent.student = student;
     }
 
     Object.assign(parent, updateParentDto);
+
     return this.parentRepository.save(parent);
   }
 

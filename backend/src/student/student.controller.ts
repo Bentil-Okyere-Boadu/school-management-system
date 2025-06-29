@@ -76,10 +76,11 @@ export class StudentController {
   @Patch(':id/parents')
   @Roles('student')
   updateParent(
-    @Param('id') id: string,
+    @CurrentUser() student: Student,
+    @Param('parentId') parentId: string,
     @Body() updateParentDto: UpdateParentDto,
   ) {
-    return this.parentService.update(id, updateParentDto);
+    return this.parentService.update(parentId, updateParentDto, student.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)

@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef } from 'react'
+import React, { useRef, useMemo } from 'react'
 import Image from "next/image";
 import HomeIcon from "@/images/admission-home-logo.svg"
 import InputField from '../InputField';
@@ -7,6 +7,7 @@ import CustomButton from '../Button';
 import { Select } from '@mantine/core';
 import { AdditionalInformation } from '@/@types';
 import DocumentItem from '../common/DocumentItem';
+import countryList from 'react-select-country-list';
 
 interface AdditionalInfoProps {
   additionalInfo: AdditionalInformation;
@@ -18,6 +19,16 @@ interface AdditionalInfoProps {
     { value: "yes", label: "Yes" },
     { value: "no", label: "No" },
   ];
+
+  // Retrieve a list of countries [label: 'Ghana', value: 'GH']
+  const countryOptions = useMemo(() => {
+    return countryList()
+        .getData()
+        .map((option) => ({
+            value: option.label, // use label as value
+            label: option.label,
+        }));
+    }, []);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -127,7 +138,7 @@ interface AdditionalInfoProps {
         {additionalInfo?.hasAcademicHistory === "yes" && (
           <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2 mt-8">
             <InputField
-                label="School Name"
+                label="Name of Previous School"
                 required
                 isTransulent={false}
                 value={additionalInfo?.previousSchool?.name}
@@ -136,7 +147,7 @@ interface AdditionalInfoProps {
                 }
             />
             <InputField
-                label="School URL"
+                label="Previous School URL"
                 isTransulent={false}
                 value={additionalInfo?.previousSchool?.url}
                 onChange={(e) =>
@@ -170,14 +181,14 @@ interface AdditionalInfoProps {
                   handlePreviousSchoolChange("state", e.target.value)
                 }
             />
-            <InputField
-                label="Country"
-                required
-                isTransulent={false}
-                value={additionalInfo?.previousSchool?.country}
-                onChange={(e) =>
-                  handlePreviousSchoolChange("country", e.target.value)
-                }
+            <Select
+              required
+              label="Country"
+              data={countryOptions}
+              value={additionalInfo?.previousSchool?.country}
+              searchable
+              className="-mt-2 mb-2 sm:mb-0"
+              onChange={(value) => handlePreviousSchoolChange('country', value ?? '')}
             />
             <InputField
                 label="Attended From"

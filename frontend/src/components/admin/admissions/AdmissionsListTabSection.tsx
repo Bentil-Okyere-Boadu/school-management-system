@@ -31,6 +31,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [interviewDate, setInterviewDate] = useState("");
   const [interviewTime, setInterviewTime] = useState("");
+  const [statusChangePendingId, setStatusChangePendingId] = useState<string | null>(null);
 
   const statusFilterOptions = [
     { value: "", label: "Status" },
@@ -56,7 +57,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
       setInterviewDate("");
       setIsInterviewInviteDialogOpen(true);
     } else {
-      updateAdmissionStatus(sSelectedStatus);
+      updateAdmissionStatus(sSelectedStatus, admissionId);
     }
   }
 
@@ -66,7 +67,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
   const deleteAdmission = () => {
     deleteAdmissionMutation(admissionId, {
       onSuccess: () => {
-        toast.success('Deleted successfully.');
+        toast.success('Archived successfully.');
         setIsConfirmDeleteAdmissionDialogOpen(false);
         refetchAdmissionList();
       },
@@ -81,7 +82,9 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
     setAdmissionId(sId);
   }
 
-  const updateAdmissionStatus = (sSelectedStatus: string) => {
+  const updateAdmissionStatus = (sSelectedStatus: string, id: string) => {
+    setStatusChangePendingId(id);
+
     editMutation({ status: sSelectedStatus}, {
       onSuccess: () => {
         toast.success('Successfully updated admission status.')
@@ -89,6 +92,9 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+      onSettled: () => {
+        setStatusChangePendingId(null);
       }
     })
   }
@@ -165,6 +171,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
                     <div className="flex items-center justity-start">
                       <AdmissionStatusMenu 
                         status={admission.enrollmentStatus} 
+                        isStatusChangePending={ statusChangePendingId === admission.id }
                         admissionId={admission.id}
                         onStatusClick={(option, admissionId) => onHandleAdmissionStatusChange(option, admissionId)} /> 
                     </div>
@@ -184,7 +191,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
                           <Menu.Item leftSection={<IconTrashFilled size={18} color="#AB58E7" /> }
                             onClick={() => onDeleteAdmissionClick(admission.id)}
                           >
-                            Delete Admission
+                            Archive Admission
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
@@ -211,14 +218,14 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
       <Dialog 
         isOpen={isConfirmDeleteAdmissionDialogOpen}
         busy={pendingAdmissionDelete}
-        dialogTitle="Confirm Delete"
-        saveButtonText="Delete Admission"
+        dialogTitle="Confirm Archive"
+        saveButtonText="Archive Admission"
         onClose={() => { setIsConfirmDeleteAdmissionDialogOpen(false)}} 
         onSave={deleteAdmission}
       >
         <div className="my-3 flex flex-col gap-4">
           <p>
-            Are you sure you want to delete this admission? You will loose all related information
+            Are you sure you want to archive this admission? You will loose all related information
           </p>
         </div>
       </Dialog>
