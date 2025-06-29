@@ -4,7 +4,7 @@ import Image from "next/image";
 import React from "react";
 
 interface StatCardProps {
-  value: string;
+  value: number | string;
   label: string;
   iconUrl: string;
   iconAlt: string;

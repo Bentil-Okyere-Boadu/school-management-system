@@ -115,8 +115,7 @@ export class SchoolAdminService {
       .filter()
       .sort()
       .search(['firstName', 'lastName', 'email'])
-      .limitFields()
-      .paginate();
+      .limitFields();
 
     const students = await studentsFeatures.getQuery().getMany();
 
@@ -125,7 +124,7 @@ export class SchoolAdminService {
       .createQueryBuilder('teacher')
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
-      .leftJoinAndSelect('teacher.profile', 'profile') // added profile
+      .leftJoinAndSelect('teacher.profile', 'profile')
       .where('teacher.school.id = :schoolId', { schoolId })
       .andWhere('teacher.isArchived = :isArchived', { isArchived });
 
@@ -133,8 +132,7 @@ export class SchoolAdminService {
       .filter()
       .sort()
       .search(['firstName', 'lastName', 'email'])
-      .limitFields()
-      .paginate();
+      .limitFields();
 
     const teachers = await teachersFeatures.getQuery().getMany();
 
@@ -167,34 +165,32 @@ export class SchoolAdminService {
       }),
     );
 
-    // --- Pagination Count ---
-    const [studentsCount, teachersCount] = await Promise.all([
-      this.studentRepository
-        .createQueryBuilder('student')
-        .where('student.school.id = :schoolId', { schoolId })
-        .andWhere('student.isArchived = :isArchived', { isArchived })
-        .getCount(),
-      this.teacherRepository
-        .createQueryBuilder('teacher')
-        .where('teacher.school.id = :schoolId', { schoolId })
-        .andWhere('teacher.isArchived = :isArchived', { isArchived })
-        .getCount(),
-    ]);
+    // --- Merge, Sort, and Paginate ---
+    let combined = [...signedStudents, ...signedTeachers];
 
+    // Optional: sort combined array if needed (e.g., by createdAt desc)
+    combined = combined.sort((a, b) => {
+      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bDate - aDate;
+    });
+
+    // Pagination
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
-    const total = studentsCount + teachersCount;
+    const total = combined.length;
     const totalPages = Math.ceil(total / limit);
+    const paginated = combined.slice((page - 1) * limit, page * limit);
 
     return {
-      data: [...signedStudents, ...signedTeachers],
+      data: paginated,
       meta: {
         total,
         page,
         limit,
         totalPages,
-        studentsCount,
-        teachersCount,
+        studentsCount: signedStudents.length,
+        teachersCount: signedTeachers.length,
       },
     };
   }
@@ -506,5 +502,31 @@ export class SchoolAdminService {
         `Failed to delete student: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
+  }
+
+  //Todo: attendace section info
+  async getDashboardStats(schoolId: string) {
+    const totalTeachers = await this.teacherRepository.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const totalStudents = await this.studentRepository.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const admissionRepo =
+      this.schoolRepository.manager.getRepository('Admission');
+    const totalApplications = await admissionRepo.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const averageAttendanceRate = 0;
+
+    return {
+      totalTeachers,
+      totalStudents,
+      totalApplications,
+      averageAttendanceRate,
+    };
   }
 }

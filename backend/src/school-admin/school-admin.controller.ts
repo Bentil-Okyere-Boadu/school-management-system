@@ -190,21 +190,47 @@ export class SchoolAdminController {
   async deleteUser(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.schoolAdminService.deleteUser(id, admin.school.id);
   }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('dashboard/stats')
+  @Roles('school_admin')
+  async getDashboardStats(@CurrentUser() admin: SchoolAdmin) {
+    return this.schoolAdminService.getDashboardStats(admin.school.id);
+  }
+  // @UseGuards(
+  //   SchoolAdminJwtAuthGuard,
+  //   ActiveUserGuard,
+  //   RolesGuard,
+  //   SchoolAdminSchoolGuard,
+  // )
+  // @Delete('admissions/:applicationId')
+  // @Roles('school_admin')
+  // async deleteAdmission(
+  //   @Param('applicationId') applicationId: string,
+  //   @CurrentUser() admin: SchoolAdmin,
+  // ) {
+  //   return this.admissionService.deleteAdmission(
+  //     applicationId,
+  //     admin.school.id,
+  //   );
+  // }
   @UseGuards(
     SchoolAdminJwtAuthGuard,
     ActiveUserGuard,
     RolesGuard,
     SchoolAdminSchoolGuard,
   )
-  @Delete('admissions/:applicationId')
+  @Put('admissions/:applicationId/archive')
   @Roles('school_admin')
-  async deleteAdmission(
+  async archiveAdmission(
     @Param('applicationId') applicationId: string,
     @CurrentUser() admin: SchoolAdmin,
+    @Body() body: { archive: boolean },
   ) {
-    return this.admissionService.deleteAdmission(
+    return this.admissionService.archiveAdmission(
       applicationId,
       admin.school.id,
+      body.archive,
     );
   }
 }

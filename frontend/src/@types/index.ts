@@ -118,6 +118,7 @@ export enum AdmissionStatus {
   ACCEPTED = 'Accepted',
   REJECTED = 'Rejected',
   WAITLISTED = 'Waitlisted',
+  ARCHIVED = 'Archived'
 }
 
 export type BadgeVariant =
@@ -346,4 +347,11 @@ export interface AdmissionDashboardInfo {
     rate: string;
   }[];
   applicationsThisYear: number;
+}
+
+export interface AdminDashboardStats {
+  averageAttendanceRate: number;
+  totalApplications: number;
+  totalStudents: number;
+  totalTeachers: number;
 }
