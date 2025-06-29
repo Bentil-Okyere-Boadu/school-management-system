@@ -40,7 +40,7 @@ export class ClassLevel {
   })
   teachers: Teacher[];
 
-  @ManyToMany(() => Student)
+  @ManyToMany(() => Student, (student) => student.classLevels)
   @JoinTable({
     name: 'class_level_students',
     joinColumn: {

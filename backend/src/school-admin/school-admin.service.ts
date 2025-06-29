@@ -108,6 +108,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
       .leftJoinAndSelect('student.profile', 'profile')
+      .leftJoinAndSelect('student.classLevels', 'classLevel')
       .where('student.school.id = :schoolId', { schoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived });
 
