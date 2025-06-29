@@ -7,12 +7,14 @@ import {
   UpdateDateColumn,
   JoinColumn,
   OneToOne,
+  ManyToMany,
   OneToMany,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Role } from '../role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Parent } from '../parent/parent.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -95,4 +97,7 @@ export class Student {
     onDelete: 'CASCADE',
   })
   parents: Parent[];
+
+  @ManyToMany(() => ClassLevel, (classLevel) => classLevel.students)
+  classLevels: ClassLevel[];
 }
