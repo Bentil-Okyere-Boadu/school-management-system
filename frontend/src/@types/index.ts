@@ -118,6 +118,7 @@ export enum AdmissionStatus {
   ACCEPTED = 'Accepted',
   REJECTED = 'Rejected',
   WAITLISTED = 'Waitlisted',
+  ARCHIVED = 'Archived'
 }
 
 export type BadgeVariant =

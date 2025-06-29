@@ -40,7 +40,8 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
     { value: AdmissionStatus.REJECTED, label: "Rejected" },
     { value: AdmissionStatus.WAITLISTED, label: "Waitlisted" },
     { value: AdmissionStatus.INTERVIEW_PENDING, label: "Interview Pending" },
-    { value: AdmissionStatus.INTERVIEW_COMPLETED, label: "Interview Completed" }
+    { value: AdmissionStatus.INTERVIEW_COMPLETED, label: "Interview Completed" },
+    { value: AdmissionStatus.ARCHIVED, label: "Archived" }
   ];
 
   const onOptionFilterItemClick = (event: React.ChangeEvent<HTMLSelectElement>) => {
