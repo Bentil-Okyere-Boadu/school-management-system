@@ -503,4 +503,30 @@ export class SchoolAdminService {
       );
     }
   }
+
+  //Todo: attendace section info
+  async getDashboardStats(schoolId: string) {
+    const totalTeachers = await this.teacherRepository.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const totalStudents = await this.studentRepository.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const admissionRepo =
+      this.schoolRepository.manager.getRepository('Admission');
+    const totalApplications = await admissionRepo.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const averageAttendanceRate = 0;
+
+    return {
+      totalTeachers,
+      totalStudents,
+      totalApplications,
+      averageAttendanceRate,
+    };
+  }
 }

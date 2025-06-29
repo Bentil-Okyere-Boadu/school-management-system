@@ -190,6 +190,13 @@ export class SchoolAdminController {
   async deleteUser(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.schoolAdminService.deleteUser(id, admin.school.id);
   }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('dashboard/stats')
+  @Roles('school_admin')
+  async getDashboardStats(@CurrentUser() admin: SchoolAdmin) {
+    return this.schoolAdminService.getDashboardStats(admin.school.id);
+  }
   // @UseGuards(
   //   SchoolAdminJwtAuthGuard,
   //   ActiveUserGuard,
