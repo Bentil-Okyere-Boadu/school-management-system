@@ -32,6 +32,9 @@ export class ObjectStorageServiceService {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
   ];
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB
   private readonly maxDocumentSize = 10 * 1024 * 1024; // 10MB
@@ -86,6 +89,38 @@ export class ObjectStorageServiceService {
     return `schools/${schoolId}/assets/${assetType}/${uniqueId}${extension}`;
   }
 
+  // Upload a general admission document (e.g., birth cert, result, etc.)
+  async uploadAdmissionDocument(
+    file: Express.Multer.File,
+    schoolId: string,
+    studentIdentifier: string, // could be email or generated id
+    docType: string, // e.g., 'birth-cert', 'prev-result'
+  ): Promise<{ path: string; url: string }> {
+    this.validateDocumentFile(file);
+
+    const documentPath = `schools/${schoolId}/admissions/${studentIdentifier}/${docType}-${uuidv4()}${path.extname(file.originalname)}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: documentPath,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      Metadata: {
+        schoolId,
+        studentIdentifier,
+        docType,
+        uploadedAt: new Date().toISOString(),
+        originalName: file.originalname,
+        assetType: 'admission-document',
+      },
+      CacheControl: 'max-age=86400', // 24 hours
+    });
+
+    await this.s3Client.send(command);
+    const url = await this.getSignedUrl(documentPath);
+
+    return { path: documentPath, url };
+  }
   // Upload admission policy document
   async uploadAdmissionPolicyDocument(
     file: Express.Multer.File,

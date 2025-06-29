@@ -1,7 +1,7 @@
 "use client";
 // import CustomButton from "@/components/Button";
 import { IconUpload } from "@tabler/icons-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
 import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import InputField from "@/components/InputField";
@@ -11,9 +11,9 @@ import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
 import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUploadSchoolLogoFile } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
-import { ErrorResponse, FeeStructure, School } from "@/@types";
+import { ClassLevel, ErrorResponse, FeeStructure, School } from "@/@types";
 import { EmailItem } from "./EmailItem";
-import { ClassLevelsTable } from "./ClassLevelsTable";
+// import { ClassLevelsTable } from "./ClassLevelsTable";
 import FileUploadArea from "@/components/common/FileUploadArea";
 // import { FeeStructureTable } from "./FeeStructureTable";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,10 +21,11 @@ import { AdmissionPoliciesSection } from "./AdmissionPoliesSection";
 
 interface SchoolSettingsTabSectionProps {
   schoolData: School;
+  classes: ClassLevel[]
 }
 
 
-export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> = ({schoolData}) => {
+export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> = ({schoolData, classes}) => {
   const [isFeeStructureDialogOpen, setIsFeeStructureDialogOpen] =
     useState(false);
   const [selectedDuration, setSelectedDuration] = useState<string>("daily");
@@ -32,7 +33,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const [feesTitle, setFeesTitle] = useState("");
   const [amount, setAmount] = useState(0);
   const [dueDate, setDueDate] = useState('')
-  const [selectedClasses, setSelectedClasses] = useState<string[]>(["class-1"]);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [
     isConfirmDeleteFeeStructureDialogOpen,
     setIsConfirmDeleteFeeStructureDialogOpen,
@@ -43,6 +44,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const [isSchoolLogoUploadOpen, setIsSchoolLogoUploadOpen] = useState(false);
   const [selectedSchoolLogoFiles, setSelectedSchoolLogoFiles] = useState<File[]>([]);
   const [isConfirmDeleteSchoolLogoDialogOpen, setIsConfirmDeleteSchoolLogoDialogOpen] = useState(false);
+  const [classLevels, setClassLevels] = useState<{value: string, label: string}[]>();
 
 
   const appliesTo = [
@@ -55,13 +57,13 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     { value: "term", label: "Per term" },
     { value: "yearly", label: "Yearly" },
   ];
-  const classes = [
-    { value: "class-1", label: "Class 1" },
-    { value: "class-2", label: "Class 2" },
-    { value: "class-3", label: "Class 3" },
-    { value: "class-4", label: "Class 4" },
-  ];
 
+  useEffect(() => {
+    setClassLevels(classes.map((classlvl) => {
+        return { value: classlvl.id, label: classlvl.name };
+      }));
+  }, [classes])
+  
   const currencies = [
     { value: "ghc", label: "GHC" },
     { value: "eur", label: "🇪🇺 EUR" },
@@ -117,6 +119,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
      amount: amount,
      appliesTo: feesAppliesTo,
      dueDate: dueDate,
+     classLevelIds: selectedClasses
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');
@@ -137,6 +140,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
      amount: amount,
      appliesTo: feesAppliesTo,
      dueDate: dueDate,
+     classLevelIds: selectedClasses
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');
@@ -157,7 +161,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     setDueDate(fee.dueDate);
     setFeesTitle(fee.feeTitle);
     setFeesAppliesTo(fee.appliesTo);
-    setSelectedClasses(fee.classes);
+    setSelectedClasses(fee.classLevelIds);
     setSelectedDuration(fee.feeType);
     setIsFeeStructureDialogOpen(true);
   }
@@ -167,7 +171,9 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       setFeesAppliesTo('');
       setDueDate('');
       setFeesTitle('');
+      setAmount(0);
       setSelectedClasses([]);
+      setEditMode(false);
   }
 
   const handleDurationChange = (value: string | null) => {
@@ -293,9 +299,9 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
         <GradingSystemTable />
       </div>
 
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <ClassLevelsTable />
-      </div>
+      </div> */}
 
       <div className="mt-8">
         <AdmissionPoliciesSection />
@@ -386,7 +392,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           <MultiSelect
             label="Class / Level"
             placeholder="Please Select"
-            data={classes}
+            data={classLevels}
             value={selectedClasses}
             onChange={handleClassesChange}
             withCheckIcon

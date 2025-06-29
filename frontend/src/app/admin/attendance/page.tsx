@@ -1,6 +1,14 @@
 "use client";
 import React, { useState } from 'react'
 import StatCard from '@/components/admin/attendence/StatsCard';
+import TabBar from '@/components/common/TabBar';
+import { AttendanceSheetTabSection } from '@/components/admin/attendence/AttendanceSheetTabSection';
+import { AttendanceSummaryTabSection } from '@/components/admin/attendence/AttendanceSummaryTabSection';
+
+export type TabListItem = {
+  tabLabel: string;
+  tabKey: string;
+};
 
 const Attendance = () => {
   const [alreadyDone] = useState(false);
@@ -32,14 +40,49 @@ const Attendance = () => {
     },
   ];
 
+  const defaultNavItems: TabListItem[] = [
+    { tabLabel: "Attendance Sheet", tabKey: "attendance-sheet" },
+    { tabLabel: "Attendance Summary", tabKey: "attendance-summary" },
+  ];
+  const [activeTabKey, setActiveTabKey] = useState('attendance-sheet');
+
+  const handleItemClick = (item: TabListItem) => {
+    setActiveTabKey(item.tabKey);
+  };
+
   return (
     <div className="pb-8">
-      Attendance
-      {alreadyDone && (<section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
+      {!alreadyDone && <div>Attendance</div>}
+      {alreadyDone && (
+        <>
+        <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
           {stats.map((stat, index) => (
             <StatCard key={index} {...stat} />
           ))}
-        </section>)}
+        </section>
+      
+      <div>
+        <TabBar 
+          items={defaultNavItems} 
+          activeTabKey={activeTabKey} 
+          onItemClick={handleItemClick}
+        />
+
+        {activeTabKey === "attendance-sheet" && (
+          <div>
+            <AttendanceSheetTabSection />
+          </div>
+        )}
+
+        {activeTabKey === "attendance-summary" && (
+          <div>
+            <AttendanceSummaryTabSection />
+          </div>
+        )}
+      </div>
+      </>
+      )}
+      
     </div>
   );
 }

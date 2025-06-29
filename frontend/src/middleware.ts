@@ -34,7 +34,7 @@ export async function updateSession(request: NextRequest) {
     if (!authToken) return;
 
     // Refresh the auth so it doesn't expire
-    const expires = new Date(Date.now() + 30 * 60 * 1000);
+    const expires = new Date(Date.now() + 6 * 60 * 60 * 1000);
     const res = NextResponse.next();
     res.cookies.set({
         name: "authToken",
@@ -52,7 +52,7 @@ export function handleLoginRedirectAndToken(
 ): void {
   if (!data?.data?.access_token || !data?.data?.role?.name) return;
 
-  const expireToken = new Date(Date.now() + 30 * 60 * 1000);
+  const expireToken = new Date(Date.now() + 6 * 60 * 60 * 1000);
   Cookies.set("authToken", data.data.access_token, { expires: expireToken });
 
   const roleToRouteMap: Record<string, string> = {

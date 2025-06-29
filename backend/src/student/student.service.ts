@@ -15,7 +15,8 @@ import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
 import { InvitationService } from 'src/invitation/invitation.service';
-
+import { ProfileService } from 'src/profile/profile.service';
+import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 @Injectable()
 export class StudentService {
   private readonly logger = new Logger(StudentService.name);
@@ -25,6 +26,7 @@ export class StudentService {
     private studentRepository: Repository<Student>,
     private emailService: EmailService,
     private invitationService: InvitationService,
+    private readonly profileService: ProfileService,
   ) {}
 
   /**
@@ -125,5 +127,38 @@ export class StudentService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+  async getMyProfile(user: Student) {
+    if (!user) {
+      throw new NotFoundException('no Student found');
+    }
+
+    const studentInfo = await this.studentRepository.findOne({
+      where: { id: user.id },
+      relations: ['role', 'profile', 'parents'],
+    });
+    if (studentInfo?.profile?.id) {
+      const profileWithUrl = await this.profileService.getProfileWithImageUrl(
+        studentInfo.profile.id,
+      );
+      studentInfo.profile = profileWithUrl;
+    }
+
+    return studentInfo;
+  }
+  async updateProfile(
+    adminId: string,
+    updateDto: UpdateProfileDto,
+  ): Promise<Student> {
+    return this.profileService.handleUpdateProfile(
+      adminId,
+      updateDto,
+      this.studentRepository,
+      ['role', 'school', 'profile'],
+    );
+  }
+
+  getRepository(): Repository<Student> {
+    return this.studentRepository;
   }
 }

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -71,7 +76,7 @@ export class SchoolAdminService {
     )
       .filter()
       .sort()
-      .search()
+      .search(['firstName', 'lastName', 'email'])
       .limitFields();
 
     const total = await featuresWithoutPagination.getQuery().getCount();
@@ -94,202 +99,103 @@ export class SchoolAdminService {
     };
   }
 
-  /* async findAllUsers(schoolId: string, queryString: QueryString) {
-  let isArchived = false;
-  if (queryString.status === 'archived') {
-    isArchived = true;
-  } else if (queryString.status === 'active' || !queryString.status) {
-    isArchived = false;
-  }
-
-  // Build students query
-  const studentsQuery = this.studentRepository
-    .createQueryBuilder('student')
-    .leftJoinAndSelect('student.role', 'role')
-    .leftJoinAndSelect('student.school', 'school')
-    .leftJoinAndSelect('student.profile', 'profile')
-    .where('student.school.id = :schoolId', { schoolId })
-    .andWhere('student.isArchived = :isArchived', { isArchived });
-
-  const teachersQuery = this.teacherRepository
-    .createQueryBuilder('teacher')
-    .leftJoinAndSelect('teacher.role', 'role')
-    .leftJoinAndSelect('teacher.school', 'school')
-    .leftJoinAndSelect('teacher.profile', 'profile')
-    .where('teacher.school.id = :schoolId', { schoolId })
-    .andWhere('teacher.isArchived = :isArchived', { isArchived });
-
-  // Apply features
-  const [students, teachers]: [Student[], Teacher[]] = await Promise.all([
-    new APIFeatures(studentsQuery.clone(), queryString)
-      .filter()
-      .sort()
-      .search()
-      .limitFields()
-      .paginate()
-      .getQuery()
-      .getMany(),
-
-    new APIFeatures(teachersQuery.clone(), queryString)
-      .filter()
-      .sort()
-      .search()
-      .limitFields()
-      .paginate()
-      .getQuery()
-      .getMany(),
-  ]);
-
-  // Get profileIds for signed URLs
-  const profileIds = [
-    ...students.map((s) => s.profile?.id).filter(Boolean),
-    ...teachers.map((t) => t.profile?.id).filter(Boolean),
-  ];
-
-  const profilesWithUrls = await this.profileService.getProfilesWithImageUrls(profileIds);
-
-  const profileMap = new Map(profilesWithUrls.map((p) => [p.id, p]));
-
-  // Attach avatarUrl to student/teacher profiles
-  const studentsWithType = students.map((student) => ({
-    ...student,
-    userType: 'student',
-    profile: student.profile?.id ? profileMap.get(student.profile.id) : undefined,
-  }));
-
-  const teachersWithType = teachers.map((teacher) => ({
-    ...teacher,
-    userType: 'teacher',
-    profile: teacher.profile?.id ? profileMap.get(teacher.profile.id) : undefined,
-  }));
-
-  // Pagination and metadata
-  const [studentsCount, teachersCount] = await Promise.all([
-    this.studentRepository
-      .createQueryBuilder('student')
-      .leftJoin('student.school', 'school')
-      .where('student.school.id = :schoolId', { schoolId })
-      .andWhere('student.isArchived = :isArchived', { isArchived })
-      .getCount(),
-
-    this.teacherRepository
-      .createQueryBuilder('teacher')
-      .leftJoin('teacher.school', 'school')
-      .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('teacher.isArchived = :isArchived', { isArchived })
-      .getCount(),
-  ]);
-
-  const page = parseInt(queryString.page ?? '1', 10);
-  const limit = parseInt(queryString.limit ?? '20', 10);
-  const total = studentsCount + teachersCount;
-  const totalPages = Math.ceil(total / limit);
-
-  return {
-    data: [...studentsWithType, ...teachersWithType],
-    meta: {
-      total,
-      page,
-      limit,
-      totalPages,
-      studentsCount,
-      teachersCount,
-    },
-  };
-}
-*/
   async findAllUsers(schoolId: string, queryString: QueryString) {
-    let isArchived = false;
-    if (queryString.status === 'archived') {
-      isArchived = true;
-    } else if (queryString.status === 'active' || !queryString.status) {
-      isArchived = false;
-    } else {
-      isArchived = false;
-    }
+    const isArchived = queryString.status === 'archived' ? true : false;
 
-    // Get students
+    // --- Students Query ---
     const studentsQuery = this.studentRepository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('student.profile', 'profile')
+      .leftJoinAndSelect('student.classLevels', 'classLevel')
       .where('student.school.id = :schoolId', { schoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived });
 
     const studentsFeatures = new APIFeatures(studentsQuery, queryString)
       .filter()
       .sort()
-      .search()
-      .limitFields()
-      .paginate();
+      .search(['firstName', 'lastName', 'email'])
+      .limitFields();
 
     const students = await studentsFeatures.getQuery().getMany();
 
-    // Get teachers
+    // --- Teachers Query ---
     const teachersQuery = this.teacherRepository
       .createQueryBuilder('teacher')
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
+      .leftJoinAndSelect('teacher.profile', 'profile')
       .where('teacher.school.id = :schoolId', { schoolId })
       .andWhere('teacher.isArchived = :isArchived', { isArchived });
 
     const teachersFeatures = new APIFeatures(teachersQuery, queryString)
       .filter()
       .sort()
-      .search()
-      .limitFields()
-      .paginate();
+      .search(['firstName', 'lastName', 'email'])
+      .limitFields();
 
     const teachers = await teachersFeatures.getQuery().getMany();
 
-    // Count total records for pagination
-    const studentsCount = await this.studentRepository
-      .createQueryBuilder('student')
-      .leftJoinAndSelect('student.school', 'school')
-      .where('student.school.id = :schoolId', { schoolId })
-      .andWhere('student.isArchived = :isArchived', { isArchived })
-      .getCount();
+    // --- Sign Profile URLs ---
+    const signedStudents = await Promise.all(
+      students.map(async (student) => {
+        if (student.profile?.id) {
+          student.profile = await this.profileService.getProfileWithImageUrl(
+            student.profile.id,
+          );
+        }
+        return {
+          ...student,
+          userType: 'student',
+        };
+      }),
+    );
 
-    const teachersCount = await this.teacherRepository
-      .createQueryBuilder('teacher')
-      .leftJoinAndSelect('teacher.role', 'role')
-      .leftJoinAndSelect('teacher.school', 'school')
-      .where('teacher.school.id = :schoolId', { schoolId })
-      .andWhere('teacher.isArchived = :isArchived', { isArchived })
-      .getCount();
+    const signedTeachers = await Promise.all(
+      teachers.map(async (teacher) => {
+        if (teacher.profile?.id) {
+          teacher.profile = await this.profileService.getProfileWithImageUrl(
+            teacher.profile.id,
+          );
+        }
+        return {
+          ...teacher,
+          userType: 'teacher',
+        };
+      }),
+    );
 
-    // Add userType to each entity
-    const studentsWithType = students.map((student) => ({
-      ...student,
-      userType: 'student',
-    }));
+    // --- Merge, Sort, and Paginate ---
+    let combined = [...signedStudents, ...signedTeachers];
 
-    const teachersWithType = teachers.map((teacher) => ({
-      ...teacher,
-      userType: 'teacher',
-    }));
+    // Optional: sort combined array if needed (e.g., by createdAt desc)
+    combined = combined.sort((a, b) => {
+      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bDate - aDate;
+    });
 
-    // Combine data
-    const combinedData = [...studentsWithType, ...teachersWithType];
-
-    // Pagination metadata
+    // Pagination
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
-    const total = studentsCount + teachersCount;
+    const total = combined.length;
     const totalPages = Math.ceil(total / limit);
+    const paginated = combined.slice((page - 1) * limit, page * limit);
 
     return {
-      data: combinedData,
+      data: paginated,
       meta: {
         total,
         page,
         limit,
         totalPages,
-        studentsCount,
-        teachersCount,
+        studentsCount: signedStudents.length,
+        teachersCount: signedTeachers.length,
       },
     };
   }
+
   async getMySchoolWithRelations(user: SchoolAdmin) {
     if (!user.school) {
       throw new NotFoundException('School not found for this admin');
@@ -383,6 +289,52 @@ export class SchoolAdminService {
 
     return school;
   }
+  async getUserById(userId: string, schoolId: string) {
+    // Try finding a student first
+    const student = await this.studentRepository.findOne({
+      where: {
+        id: userId,
+        school: { id: schoolId },
+      },
+      relations: ['profile'],
+    });
+
+    if (student) {
+      const profileWithUrl = student.profile?.id
+        ? await this.profileService.getProfileWithImageUrl(student.profile.id)
+        : null;
+
+      return {
+        ...student,
+        userType: 'student',
+        profile: profileWithUrl,
+      };
+    }
+
+    // If not a student, try finding a teacher
+    const teacher = await this.teacherRepository.findOne({
+      where: {
+        id: userId,
+        school: { id: schoolId },
+      },
+      relations: ['role', 'profile', 'school'],
+    });
+
+    if (teacher) {
+      const profileWithUrl = teacher.profile?.id
+        ? await this.profileService.getProfileWithImageUrl(teacher.profile.id)
+        : null;
+
+      return {
+        ...teacher,
+        userType: 'teacher',
+        profile: profileWithUrl,
+      };
+    }
+
+    throw new NotFoundException(`User with ID ${userId} not found`);
+  }
+
   async getMyProfile(user: SchoolAdmin) {
     if (!user) {
       throw new NotFoundException('no admin found');
@@ -412,12 +364,18 @@ export class SchoolAdminService {
       ['role', 'school', 'profile'],
     );
   }
+  async findStudentById(id: string, schoolId: string): Promise<Student | null> {
+    return this.studentRepository.findOne({
+      where: { id, school: { id: schoolId } },
+    });
+  }
+
   async archiveUser(id: string, archive: boolean) {
-    const user = await this.studentRepository.findOne({ where: { id } });
-    if (user) {
-      user.isArchived = archive;
-      user.status = archive ? 'archived' : 'active';
-      return this.studentRepository.save(user);
+    const student = await this.studentRepository.findOne({ where: { id } });
+    if (student) {
+      student.isArchived = archive;
+      student.status = archive ? 'archived' : 'active';
+      return this.studentRepository.save(student);
     }
 
     const teacher = await this.teacherRepository.findOne({ where: { id } });
@@ -426,10 +384,150 @@ export class SchoolAdminService {
       teacher.status = archive ? 'archived' : 'active';
       return this.teacherRepository.save(teacher);
     }
+
     throw new NotFoundException(`User with ID ${id} not found`);
   }
 
   getRepository(): Repository<SchoolAdmin> {
     return this.schoolAdminRepository;
+  }
+
+  /**
+   * Delete a user record (student or teacher)
+   */
+  async deleteUser(
+    userId: string,
+    schoolId: string,
+  ): Promise<{ message: string }> {
+    const student = await this.studentRepository.findOne({
+      where: { id: userId, school: { id: schoolId } },
+    });
+
+    if (student) {
+      return this.deleteStudent(userId, schoolId);
+    }
+
+    const teacher = await this.teacherRepository.findOne({
+      where: { id: userId, school: { id: schoolId } },
+    });
+
+    if (teacher) {
+      return this.deleteTeacher(userId, schoolId);
+    }
+
+    throw new NotFoundException(
+      `User with ID ${userId} not found in school ${schoolId}`,
+    );
+  }
+
+  async deleteTeacher(
+    teacherId: string,
+    schoolId: string,
+  ): Promise<{ message: string }> {
+    const teacher = await this.teacherRepository.findOne({
+      where: { id: teacherId, school: { id: schoolId } },
+      relations: ['profile'],
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found or not authorized');
+    }
+
+    try {
+      if (teacher.profile?.avatarPath) {
+        await this.objectStorageService.deleteFile(teacher.profile.avatarPath);
+      }
+
+      await this.teacherRepository.remove(teacher);
+
+      this.logger.log(
+        `Teacher ${teacherId} deleted successfully from school ${schoolId}`,
+      );
+      return { message: 'Teacher record deleted successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete teacher: ${teacherId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new BadRequestException(
+        `Failed to delete teacher: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Delete a student record completely
+   */
+  async deleteStudent(
+    studentId: string,
+    schoolId: string,
+  ): Promise<{ message: string }> {
+    const student = await this.studentRepository.findOne({
+      where: { id: studentId, school: { id: schoolId } },
+      relations: ['profile', 'parents'],
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found or not authorized');
+    }
+
+    try {
+      if (student.profile?.avatarPath) {
+        await this.objectStorageService.deleteFile(student.profile.avatarPath);
+      }
+
+      // Delete parent profile images if they exist
+      // if (student.parents && Array.isArray(student.parents)) {
+      //   for (const parent of student.parents) {
+      //     if (parent.profile?.avatarPath) {
+      //       await this.objectStorageService.deleteFile(
+      //         parent.profile.avatarPath,
+      //       );
+      //     }
+      //   }
+      // }
+
+      // Delete the student record and its related entities
+      await this.studentRepository.remove(student);
+
+      this.logger.log(
+        `Student ${studentId} deleted successfully from school ${schoolId}`,
+      );
+      return { message: 'Student record deleted successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete student: ${studentId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new BadRequestException(
+        `Failed to delete student: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  //Todo: attendace section info
+  async getDashboardStats(schoolId: string) {
+    const totalTeachers = await this.teacherRepository.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const totalStudents = await this.studentRepository.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const admissionRepo =
+      this.schoolRepository.manager.getRepository('Admission');
+    const totalApplications = await admissionRepo.count({
+      where: { school: { id: schoolId }, isArchived: false },
+    });
+
+    const averageAttendanceRate = 0;
+
+    return {
+      totalTeachers,
+      totalStudents,
+      totalApplications,
+      averageAttendanceRate,
+    };
   }
 }

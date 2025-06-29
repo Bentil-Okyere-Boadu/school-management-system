@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsUUID,
   IsDateString,
+  IsArray,
 } from 'class-validator';
 
 export class CreateFeeStructureDto {
@@ -33,6 +34,7 @@ export class CreateFeeStructureDto {
   dueDate?: string;
 
   @IsOptional()
-  @IsUUID()
-  classLevelId?: string;
+  @IsArray()
+  @IsUUID('all', { each: true })
+  classLevelIds?: string[];
 }

@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardIcon, UsersIcon, SchoolsIcon } from "@/utils/icons";
-import { useGetMe } from "@/hooks/super-admin";
+import { useStudentGetMe } from "@/hooks/student";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -14,7 +14,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
 
-  const {me} = useGetMe();
+  const {me} = useStudentGetMe();
 
   const sidebarItems = [
     {

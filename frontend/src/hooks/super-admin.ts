@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { School, SuperAdminDashStats, User } from "@/@types";
 
@@ -128,20 +128,18 @@ export const useGetAllSchools = (page=1,search: string = "", status: string = ""
     return { schools , isLoading, paginationValues, refetch }
 }
 
-export const useGetSchoolById = (id: string) => {
-    const enabled = Boolean(id);
-
+export const useGetSchoolById = (id: string, options?: UseQueryOptions) => {
     const { data, isPending} = useQuery({
         queryKey: [id],
         queryFn: () => {
             return customAPI.get(`/schools/${id}`)
         },
-        enabled,
-        refetchOnWindowFocus: true
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+        ...options,
     })
 
-    const school = data?.data as School;
-
+    const school = (data as {data: School})?.data;
     return { school, isPending }
 }
 

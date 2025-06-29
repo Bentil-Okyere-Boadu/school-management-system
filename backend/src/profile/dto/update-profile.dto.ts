@@ -10,12 +10,24 @@ export class UpdateProfileDto {
   lastName?: string;
 
   @IsOptional()
+  @IsString()
+  otherName?: string;
+
+  @IsOptional()
   @IsEmail()
   email?: string;
 
   @IsOptional()
   @IsString()
   phoneContact?: string;
+
+  @IsOptional()
+  @IsString()
+  PlaceOfBirth?: string;
+
+  @IsOptional()
+  @IsString()
+  BoxAddress?: string;
 
   @IsOptional()
   @IsString()
@@ -28,4 +40,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   optionalPhoneContact?: string;
+
+  @IsOptional()
+  @IsString()
+  optionalPhoneContactTwo?: string;
 }

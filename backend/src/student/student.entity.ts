@@ -7,10 +7,19 @@ import {
   UpdateDateColumn,
   JoinColumn,
   OneToOne,
+  ManyToMany,
+  OneToMany,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Role } from '../role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
+import { Parent } from '../parent/parent.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
 
 @Entity()
 export class Student {
@@ -25,6 +34,13 @@ export class Student {
 
   @Column({ unique: true })
   email: string;
+
+  @Column({
+    type: 'enum',
+    enum: Gender,
+    nullable: true,
+  })
+  gender: Gender;
 
   @Column()
   password: string; // For PIN storage
@@ -74,4 +90,14 @@ export class Student {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => Parent, (parent) => parent.student, {
+    cascade: true,
+    eager: true,
+    onDelete: 'CASCADE',
+  })
+  parents: Parent[];
+
+  @ManyToMany(() => ClassLevel, (classLevel) => classLevel.students)
+  classLevels: ClassLevel[];
 }

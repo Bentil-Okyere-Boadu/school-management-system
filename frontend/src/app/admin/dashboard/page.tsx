@@ -1,7 +1,7 @@
 'use client'
 import { Dialog } from '@/components/common/Dialog'
 import InputField from '@/components/InputField'
-import { useCreateSchool, useGetSchoolAdminInfo, useGetSchoolUsers } from '@/hooks/school-admin'
+import { useCreateSchool, useGetAdminDashboardStats, useGetSchoolAdminInfo, useGetSchoolUsers } from '@/hooks/school-admin'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -54,30 +54,33 @@ const AdminDashboard = () => {
   const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState("");
+
+      const { dashboardStats } = useGetAdminDashboardStats();
+
     const stats = [
       {
-        value: "2, 347",
+        value: dashboardStats?.totalTeachers || 0,
         label: "Total Teachers",
         iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/36a067b5f7f8490f5bc5c8962136645a32f17f39?placeholderIfAbsent=true",
         iconAlt: "School Icon",
         valueColor: "#597AE8",
       },
       {
-        value: "5, 347",
+        value: dashboardStats?.totalStudents || 0,
         label: "Total Students",
         iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/5cdc8e15cdd19351c9962680fff3b3636cd00e80?placeholderIfAbsent=true",
         iconAlt: "Teacher Icon",
         valueColor: "#BD7CEB",
       },
       {
-        value: "15, 192",
+        value: dashboardStats?.totalApplications || 0,
         label: "Total Applications",
         iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/2c8ec1dbb54a09a6027cd0a05fdb19c1c60805d1?placeholderIfAbsent=true",
         iconAlt: "Student Icon",
         valueColor: "#F081AE",
       },
       {
-        value: "82%",
+        value: dashboardStats?.averageAttendanceRate + "%" || '0%',
         label: "Average Attendance Rate",
         iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/ba656832819e22052f838d66aeb1b30662f1df92?placeholderIfAbsent=true",
         iconAlt: "Attendance Icon",
@@ -121,7 +124,7 @@ const AdminDashboard = () => {
     setCurrentPage(1);
   };
 
-  const { schoolUsers, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), "", "", 6);
+  const { schoolUsers, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), "", "", "", 6);
 
   return (
     <div>

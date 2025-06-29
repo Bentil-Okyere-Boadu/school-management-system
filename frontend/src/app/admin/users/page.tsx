@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Pagination } from "@/components/common/Pagination";
 import { UserTable } from "@/components/admin/users/UsersTable";
 import { SearchBar } from "@/components/common/SearchBar";
@@ -28,12 +28,13 @@ const UsersPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  const { schoolUsers, paginationValues, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "", 10);
+  const { schoolUsers, paginationValues, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "","",  10);
 
   const statusOptions = [
     { value: "", label: "Status" },
     { value: "active", label: "Active" },
-    { value: "pending", label: "Pending" }
+    { value: "pending", label: "Pending" },
+    { value: "archived", label: "Archived" }
   ];
   const roles = [
     { value: "teacher", label: "Teacher" },
@@ -80,6 +81,10 @@ const UsersPage: React.FC = () => {
       toast.error('Please enter details of user to invite.');
     }
   }
+
+  useEffect(() => {
+    refetch();
+  }, [selectedStatus]);
 
   return (
     <div>

@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useMemo } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Menu } from '@mantine/core';
 import {
@@ -9,8 +9,9 @@ import {
 import Cookies from "js-cookie";
 import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
-import { User } from "@/@types";
+import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
+import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -25,11 +26,71 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   const pathName = usePathname();
   const params = useParams();
   const schoolId = params.id;
-  const { school } = useGetSchoolById(schoolId as string);
+
+  const getSignedInRole = () => {
+    if(pathName.startsWith('/admin')) {
+      return Roles.SCHOOL_ADMIN;
+    } else if(pathName.startsWith('/superadmin')) {
+      return Roles.SUPER_ADMIN;
+    }
+  }
+
+  const isStudentDetailPage = pathName.includes(`/admin/students/${params.id}`);
+  const {schoolUser} = useGetSchoolUserById(params.id as string, {
+    enabled: isStudentDetailPage,
+    queryKey: ['schoolUser', params.id],
+  })
+
+  const isSchoolDetailPage = pathName.includes(`/superadmin/schools/${params.id}`);
+  const { school } = useGetSchoolById(schoolId as string, {
+    enabled: isSchoolDetailPage,
+    queryKey: [schoolId]
+  });
+
+  const { school: mySchool } = useGetMySchool(getSignedInRole() === Roles.SCHOOL_ADMIN? true : false );
+  
+  const isAdmissionDetailPage = pathName.includes(`/admin/admissions/${params.id}`);
+  const { admissionData } = useGetAdmissionById(params.id as string, {
+    enabled: isAdmissionDetailPage,
+    queryKey: ['admission', params.id]
+  });
+
+  const signedInRole = getSignedInRole();
+
+  const displayTitle: string = useMemo(() => {
+    if (isOverviewPage) {
+      if (signedInRole === Roles.SCHOOL_ADMIN) {
+        return mySchool?.name;
+      }
+      return `Hello, ${user?.firstName} ${user?.lastName}`;
+    }
+
+    // Detail view
+    if (admissionData) {
+      return `${admissionData.studentFirstName} ${admissionData.studentLastName}`;
+    }
+
+    if (signedInRole === Roles.SUPER_ADMIN) {
+      return school?.name;
+    }
+
+    if (signedInRole === Roles.SCHOOL_ADMIN) {
+      return `${schoolUser?.firstName ?? ''} ${schoolUser?.lastName ?? ''}`;
+    }
+
+    // Default fallback (e.g., teacher, student)
+    return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
+  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData]);
 
   const onHandleBreadCrumbPress = () => {
-    console.log(pathName);
-    router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
+     switch (getSignedInRole()) {
+      case Roles.SCHOOL_ADMIN:
+        router.push(`/admin/${activeMenuItem?.toLowerCase()}`)
+        break;
+      case Roles.SUPER_ADMIN:
+        router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
+        break;
+    }
   };
 
   const onHandleLogout = () => {
@@ -62,15 +123,21 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
           { isOverviewPage ? 
             (
               <div className="flex flex-col">
-                <h1 className="text-2xl text-neutral-800">Hello, {user?.firstName} {user?.lastName}</h1>
+                { getSignedInRole() === Roles.SCHOOL_ADMIN? (
+                  <h1 className="text-2xl text-neutral-800">{mySchool?.name}</h1>
+                ) : (
+                  <h1 className="text-2xl text-neutral-800">Hello, {user?.firstName} {user?.lastName}</h1>
+                )
+                }
+                
                 <p className="text-base text-zinc-600">Welcome to your {activeMenuItem} Overview</p>
               </div>
             ) : (
               <div className="flex flex-col">
                 <div className="text-xs text-zinc-600">
-                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{school?.name}</span>
+                  <span onClick={onHandleBreadCrumbPress} className="cursor-pointer">{activeMenuItem}</span><span>{" > "}</span><span className="text-[#AB58E7] underline">{displayTitle}</span>
                 </div>
-                <h2 className="text-2xl text-neutral-800 mt-2">{school?.name}</h2>
+                <h2 className="text-2xl text-neutral-800 mt-2">{displayTitle}</h2>
               </div>
             ) 
           }

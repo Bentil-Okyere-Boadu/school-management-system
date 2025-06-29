@@ -93,11 +93,9 @@ export class APIFeatures<T extends ObjectLiteral> {
     }
     return this;
   }
-  search(): this {
+  search(fieldsToSearch: string[] = []): this {
     const searchValue = this.queryString.search;
-    if (searchValue) {
-      const fieldsToSearch: string[] = ['firstName', 'lastName', 'email'];
-
+    if (searchValue && fieldsToSearch.length > 0) {
       this.query = this.query.andWhere(
         new Brackets((qb: SelectQueryBuilder<T>) => {
           for (const field of fieldsToSearch) {

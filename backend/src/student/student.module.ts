@@ -17,10 +17,23 @@ import { School } from 'src/school/school.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { Profile } from 'src/profile/profile.entity';
+import { ProfileService } from 'src/profile/profile.service';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { Parent } from 'src/parent/parent.entity';
+import { ParentService } from 'src/parent/parent.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Student, Role, School, SchoolAdmin, Teacher]),
+    TypeOrmModule.forFeature([
+      Student,
+      Role,
+      School,
+      SchoolAdmin,
+      Teacher,
+      Profile,
+      Parent,
+    ]),
     EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -38,7 +51,10 @@ import { Teacher } from 'src/teacher/teacher.entity';
     StudentService,
     AuthService,
     EmailService,
+    ProfileService,
     InvitationService,
+    ObjectStorageServiceService,
+    ParentService,
     StudentAuthService,
     StudentLocalStrategy,
     StudentLocalAuthGuard,

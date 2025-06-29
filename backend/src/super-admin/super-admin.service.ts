@@ -49,7 +49,7 @@ export class SuperAdminService {
     )
       .filter()
       .sort()
-      .search()
+      .search(['firstName', 'lastName', 'email'])
       .limitFields();
 
     const total = await featuresWithoutPagination.getQuery().getCount();
@@ -95,7 +95,7 @@ export class SuperAdminService {
     const features = new APIFeatures(query, queryString)
       .filter()
       .sort()
-      .search()
+      .search(['firstName', 'lastName', 'email'])
       .limitFields()
       .paginate();
 
@@ -190,7 +190,7 @@ export class SuperAdminService {
     const features = new APIFeatures(query, queryString)
       .filter()
       .sort()
-      .search()
+      .search(['firstName', 'lastName', 'email'])
       .limitFields()
       .paginate();
 

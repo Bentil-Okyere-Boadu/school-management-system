@@ -1,9 +1,11 @@
 "use client"
+import { Student } from '@/@types';
 import StudentAttendance from '@/components/admin/students/StudentAttendance';
 import StudentProfile from '@/components/admin/students/StudentProfile';
 import StudentResults from '@/components/admin/students/StudentResults';
 import TabBar from '@/components/common/TabBar';
-// import { useParams } from 'next/navigation'
+import { useGetSchoolUserById } from '@/hooks/school-admin';
+import { useParams } from 'next/navigation'
 import React, { useState } from 'react'
 
 export type TabListItem = {
@@ -12,7 +14,9 @@ export type TabListItem = {
 };
 
 const ViewStudentPage = () => {
-    // const {id} = useParams();
+    const {id} = useParams();
+
+    const {schoolUser, refetch} = useGetSchoolUserById(id as string)
 
     const [activeTabKey, setActiveTabKey] = useState('student-profile');
     
@@ -36,7 +40,7 @@ const ViewStudentPage = () => {
 
         { activeTabKey === "student-profile" && (
             <div>
-                <StudentProfile/>
+                <StudentProfile viewMode={true} studentData={schoolUser as Student} refetch={refetch}/>
             </div>
         )}
         { activeTabKey === "attendance" && (
