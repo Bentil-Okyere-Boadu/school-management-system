@@ -11,7 +11,7 @@ export type TabListItem = {
 };
 
 const Attendance = () => {
-  const [alreadyDone] = useState(false);
+  const [alreadyDone] = useState(true);
   
   const stats = [
     {
