@@ -21,6 +21,10 @@ import { School } from 'src/school/school.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { ClassLevelService } from 'src/class-level/class-level.service';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+import { AttendanceService } from 'src/attendance/attendance.service';
+import { Attendance } from 'src/attendance/attendance.entity';
 
 @Module({
   imports: [
@@ -31,6 +35,8 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       Student,
       School,
       Profile,
+      ClassLevel,
+      Attendance,
     ]),
     EmailModule,
     JwtModule.registerAsync({
@@ -56,6 +62,8 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
     TeacherLocalAuthGuard,
     TeacherJwtStrategy,
     TeacherJwtAuthGuard,
+    ClassLevelService,
+    AttendanceService,
   ],
   controllers: [TeacherController],
   exports: [TeacherService, TeacherAuthService, TeacherJwtAuthGuard],
