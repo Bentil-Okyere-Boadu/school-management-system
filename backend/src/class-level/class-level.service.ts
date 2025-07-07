@@ -114,4 +114,11 @@ export class ClassLevelService {
       relations: ['teachers', 'students'],
     });
   }
+  async getClassesForTeacher(teacherId: string) {
+    return this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoinAndSelect('classLevel.teachers', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId })
+      .getMany();
+  }
 }
