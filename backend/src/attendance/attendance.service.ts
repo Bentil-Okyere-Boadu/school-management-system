@@ -36,7 +36,7 @@ export class AttendanceService {
 
     const dateRange = this.getDateRange(filter);
 
-    // Get all attendance records for the date range
+    // Fetch attendance records in the range
     const attendanceRecords = await this.attendanceRepository.find({
       where: {
         classLevel: { id: filter.classLevelId },
@@ -46,14 +46,14 @@ export class AttendanceService {
       order: { date: 'ASC' },
     });
 
-    // Ensure today is included in the date list
+    const uniqueDates = this.generateDateRange(
+      dateRange.startDate,
+      dateRange.endDate,
+    );
+
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const uniqueDates = [
-      ...new Set([...attendanceRecords.map((record) => record.date), todayStr]),
-    ].sort();
-
-    // Create attendance map: studentId -> { date -> status }
+    // Map: studentId => { date => status }
     const attendanceMap: Map<string, Map<string, string>> = new Map();
 
     attendanceRecords.forEach((record) => {
@@ -63,27 +63,21 @@ export class AttendanceService {
       attendanceMap.get(record.student.id)!.set(record.date, record.status);
     });
 
-    // Build response with students and their attendance for each date
     const studentsWithAttendance = classLevel.students.map((student) => {
-      const studentAttendance: Map<string, string> =
-        attendanceMap.get(student.id) ?? new Map();
+      const studentAttendance =
+        attendanceMap.get(student.id) ?? new Map<string, string>();
 
       const attendanceByDate = uniqueDates.reduce(
         (acc, date) => {
-          acc[date] = studentAttendance.get(date) ?? 'present'; // default to present
+          if (date > todayStr) {
+            acc[date] = null; // Or use 'pending'
+          } else {
+            acc[date] = studentAttendance.get(date) ?? 'present';
+          }
           return acc;
         },
-        {} as Record<string, string>,
+        {} as Record<string, string | null>,
       );
-
-      // Calculate attendance statistics
-      const totalDays = uniqueDates.length;
-      const presentDays = Object.values(attendanceByDate).filter(
-        (status) => status === 'present',
-      ).length;
-      const absentDays = totalDays - presentDays;
-      const attendancePercentage =
-        totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
 
       return {
         id: student.id,
@@ -91,12 +85,6 @@ export class AttendanceService {
         lastName: student.lastName,
         fullName: `${student.firstName} ${student.lastName}`,
         attendanceByDate,
-        statistics: {
-          totalDays,
-          presentDays,
-          absentDays,
-          attendancePercentage,
-        },
       };
     });
 
@@ -111,15 +99,20 @@ export class AttendanceService {
         dates: uniqueDates,
       },
       students: studentsWithAttendance,
-      // Uncomment if needed later
-      // summary: {
-      //   totalStudents: classLevel.students.length,
-      //   totalDays: uniqueDates.length,
-      //   overallAttendancePercentage: this.calculateOverallAttendancePercentage(
-      //     studentsWithAttendance,
-      //   ),
-      // },
     };
+  }
+
+  private generateDateRange(start: string, end: string): string[] {
+    const dates: string[] = [];
+    const current = new Date(start);
+    const endDate = new Date(end);
+
+    while (current <= endDate) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+
+    return dates;
   }
 
   private getDateRange(filter: AttendanceFilter): {
@@ -243,29 +236,5 @@ export class AttendanceService {
       await this.attendanceRepository.save(attendance);
     }
     return { message: 'Attendance marked successfully' };
-  }
-
-  // Additional helper methods for getting attendance summaries
-  async getAttendanceSummary(
-    classLevelId: string,
-    filterType: 'week' | 'month' | 'year' = 'month',
-  ) {
-    const filter: AttendanceFilter = {
-      classLevelId,
-      filterType,
-    };
-
-    const attendance = await this.getClassAttendance(filter);
-
-    return {
-      classLevel: attendance.classLevel,
-      //summary: attendance.summary,
-      dateRange: attendance.dateRange,
-      studentSummaries: attendance.students.map((student) => ({
-        id: student.id,
-        fullName: student.fullName,
-        statistics: student.statistics,
-      })),
-    };
   }
 }
