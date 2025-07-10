@@ -7,14 +7,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Teacher } from './teacher.entity';
-import { Role } from '../role/role.entity';
-import { School } from '../school/school.entity';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { EmailService } from '../common/services/email.service';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import * as crypto from 'crypto';
 import { InvitationService } from 'src/invitation/invitation.service';
+import { ProfileService } from 'src/profile/profile.service';
+import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 
 @Injectable()
 export class TeacherService {
@@ -23,6 +22,7 @@ export class TeacherService {
     private teacherRepository: Repository<Teacher>,
     private emailService: EmailService,
     private invitationService: InvitationService,
+    private readonly profileService: ProfileService,
   ) {}
 
   async resendTeacherInvitation(
@@ -88,5 +88,39 @@ export class TeacherService {
     } catch (error) {
       throw new BadRequestException('Failed to send PIN reset email');
     }
+  }
+  async updateProfile(
+    adminId: string,
+    updateDto: UpdateProfileDto,
+  ): Promise<Teacher> {
+    return this.profileService.handleUpdateProfile(
+      adminId,
+      updateDto,
+      this.teacherRepository,
+      ['role', 'school', 'profile'],
+    );
+  }
+
+  getRepository(): Repository<Teacher> {
+    return this.teacherRepository;
+  }
+
+  async getMyProfile(user: Teacher) {
+    if (!user) {
+      throw new NotFoundException('no Teacher found');
+    }
+
+    const teacherInfo = await this.teacherRepository.findOne({
+      where: { id: user.id },
+      relations: ['role', 'profile'],
+    });
+    if (teacherInfo?.profile?.id) {
+      const profileWithUrl = await this.profileService.getProfileWithImageUrl(
+        teacherInfo.profile.id,
+      );
+      teacherInfo.profile = profileWithUrl;
+    }
+
+    return teacherInfo;
   }
 }

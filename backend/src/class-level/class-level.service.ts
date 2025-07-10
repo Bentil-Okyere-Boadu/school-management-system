@@ -83,7 +83,18 @@ export class ClassLevelService {
 
     return this.classLevelRepository.save(classLevel);
   }
-
+  async getClassLevelNameById(
+    id: string,
+  ): Promise<{ id: string; name: string }> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id },
+      select: ['id', 'name'],
+    });
+    if (!classLevel) {
+      throw new NotFoundException(`Class level with ID ${id} not found`);
+    }
+    return classLevel;
+  }
   async findOne(id: string, admin: SchoolAdmin): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id, school: { id: admin.school.id } },
