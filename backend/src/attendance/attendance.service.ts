@@ -14,6 +14,7 @@ export interface AttendanceFilter {
   year?: number; // for year filter
   month?: number; // for month filter (1-12)
   week?: number; // for week filter (week number of year)
+  weekOfMonth?: number; // e.g. 2nd week in a given month
 }
 
 @Injectable()
@@ -34,9 +35,9 @@ export class AttendanceService {
     });
     if (!classLevel) throw new NotFoundException('Class not found');
 
+    /* ─────────────────────────────── date range & records ────────────────────────────── */
     const dateRange = this.getDateRange(filter);
 
-    // Fetch attendance records in the range
     const attendanceRecords = await this.attendanceRepository.find({
       where: {
         classLevel: { id: filter.classLevelId },
@@ -50,34 +51,47 @@ export class AttendanceService {
       dateRange.startDate,
       dateRange.endDate,
     );
-
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Map: studentId => { date => status }
+    /* ─────────────────────────────── build look‑up map ──────────────────────────────── */
     const attendanceMap: Map<string, Map<string, string>> = new Map();
-
-    attendanceRecords.forEach((record) => {
-      if (!attendanceMap.has(record.student.id)) {
-        attendanceMap.set(record.student.id, new Map());
+    attendanceRecords.forEach((rec) => {
+      if (!attendanceMap.has(rec.student.id)) {
+        attendanceMap.set(rec.student.id, new Map());
       }
-      attendanceMap.get(record.student.id)!.set(record.date, record.status);
+      attendanceMap.get(rec.student.id)!.set(rec.date, rec.status);
     });
 
+    /* ────────────────────────────── per‑student output ──────────────────────────────── */
     const studentsWithAttendance = classLevel.students.map((student) => {
       const studentAttendance =
         attendanceMap.get(student.id) ?? new Map<string, string>();
 
+      // Build daily status object
       const attendanceByDate = uniqueDates.reduce(
         (acc, date) => {
-          if (date > todayStr) {
-            acc[date] = null; // Or use 'pending'
-          } else {
-            acc[date] = studentAttendance.get(date) ?? 'present';
-          }
+          const rawStatus = studentAttendance.get(date);
+          const status =
+            rawStatus === 'present' || rawStatus === 'absent'
+              ? rawStatus
+              : 'present';
+
+          acc[date] = date > todayStr ? null : status;
           return acc;
         },
-        {} as Record<string, string | null>,
+        {} as Record<string, 'present' | 'absent' | null>,
       );
+
+      /* ---------------- stats up to today only ---------------- */
+      const relevantStatuses = Object.entries(attendanceByDate)
+        .filter(([date, status]) => date <= todayStr && status !== null)
+        .map(([, status]) => status);
+
+      const presentCount = relevantStatuses.filter(
+        (s) => s === 'present',
+      ).length;
+      const absentCount = relevantStatuses.filter((s) => s === 'absent').length;
+      const totalMarkedDays = presentCount + absentCount;
 
       return {
         id: student.id,
@@ -85,14 +99,17 @@ export class AttendanceService {
         lastName: student.lastName,
         fullName: `${student.firstName} ${student.lastName}`,
         attendanceByDate,
+        statistics: {
+          totalMarkedDays,
+          presentCount,
+          absentCount,
+        },
       };
     });
 
+    /* ─────────────────────────────────── response ──────────────────────────────────── */
     return {
-      classLevel: {
-        id: classLevel.id,
-        name: classLevel.name,
-      },
+      classLevel: { id: classLevel.id, name: classLevel.name },
       dateRange: {
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
@@ -131,37 +148,43 @@ export class AttendanceService {
         break;
 
       case 'week':
-        if (filter.week && filter.year) {
-          // Get specific week of year
+        if (filter.month && filter.weekOfMonth) {
+          // Handle weekOfMonth + month + year
+          const year = filter.year ?? today.getFullYear();
+          const month = filter.month - 1; // 0-based index
+          const firstDay = new Date(year, month, 1);
+          const start = new Date(firstDay);
+          start.setDate(1 + (filter.weekOfMonth - 1) * 7);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          startDate = start;
+          endDate = end;
+        } else if (filter.week && filter.year) {
+          // Handle ISO week + year
           startDate = this.getDateOfWeek(filter.week, filter.year);
           endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + 6); // Add 6 days to get end of week
+          endDate.setDate(startDate.getDate() + 6);
         } else {
-          // Current week
+          // Default to current week
           startDate = new Date(today);
-          startDate.setDate(today.getDate() - today.getDay()); // Start of current week (Sunday)
+          startDate.setDate(today.getDate() - today.getDay());
           endDate = new Date(startDate);
-          endDate.setDate(startDate.getDate() + 6); // End of current week (Saturday)
+          endDate.setDate(startDate.getDate() + 6);
         }
         break;
 
       case 'month':
-        if (filter.month && filter.year) {
-          startDate = new Date(filter.year, filter.month - 1, 1);
-          endDate = new Date(filter.year, filter.month, 0); // Last day of month
-        } else {
-          // Current month
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-          endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        }
+        const yearForMonth = filter.year ?? today.getFullYear();
+        const month = (filter.month ?? today.getMonth() + 1) - 1;
+        startDate = new Date(yearForMonth, month, 1);
+        endDate = new Date(yearForMonth, month + 1, 0);
         break;
 
-      case 'year': {
-        const year = filter.year || today.getFullYear();
-        startDate = new Date(year, 0, 1); // January 1st
-        endDate = new Date(year, 11, 31); // December 31st
+      case 'year':
+        const year = filter.year ?? today.getFullYear();
+        startDate = new Date(year, 0, 1);
+        endDate = new Date(year, 11, 31);
         break;
-      }
 
       case 'custom':
         if (!filter.startDate || !filter.endDate) {
@@ -184,24 +207,20 @@ export class AttendanceService {
   }
 
   private getDateOfWeek(week: number, year: number): Date {
-    const date = new Date(year, 0, 1);
-    const dayOfWeek = date.getDay();
-    const daysToAdd = (week - 1) * 7 - dayOfWeek;
-    date.setDate(date.getDate() + daysToAdd);
-    return date;
+    const firstDay = new Date(year, 0, 1);
+    const day = firstDay.getDay(); // 0 (Sun) to 6 (Sat)
+    const diff = (week - 1) * 7 - (day > 0 ? day - 1 : 6);
+    firstDay.setDate(firstDay.getDate() + diff);
+    return firstDay;
   }
 
-  // private calculateOverallAttendancePercentage(students: any[]): number {
-  //   if (students.length === 0) return 100;
+  private getWeekNumber(date: Date): number {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear =
+      (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  }
 
-  //   const totalPercentage = students.reduce((sum, student) => {
-  //     return sum + student.statistics.attendancePercentage;
-  //   }, 0);
-
-  //   return Math.round(totalPercentage / students.length);
-  // }
-
-  // Keep the original method for backward compatibility
   async getClassAttendanceForDay(classLevelId: string, date: string) {
     return this.getClassAttendance({
       classLevelId,

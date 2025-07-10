@@ -7,6 +7,7 @@ import {
   Get,
   Param,
   Query,
+  Put,
 } from '@nestjs/common';
 import { TeacherAuthService } from './teacher.auth.service';
 import { TeacherService } from './teacher.service';
@@ -23,6 +24,7 @@ import {
   AttendanceService,
 } from 'src/attendance/attendance.service';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 
 @Controller('teacher')
 export class TeacherController {
@@ -44,6 +46,12 @@ export class TeacherController {
   @Get('my-classes')
   async getMyClasses(@CurrentUser() user: Teacher) {
     return this.classLevelService.getClassesForTeacher(user.id);
+  }
+
+  @Get('classes/:id/name')
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  async getClassLevelName(@Param('id') id: string) {
+    return this.classLevelService.getClassLevelNameById(id);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -96,5 +104,21 @@ export class TeacherController {
   @Post('forgot-password')
   forgotPassword(@Body() forgotPasswordDto: ForgotTeacherPasswordDto) {
     return this.TeacherService.forgotPin(forgotPasswordDto.email);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('profile/me')
+  @Roles('teacher')
+  async updateProfile(
+    @CurrentUser() user: Teacher,
+    @Body() updateDto: UpdateProfileDto,
+  ) {
+    return this.TeacherService.updateProfile(user.id, updateDto);
+  }
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('me')
+  @Roles('teacher')
+  getProfile(@CurrentUser() teacher: Teacher) {
+    return this.TeacherService.getMyProfile(teacher);
   }
 }
