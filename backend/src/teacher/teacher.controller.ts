@@ -25,6 +25,7 @@ import {
 } from 'src/attendance/attendance.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { QueryString } from 'src/common/api-features/api-features';
 
 @Controller('teacher')
 export class TeacherController {
@@ -44,10 +45,12 @@ export class TeacherController {
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
-  async getMyClasses(@CurrentUser() user: Teacher) {
-    return this.classLevelService.getClassesForTeacher(user.id);
+  async getMyClasses(
+    @CurrentUser() user: Teacher,
+    @Query() query: QueryString,
+  ) {
+    return this.classLevelService.getClassesForTeacher(user.id, query);
   }
-
   @Get('classes/:id/name')
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   async getClassLevelName(@Param('id') id: string) {
