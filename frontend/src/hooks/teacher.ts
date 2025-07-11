@@ -1,5 +1,5 @@
 import { ClassLevel, User } from "@/@types";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
 export const useTeacherGetMe = () => {
@@ -36,6 +36,24 @@ export const useGetTeacherClasses = (search: string = "") => {
 
     return { classLevels, isLoading, refetch }
 }
+
+
+export const useGetTeacherClassById = (
+  id: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isPending, refetch } = useQuery({
+    queryKey: ['teacherClass', id],
+    queryFn: () => customAPI.get(`/teacher/classes/${id}/name`),
+    enabled: options?.enabled ?? Boolean(id),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const classData = (data as { data: ClassLevel })?.data;
+
+  return { classData, isPending, refetch };
+};
 
 
 
