@@ -7,6 +7,7 @@ import { Teacher } from '../teacher/teacher.entity';
 import { Student } from '../student/student.entity';
 import { CreateClassLevelDto } from './dto/create-class-level.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 
 @Injectable()
 export class ClassLevelService {
@@ -83,7 +84,18 @@ export class ClassLevelService {
 
     return this.classLevelRepository.save(classLevel);
   }
-
+  async getClassLevelNameById(
+    id: string,
+  ): Promise<{ id: string; name: string }> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id },
+      select: ['id', 'name'],
+    });
+    if (!classLevel) {
+      throw new NotFoundException(`Class level with ID ${id} not found`);
+    }
+    return classLevel;
+  }
   async findOne(id: string, admin: SchoolAdmin): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id, school: { id: admin.school.id } },
@@ -114,11 +126,21 @@ export class ClassLevelService {
       relations: ['teachers', 'students'],
     });
   }
-  async getClassesForTeacher(teacherId: string) {
-    return this.classLevelRepository
+
+  async getClassesForTeacher(teacherId: string, query?: QueryString) {
+    const queryBuilder = this.classLevelRepository
       .createQueryBuilder('classLevel')
       .leftJoinAndSelect('classLevel.teachers', 'teacher')
       .where('teacher.id = :teacherId', { teacherId })
-      .getMany();
+      .loadRelationCountAndMap(
+        'classLevel.studentCount',
+        'classLevel.students',
+      );
+
+    if (query) {
+      const features = new APIFeatures(queryBuilder, query).search(['name']);
+      return features.getQuery().getMany();
+    }
+    return queryBuilder.getMany();
   }
 }

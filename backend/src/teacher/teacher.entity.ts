@@ -6,10 +6,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToOne,
+  ManyToMany,
 } from 'typeorm';
 import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
 import { Profile } from 'src/profile/profile.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
 
 @Entity()
 export class Teacher {
@@ -62,4 +64,6 @@ export class Teacher {
 
   @UpdateDateColumn()
   updatedAt: Date;
+  @ManyToMany(() => ClassLevel, (classLevel) => classLevel.teachers)
+  classLevels: ClassLevel[];
 }
