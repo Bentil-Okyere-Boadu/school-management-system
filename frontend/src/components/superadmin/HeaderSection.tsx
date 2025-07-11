@@ -11,6 +11,7 @@ import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
+import { useGetTeacherClassById } from "@/hooks/teacher";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -53,6 +54,12 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     queryKey: ['admission', params.id]
   });
 
+  const isTeacherAttendancePage = pathName.includes(`/teacher/classes/${params.classId}`);
+    const { classData } = useGetTeacherClassById(params.classId as string, {
+    enabled: isTeacherAttendancePage,
+    queryKey: ['teacherClass', params.classId]
+  });
+
   const signedInRole = getSignedInRole();
 
   const displayTitle: string = useMemo(() => {
@@ -66,6 +73,10 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     // Detail view
     if (admissionData) {
       return `${admissionData.studentFirstName} ${admissionData.studentLastName}`;
+    }
+
+    if (isTeacherAttendancePage) {
+      return `${classData?.name || ''}` || "";
     }
 
     if (signedInRole === Roles.SUPER_ADMIN) {
@@ -88,6 +99,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
       case Roles.SUPER_ADMIN:
         router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
         break;
+      default:
+        window.history.back();
     }
   };
 

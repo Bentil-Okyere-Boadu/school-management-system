@@ -58,7 +58,7 @@ export function handleLoginRedirectAndToken(
   const roleToRouteMap: Record<string, string> = {
     super_admin: "/superadmin/dashboard",
     school_admin: "/admin/dashboard",
-    teacher: "/teacher/dashboard",
+    teacher: "/teacher/classes",
     student: "/student/profile",
   };
 
