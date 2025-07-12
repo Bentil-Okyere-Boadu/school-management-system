@@ -25,6 +25,7 @@ import { ClassLevelService } from 'src/class-level/class-level.service';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { Attendance } from 'src/attendance/attendance.entity';
+import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { Attendance } from 'src/attendance/attendance.entity';
       Profile,
       ClassLevel,
       Attendance,
+      Holiday,
     ]),
     EmailModule,
     JwtModule.registerAsync({

@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Attendance } from './attendance.entity';
 import { ClassLevel } from '../class-level/class-level.entity';
 import { Student } from '../student/student.entity';
+import { Holiday } from '../academic-calendar/entitites/holiday.entity';
 
 export interface AttendanceFilter {
   classLevelId: string;
@@ -38,12 +43,14 @@ export class AttendanceService {
     private classLevelRepository: Repository<ClassLevel>,
     @InjectRepository(Student)
     private studentRepository: Repository<Student>,
+    @InjectRepository(Holiday)
+    private holidayRepository: Repository<Holiday>,
   ) {}
 
   async getClassAttendance(filter: AttendanceFilter) {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id: filter.classLevelId },
-      relations: ['students'],
+      relations: ['students', 'school'],
     });
     if (!classLevel) throw new NotFoundException('Class not found');
 
@@ -58,6 +65,21 @@ export class AttendanceService {
       relations: ['student'],
       order: { date: 'ASC' },
     });
+
+    /* ───────────── get holidays for the school ───────────── */
+    const holidays = await this.holidayRepository
+      .createQueryBuilder('holiday')
+      .innerJoin('holiday.term', 'term')
+      .innerJoin('term.academicCalendar', 'calendar')
+      .innerJoin('calendar.school', 'school')
+      .where('school.id = :schoolId', { schoolId: classLevel.school.id })
+      .andWhere('holiday.date BETWEEN :startDate AND :endDate', {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      })
+      .getMany();
+
+    const holidayDates = new Set(holidays.map((h) => h.date));
 
     const uniqueDates = this.generateDateRange(
       dateRange.startDate,
@@ -82,6 +104,19 @@ export class AttendanceService {
 
       const attendanceByDate = uniqueDates.reduce(
         (acc, date) => {
+          // Check if it's a weekend
+          const dayOfWeek = new Date(date).getDay();
+          if (dayOfWeek === 0 || dayOfWeek === 6) {
+            acc[date] = 'weekend';
+            return acc;
+          }
+
+          // Check if it's a holiday
+          if (holidayDates.has(date)) {
+            acc[date] = 'holiday';
+            return acc;
+          }
+
           const rawStatus = studentAttendance.get(date);
           const status =
             rawStatus === 'present' || rawStatus === 'absent'
@@ -90,11 +125,20 @@ export class AttendanceService {
           acc[date] = date > todayStr ? null : status;
           return acc;
         },
-        {} as Record<string, 'present' | 'absent' | null>,
+        {} as Record<
+          string,
+          'present' | 'absent' | 'holiday' | 'weekend' | null
+        >,
       );
 
       const relevantStatuses = Object.entries(attendanceByDate)
-        .filter(([date, status]) => date <= todayStr && status !== null)
+        .filter(
+          ([date, status]) =>
+            date <= todayStr &&
+            status !== null &&
+            status !== 'holiday' &&
+            status !== 'weekend',
+        )
         .map(([, status]) => status);
 
       const presentCount = relevantStatuses.filter(
@@ -207,18 +251,20 @@ export class AttendanceService {
         }
         break;
 
-      case 'month':
+      case 'month': {
         const yearForMonth = filter.year ?? today.getFullYear();
         const month = (filter.month ?? today.getMonth() + 1) - 1;
         startDate = new Date(yearForMonth, month, 1);
         endDate = new Date(yearForMonth, month + 1, 0);
         break;
+      }
 
-      case 'year':
+      case 'year': {
         const year = filter.year ?? today.getFullYear();
         startDate = new Date(year, 0, 1);
         endDate = new Date(year, 11, 31);
         break;
+      }
 
       case 'custom':
         if (!filter.startDate || !filter.endDate) {
@@ -268,6 +314,32 @@ export class AttendanceService {
     date: string,
     records: { studentId: string; status: 'present' | 'absent' }[],
   ) {
+    // Check if the date is a weekend
+    const dayOfWeek = new Date(date).getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      throw new BadRequestException('Cannot mark attendance on weekends');
+    }
+
+    // Check if the date is a holiday
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['school'],
+    });
+    if (!classLevel) throw new NotFoundException('Class not found');
+
+    const isHoliday = await this.holidayRepository
+      .createQueryBuilder('holiday')
+      .innerJoin('holiday.term', 'term')
+      .innerJoin('term.academicCalendar', 'calendar')
+      .innerJoin('calendar.school', 'school')
+      .where('school.id = :schoolId', { schoolId: classLevel.school.id })
+      .andWhere('holiday.date = :date', { date })
+      .getExists();
+
+    if (isHoliday) {
+      throw new BadRequestException('Cannot mark attendance on a holiday');
+    }
+
     for (const record of records) {
       let attendance = await this.attendanceRepository.findOne({
         where: {
