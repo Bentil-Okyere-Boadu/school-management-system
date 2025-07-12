@@ -74,7 +74,7 @@ export const AttendanceSummaryTabSection: React.FC= () => {
 
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 px-0.5">
 
       <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
 

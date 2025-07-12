@@ -159,6 +159,7 @@ const ClassesPage = () => {
               key={index + "12"}
               showEditAndDelete={true}
               classData={data}
+              studentCount={data?.students?.length}
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
             />

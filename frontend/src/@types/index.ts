@@ -174,6 +174,7 @@ export interface ClassLevel {
   studentIds: string[];
   students: User[];
   teachers: User[];
+  studentCount?: number;
 }
 
 export interface AdmissionPolicy {

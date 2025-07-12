@@ -11,6 +11,7 @@ interface ClassCardProps {
   showEditAndDelete?: boolean
   showGoToAttendance?: boolean,
   onNavigateClick?: (item: ClassLevel) => void;
+  studentCount?: number;
 }
 
 export const ClassCard: React.FC<ClassCardProps> = ({
@@ -20,6 +21,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   showEditAndDelete = false,
   showGoToAttendance = false,
   onNavigateClick,
+  studentCount,
 }) => {
   return (
     <div
@@ -48,7 +50,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
                 <IconSchool size={18} className="text-gray-500" />
                 <span className="text-gray-500">Students count:</span>
             </div>
-          <span className="font-medium">{classData?.students?.length}</span>
+          <span className="font-medium">{studentCount}</span>
         </div>
         <div className="flex gap-1">
             <div className="flex gap-1.5 items-center">

@@ -27,7 +27,7 @@ export const useGetTeacherClasses = (search: string = "") => {
             const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
             console.log(params);
 
-            return customAPI.get(`/teacher/my-classes`);
+            return customAPI.get(`/teacher/my-classes?${params}`);
         },
         refetchOnWindowFocus: true
     })
