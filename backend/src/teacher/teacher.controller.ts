@@ -69,6 +69,8 @@ export class TeacherController {
     @Query('year') year?: number,
     @Query('month') month?: number,
     @Query('week') week?: number,
+    @Query('weekOfMonth') weekOfMonth?: number,
+    @Query('summaryOnly') summaryOnly?: boolean,
   ) {
     // Optionally, check if user is assigned to this class
     const filter: AttendanceFilter = {
@@ -80,7 +82,16 @@ export class TeacherController {
       year,
       month,
       week,
+      weekOfMonth,
+      summaryOnly,
     };
+    if (weekOfMonth && filterType !== 'week') {
+      filter.filterType = 'week';
+    }
+
+    if (startDate && endDate && filterType !== 'custom') {
+      filter.filterType = 'custom';
+    }
 
     return this.attendanceService.getClassAttendance(filter);
   }

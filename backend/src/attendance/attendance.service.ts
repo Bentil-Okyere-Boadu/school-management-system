@@ -15,8 +15,20 @@ export interface AttendanceFilter {
   month?: number; // for month filter (1-12)
   week?: number; // for week filter (week number of year)
   weekOfMonth?: number; // e.g. 2nd week in a given month
+  summaryOnly?: boolean;
 }
-
+type StudentWithAttendance = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  statistics: {
+    totalMarkedDays: number;
+    presentCount: number;
+    absentCount: number;
+    totalDaysInRange: number;
+  };
+};
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -35,7 +47,7 @@ export class AttendanceService {
     });
     if (!classLevel) throw new NotFoundException('Class not found');
 
-    /* ─────────────────────────────── date range & records ────────────────────────────── */
+    /* ───────────── date range & records ───────────── */
     const dateRange = this.getDateRange(filter);
 
     const attendanceRecords = await this.attendanceRepository.find({
@@ -51,9 +63,10 @@ export class AttendanceService {
       dateRange.startDate,
       dateRange.endDate,
     );
+    const totalDaysInRange = uniqueDates.length;
     const todayStr = new Date().toISOString().split('T')[0];
 
-    /* ─────────────────────────────── build look‑up map ──────────────────────────────── */
+    /* ───────────── build lookup map ───────────── */
     const attendanceMap: Map<string, Map<string, string>> = new Map();
     attendanceRecords.forEach((rec) => {
       if (!attendanceMap.has(rec.student.id)) {
@@ -62,12 +75,11 @@ export class AttendanceService {
       attendanceMap.get(rec.student.id)!.set(rec.date, rec.status);
     });
 
-    /* ────────────────────────────── per‑student output ──────────────────────────────── */
-    const studentsWithAttendance = classLevel.students.map((student) => {
+    /* ───────────── full detailed students ───────────── */
+    const detailedStudents = classLevel.students.map((student) => {
       const studentAttendance =
         attendanceMap.get(student.id) ?? new Map<string, string>();
 
-      // Build daily status object
       const attendanceByDate = uniqueDates.reduce(
         (acc, date) => {
           const rawStatus = studentAttendance.get(date);
@@ -75,14 +87,12 @@ export class AttendanceService {
             rawStatus === 'present' || rawStatus === 'absent'
               ? rawStatus
               : 'present';
-
           acc[date] = date > todayStr ? null : status;
           return acc;
         },
         {} as Record<string, 'present' | 'absent' | null>,
       );
 
-      /* ---------------- stats up to today only ---------------- */
       const relevantStatuses = Object.entries(attendanceByDate)
         .filter(([date, status]) => date <= todayStr && status !== null)
         .map(([, status]) => status);
@@ -103,20 +113,39 @@ export class AttendanceService {
           totalMarkedDays,
           presentCount,
           absentCount,
+          totalDaysInRange,
         },
       };
     });
 
-    /* ─────────────────────────────────── response ──────────────────────────────────── */
-    return {
-      classLevel: { id: classLevel.id, name: classLevel.name },
-      dateRange: {
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-        dates: uniqueDates,
-      },
-      students: studentsWithAttendance,
-    };
+    /* ───────────── if summaryOnly = true, strip down ───────────── */
+    const students = filter.summaryOnly
+      ? detailedStudents.map(
+          ({ id, firstName, lastName, fullName, statistics }) => ({
+            id,
+            firstName,
+            lastName,
+            fullName,
+            statistics,
+          }),
+        )
+      : detailedStudents;
+
+    /* ───────────── return based on summary flag ───────────── */
+    return filter.summaryOnly
+      ? {
+          classLevel: { id: classLevel.id, name: classLevel.name },
+          students,
+        }
+      : {
+          classLevel: { id: classLevel.id, name: classLevel.name },
+          dateRange: {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+            dates: uniqueDates,
+          },
+          students,
+        };
   }
 
   private generateDateRange(start: string, end: string): string[] {
@@ -149,16 +178,21 @@ export class AttendanceService {
 
       case 'week':
         if (filter.month && filter.weekOfMonth) {
-          // Handle weekOfMonth + month + year
+          // ───── week N INSIDE a specific month ─────
           const year = filter.year ?? today.getFullYear();
-          const month = filter.month - 1; // 0-based index
-          const firstDay = new Date(year, month, 1);
-          const start = new Date(firstDay);
-          start.setDate(1 + (filter.weekOfMonth - 1) * 7);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 6);
-          startDate = start;
-          endDate = end;
+          const month = filter.month - 1; // 0‑based
+          const week = filter.weekOfMonth; // 1‑based
+
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const startDay = 1 + (week - 1) * 7;
+          if (startDay > daysInMonth) {
+            throw new Error(
+              'weekOfMonth exceeds number of weeks in this month',
+            );
+          }
+
+          startDate = new Date(year, month, startDay);
+          endDate = new Date(year, month, Math.min(startDay + 6, daysInMonth));
         } else if (filter.week && filter.year) {
           // Handle ISO week + year
           startDate = this.getDateOfWeek(filter.week, filter.year);
