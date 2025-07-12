@@ -35,6 +35,7 @@ const ClassesPage = () => {
           <ClassCard
             key={index + "12"}
             classData={data}
+            studentCount={data?.studentCount}
             showGoToAttendance={true}
             onNavigateClick={onNavigateToAttendance}
           />
