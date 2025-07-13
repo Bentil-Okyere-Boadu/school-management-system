@@ -9,6 +9,8 @@ import { Attendance } from './attendance.entity';
 import { ClassLevel } from '../class-level/class-level.entity';
 import { Student } from '../student/student.entity';
 import { Holiday } from '../academic-calendar/entitites/holiday.entity';
+import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
+import { AcademicCalendar } from '../academic-calendar/entitites/academic-calendar.entity';
 
 export interface AttendanceFilter {
   classLevelId: string;
@@ -22,18 +24,7 @@ export interface AttendanceFilter {
   weekOfMonth?: number; // e.g. 2nd week in a given month
   summaryOnly?: boolean;
 }
-type StudentWithAttendance = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  statistics: {
-    totalMarkedDays: number;
-    presentCount: number;
-    absentCount: number;
-    totalDaysInRange: number;
-  };
-};
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -41,10 +32,12 @@ export class AttendanceService {
     private attendanceRepository: Repository<Attendance>,
     @InjectRepository(ClassLevel)
     private classLevelRepository: Repository<ClassLevel>,
-    @InjectRepository(Student)
-    private studentRepository: Repository<Student>,
     @InjectRepository(Holiday)
     private holidayRepository: Repository<Holiday>,
+    @InjectRepository(AcademicTerm)
+    private academicTermRepository: Repository<AcademicTerm>,
+    @InjectRepository(AcademicCalendar)
+    private academicCalendarRepository: Repository<AcademicCalendar>,
   ) {}
 
   async getClassAttendance(filter: AttendanceFilter) {
@@ -301,11 +294,103 @@ export class AttendanceService {
     return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   }
 
+  private async findAcademicTermForDate(
+    schoolId: string,
+    date: string,
+  ): Promise<{ term: AcademicTerm; calendar: AcademicCalendar } | null> {
+    const term = await this.academicTermRepository
+      .createQueryBuilder('term')
+      .innerJoin('term.academicCalendar', 'calendar')
+      .innerJoin('calendar.school', 'school')
+      .where('school.id = :schoolId', { schoolId })
+      .andWhere('term.startDate <= :date', { date })
+      .andWhere('term.endDate >= :date', { date })
+      .getOne();
+
+    if (!term) {
+      return null;
+    }
+
+    return {
+      term,
+      calendar: term.academicCalendar,
+    };
+  }
+
   async getClassAttendanceForDay(classLevelId: string, date: string) {
     return this.getClassAttendance({
       classLevelId,
       filterType: 'day',
       date,
+    });
+  }
+
+  async getClassAttendanceByTerm(classLevelId: string, academicTermId: string) {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) throw new NotFoundException('Class not found');
+
+    const term = await this.academicTermRepository.findOne({
+      where: { id: academicTermId },
+      relations: ['academicCalendar', 'academicCalendar.school'],
+    });
+    if (!term) throw new NotFoundException('Academic term not found');
+
+    // Verify the term belongs to the same school as the class
+    if (term.academicCalendar.school.id !== classLevel.school.id) {
+      throw new BadRequestException('Term does not belong to the same school');
+    }
+
+    return this.getClassAttendance({
+      classLevelId,
+      filterType: 'custom',
+      startDate: term.startDate,
+      endDate: term.endDate,
+    });
+  }
+
+  async getClassAttendanceByAcademicYear(
+    classLevelId: string,
+    academicCalendarId: string,
+  ) {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) throw new NotFoundException('Class not found');
+
+    const calendar = await this.academicCalendarRepository.findOne({
+      where: { id: academicCalendarId },
+      relations: ['school', 'terms'],
+    });
+    if (!calendar) throw new NotFoundException('Academic calendar not found');
+
+    // Verify the calendar belongs to the same school as the class
+    if (calendar.school.id !== classLevel.school.id) {
+      throw new BadRequestException(
+        'Calendar does not belong to the same school',
+      );
+    }
+
+    // Find the earliest start date and latest end date from all terms
+    const startDate = calendar.terms.reduce(
+      (earliest, term) =>
+        term.startDate < earliest ? term.startDate : earliest,
+      calendar.terms[0]?.startDate || new Date().toISOString().split('T')[0],
+    );
+
+    const endDate = calendar.terms.reduce(
+      (latest, term) => (term.endDate > latest ? term.endDate : latest),
+      calendar.terms[0]?.endDate || new Date().toISOString().split('T')[0],
+    );
+
+    return this.getClassAttendance({
+      classLevelId,
+      filterType: 'custom',
+      startDate,
+      endDate,
     });
   }
 
@@ -340,6 +425,12 @@ export class AttendanceService {
       throw new BadRequestException('Cannot mark attendance on a holiday');
     }
 
+    // Find the academic term for this date
+    const academicInfo = await this.findAcademicTermForDate(
+      classLevel.school.id,
+      date,
+    );
+
     for (const record of records) {
       let attendance = await this.attendanceRepository.findOne({
         where: {
@@ -354,9 +445,16 @@ export class AttendanceService {
           student: { id: record.studentId } as Student,
           date,
           status: record.status,
+          academicTerm: academicInfo?.term || undefined,
+          academicCalendar: academicInfo?.calendar || undefined,
         });
       } else {
         attendance.status = record.status;
+        // Update academic term/calendar if not set
+        if (!attendance.academicTerm && academicInfo?.term) {
+          attendance.academicTerm = academicInfo.term;
+          attendance.academicCalendar = academicInfo.calendar;
+        }
       }
       await this.attendanceRepository.save(attendance);
     }

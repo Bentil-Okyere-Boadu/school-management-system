@@ -26,6 +26,9 @@ import { ClassLevel } from 'src/class-level/class-level.entity';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { Attendance } from 'src/attendance/attendance.entity';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 
 @Module({
   imports: [
@@ -39,6 +42,8 @@ import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
       ClassLevel,
       Attendance,
       Holiday,
+      AcademicCalendar,
+      AcademicTerm,
     ]),
     EmailModule,
     JwtModule.registerAsync({
@@ -66,6 +71,7 @@ import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
     TeacherJwtAuthGuard,
     ClassLevelService,
     AttendanceService,
+    SchoolAdminService,
   ],
   controllers: [TeacherController],
   exports: [TeacherService, TeacherAuthService, TeacherJwtAuthGuard],
