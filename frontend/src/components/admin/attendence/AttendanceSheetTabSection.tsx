@@ -6,9 +6,9 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import Image from "next/image";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/school-admin";
-import { ErrorResponse } from "@/@types";
-import { toast } from "react-toastify";
+import { useGetClassAttendance } from "@/hooks/school-admin";
+// import { ErrorResponse } from "@/@types";
+// import { toast } from "react-toastify";
 import { useDebouncer } from "@/hooks/generalHooks";
 import { useGetClassLevels } from "@/hooks/school-admin";
 
@@ -52,8 +52,8 @@ export const AttendanceSheetTabSection = () => {
   
   
   const [selectedClass, setSelectedClass] = useState(getClasses[0]?.value);
-  const { attendanceData, refetch } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, "") as GetClassAttendance;
-  const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
+  const { attendanceData } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, "") as GetClassAttendance;
+  // const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
 
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month") => {
     const value = event.target.value;
@@ -92,7 +92,7 @@ export const AttendanceSheetTabSection = () => {
     student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
   ) ?? [];
 
-  const handleStudentAttendance = (student: Student, selectedDate: string) => {
+ /* const handleStudentAttendance = (student: Student, selectedDate: string) => {
     const selected = new Date(selectedDate);
     const today = new Date();
     selected.setHours(0, 0, 0, 0);
@@ -126,10 +126,11 @@ export const AttendanceSheetTabSection = () => {
       },
     });
   };
+  */
 
   return (
     <div className="pb-8">
-      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
+      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
 
       <div className="flex gap-3 my-6">
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />

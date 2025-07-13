@@ -87,7 +87,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
   return (
     <div className="pb-8 px-0.5">
 
-      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
+      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
 
       <div className="flex gap-3 my-6">
         {/* <CustomSelectTag value={'Week'} options={[{label: 'Week', value: 'week'}]} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} /> */}

@@ -105,7 +105,7 @@ export const AttendanceSummaryTabSection: React.FC = () => {
 
   return (
     <div className="pb-8">
-      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
+      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
 
       <div className="flex gap-3 my-6">
         <CustomSelectTag
