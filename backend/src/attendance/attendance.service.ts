@@ -460,4 +460,52 @@ export class AttendanceService {
     }
     return { message: 'Attendance marked successfully' };
   }
+
+  async getClassAttendanceSummary(
+    classLevelId: string,
+    filter?: AttendanceFilter,
+  ) {
+    // Use the same filter logic as getClassAttendance, but always summaryOnly
+    const summary = await this.getClassAttendance({
+      classLevelId,
+      filterType: filter?.filterType || 'year', // or whatever default you want
+      year: filter?.year,
+      month: filter?.month,
+      week: filter?.week,
+      weekOfMonth: filter?.weekOfMonth,
+      date: filter?.date,
+      startDate: filter?.startDate,
+      endDate: filter?.endDate,
+      summaryOnly: true,
+    });
+
+    // Aggregate statistics from all students
+    const stats = summary.students.reduce(
+      (acc, s) => {
+        acc.totalMarkedDays += s.statistics.totalMarkedDays;
+        acc.presentCount += s.statistics.presentCount;
+        acc.absentCount += s.statistics.absentCount;
+        acc.totalDaysInRange += s.statistics.totalDaysInRange;
+        return acc;
+      },
+      {
+        totalMarkedDays: 0,
+        presentCount: 0,
+        absentCount: 0,
+        totalDaysInRange: 0,
+      },
+    );
+
+    const averageAttendanceRate =
+      stats.totalDaysInRange > 0
+        ? Math.round((stats.presentCount / stats.totalDaysInRange) * 100)
+        : 0;
+
+    return {
+      totalAttendanceCount: stats.totalMarkedDays,
+      totalPresentCount: stats.presentCount,
+      totalAbsentCount: stats.absentCount,
+      averageAttendanceRate,
+    };
+  }
 }
