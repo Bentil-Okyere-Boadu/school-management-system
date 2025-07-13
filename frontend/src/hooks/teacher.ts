@@ -25,7 +25,6 @@ export const useGetTeacherClasses = (search: string = "") => {
                 queryBuilder.push(`search=${search}`);
             }
             const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
-            console.log(params);
 
             return customAPI.get(`/teacher/my-classes?${params}`);
         },
@@ -63,13 +62,12 @@ export const useGetClassAttendance = (
   month?: string,
   year?: string,
   week?: string,
+  summaryOnly?: boolean
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week }],
+    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly }],
     queryFn: () => {
       const queryBuilder = [];
-
-      console.log(filterType, month, year);
 
       if (filterType) {
         queryBuilder.push(`filterType=${filterType}`);
@@ -85,6 +83,10 @@ export const useGetClassAttendance = (
 
       if (week) {
         queryBuilder.push(`week=${week}`);
+      }
+
+      if(summaryOnly) {
+        queryBuilder.push(`summaryOnly=${summaryOnly}`);
       }
 
       const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
@@ -117,3 +119,14 @@ export const usePostClassAttendance = (classLevelId: string) => {
   });
 };
 
+export const useTeacherAttendanceSummary = (classLevelId: string) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['summary', classLevelId],
+    queryFn: () => {
+      return customAPI.get(`teacher/${classLevelId}/summary`);
+    }
+  })
+
+  const classSummary = data?.data;
+  return {classSummary, isLoading}
+}

@@ -6,9 +6,11 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import Image from "next/image";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/teacher";
+import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/school-admin";
 import { ErrorResponse } from "@/@types";
 import { toast } from "react-toastify";
+import { useDebouncer } from "@/hooks/generalHooks";
+import { useGetClassLevels } from "@/hooks/school-admin";
 
 interface Student {
   id: string;
@@ -34,19 +36,23 @@ interface AttendanceData {
 interface GetClassAttendance {
   attendanceData: AttendanceData; 
   refetch: () => void;
-}
+} 
 
-
-interface AttendanceSheetTabSectionProps {
-  classId: string;
-}
-
-export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps> = ({ classId }) => {
+export const AttendanceSheetTabSection = () => {
   const [currentYear, setCurrentYear] = useState("");
   const [currentMonth, setCurrentMonth] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { attendanceData, refetch } = useGetClassAttendance(classId, "month", currentMonth, currentYear, "") as GetClassAttendance;
+
+  const { classLevels } = useGetClassLevels(useDebouncer(searchQuery));
+  
+  const getClasses = classLevels.map((classLevel) => { 
+      return { value: classLevel.id, label: classLevel.name}
+    })
+  
+  
+  const [selectedClass, setSelectedClass] = useState(getClasses[0]?.value);
+  const { attendanceData, refetch } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, "") as GetClassAttendance;
   const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
 
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month") => {
@@ -54,6 +60,11 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
     if (type === "year") setCurrentYear(value);
     else if (type === "month") setCurrentMonth(value);
   };
+
+  const handleClassChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    setSelectedClass(value)
+  }
 
   const monthOptions = [
     { label: 'Month', value: '' },
@@ -118,11 +129,12 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
 
   return (
     <div className="pb-8">
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
 
       <div className="flex gap-3 my-6">
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
         <CustomSelectTag value={currentYear} options={yearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />
+        <CustomSelectTag value={selectedClass} options={getClasses} onOptionItemClick={(e) => handleClassChange(e as React.ChangeEvent<HTMLSelectElement>)} />
       </div>
 
       <div className="overflow-x-auto">
@@ -159,7 +171,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                           ? "bg-white none pointer-events-none"
                           : "bg-[#F9F5FF] cursor-pointer"
                       }`}
-                      onClick={() => handleStudentAttendance(student, date)}
+                      onClick={() => {}}
                     >
                       {icon ? (
                         <Image src={icon} alt={present ? "Present" : "Absent"} className="w-5 h-5 object-contain" width={20} height={20} />
