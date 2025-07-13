@@ -5,64 +5,46 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Menu } from "@mantine/core";
 import { IconDots, IconMessageFilled } from "@tabler/icons-react";
+import { useGetClassAttendance } from "@/hooks/teacher";
+import { Pagination } from "@/components/common/Pagination";
+interface AttendanceSummaryTabSectionProps {
+  classId: string;
+}
 
-export const AttendanceSummaryTabSection: React.FC= () => {
+interface AttendanceStats {
+  totalMarkedDays: number;
+  presentCount: number;
+  absentCount: number;
+  totalDaysInRange: number;
+}
 
-  const users =  [
-    {
-        "id": "4a4aab00-a0a0-4649-a903-516d100d704d",
-        "firstName": "polivox",
-        "lastName": "frisbook",
-        "email": "polivox201@frisbook.com",
-        "status": "active",
-        "date": "Mar 25, 2024 at 04:50 PM",
-        "grade": "Class A",
-        "attendance": "433",
-        "presentCount": "32",
-        "absentCount": "23",
-        "dayOfTerm": "12"
-    },
-    {
-        "id": "2a1d1bae-967b-4d83-8a01-85beec41efd1",
-        "firstName": "sibiro",
-        "lastName": "betzenn",
-        "email": "sibiro3056@betzenn.com",
-        "status": "pending",
-        "date": "Mar 25, 2024 at 04:50 PM",
-        "grade": "Class A",
-        "attendance": "433",
-        "presentCount": "32",
-        "absentCount": "23",
-        "dayOfTerm": "12"
-    },
-    {
-        "id": "95a5af8a-8fd6-433b-88f9-cb4ab7c682e3",
-        "firstName": "jihebiw",
-        "lastName": "ofular",
-        "email": "jihebiw294@ofular.com",
-        "status": "active",
-        "date": "Mar 25, 2024 at 04:50 PM",
-        "grade": "Class A",
-        "attendance": "433",
-        "presentCount": "32",
-        "absentCount": "23",
-        "dayOfTerm": "12"
-    },
-    {
-        "id": "180fd60a-cedf-42b2-96a0-8216b3ec6fd0",
-        "firstName": "nileyi",
-        "lastName": "neuraxo",
-        "email": "nileyi3109@neuraxo.com",
-        "status": "pending",
-        "date": "Mar 25, 2024 at 04:50 PM",
-        "grade": "Class A",
-        "attendance": "433",
-        "presentCount": "32",
-        "absentCount": "23",
-        "dayOfTerm": "12"
-    }
-  ];
+interface Student {
+   id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  statistics: AttendanceStats
+}
+
+interface AttendanceData {
+  classLevel: {
+    id: string;
+    name: string;
+  }
+  students: Student[]
+}
+
+interface GetAttendanceSummary {
+  attendanceData: AttendanceData;
+  refetch: () => void;
+}
+
+export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionProps>= ({ classId }) => {
+    const [currentYear, setCurrentYear] = useState("");
+    const [currentMonth, setCurrentMonth] = useState("");
   
+ const { attendanceData } = useGetClassAttendance(classId, "month", currentMonth, currentYear, "", true) as GetAttendanceSummary;
+
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -72,16 +54,45 @@ export const AttendanceSummaryTabSection: React.FC= () => {
     console.log(currentPage, searchQuery);
   };
 
+  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month") => {
+    const value = event.target.value;
+    if (type === "year") setCurrentYear(value);
+    else if (type === "month") setCurrentMonth(value);
+  };
+
+  const monthOptions = [
+    { label: 'Month', value: '' },
+    ...Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(0, i);
+      return {
+        label: date.toLocaleString('default', { month: 'long' }),
+        value: String(i + 1),
+      };
+    })
+  ];
+
+  const currentYearNumber = new Date().getFullYear();
+  const yearOptions = [
+    { label: "Year", value: "" },
+    ...Array.from({ length: 10 }, (_, i) => {
+      const year = currentYearNumber - i;
+      return { label: String(year), value: String(year) };
+    }),
+  ];
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   return (
     <div className="pb-8 px-0.5">
 
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
 
       <div className="flex gap-3 my-6">
-        <CustomSelectTag value={'Week'} options={[{label: 'Week', value: 'week'}]} onOptionItemClick={() => {}} />
-        <CustomSelectTag value={'Month'} options={[{label: 'Month', value: 'month'}]}  onOptionItemClick={() => {}} />
-        <CustomSelectTag value={'Year'} options={[{label: 'Year', value: 'year'}]}  onOptionItemClick={() => {}} />
+        {/* <CustomSelectTag value={'Week'} options={[{label: 'Week', value: 'week'}]} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} /> */}
+        <CustomSelectTag value={currentMonth} options={monthOptions}  onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
+        <CustomSelectTag value={currentYear} options={yearOptions}  onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />
       </div>
 
       <section className="bg-white">
@@ -111,31 +122,31 @@ export const AttendanceSummaryTabSection: React.FC= () => {
               </tr>
             </thead>
             <tbody>
-              {users?.length > 0 ? (users.map((user) => (
-                <tr key={user.id}>
+              {attendanceData?.students?.length > 0 ? (attendanceData.students.map((student) => (
+                <tr key={student.id}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    {user.firstName} {user.lastName}
+                    {student.firstName} {student.lastName}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {user.grade}
+                    {attendanceData.classLevel.name}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {user.attendance}
+                    {student.statistics.totalMarkedDays}
                   </td>
                   <td
                     className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
                   >
-                    {user.presentCount}
+                    {student.statistics.presentCount}
                   </td>
                   <td
                     className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
                   >
-                    {user.absentCount}
+                    {student.statistics.absentCount}
                   </td>
                   <td
                     className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
                   >
-                    {user.dayOfTerm}
+                    {student.statistics.totalDaysInRange}
                   </td>
                   <td
                     className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]"
@@ -171,6 +182,12 @@ export const AttendanceSummaryTabSection: React.FC= () => {
           </table>
         </div>
       </section>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={1}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 };
