@@ -30,6 +30,10 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { SchoolAdminSchoolGuard } from './guards/school-admin-school.guard';
 import { AdmissionService } from 'src/admission/admission.service';
 import { UpdateAdmissionStatusDto } from 'src/admission/dto/create-admission-student-info.dto';
+import {
+  AttendanceFilter,
+  AttendanceService,
+} from 'src/attendance/attendance.service';
 
 @Controller('school-admin')
 @UseInterceptors(SanitizeResponseInterceptor)
@@ -38,6 +42,7 @@ export class SchoolAdminController {
     private readonly schoolAdminAuthService: SchoolAdminAuthService,
     private readonly schoolAdminService: SchoolAdminService,
     private readonly admissionService: AdmissionService,
+    private readonly attendanceService: AttendanceService,
   ) {}
 
   @UseGuards(SchoolAdminLocalAuthGuard)
@@ -214,6 +219,49 @@ export class SchoolAdminController {
   //     admin.school.id,
   //   );
   // }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('classes/:classLevelId/attendance')
+  @Roles('school_admin')
+  async getClassAttendance(
+    @Param('classLevelId') classLevelId: string,
+    @Query()
+    {
+      filterType,
+      date,
+      startDate,
+      endDate,
+      year,
+      month,
+      week,
+      weekOfMonth,
+      summaryOnly,
+    }: AttendanceFilter,
+  ) {
+    // Optionally, check if user is assigned to this class
+    const filter: AttendanceFilter = {
+      classLevelId,
+      filterType,
+      date,
+      startDate,
+      endDate,
+      year,
+      month,
+      week,
+      weekOfMonth,
+      summaryOnly,
+    };
+    if (weekOfMonth && filterType !== 'week') {
+      filter.filterType = 'week';
+    }
+
+    if (startDate && endDate && filterType !== 'custom') {
+      filter.filterType = 'custom';
+    }
+
+    return this.attendanceService.getClassAttendance(filter);
+  }
+
   @UseGuards(
     SchoolAdminJwtAuthGuard,
     ActiveUserGuard,
