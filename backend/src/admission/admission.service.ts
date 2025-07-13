@@ -14,6 +14,7 @@ import { School } from 'src/school/school.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { EmailService } from 'src/common/services/email.service';
+import { SmsService } from 'src/common/services/sms.service';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { format } from 'date-fns';
 import { PreviousSchoolResult } from './previous-school-result.entity';
@@ -51,6 +52,7 @@ export class AdmissionService {
     private roleRepository: Repository<Role>,
     private objectStorageService: ObjectStorageServiceService,
     private emailService: EmailService,
+    private smsService: SmsService,
     private invitationService: InvitationService,
   ) {}
 
@@ -181,6 +183,23 @@ export class AdmissionService {
         school.name,
         admission.applicationId,
       );
+    }
+    
+    // Send SMS notification if phone number is available
+    if (admission.studentPhone) {
+      try {
+        await this.smsService.sendAdmissionApplicationConfirmationSms(
+          admission.studentPhone,
+          `${admission.studentFirstName} ${admission.studentLastName}`,
+          school.name,
+          admission.applicationId,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send admission confirmation SMS to ${admission.studentPhone}`,
+          error,
+        );
+      }
     }
     return this.admissionRepository.findOne({
       where: { applicationId: admission.applicationId },
@@ -325,6 +344,26 @@ export class AdmissionService {
       interviewDate,
       interviewTime,
     );
+    
+    // Send SMS notification if phone number is available
+    if (admission.studentPhone) {
+      try {
+        await this.smsService.sendInterviewInvitationSms(
+          admission.studentPhone,
+          `${admission.studentFirstName} ${admission.studentLastName}`,
+          admission.school.name,
+          applicationId,
+          interviewDate,
+          interviewTime,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send interview invitation SMS to ${admission.studentPhone}`,
+          error,
+        );
+      }
+    }
+    
     admission.status = AdmissionStatus.INTERVIEW_PENDING;
     await this.admissionRepository.save(admission);
 
@@ -395,6 +434,61 @@ export class AdmissionService {
           } catch (error) {
             this.logger.error(
               `Failed to send status update email to ${admission.studentEmail}`,
+              error,
+            );
+          }
+        })();
+      });
+    }
+
+    // Send SMS notifications if phone number is available
+    if (admission.studentPhone) {
+      const studentName = `${admission.studentFirstName} ${admission.studentLastName}`;
+      const schoolName = admission.school?.name || 'School';
+
+      setImmediate(() => {
+        void (async () => {
+          try {
+            switch (status) {
+              case AdmissionStatus.ACCEPTED:
+                await this.smsService.sendAdmissionAcceptedSms(
+                  admission.studentPhone,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
+
+              case AdmissionStatus.REJECTED:
+                await this.smsService.sendAdmissionRejectedSms(
+                  admission.studentPhone,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
+
+              case AdmissionStatus.WAITLISTED:
+                await this.smsService.sendAdmissionWaitlistedSms(
+                  admission.studentPhone,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
+
+              case AdmissionStatus.INTERVIEW_COMPLETED:
+                await this.smsService.sendInterviewCompletedSms(
+                  admission.studentPhone,
+                  studentName,
+                  schoolName,
+                  applicationId,
+                );
+                break;
+            }
+          } catch (error) {
+            this.logger.error(
+              `Failed to send status update SMS to ${admission.studentPhone}`,
               error,
             );
           }
@@ -529,6 +623,24 @@ export class AdmissionService {
         studentId,
         pin,
       );
+
+      // Send SMS invitation if phone number is available
+      if (admission.studentPhone) {
+        try {
+          await this.smsService.sendStudentInvitationSms(
+            admission.studentPhone,
+            `${admission.studentFirstName} ${admission.studentLastName}`,
+            studentId,
+            pin,
+            admission.school?.name || 'School',
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to send student invitation SMS to ${admission.studentPhone}`,
+            error,
+          );
+        }
+      }
 
       this.logger.log(
         `Student account created from admission application ${admission.applicationId}`,

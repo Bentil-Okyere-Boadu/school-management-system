@@ -157,7 +157,9 @@ const ClassesPage = () => {
           {classLevels?.map((data, index) => (
             <ClassCard
               key={index + "12"}
+              showEditAndDelete={true}
               classData={data}
+              studentCount={data?.students?.length}
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
             />

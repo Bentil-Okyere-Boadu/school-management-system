@@ -26,6 +26,11 @@ export interface Student extends User {
   isArchived: boolean;
 }
 
+export interface Teacher extends User {
+  teacherId: string;
+  isArchived: boolean;
+}
+
 export interface Parent {
   id?: string;
   firstName: string;
@@ -169,6 +174,7 @@ export interface ClassLevel {
   studentIds: string[];
   students: User[];
   teachers: User[];
+  studentCount?: number;
 }
 
 export interface AdmissionPolicy {
@@ -354,4 +360,12 @@ export interface AdminDashboardStats {
   totalApplications: number;
   totalStudents: number;
   totalTeachers: number;
+}
+
+export interface AttendanceParams {
+  classLevelId: string;
+  filterType?: "month" | "week";
+  month?: number;
+  year?: number;
+  week?: number;
 }
