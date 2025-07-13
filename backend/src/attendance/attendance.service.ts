@@ -151,6 +151,14 @@ export class AttendanceService {
           presentCount,
           absentCount,
           totalDaysInRange,
+          presentPercentage:
+            totalDaysInRange > 0
+              ? Math.round((presentCount / totalDaysInRange) * 100)
+              : 0,
+          absentPercentage:
+            totalDaysInRange > 0
+              ? Math.round((absentCount / totalDaysInRange) * 100)
+              : 0,
         },
       };
     });
@@ -506,6 +514,35 @@ export class AttendanceService {
       totalPresentCount: stats.presentCount,
       totalAbsentCount: stats.absentCount,
       averageAttendanceRate,
+    };
+  }
+
+  async getStudentAttendance(
+    classLevelId: string,
+    studentId: string,
+    filter: AttendanceFilter,
+  ) {
+    // Always use summaryOnly: false to get full attendance details
+    const classAttendance = await this.getClassAttendance({
+      ...filter,
+      classLevelId,
+      summaryOnly: filter.summaryOnly,
+    });
+
+    // Find the student in the result
+    const student = classAttendance.students.find((s) => s.id === studentId);
+
+    if (!student) {
+      throw new NotFoundException(
+        'Student not found in this class or date range',
+      );
+    }
+
+    // Optionally, return class info and date range for context
+    return {
+      classLevel: classAttendance.classLevel,
+      dateRange: classAttendance.dateRange,
+      student,
     };
   }
 }
