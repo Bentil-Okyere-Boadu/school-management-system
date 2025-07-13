@@ -25,6 +25,11 @@ import { ClassLevel } from 'src/class-level/class-level.entity';
 import { PreviousSchoolResult } from 'src/admission/previous-school-result.entity';
 import { Parent } from 'src/parent/parent.entity';
 import { InvitationService } from 'src/invitation/invitation.service';
+import { AttendanceService } from 'src/attendance/attendance.service';
+import { Attendance } from 'src/attendance/attendance.entity';
+import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
 
 @Module({
   imports: [
@@ -40,6 +45,10 @@ import { InvitationService } from 'src/invitation/invitation.service';
       ClassLevel,
       PreviousSchoolResult,
       Parent,
+      Attendance,
+      Holiday,
+      AcademicTerm,
+      AcademicCalendar,
     ]),
     PassportModule,
     JwtModule.registerAsync({
@@ -64,6 +73,7 @@ import { InvitationService } from 'src/invitation/invitation.service';
     ConfigService,
     AdmissionService,
     InvitationService,
+    AttendanceService,
   ],
   exports: [SchoolAdminAuthService, SchoolAdminService],
 })

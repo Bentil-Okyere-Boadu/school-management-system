@@ -95,16 +95,18 @@ export class TeacherController {
   @Roles('teacher')
   async getClassAttendance(
     @Param('classLevelId') classLevelId: string,
-    @Query('filterType')
-    filterType: 'day' | 'week' | 'month' | 'year' | 'custom' = 'day',
-    @Query('date') date?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('year') year?: number,
-    @Query('month') month?: number,
-    @Query('week') week?: number,
-    @Query('weekOfMonth') weekOfMonth?: number,
-    @Query('summaryOnly') summaryOnly?: boolean,
+    @Query()
+    {
+      filterType,
+      date,
+      startDate,
+      endDate,
+      year,
+      month,
+      week,
+      weekOfMonth,
+      summaryOnly,
+    }: AttendanceFilter,
   ) {
     // Optionally, check if user is assigned to this class
     const filter: AttendanceFilter = {
