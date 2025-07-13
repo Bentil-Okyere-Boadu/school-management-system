@@ -6,7 +6,7 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import Image from "next/image";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/teacher";
+import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/school-admin";
 import { ErrorResponse } from "@/@types";
 import { toast } from "react-toastify";
 import { useDebouncer } from "@/hooks/generalHooks";
@@ -129,7 +129,7 @@ export const AttendanceSheetTabSection = () => {
 
   return (
     <div className="pb-8">
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
 
       <div className="flex gap-3 my-6">
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
@@ -171,7 +171,7 @@ export const AttendanceSheetTabSection = () => {
                           ? "bg-white none pointer-events-none"
                           : "bg-[#F9F5FF] cursor-pointer"
                       }`}
-                      onClick={() => handleStudentAttendance(student, date)}
+                      onClick={() => {}}
                     >
                       {icon ? (
                         <Image src={icon} alt={present ? "Present" : "Absent"} className="w-5 h-5 object-contain" width={20} height={20} />
