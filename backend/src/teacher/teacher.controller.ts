@@ -26,6 +26,7 @@ import {
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { QueryString } from 'src/common/api-features/api-features';
+import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 
 @Controller('teacher')
 export class TeacherController {
@@ -34,6 +35,7 @@ export class TeacherController {
     private readonly TeacherService: TeacherService,
     private readonly classLevelService: ClassLevelService,
     private readonly attendanceService: AttendanceService,
+    private readonly schoolAdminService: SchoolAdminService,
   ) {}
 
   @UseGuards(TeacherLocalAuthGuard)
@@ -42,9 +44,19 @@ export class TeacherController {
   login(@Request() req: { user: Teacher }) {
     return this.teacherAuthService.login(req.user);
   }
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('students')
+  @Roles('teacher')
+  async findAllStudents(
+    @CurrentUser() user: Teacher,
+    @Query() query: QueryString,
+  ) {
+    return this.schoolAdminService.findAllStudents(user.school.id, query);
+  }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
+  @Roles('teacher')
   async getMyClasses(
     @CurrentUser() user: Teacher,
     @Query() query: QueryString,
@@ -53,12 +65,14 @@ export class TeacherController {
   }
   @Get('classes/:id/name')
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles('teacher')
   async getClassLevelName(@Param('id') id: string) {
     return this.classLevelService.getClassLevelNameById(id);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/attendance')
+  @Roles('teacher')
   async getClassAttendance(
     @Param('classLevelId') classLevelId: string,
     @Query('filterType')
@@ -98,6 +112,7 @@ export class TeacherController {
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('classes/:classLevelId/attendance')
+  @Roles('teacher')
   async markAttendance(
     @Param('classLevelId') classLevelId: string,
     @Body()
