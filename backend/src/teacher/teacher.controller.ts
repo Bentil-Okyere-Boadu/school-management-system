@@ -6,6 +6,7 @@ import {
   Body,
   Get,
   Param,
+  UseInterceptors,
   Query,
   Put,
 } from '@nestjs/common';
@@ -27,6 +28,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { QueryString } from 'src/common/api-features/api-features';
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
+import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
 
 @Controller('teacher')
 export class TeacherController {
@@ -53,7 +55,13 @@ export class TeacherController {
   ) {
     return this.schoolAdminService.findAllStudents(user.school.id, query);
   }
-
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('users/:id')
+  @Roles('teacher')
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
+  async getUserById(@Param('id') id: string, @CurrentUser() teacher: Teacher) {
+    return this.schoolAdminService.getUserById(id, teacher.school.id);
+  }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
   @Roles('teacher')
@@ -128,6 +136,10 @@ export class TeacherController {
       body.date,
       body.records,
     );
+  }
+  @Get(':classLevelId/summary')
+  getClassAttendanceSummary(@Param('classLevelId') classLevelId: string) {
+    return this.attendanceService.getClassAttendanceSummary(classLevelId);
   }
 
   @Post('forgot-password')
