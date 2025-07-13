@@ -9,6 +9,8 @@ import Cancel from "@/images/Cancel.svg";
 import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/teacher";
 import { ErrorResponse } from "@/@types";
 import { toast } from "react-toastify";
+import { useQueryClient } from "@tanstack/react-query";
+import { Pagination } from "@/components/common/Pagination";
 
 interface Student {
   id: string;
@@ -45,6 +47,10 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
   const [currentYear, setCurrentYear] = useState("");
   const [currentMonth, setCurrentMonth] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+  
+
+  const queryClient = useQueryClient();
 
   const { attendanceData, refetch } = useGetClassAttendance(classId, "month", currentMonth, currentYear, "") as GetClassAttendance;
   const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
@@ -76,6 +82,9 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
   ];
 
   const handleSearch = (query: string) => setSearchQuery(query);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const filteredStudents = attendanceData?.students?.filter((student: Student) =>
     student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -109,6 +118,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
       onSuccess: () => {
         toast.success('Attendance marked successfully.');
         refetch();
+        queryClient.invalidateQueries({ queryKey: ['summary']})
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -118,7 +128,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
 
   return (
     <div className="pb-8 px-0.5">
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full px-0.5" />
+      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full px-0.5" /> */}
 
       <div className="flex gap-3 my-6">
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
@@ -174,6 +184,12 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
           </div>
         </div>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={1}
+        onPageChange={handlePageChange}
+        />
     </div>
   );
 };

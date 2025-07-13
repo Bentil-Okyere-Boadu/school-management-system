@@ -661,3 +661,64 @@ export const useGetAdminDashboardStats = () => {
 
     return { dashboardStats, isPending }
 }
+
+export const useGetClassAttendance = (
+  classLevelId: string,
+  filterType: string = "month",
+  month?: string,
+  year?: string,
+  week?: string,
+  summaryOnly?: boolean
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly }],
+    queryFn: () => {
+      const queryBuilder = [];
+
+      if (filterType) {
+        queryBuilder.push(`filterType=${filterType}`);
+      }
+
+      if (month) {
+        queryBuilder.push(`month=${month}`);
+      }
+
+      if (year) {
+        queryBuilder.push(`year=${year}`);
+      }
+
+      if (week) {
+        queryBuilder.push(`week=${week}`);
+      }
+
+      if(summaryOnly) {
+        queryBuilder.push(`summaryOnly=${summaryOnly}`);
+      }
+
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+      return customAPI.get(`/school-admin/classes/${classLevelId}/attendance?${params}`);
+    },
+    enabled: !!classLevelId, // only run if classLevelId is provided
+    refetchOnWindowFocus: true,
+  });
+
+  const attendanceData = data?.data;
+
+  return { attendanceData, isLoading, refetch };
+};
+
+interface AttendanceRecord {
+  studentId: string;
+  status: 'present' | 'absent';
+}
+interface PostAttendancePayload {
+  date: string;
+  records: AttendanceRecord[];
+}
+
+export const usePostClassAttendance = (classLevelId: string) => {
+  return useMutation({
+    mutationFn: (payload: PostAttendancePayload) =>
+      customAPI.post(`/school-admin/classes/${classLevelId}/attendance`, payload),
+  });
+};

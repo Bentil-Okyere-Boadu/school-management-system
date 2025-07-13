@@ -11,7 +11,7 @@ export type TabListItem = {
 };
 
 const Attendance = () => {
-  const [alreadyDone] = useState(false);
+  const [alreadyDone] = useState(true);
   
   const stats = [
     {
@@ -52,7 +52,6 @@ const Attendance = () => {
 
   return (
     <div className="pb-8">
-      {!alreadyDone && <div>Attendance</div>}
       {alreadyDone && (
         <>
         <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">

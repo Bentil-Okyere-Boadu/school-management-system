@@ -5,6 +5,7 @@ import StatCard from '@/components/teacher/attendence/StatsCard';
 import TabBar from '@/components/common/TabBar';
 import { AttendanceSheetTabSection } from '@/components/teacher/attendence/AttendanceSheetTabSection';
 import { AttendanceSummaryTabSection } from '@/components/teacher/attendence/AttendanceSummaryTabSection';
+import { useTeacherAttendanceSummary } from '@/hooks/teacher';
 
 export type TabListItem = {
   tabLabel: string;
@@ -14,28 +15,29 @@ export type TabListItem = {
 const ClassAttendance = () => {
 
   const { classId } = useParams();
+  const {classSummary} = useTeacherAttendanceSummary(classId as string);
   const stats = [
     {
       label: "Total Attendance Count",
-      value: "2,347",
+      value: classSummary?.totalAttendanceCount,
       fromColor: "#2B62E5",
       toColor: "#8FB5FF",
     },
     {
       label: "Total Present Count",
-      value: "2,347",
+      value: classSummary?.totalPresentCount,
       fromColor: "#B55CF3",
       toColor: "#D9A6FD",
     },
     {
       label: "Total Absent Count",
-      value: "2,347",
+      value: classSummary?.totalAbsentCount,
       fromColor: "#F15580",
       toColor: "#F88FB3",
     },
     {
       label: "Average Attendance Rate",
-      value: "87%",
+      value: classSummary?.averageAttendanceRate + "%",
       fromColor: "#30C97A",
       toColor: "#8DF4B8",
     },
@@ -74,7 +76,7 @@ const ClassAttendance = () => {
 
         {activeTabKey === "attendance-summary" && (
             <div>
-                <AttendanceSummaryTabSection />
+                <AttendanceSummaryTabSection classId={classId as string}/>
             </div>
         )}
       </div>
