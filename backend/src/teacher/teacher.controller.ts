@@ -77,7 +77,19 @@ export class TeacherController {
   async getClassLevelName(@Param('id') id: string) {
     return this.classLevelService.getClassLevelNameById(id);
   }
-
+  //Todo
+  @Get('classes/:classLevelId/students/:studentId/attendance')
+  getStudentAttendance(
+    @Param('classLevelId') classLevelId: string,
+    @Param('studentId') studentId: string,
+    @Query() query: AttendanceFilter,
+  ) {
+    return this.attendanceService.getStudentAttendance(
+      classLevelId,
+      studentId,
+      query,
+    );
+  }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/attendance')
   @Roles('teacher')
