@@ -11,8 +11,6 @@ export type TabListItem = {
 };
 
 const Attendance = () => {
-  const [alreadyDone] = useState(true);
-  
   const stats = [
     {
       label: "Total Attendance Count",
@@ -52,13 +50,11 @@ const Attendance = () => {
 
   return (
     <div className="pb-8">
-      {alreadyDone && (
-        <>
-        <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
-          {stats.map((stat, index) => (
-            <StatCard key={index} {...stat} />
-          ))}
-        </section>
+      <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
+        {stats.map((stat, index) => (
+          <StatCard key={index} {...stat} />
+        ))}
+      </section>
       
       <div>
         <TabBar 
@@ -79,9 +75,6 @@ const Attendance = () => {
           </div>
         )}
       </div>
-      </>
-      )}
-      
     </div>
   );
 }

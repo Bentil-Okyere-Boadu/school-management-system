@@ -80,7 +80,7 @@ const AdminDashboard = () => {
         valueColor: "#F081AE",
       },
       {
-        value: dashboardStats?.averageAttendanceRate + "%" || '0%',
+        value: (dashboardStats?.averageAttendanceRate ?? 0) + "%",
         label: "Average Attendance Rate",
         iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/ba656832819e22052f838d66aeb1b30662f1df92?placeholderIfAbsent=true",
         iconAlt: "Attendance Icon",
