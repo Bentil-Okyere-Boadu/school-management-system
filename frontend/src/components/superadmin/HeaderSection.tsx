@@ -75,7 +75,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
       return `${admissionData.studentFirstName} ${admissionData.studentLastName}`;
     }
 
-    if (isTeacherAttendancePage) {
+    if (classData) {
       return `${classData?.name || ''}` || "";
     }
 

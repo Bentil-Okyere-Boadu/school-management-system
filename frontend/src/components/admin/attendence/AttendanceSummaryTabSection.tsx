@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { SearchBar } from "@/components/common/SearchBar";
+// import { SearchBar } from "@/components/common/SearchBar";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Menu } from "@mantine/core";
 import { IconDots, IconMessageFilled } from "@tabler/icons-react";
 import { Pagination } from "@/components/common/Pagination";
 import { useGetClassAttendance, useGetClassLevels } from "@/hooks/school-admin";
-import { useDebouncer } from "@/hooks/generalHooks";
+// import { useDebouncer } from "@/hooks/generalHooks";
 
 interface AttendanceStats {
   totalMarkedDays: number;
@@ -41,9 +41,9 @@ export const AttendanceSummaryTabSection: React.FC = () => {
   const [currentYear, setCurrentYear] = useState("");
   const [currentMonth, setCurrentMonth] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
+  // const [searchQuery, setSearchQuery] = useState("");
 
-  const { classLevels } = useGetClassLevels(useDebouncer(searchQuery));
+  const { classLevels } = useGetClassLevels();
   const getClasses = classLevels.map((classLevel) => {
     return { value: classLevel.id, label: classLevel.name };
   });
@@ -59,11 +59,11 @@ export const AttendanceSummaryTabSection: React.FC = () => {
     true
   ) as GetAttendanceSummary;
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-    console.log(currentPage, searchQuery);
-  };
+  // const handleSearch = (query: string) => {
+  //   setSearchQuery(query);
+  //   setCurrentPage(1);
+  //   console.log(currentPage, searchQuery);
+  // };
 
   const handleSelectChange = (
     event: React.ChangeEvent<HTMLSelectElement>,

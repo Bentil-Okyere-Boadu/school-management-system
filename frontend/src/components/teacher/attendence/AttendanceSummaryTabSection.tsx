@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { SearchBar } from "@/components/common/SearchBar";
+// import { SearchBar } from "@/components/common/SearchBar";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
-import { Menu } from "@mantine/core";
+import { Menu, MultiSelect, Select } from "@mantine/core";
 import { IconDots, IconMessageFilled } from "@tabler/icons-react";
 import { useGetClassAttendance } from "@/hooks/teacher";
 import { Pagination } from "@/components/common/Pagination";
+import { Dialog } from "@/components/common/Dialog";
+
 interface AttendanceSummaryTabSectionProps {
   classId: string;
 }
@@ -39,20 +41,32 @@ interface GetAttendanceSummary {
   refetch: () => void;
 }
 
-export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionProps>= ({ classId }) => {
-    const [currentYear, setCurrentYear] = useState("");
-    const [currentMonth, setCurrentMonth] = useState("");
-  
- const { attendanceData } = useGetClassAttendance(classId, "month", currentMonth, currentYear, "", true) as GetAttendanceSummary;
+export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionProps> = ({ classId }) => {
+  const [currentYear, setCurrentYear] = useState("");
+  const [currentMonth, setCurrentMonth] = useState("");
+
+  const { attendanceData } = useGetClassAttendance(classId, "month", currentMonth, currentYear, "", true) as GetAttendanceSummary;
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
+  // const [searchQuery, setSearchQuery] = useState("");
+  const [isSendReminderDialogOpen, setIsSendReminderDialogOpen] = useState(false);
+  const [selectedTransmission, setSelectedTransmission] = useState<string[]>([]);
+  const [selectedReminderTitle, setSelectedReminderTitle] = useState<string>();
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-    console.log(currentPage, searchQuery);
-  };
+  const transmissionList = [
+    { label: 'Email', value: 'emalil' },
+    { label: 'SMS', value: 'sms' }
+  ];
+  const reminderTitlesList = [
+    { label: 'Fee due Date Reminder', value: 'fee-due' },
+    { label: 'Absent Notice', value: 'absent-notice' },
+  ];
+
+  // const handleSearch = (query: string) => {
+  //   setSearchQuery(query);
+  //   setCurrentPage(1);
+  //   console.log(currentPage, searchQuery);
+  // };
 
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month") => {
     const value = event.target.value;
@@ -82,6 +96,18 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleTransmissionChange = (value: string[]) => {
+    setSelectedTransmission(value);
+  };
+
+  const handleReminderTitle = (event: string) => {
+    setSelectedReminderTitle(event);
+  };
+
+  const onSenderReminderActionClick = () => {
+    console.log(selectedReminderTitle, selectedTransmission);
   };
 
   return (
@@ -158,7 +184,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
                         </Menu.Target>
                         <Menu.Dropdown className="!-ml-12 !-mt-2">
                           <Menu.Item 
-                            onClick={() => {}} 
+                            onClick={() => {setIsSendReminderDialogOpen(false)}} 
                             leftSection={<IconMessageFilled size={18} color="#AB58E7" />}>
                             Send Reminder
                           </Menu.Item>
@@ -188,7 +214,43 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
         totalPages={1}
         onPageChange={handlePageChange}
       />
+
+      
+      {/* Send Reminder dialog */}
+      <Dialog
+        isOpen={isSendReminderDialogOpen}
+        dialogTitle="Send Reminder"
+        saveButtonText="Send"
+        onClose={() => {
+          setIsSendReminderDialogOpen(false);
+        }}
+        onSave={onSenderReminderActionClick}
+        busy={false}
+      >
+        <p className="text-xs text-gray-500">
+          Select the mode and message to send a reminder
+        </p>
+        <div className="my-3 flex flex-col gap-2">
+          <Select
+            label="Reminder Title"
+            placeholder="Please Select"
+            className="mb-3"
+            data={reminderTitlesList}
+            value={selectedReminderTitle}
+            onChange={(e) => handleReminderTitle(e as string)}
+          />
+
+          <MultiSelect
+            label="Send via"
+            placeholder="Please Select"
+            className="mb-5"
+            data={transmissionList}
+            value={selectedTransmission}
+            onChange={handleTransmissionChange}
+            withCheckIcon
+          />
+        </div>
+      </Dialog>
     </div>
   );
-};
- 
+}

@@ -37,7 +37,7 @@ const ClassAttendance = () => {
     },
     {
       label: "Average Attendance Rate",
-      value: classSummary?.averageAttendanceRate + "%",
+      value: (classSummary?.averageAttendanceRate ?? 0) + "%",
       fromColor: "#30C97A",
       toColor: "#8DF4B8",
     },
