@@ -74,7 +74,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
             <Image
               src={
                 student?.profile
-                  ? (student.profile as string)
+                  ? (student.profile?.avatarUrl as string)
                   : NoProfileImg.src
               }
               width={160}

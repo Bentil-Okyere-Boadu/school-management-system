@@ -15,6 +15,8 @@ export interface User {
   school: School;
   profile: {
     avatarUrl?: string;
+    otherName?: string;
+    DateOfBirth?: string,
   }
   date: string;
 }

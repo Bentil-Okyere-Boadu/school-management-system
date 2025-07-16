@@ -39,6 +39,7 @@ interface GetClassAttendance {
 export const AttendanceSheetTabSection = () => {
   const [currentYear, setCurrentYear] = useState("");
   const [currentMonth, setCurrentMonth] = useState("");
+  const [currentWeek, setCurrentWeek] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   // const [searchQuery, setSearchQuery] = useState("");
@@ -51,7 +52,7 @@ export const AttendanceSheetTabSection = () => {
   })
   
   
-  const { attendanceData } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, "") as GetClassAttendance;
+  const { attendanceData } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, currentWeek) as GetClassAttendance;
   
   useEffect(() => {
     if (getClasses.length > 0 && !selectedClass) {
@@ -59,10 +60,11 @@ export const AttendanceSheetTabSection = () => {
     }
   }, [getClasses, selectedClass]);
 
-  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month") => {
+  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month" | "week") => {
     const value = event.target.value;
     if (type === "year") setCurrentYear(value);
     else if (type === "month") setCurrentMonth(value);
+    else if (type === "week") setCurrentWeek(value);
   };
 
   const handleClassChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -94,6 +96,15 @@ export const AttendanceSheetTabSection = () => {
     }),
   ];
 
+  const weekOptions = [
+    { label: "Week", value: "" },
+    { label: "Week 1", value: "1" },
+    { label: "Week 2", value: "2" },
+    { label: "Week 3", value: "3" },
+    { label: "Week 4", value: "4" },
+    { label: "Week 5", value: "5" },
+  ];
+
   // const handleSearch = (query: string) => setSearchQuery(query);
 
   // const filteredStudents = attendanceData?.students?.filter((student: Student) =>
@@ -105,6 +116,7 @@ export const AttendanceSheetTabSection = () => {
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
 
       <div className="flex gap-3 my-6">
+        <CustomSelectTag value={currentWeek} options={weekOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} />
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
         <CustomSelectTag value={currentYear} options={yearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />
         <CustomSelectTag value={selectedClass} options={getClasses} onOptionItemClick={(e) => handleClassChange(e as React.ChangeEvent<HTMLSelectElement>)} />
