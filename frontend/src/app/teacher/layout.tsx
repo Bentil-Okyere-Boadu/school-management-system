@@ -4,8 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-// import { ClassesIcon, StudentsIcon } from "@/utils/icons";
-import { ClassesIcon } from "@/utils/icons";
+import { ClassesIcon, StudentsIcon } from "@/utils/icons";
 
 import { useTeacherGetMe } from "@/hooks/teacher";
 
@@ -13,17 +12,17 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [activeMenuItem, setActiveMenuItem] = useState("classes");
+  const [activeMenuItem, setActiveMenuItem] = useState("students");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
 
   const {me} = useTeacherGetMe();
 
   const sidebarItems = [
-    // {
-    //   icon: StudentsIcon,
-    //   label: "Students",
-    // },
+    {
+      icon: StudentsIcon,
+      label: "Students",
+    },
     {
       icon: ClassesIcon,      
       label: "Classes",

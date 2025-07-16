@@ -688,7 +688,7 @@ export const useGetClassAttendance = (
       }
 
       if (week) {
-        queryBuilder.push(`week=${week}`);
+        queryBuilder.push(`weekOfMonth=${week}`);
       }
 
       if(summaryOnly) {

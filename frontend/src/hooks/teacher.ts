@@ -1,4 +1,4 @@
-import { ClassLevel, User } from "@/@types";
+import { ClassLevel, Student, User } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -82,7 +82,7 @@ export const useGetClassAttendance = (
       }
 
       if (week) {
-        queryBuilder.push(`week=${week}`);
+        queryBuilder.push(`weekOfMonth=${week}`);
       }
 
       if(summaryOnly) {
@@ -129,4 +129,62 @@ export const useTeacherAttendanceSummary = (classLevelId: string) => {
 
   const classSummary = data?.data;
   return {classSummary, isLoading}
+}
+
+export const useGetStudents = (page=1,search: string = "", status: string = "", role: string = "", roleLabel?: string,  limit?: number ) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['allStudents', { page, search, status, role, roleLabel, limit }],
+    queryFn: () => {
+      const queryBuilder = [];
+      if(search) {
+          queryBuilder.push(`search=${search}`);
+      }
+
+      if(status) {
+          queryBuilder.push(`status=${status}`);
+      }
+      
+      if(role) {
+          queryBuilder.push(`role=${role}`);
+      }
+      
+      if(page) {
+          queryBuilder.push(`page=${page}`);
+      }
+      
+      if(roleLabel) {
+          queryBuilder.push(`roleLabel=${roleLabel}`);
+      }
+
+      if(limit) {
+          queryBuilder.push(`limit=${limit}`);
+      }
+      
+      const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+      console.log(params);
+      
+      return customAPI.get(`/teacher/students`);
+    },
+    refetchOnWindowFocus: true
+});
+
+  const studentsData = data?.data?.data;
+  // const paginationValues = data?.data.meta;
+  return { studentsData, isLoading, refetch }
+}
+
+export const useGetStudentById = (id: string, options?: UseQueryOptions) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['student', id],
+        queryFn: () => {
+            return customAPI.get(`/teacher/users/${id}`);
+        },
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+         ...options,
+    })
+
+    const studentData = (data as {data: User | Student})?.data ;
+
+    return { studentData, isLoading, refetch }
 }

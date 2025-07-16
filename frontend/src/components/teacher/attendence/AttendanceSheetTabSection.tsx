@@ -46,19 +46,21 @@ interface AttendanceSheetTabSectionProps {
 export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps> = ({ classId }) => {
   const [currentYear, setCurrentYear] = useState("");
   const [currentMonth, setCurrentMonth] = useState("");
+  const [currentWeek, setCurrentWeek] = useState("");
   // const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   
 
   const queryClient = useQueryClient();
 
-  const { attendanceData, refetch } = useGetClassAttendance(classId, "month", currentMonth, currentYear, "") as GetClassAttendance;
+  const { attendanceData, refetch } = useGetClassAttendance(classId, "month", currentMonth, currentYear, currentWeek) as GetClassAttendance;
   const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
 
-  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month") => {
+  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month" | "week") => {
     const value = event.target.value;
     if (type === "year") setCurrentYear(value);
     else if (type === "month") setCurrentMonth(value);
+    else if (type === "week") setCurrentWeek(value);
   };
 
   const monthOptions = [
@@ -79,6 +81,15 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
       const year = currentYearNumber - i;
       return { label: String(year), value: String(year) };
     }),
+  ];
+
+  const weekOptions = [
+    { label: "Week", value: "" },
+    { label: "Week 1", value: "1" },
+    { label: "Week 2", value: "2" },
+    { label: "Week 3", value: "3" },
+    { label: "Week 4", value: "4" },
+    { label: "Week 5", value: "5" },
   ];
 
   // const handleSearch = (query: string) => setSearchQuery(query);
@@ -131,6 +142,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full px-0.5" /> */}
 
       <div className="flex gap-3 my-6">
+        <CustomSelectTag value={currentWeek} options={weekOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} />
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
         <CustomSelectTag value={currentYear} options={yearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />
       </div>
