@@ -41,6 +41,17 @@ export class AttendanceService {
   ) {}
 
   async getClassAttendance(filter: AttendanceFilter) {
+    // Default to current month/year if filterType is 'month' and not provided
+    if (filter.filterType === 'month') {
+      const now = new Date();
+      if (!filter.year) {
+        filter.year = now.getFullYear();
+      }
+      if (!filter.month) {
+        filter.month = now.getMonth() + 1; // JS months are 0-based
+      }
+    }
+
     const classLevel = await this.classLevelRepository.findOne({
       where: { id: filter.classLevelId },
       relations: ['students', 'school'],
@@ -78,8 +89,15 @@ export class AttendanceService {
       dateRange.startDate,
       dateRange.endDate,
     );
-    const totalDaysInRange = uniqueDates.length;
     const todayStr = new Date().toISOString().split('T')[0];
+
+    // Only count valid school days (not weekends or holidays)
+    const validSchoolDays = uniqueDates.filter((date) => {
+      const dayOfWeek = new Date(date).getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+      if (holidayDates.has(date)) return false;
+      return true;
+    });
 
     /* ───────────── build lookup map ───────────── */
     const attendanceMap: Map<string, Map<string, string>> = new Map();
@@ -124,21 +142,18 @@ export class AttendanceService {
         >,
       );
 
-      const relevantStatuses = Object.entries(attendanceByDate)
-        .filter(
-          ([date, status]) =>
-            date <= todayStr &&
-            status !== null &&
-            status !== 'holiday' &&
-            status !== 'weekend',
-        )
-        .map(([, status]) => status);
+      const relevantStatuses = validSchoolDays
+        .filter((date) => date <= todayStr)
+        .map((date) => attendanceByDate[date]);
 
       const presentCount = relevantStatuses.filter(
         (s) => s === 'present',
       ).length;
       const absentCount = relevantStatuses.filter((s) => s === 'absent').length;
       const totalMarkedDays = presentCount + absentCount;
+      const totalDaysInRange = validSchoolDays.filter(
+        (date) => date <= todayStr,
+      ).length;
 
       return {
         id: student.id,
@@ -176,11 +191,41 @@ export class AttendanceService {
         )
       : detailedStudents;
 
+    // ───────────── summary for all students ─────────────
+    const summaryStats = students.reduce(
+      (acc, s) => {
+        acc.totalMarkedDays += s.statistics.totalMarkedDays;
+        acc.presentCount += s.statistics.presentCount;
+        acc.absentCount += s.statistics.absentCount;
+        acc.totalDaysInRange += s.statistics.totalDaysInRange;
+        return acc;
+      },
+      {
+        totalMarkedDays: 0,
+        presentCount: 0,
+        absentCount: 0,
+        totalDaysInRange: 0,
+      },
+    );
+    const averageAttendanceRate =
+      summaryStats.totalDaysInRange > 0
+        ? Math.round(
+            (summaryStats.presentCount / summaryStats.totalDaysInRange) * 100,
+          )
+        : 0;
+    const summary = {
+      totalAttendanceCount: summaryStats.totalMarkedDays,
+      totalPresentCount: summaryStats.presentCount,
+      totalAbsentCount: summaryStats.absentCount,
+      averageAttendanceRate,
+    };
+
     /* ───────────── return based on summary flag ───────────── */
     return filter.summaryOnly
       ? {
           classLevel: { id: classLevel.id, name: classLevel.name },
           students,
+          summary,
         }
       : {
           classLevel: { id: classLevel.id, name: classLevel.name },
@@ -190,6 +235,7 @@ export class AttendanceService {
             dates: uniqueDates,
           },
           students,
+          summary,
         };
   }
 
@@ -213,6 +259,13 @@ export class AttendanceService {
     const today = new Date();
     let startDate: Date;
     let endDate: Date;
+    if (
+      (filter.filterType === 'week' || filter.filterType === 'month') &&
+      (!filter.month || !filter.year)
+    ) {
+      if (!filter.year) filter.year = today.getFullYear();
+      if (!filter.month) filter.month = today.getMonth() + 1;
+    }
 
     switch (filter.filterType) {
       case 'day':
