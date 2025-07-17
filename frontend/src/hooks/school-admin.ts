@@ -668,10 +668,12 @@ export const useGetClassAttendance = (
   month?: string,
   year?: string,
   week?: string,
-  summaryOnly?: boolean
+  summaryOnly?: boolean,
+  startDate?: string,
+  endDate?: string
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly }],
+    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly, startDate, endDate }],
     queryFn: () => {
       const queryBuilder = [];
 
@@ -693,6 +695,14 @@ export const useGetClassAttendance = (
 
       if(summaryOnly) {
         queryBuilder.push(`summaryOnly=${summaryOnly}`);
+      }
+      
+      if(startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+      
+      if(endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
       }
 
       const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
