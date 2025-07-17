@@ -197,7 +197,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
                         </Menu.Target>
                         <Menu.Dropdown className="!-ml-12 !-mt-2">
                           <Menu.Item 
-                            onClick={() => setIsSendReminderDialogOpen(true)} 
+                            onClick={() => setIsSendReminderDialogOpen(false)} 
                             leftSection={<IconMessageFilled size={18} color="#AB58E7" />}>
                             Send Reminder
                           </Menu.Item>
