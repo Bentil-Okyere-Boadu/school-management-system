@@ -598,4 +598,154 @@ export class AttendanceService {
       student,
     };
   }
+
+  /**
+   * Returns attendance grouped by term and by month within each term for a class and academic year.
+   * Structure: { academicYear, terms: [{ termName, startDate, endDate, months: [{ month, year, attendance }] }] }
+   */
+  async getClassAttendanceGroupedByTermAndMonth(
+    classLevelId: string,
+    academicCalendarId: string,
+  ) {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) throw new NotFoundException('Class not found');
+
+    const calendar = await this.academicCalendarRepository.findOne({
+      where: { id: academicCalendarId },
+      relations: ['school', 'terms'],
+    });
+    if (!calendar) throw new NotFoundException('Academic calendar not found');
+    if (calendar.school.id !== classLevel.school.id) {
+      throw new BadRequestException(
+        'Calendar does not belong to the same school',
+      );
+    }
+
+    // Sort terms by startDate
+    const terms = [...calendar.terms].sort((a, b) =>
+      a.startDate.localeCompare(b.startDate),
+    );
+    const result = {
+      academicYear: calendar.name,
+      terms: [] as any[],
+    };
+
+    for (const term of terms) {
+      const termStart = new Date(term.startDate);
+      const termEnd = new Date(term.endDate);
+      const months: { month: number; year: number; attendance: any }[] = [];
+      let current = new Date(termStart.getFullYear(), termStart.getMonth(), 1);
+      while (current <= termEnd) {
+        const year = current.getFullYear();
+        const month = current.getMonth() + 1; // JS: 0-based
+        // Calculate the month's start and end within the term
+        const monthStart = new Date(year, current.getMonth(), 1);
+        let monthEnd = new Date(year, current.getMonth() + 1, 0);
+        if (monthStart < termStart) monthStart.setTime(termStart.getTime());
+        if (monthEnd > termEnd) monthEnd.setTime(termEnd.getTime());
+        // Get attendance for this month in this term
+        const attendance = await this.getClassAttendance({
+          classLevelId,
+          filterType: 'custom',
+          startDate: monthStart.toISOString().split('T')[0],
+          endDate: monthEnd.toISOString().split('T')[0],
+        });
+        months.push({ month, year, attendance });
+        // Move to next month
+        current.setMonth(current.getMonth() + 1);
+        current.setDate(1);
+      }
+      result.terms.push({
+        termName: term.termName,
+        startDate: term.startDate,
+        endDate: term.endDate,
+        months,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Returns grouped attendance by term and month for a single student in a class and academic year.
+   */
+  async getStudentAttendanceGroupedByTermAndMonth(
+    classLevelId: string,
+    studentId: string,
+    academicCalendarId: string,
+  ) {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) throw new NotFoundException('Class not found');
+    const student = classLevel.students.find((s) => s.id === studentId);
+    if (!student)
+      throw new NotFoundException('Student not found in this class');
+
+    const calendar = await this.academicCalendarRepository.findOne({
+      where: { id: academicCalendarId },
+      relations: ['school', 'terms'],
+    });
+    if (!calendar) throw new NotFoundException('Academic calendar not found');
+    if (calendar.school.id !== classLevel.school.id) {
+      throw new BadRequestException(
+        'Calendar does not belong to the same school',
+      );
+    }
+
+    // Sort terms by startDate
+    const terms = [...calendar.terms].sort((a, b) =>
+      a.startDate.localeCompare(b.startDate),
+    );
+    const result = {
+      academicYear: calendar.name,
+      student: {
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        fullName: `${student.firstName} ${student.lastName}`,
+      },
+      terms: [] as any[],
+    };
+
+    for (const term of terms) {
+      const termStart = new Date(term.startDate);
+      const termEnd = new Date(term.endDate);
+      const months: { month: number; year: number; attendance: any }[] = [];
+      let current = new Date(termStart.getFullYear(), termStart.getMonth(), 1);
+      while (current <= termEnd) {
+        const year = current.getFullYear();
+        const month = current.getMonth() + 1;
+        const monthStart = new Date(year, current.getMonth(), 1);
+        let monthEnd = new Date(year, current.getMonth() + 1, 0);
+        if (monthStart < termStart) monthStart.setTime(termStart.getTime());
+        if (monthEnd > termEnd) monthEnd.setTime(termEnd.getTime());
+        // Get attendance for this month in this term, for this student only
+        const attendance = await this.getStudentAttendance(
+          classLevelId,
+          studentId,
+          {
+            filterType: 'custom',
+            startDate: monthStart.toISOString().split('T')[0],
+            endDate: monthEnd.toISOString().split('T')[0],
+            classLevelId,
+            summaryOnly: false,
+          },
+        );
+        months.push({ month, year, attendance });
+        current.setMonth(current.getMonth() + 1);
+        current.setDate(1);
+      }
+      result.terms.push({
+        termName: term.termName,
+        startDate: term.startDate,
+        endDate: term.endDate,
+        months,
+      });
+    }
+    return result;
+  }
 }
