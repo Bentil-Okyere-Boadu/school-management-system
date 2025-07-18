@@ -631,19 +631,28 @@ export class AttendanceService {
     const result = {
       academicYear: calendar.name,
       terms: [] as any[],
+      summary: {},
     };
 
+    let totalMarkedDays = 0;
+    let presentCount = 0;
+    let absentCount = 0;
+    let totalDaysInRange = 0;
     for (const term of terms) {
       const termStart = new Date(term.startDate);
       const termEnd = new Date(term.endDate);
       const months: { month: number; year: number; attendance: any }[] = [];
-      let current = new Date(termStart.getFullYear(), termStart.getMonth(), 1);
+      const current = new Date(
+        termStart.getFullYear(),
+        termStart.getMonth(),
+        1,
+      );
       while (current <= termEnd) {
         const year = current.getFullYear();
         const month = current.getMonth() + 1; // JS: 0-based
         // Calculate the month's start and end within the term
         const monthStart = new Date(year, current.getMonth(), 1);
-        let monthEnd = new Date(year, current.getMonth() + 1, 0);
+        const monthEnd = new Date(year, current.getMonth() + 1, 0);
         if (monthStart < termStart) monthStart.setTime(termStart.getTime());
         if (monthEnd > termEnd) monthEnd.setTime(termEnd.getTime());
         // Get attendance for this month in this term
@@ -654,6 +663,12 @@ export class AttendanceService {
           endDate: monthEnd.toISOString().split('T')[0],
         });
         months.push({ month, year, attendance });
+        if (attendance.summary) {
+          totalMarkedDays += attendance.summary.totalAttendanceCount || 0;
+          presentCount += attendance.summary.totalPresentCount || 0;
+          absentCount += attendance.summary.totalAbsentCount || 0;
+          totalDaysInRange += attendance.summary.totalAttendanceCount || 0;
+        }
         // Move to next month
         current.setMonth(current.getMonth() + 1);
         current.setDate(1);
@@ -665,6 +680,17 @@ export class AttendanceService {
         months,
       });
     }
+    const averageAttendanceRate =
+      totalDaysInRange > 0
+        ? Math.round((presentCount / totalDaysInRange) * 100)
+        : 0;
+    const summary = {
+      totalAttendanceCount: totalMarkedDays,
+      totalPresentCount: presentCount,
+      totalAbsentCount: absentCount,
+      averageAttendanceRate,
+    };
+    result.summary = summary;
     return result;
   }
 
@@ -680,7 +706,23 @@ export class AttendanceService {
       where: { id: classLevelId },
       relations: ['students', 'school'],
     });
-    if (!classLevel) throw new NotFoundException('Class not found');
+    if (!classLevel) {
+      const calendar = await this.academicCalendarRepository.findOne({
+        where: { id: academicCalendarId },
+        relations: ['school'],
+      });
+      return {
+        academicYear: calendar ? calendar.name : '',
+        student: { id: studentId },
+        terms: [],
+        summary: {
+          totalAttendanceCount: 0,
+          totalPresentCount: 0,
+          totalAbsentCount: 0,
+          averageAttendanceRate: 0,
+        },
+      };
+    }
     const student = classLevel.students.find((s) => s.id === studentId);
     if (!student)
       throw new NotFoundException('Student not found in this class');
@@ -709,18 +751,27 @@ export class AttendanceService {
         fullName: `${student.firstName} ${student.lastName}`,
       },
       terms: [] as any[],
+      summary: {},
     };
 
+    let totalMarkedDays = 0;
+    let presentCount = 0;
+    let absentCount = 0;
+    let totalDaysInRange = 0;
     for (const term of terms) {
       const termStart = new Date(term.startDate);
       const termEnd = new Date(term.endDate);
       const months: { month: number; year: number; attendance: any }[] = [];
-      let current = new Date(termStart.getFullYear(), termStart.getMonth(), 1);
+      const current = new Date(
+        termStart.getFullYear(),
+        termStart.getMonth(),
+        1,
+      );
       while (current <= termEnd) {
         const year = current.getFullYear();
         const month = current.getMonth() + 1;
         const monthStart = new Date(year, current.getMonth(), 1);
-        let monthEnd = new Date(year, current.getMonth() + 1, 0);
+        const monthEnd = new Date(year, current.getMonth() + 1, 0);
         if (monthStart < termStart) monthStart.setTime(termStart.getTime());
         if (monthEnd > termEnd) monthEnd.setTime(termEnd.getTime());
         // Get attendance for this month in this term, for this student only
@@ -736,6 +787,13 @@ export class AttendanceService {
           },
         );
         months.push({ month, year, attendance });
+        if (attendance.student && attendance.student.statistics) {
+          totalMarkedDays += attendance.student.statistics.totalMarkedDays || 0;
+          presentCount += attendance.student.statistics.presentCount || 0;
+          absentCount += attendance.student.statistics.absentCount || 0;
+          totalDaysInRange +=
+            attendance.student.statistics.totalDaysInRange || 0;
+        }
         current.setMonth(current.getMonth() + 1);
         current.setDate(1);
       }
@@ -746,6 +804,17 @@ export class AttendanceService {
         months,
       });
     }
+    const averageAttendanceRate =
+      totalDaysInRange > 0
+        ? Math.round((presentCount / totalDaysInRange) * 100)
+        : 0;
+    const summary = {
+      totalAttendanceCount: totalMarkedDays,
+      totalPresentCount: presentCount,
+      totalAbsentCount: absentCount,
+      averageAttendanceRate,
+    };
+    result.summary = summary;
     return result;
   }
 }
