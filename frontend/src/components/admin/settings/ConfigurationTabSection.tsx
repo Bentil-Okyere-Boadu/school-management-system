@@ -49,25 +49,29 @@ export const ConfigurationTabSection: React.FC = () => {
 
 
     useEffect(() => {
-        const options = calendars?.map((calendar) => ({
+        if (!calendars || calendars.length === 0) return;
+
+        const options = calendars.map((calendar) => ({
             value: calendar.id,
             label: calendar.name,
         }));
-
         setCalendarOptions(options);
 
-        if ((calendars.length > 0 && isUseFirstCalendar) || calendars.length === 1) {
-            setSelectedAcademicCalendar(calendars[0].id);
-            setSelectedCalendarData(calendars[0]);
+        const shouldAutoSelect = (calendars.length > 0 && isUseFirstCalendar) || calendars.length === 1;
+        if (shouldAutoSelect) {
+            const first = calendars[0];
+            if (selectedAcademicCalendar !== first.id) {
+                setSelectedAcademicCalendar(first.id);
+            }
+            setSelectedCalendarData(first);
+
         } else if (!isUseFirstCalendar) {
-            const foundCalendar: Calendar | undefined = calendars.find(c => c.id === selectedAcademicCalendar);
-            if (foundCalendar) {
-                setSelectedAcademicCalendar(foundCalendar.id);
-                setSelectedCalendarData(foundCalendar);
+            const found = calendars.find(c => c.id === selectedAcademicCalendar);
+            if (found) {
+                setSelectedCalendarData(found);
             }
         }
-        
-    }, [calendars, isUseFirstCalendar, selectedAcademicCalendar]);
+    }, [calendars, isUseFirstCalendar]);
 
 
 
@@ -78,6 +82,8 @@ export const ConfigurationTabSection: React.FC = () => {
         if (calendar) {
             setSelectedCalendarData(calendar);
         }
+        console.log(selectedValue, "selectedValue");
+
     };
 
     const handleHolidaysInTermChange = (value: string | null) => {
