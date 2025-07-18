@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 // import { SearchBar } from "@/components/common/SearchBar";
+import StatCard from '@/components/admin/attendence/StatsCard';
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Menu } from "@mantine/core";
 import { IconDots, IconMessageFilled } from "@tabler/icons-react";
 import { Pagination } from "@/components/common/Pagination";
 import { useGetClassAttendance, useGetClassLevels } from "@/hooks/school-admin";
+import InputField from "@/components/InputField";
 // import { useDebouncer } from "@/hooks/generalHooks";
 
 interface AttendanceStats {
@@ -30,6 +32,12 @@ interface AttendanceData {
     name: string;
   };
   students: Student[];
+  summary: {
+    totalAttendanceCount: number,
+    totalPresentCount: number,
+    totalAbsentCount: number,
+    averageAttendanceRate: number
+  }
 }
 
 interface GetAttendanceSummary {
@@ -38,10 +46,15 @@ interface GetAttendanceSummary {
 }
 
 export const AttendanceSummaryTabSection: React.FC = () => {
-  const [currentYear, setCurrentYear] = useState("");
-  const [currentMonth, setCurrentMonth] = useState("");
+
   const [currentPage, setCurrentPage] = useState(1);
   // const [searchQuery, setSearchQuery] = useState("");
+
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  const [startDate, setStartDate] = useState(firstDay.toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
 
   const { classLevels } = useGetClassLevels();
   const getClasses = classLevels.map((classLevel) => {
@@ -53,46 +66,46 @@ export const AttendanceSummaryTabSection: React.FC = () => {
   const { attendanceData } = useGetClassAttendance(
     selectedClass,
     "month",
-    currentMonth,
-    currentYear,
     "",
-    true
+    "",
+    "",
+    true,
+    startDate,
+    endDate
   ) as GetAttendanceSummary;
+
+    const stats = [
+    {
+      label: "Total Attendance Count",
+      value: attendanceData?.summary.totalAttendanceCount as unknown as string,
+      fromColor: "#2B62E5",
+      toColor: "#8FB5FF",
+    },
+    {
+      label: "Total Present Count",
+      value: attendanceData?.summary.totalPresentCount as unknown as string,
+      fromColor: "#B55CF3",
+      toColor: "#D9A6FD",
+    },
+    {
+      label: "Total Absent Count",
+      value: attendanceData?.summary.totalAbsentCount as unknown as string,
+      fromColor: "#F15580",
+      toColor: "#F88FB3",
+    },
+    {
+      label: "Average Attendance Rate",
+      value: attendanceData?.summary.averageAttendanceRate+ '%',
+      fromColor: "#30C97A",
+      toColor: "#8DF4B8",
+    },
+  ];
 
   // const handleSearch = (query: string) => {
   //   setSearchQuery(query);
   //   setCurrentPage(1);
   //   console.log(currentPage, searchQuery);
   // };
-
-  const handleSelectChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-    type: "year" | "month"
-  ) => {
-    const value = event.target.value;
-    if (type === "year") setCurrentYear(value);
-    else if (type === "month") setCurrentMonth(value);
-  };
-
-  const monthOptions = [
-    { label: "Month", value: "" },
-    ...Array.from({ length: 12 }, (_, i) => {
-      const date = new Date(0, i);
-      return {
-        label: date.toLocaleString("default", { month: "long" }),
-        value: String(i + 1),
-      };
-    }),
-  ];
-
-  const currentYearNumber = new Date().getFullYear();
-  const yearOptions = [
-    { label: "Year", value: "" },
-    ...Array.from({ length: 10 }, (_, i) => {
-      const year = currentYearNumber - i;
-      return { label: String(year), value: String(year) };
-    }),
-  ];
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -106,28 +119,17 @@ export const AttendanceSummaryTabSection: React.FC = () => {
   return (
     <div className="pb-8">
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
-
+      <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
+        {stats.map((stat, index) => (
+          <StatCard key={index} {...stat} />
+        ))}
+      </section>
       <div className="flex gap-3 my-6">
-        <CustomSelectTag
-          value={currentMonth}
-          options={monthOptions}
-          onOptionItemClick={(e) =>
-            handleSelectChange(
-              e as React.ChangeEvent<HTMLSelectElement>,
-              "month"
-            )
-          }
-        />
-        <CustomSelectTag
-          value={currentYear}
-          options={yearOptions}
-          onOptionItemClick={(e) =>
-            handleSelectChange(
-              e as React.ChangeEvent<HTMLSelectElement>,
-              "year"
-            )
-          }
-        />
+        <div className="flex items-center">
+          <label>Select date range:</label>
+        </div>
+        <InputField type="date" label="Start Date" value={startDate} onChange={(e) => setStartDate(e.target.value)}/>
+        <InputField type="date" label="End Date" value={endDate} onChange={(e) => {setEndDate(e.target.value)}}/>
         <CustomSelectTag
           value={selectedClass}
           options={getClasses}

@@ -28,9 +28,16 @@ export interface User {
   date: string;
 }
 
+export interface ClassLevel {
+  id: string;
+  name: string;
+  description: string
+}
+
 export interface Student extends User {
   studentId: string;
   parents: Parent[];
+  classLevels: ClassLevel[];
   isInvitationAccepted: boolean;
   isArchived: boolean;
 }
@@ -164,6 +171,7 @@ export interface Term {
   termName: string;
   holidays: Holiday[];
   academicCalendarId?: string;
+  months?: Month[];
 }
 
 export interface Holiday {
@@ -382,4 +390,27 @@ export interface AttendanceParams {
   month?: number;
   year?: number;
   week?: number;
+}
+
+export interface Month {
+  month: number,
+  year: number,
+  attendance: {
+    classLevel: ClassLevel,
+    dateRange: {
+      startDate: string;
+      endDate: string;
+      dates: string[]
+    },
+    student: {
+      id: string;
+      attendanceByDate: Record<string, string>;
+    }
+  }
+}
+
+export interface StudentAttendanceData {
+  academicYear: string;
+  student: Student;
+  terms: Term[]
 }

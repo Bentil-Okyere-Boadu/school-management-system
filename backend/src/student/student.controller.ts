@@ -25,6 +25,8 @@ import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { ParentService } from 'src/parent/parent.service';
 import { CreateParentDto } from 'src/parent/dto/create-parent-dto';
 import { UpdateParentDto } from 'src/parent/dto/update-parent-dto';
+import { AttendanceService } from 'src/attendance/attendance.service';
+import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 
 @Controller('student')
 export class StudentController {
@@ -32,6 +34,8 @@ export class StudentController {
     private readonly studentAuthService: StudentAuthService,
     private readonly studentService: StudentService,
     private readonly parentService: ParentService,
+    private readonly attendanceService: AttendanceService,
+    private readonly academicCalendarService: AcademicCalendarService,
   ) {}
 
   @UseGuards(StudentLocalAuthGuard)
@@ -94,5 +98,27 @@ export class StudentController {
   @Roles('student')
   getProfile(@CurrentUser() student: Student) {
     return this.studentService.getMyProfile(student);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('classes/:classLevelId/calendars/:calendarId/attendance/grouped')
+  @Roles('student')
+  async getMyAttendanceGroupedByTermAndMonth(
+    @CurrentUser() student: Student,
+    @Param('classLevelId') classLevelId: string,
+    @Param('calendarId') calendarId: string,
+  ) {
+    return await this.attendanceService.getStudentAttendanceGroupedByTermAndMonth(
+      classLevelId,
+      student.id,
+      calendarId,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('calendars')
+  @Roles('student')
+  async getAllAcademicCalendars(@CurrentUser() student: Student) {
+    return this.academicCalendarService.findAllCalendars(student.school.id);
   }
 }
