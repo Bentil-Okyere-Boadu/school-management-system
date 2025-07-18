@@ -732,3 +732,21 @@ export const usePostClassAttendance = (classLevelId: string) => {
       customAPI.post(`/school-admin/classes/${classLevelId}/attendance`, payload),
   });
 };
+
+export const useAdminViewStudentAttendance = (
+    classLevelId: string,
+    studentId: string,
+    calendarId: string
+) => {
+    const {data, isLoading, refetch} = useQuery({
+        queryKey: ['adminStudentAttendance', studentId, calendarId, classLevelId],
+        queryFn: () => {
+            return customAPI.get(`school-admin/classes/${classLevelId}/students/${studentId}/calendars/${calendarId}/attendance/grouped`);
+        },
+        enabled: !!calendarId,
+        refetchOnWindowFocus: true
+    })
+
+    const studentAttendance = data?.data;
+    return { studentAttendance, isLoading, refetch };
+}

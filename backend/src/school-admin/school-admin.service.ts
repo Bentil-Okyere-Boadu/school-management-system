@@ -309,7 +309,7 @@ export class SchoolAdminService {
         id: userId,
         school: { id: schoolId },
       },
-      relations: ['profile'],
+      relations: ['profile', 'classLevels'],
     });
 
     if (student) {
