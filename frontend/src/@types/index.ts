@@ -13,6 +13,7 @@ export interface User {
   role: Role;
   status: string;
   school: School;
+  gender: string;
   profile: {
     avatarUrl?: string;
     otherName?: string;

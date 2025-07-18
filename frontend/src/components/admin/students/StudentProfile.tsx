@@ -113,7 +113,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
             label="Other Names"
             isTransulent={viewMode}
           />
-          <InputField className="!py-0" label="Gender" isTransulent={true} />
+          <InputField className="!py-0" label="Gender" value={student?.gender} isTransulent={true} />
           <InputField
             className="!py-0"
             label="Date of Birth"
@@ -139,7 +139,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
         <div className="mt-15">
           <h3 className="font-bold mb-3">Academic Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <InputField className="!py-0" label="Grade" isTransulent={true} />
+            <InputField className="!py-0" label="Grade" value={student?.classLevels[0].name} isTransulent={true} />
             <InputField
               className="!py-0"
               label="Student ID"
