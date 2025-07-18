@@ -215,3 +215,26 @@ export const useEditTeacherInfo = () => {
     }
   })
 }
+
+export const useUploadProfileImage = (id: string) => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post(`/profiles/teacher/${id}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteProfileImage = () => {
+  return useMutation({
+      mutationFn: (id: string) => {
+          return customAPI.delete(`/profiles/teacher/${id}/avatar`)
+      }
+  })
+}

@@ -6,13 +6,12 @@ import ProfileCard from "@/components/common/ProfileCard";
 import CustomUnderlinedButton from "@/components/common/CustomUnderlinedButton";
 import NoProfileImg from '@/images/no-profile-img.png' 
 import CustomButton from "@/components/Button";
-import { useUploadProfileImage, useDeleteProfileImage } from "@/hooks/school-admin";
+import { useUploadProfileImage, useDeleteProfileImage, useTeacherGetMe, useEditTeacherInfo } from "@/hooks/teacher";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { ErrorResponse } from "@/@types";
 import { Dialog } from "@/components/common/Dialog";
 import FileUploadArea from "@/components/common/FileUploadArea";
-import { useTeacherGetMe, useEditTeacherInfo } from "@/hooks/teacher";
 
 
 const TeacherProfileView = () => {
@@ -88,7 +87,7 @@ const TeacherProfileView = () => {
         onSuccess: () => {
           toast.success('File uploaded successfully');
           setIsFileUploadOpen(false);
-          queryClient.invalidateQueries({ queryKey: ['schoolAdminInfo']});
+          queryClient.invalidateQueries({ queryKey: ['teacherMe']});
         },
         onError: (error: unknown) => {
           toast.error(
@@ -106,7 +105,6 @@ const TeacherProfileView = () => {
       onSuccess: () => {
         toast.success('Deleted successfully.');
         setIsConfirmDeleteProfileImageDialogOpen(false);
-        // queryClient.invalidateQueries({ queryKey: ['schoolAdminMe']});
         queryClient.invalidateQueries({ queryKey: ['teacherMe']});
       },
       onError: (error: unknown) => {
