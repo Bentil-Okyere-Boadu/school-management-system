@@ -1,4 +1,4 @@
-import { ClassLevel, Student, User } from "@/@types";
+import { ClassLevel, Student, Teacher, User } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -11,7 +11,7 @@ export const useTeacherGetMe = () => {
         refetchOnWindowFocus: true
     })
 
-    const me = data?.data as User;
+    const me = data?.data as Teacher;
 
     return { me, isPending, refetch }
 }
@@ -181,16 +181,15 @@ export const useGetStudents = (page=1,search: string = "", status: string = "", 
       }
       
       const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
-      console.log(params);
       
-      return customAPI.get(`/teacher/students`);
+      return customAPI.get(`/teacher/students?${params}`);
     },
     refetchOnWindowFocus: true
 });
 
   const studentsData = data?.data?.data;
-  // const paginationValues = data?.data.meta;
-  return { studentsData, isLoading, refetch }
+  const paginationValues = data?.data.meta;
+  return { studentsData, isLoading, refetch, paginationValues }
 }
 
 export const useGetStudentById = (id: string, options?: UseQueryOptions) => {
@@ -207,4 +206,35 @@ export const useGetStudentById = (id: string, options?: UseQueryOptions) => {
     const studentData = (data as {data: User | Student})?.data ;
 
     return { studentData, isLoading, refetch }
+}
+
+export const useEditTeacherInfo = () => {
+  return useMutation({
+    mutationFn: (teacherData: Partial<Teacher>) => {
+      return customAPI.put('/teacher/profile/me', teacherData);
+    }
+  })
+}
+
+export const useUploadProfileImage = (id: string) => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post(`/profiles/teacher/${id}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteProfileImage = () => {
+  return useMutation({
+      mutationFn: (id: string) => {
+          return customAPI.delete(`/profiles/teacher/${id}/avatar`)
+      }
+  })
 }
