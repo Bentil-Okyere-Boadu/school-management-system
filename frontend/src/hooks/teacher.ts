@@ -181,16 +181,15 @@ export const useGetStudents = (page=1,search: string = "", status: string = "", 
       }
       
       const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
-      console.log(params);
       
-      return customAPI.get(`/teacher/students`);
+      return customAPI.get(`/teacher/students?${params}`);
     },
     refetchOnWindowFocus: true
 });
 
   const studentsData = data?.data?.data;
-  // const paginationValues = data?.data.meta;
-  return { studentsData, isLoading, refetch }
+  const paginationValues = data?.data.meta;
+  return { studentsData, isLoading, refetch, paginationValues }
 }
 
 export const useGetStudentById = (id: string, options?: UseQueryOptions) => {
