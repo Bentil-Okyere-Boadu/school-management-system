@@ -1,11 +1,9 @@
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import InputField from "@/components/InputField";
 import {
-  useAdminViewStudentAttendance,
-  useGetCalendars,
-} from "@/hooks/school-admin";
+useGetClassAttendance, useGetCalendars,
+} from "@/hooks/student";
 import Image from "next/image";
-import { useParams } from "next/navigation";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
 import React, { useState } from "react";
@@ -20,21 +18,21 @@ interface StudentAttendanceProps {
   classLevelId: string;
 }
 
-const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
-  const { id } = useParams();
+const ViewAttendance = ({ classLevelId }: StudentAttendanceProps) => {
+  const { studentCalendars } = useGetCalendars();
 
   const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
 
-  const { studentAttendance } = useAdminViewStudentAttendance(
+  const { studentAttendance } = useGetClassAttendance(
     classLevelId,
-    id as string,
     selectedAcademicYear
   ) as AttendanceData;
-  const { calendars } = useGetCalendars();
 
-  const academicYears = calendars.map((calendar) => {
+  const academicYears = studentCalendars?.map((calendar) => {
     return { value: calendar.id, label: calendar.name };
   });
+
+  console.log(studentAttendance, 'att')
 
   const handleSelectAcademicYear = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -52,7 +50,7 @@ const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
         <h3 className="my-4 font-bold">Attendance Summary</h3>
         <div className="mb-5">Select Academic Year</div>
         <CustomSelectTag
-          options={academicYears}
+          options={academicYears || []}
           optionLabel="Academic Year"
           onOptionItemClick={handleSelectAcademicYear}
         />
@@ -210,7 +208,7 @@ const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
         </div>
       </div>
     </div>
-  );
+  )
 };
 
-export default StudentAttendance;
+export default ViewAttendance;
