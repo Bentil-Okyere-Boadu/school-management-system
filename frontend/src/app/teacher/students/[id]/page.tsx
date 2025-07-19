@@ -1,16 +1,23 @@
 "use client"
-import { Student } from '@/@types';
+
+import React, { useState } from 'react';
+import { useParams } from 'next/navigation';
+import { Student, StudentAttendanceData } from '@/@types';
 import StudentAttendance from '@/components/admin/students/StudentAttendance';
 import StudentProfile from '@/components/admin/students/StudentProfile';
 import TabBar from '@/components/common/TabBar';
-import { useParams } from 'next/navigation'
-import React, { useState } from 'react'
-import { useGetStudentById } from '@/hooks/teacher';
+import { useGetStudentById, useAdminViewStudentAttendance, useGetCalendars,  } from '@/hooks/teacher';
 
 export type TabListItem = {
   tabLabel: string;
   tabKey: string;
 };
+
+interface AttendanceData {
+  studentAttendance: StudentAttendanceData;
+  isLoading: boolean;
+  refetch: () => void
+}
 
 const ViewStudentPage = () => {
     const {id} = useParams();
@@ -28,6 +35,19 @@ const ViewStudentPage = () => {
         { tabLabel: "Attendance", tabKey: "attendance" },
     ];
 
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
+
+    const { studentAttendance } = useAdminViewStudentAttendance(
+      (studentData as Student)?.classLevels?.[0]?.id,
+      id as string,
+      selectedAcademicYear
+    ) as AttendanceData;
+    const { studentCalendars } = useGetCalendars();
+
+    const handleSelectAcademicYear = (academicYearId: string) => {
+      setSelectedAcademicYear(academicYearId);
+    };
+
   return (
     <div className='px-0.5'>
         <TabBar 
@@ -43,7 +63,11 @@ const ViewStudentPage = () => {
         )}
         { activeTabKey === "attendance" && (
             <div>
-                <StudentAttendance classLevelId={(studentData as Student).classLevels[0].id} />
+                <StudentAttendance  
+                studentAttendance={studentAttendance}
+                calendars={studentCalendars}
+                onSelectAcademicYear={handleSelectAcademicYear}
+                />
             </div>
         )}
     </div>

@@ -1,4 +1,4 @@
-import { ClassLevel, Student, Teacher, User } from "@/@types";
+import { Calendar, ClassLevel, Student, Teacher, User } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -239,23 +239,23 @@ export const useDeleteProfileImage = () => {
   })
 }
 
-export const useGetStudentAttendance = (
-  classLevelId: string,
-  calendarId?: string
+export const useAdminViewStudentAttendance = (
+    classLevelId: string,
+    studentId: string,
+    calendarId: string
 ) => {
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['studentAttendance', { classLevelId, calendarId }],
-    queryFn: () => {
-      return customAPI.get(`/teacher/classes/${classLevelId}/calendars/${calendarId}/attendance/grouped`);
-    },
-    enabled: !!calendarId, // only run if calendarId is provided
-    refetchOnWindowFocus: true,
-  });
+    const {data, isLoading, refetch} = useQuery({
+        queryKey: ['adminStudentAttendance', studentId, calendarId, classLevelId],
+        queryFn: () => {
+            return customAPI.get(`teacher/classes/${classLevelId}/students/${studentId}/calendars/${calendarId}/attendance/grouped`);
+        },
+        enabled: !!calendarId,
+        refetchOnWindowFocus: true
+    })
 
-  const studentAttendance = data?.data;
-
-  return { studentAttendance, isLoading, refetch };
-};
+    const studentAttendance = data?.data;
+    return { studentAttendance, isLoading, refetch };
+}
 
 export const useGetCalendars = () => {
   const { data, isLoading, refetch } = useQuery({
@@ -265,7 +265,7 @@ export const useGetCalendars = () => {
     }
   })
 
-  const studentCalendars = data?.data as ClassLevel[];
+  const studentCalendars = data?.data as Calendar[];
 
   return { studentCalendars, isLoading, refetch }
 }
