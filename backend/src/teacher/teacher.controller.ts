@@ -29,6 +29,7 @@ import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { QueryString } from 'src/common/api-features/api-features';
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
+import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 
 @Controller('teacher')
 export class TeacherController {
@@ -38,6 +39,7 @@ export class TeacherController {
     private readonly classLevelService: ClassLevelService,
     private readonly attendanceService: AttendanceService,
     private readonly schoolAdminService: SchoolAdminService,
+    private readonly academicCalendarService: AcademicCalendarService,
   ) {}
 
   @UseGuards(TeacherLocalAuthGuard)
@@ -155,7 +157,29 @@ export class TeacherController {
   getClassAttendanceSummary(@Param('classLevelId') classLevelId: string) {
     return this.attendanceService.getClassAttendanceSummary(classLevelId);
   }
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('calendars')
+  @Roles('teacher')
+  async getAllAcademicCalendars(@CurrentUser() teacher: Teacher) {
+    return this.academicCalendarService.findAllCalendars(teacher.school.id);
+  }
 
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get(
+    'classes/:classLevelId/students/:studentId/calendars/:calendarId/attendance/grouped',
+  )
+  @Roles('teacher')
+  async getStudentAttendanceGroupedByTermAndMonth(
+    @Param('classLevelId') classLevelId: string,
+    @Param('studentId') studentId: string,
+    @Param('calendarId') calendarId: string,
+  ) {
+    return this.attendanceService.getStudentAttendanceGroupedByTermAndMonth(
+      classLevelId,
+      studentId,
+      calendarId,
+    );
+  }
   @Post('forgot-password')
   forgotPassword(@Body() forgotPasswordDto: ForgotTeacherPasswordDto) {
     return this.TeacherService.forgotPin(forgotPasswordDto.email);

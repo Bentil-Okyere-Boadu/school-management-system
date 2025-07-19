@@ -29,6 +29,7 @@ import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
+import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { SchoolAdminService } from 'src/school-admin/school-admin.service';
     ClassLevelService,
     AttendanceService,
     SchoolAdminService,
+    AcademicCalendarService,
   ],
   controllers: [TeacherController],
   exports: [TeacherService, TeacherAuthService, TeacherJwtAuthGuard],
