@@ -3,6 +3,20 @@ export enum ButtonType {
   reset = "reset",
   button = "button",
 }
+
+export interface Profile {
+    avatarUrl?: string;
+    firstName?: string;
+    lastName?: string;
+    otherName?: string;
+    DateOfBirth?: string,
+    optionalPhoneContact: string;
+    email: string;
+    PlaceOfBirth: string;
+    streetAddress: string;
+    phoneContact: string;
+    BoxAddress: string;
+  }
 export interface User {
   id: string;
   email: string;
@@ -15,17 +29,7 @@ export interface User {
   school: School;
   gender: string;
   phoneContact: string;
-  profile: {
-    avatarUrl?: string;
-    otherName?: string;
-    DateOfBirth?: string,
-    optionalPhoneContact: string;
-    email: string;
-    PlaceOfBirth: string;
-    streetAddress: string;
-    phoneContact: string;
-    BoxAddress: string;
-  }
+  profile: Profile;
   date: string;
 }
 
