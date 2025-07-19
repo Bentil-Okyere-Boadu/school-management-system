@@ -58,7 +58,7 @@ export class ClassLevelController {
     @CurrentUser() admin: SchoolAdmin,
     @Query() query: QueryString,
   ) {
-    return this.classLevelService.findAll(admin, query);
+    return this.classLevelService.findAll(admin);
   }
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
   @Delete(':id')
