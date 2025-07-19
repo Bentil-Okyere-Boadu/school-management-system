@@ -43,6 +43,9 @@ const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
     setSelectedAcademicYear(selected);
   };
 
+  const presentPercentage = (studentAttendance?.summary.totalPresentCount / studentAttendance?.summary.totalAttendanceCount) * 100 || 0 + '%'
+  const absentPercentage = (studentAttendance?.summary.totalAbsentCount / studentAttendance?.summary.totalAttendanceCount) * 100 || 0 + '%'
+
   return (
     <div>
       <div>
@@ -55,30 +58,37 @@ const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
         />
       </div>
       <div className="my-5">
-        <InputField
-          className="!py-0 w-[40%]"
-          label="Attendance Count"
-          isTransulent={true}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
+          <InputField
+            className="!py-0 w-[40px]"
+            label="Attendance Count"
+            value={studentAttendance?.summary.totalAttendanceCount as unknown as string}
+            isTransulent={true}
+          />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
           <InputField
             className="!py-0"
             label="Present Count"
+            value={studentAttendance?.summary.totalPresentCount as unknown as string}
             isTransulent={true}
           />
           <InputField
             className="!py-0"
             label="Present Percentage"
+            value={presentPercentage as string}
             isTransulent={true}
           />
           <InputField
             className="!py-0"
             label="Absent Count"
+            value={studentAttendance?.summary.totalAbsentCount as unknown as string}
             isTransulent={true}
           />
           <InputField
             className="!py-0"
-            label="Absent Persentage"
+            label="Absent Percentage"
+            value={absentPercentage as string}
             isTransulent={true}
           />
         </div>

@@ -413,5 +413,11 @@ export interface Month {
 export interface StudentAttendanceData {
   academicYear: string;
   student: Student;
-  terms: Term[]
+  terms: Term[];
+  summary: {
+    totalAttendanceCount: number,
+    totalPresentCount: number,
+    totalAbsentCount: number,
+    averageAttendanceRate: number
+  }
 }
