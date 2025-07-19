@@ -3,7 +3,7 @@ import { useParams } from "next/navigation";
 import NoProfileImg from "@/images/ProfilePic.jpg";
 import React, { useEffect, useState } from "react";
 import InputField from "@/components/InputField";
-import { Parent, Student } from "@/@types";
+import { Parent, Profile, Student } from "@/@types";
 import CustomButton from "@/components/Button";
 import Guardian from "./Guardian";
 import CustomUnderlinedButton from "@/components/common/CustomUnderlinedButton";
@@ -33,19 +33,28 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
 
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [newGuardian, setNewGuardian] = useState<Parent>(guardianObj);
-  const [student, setStudent] = useState<Student>(studentData);
+  const [student, setStudent] = useState(studentData);
+  const [profile, setProfile] = useState<Partial<Profile>>({ 
+    firstName: studentData?.firstName, 
+    lastName: studentData?.lastName,
+    otherName: studentData?.profile?.otherName,
+    PlaceOfBirth: studentData?.profile.PlaceOfBirth,
+    DateOfBirth: studentData?.profile.DateOfBirth
+  })
 
   useEffect(() => {
     setStudent(studentData);
   }, [studentData]);
 
   const saveStudentData = () => {
-    editStudent( student, {
+    editStudent( profile as Partial<Profile>, {
       onSuccess: () => {
         toast.success('Student data updated successfully.');
         refetch();
       },
-      onError: () => {}
+      onError: () => {
+         toast.error('Error occured while updating profile.');
+      }
     })
   }
 
@@ -72,7 +81,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
             <h3 className="font-bold mb-3">Personal Information</h3>
             <Image
               src={
-                student?.profile
+                student?.profile?.avatarUrl
                   ? (student.profile?.avatarUrl as string)
                   : NoProfileImg.src
               }
@@ -96,20 +105,22 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
             className="!py-0"
             label="First Name"
             isTransulent={viewMode}
-            value={student?.firstName}
-            onChange={(e) => setStudent({...student, firstName: e.target.value})}
+            value={profile?.firstName}
+            onChange={(e) => setProfile({...profile, firstName: e.target.value})}
           />
           <InputField
             className="!py-0"
             label="Last Name"
-            value={student?.lastName}
+            value={profile?.lastName}
             isTransulent={viewMode}
-            onChange={(e) => setStudent({...student, lastName: e.target.value})}
+            onChange={(e) => setProfile({...profile, lastName: e.target.value})}
           />
 
           <InputField
             className="!py-0"
             label="Other Names"
+            onChange={(e) => setProfile({...profile, otherName: e.target.value})}
+            value={profile?.otherName}
             isTransulent={viewMode}
           />
           <InputField className="!py-0" label="Gender" value={student?.gender} isTransulent={true} />
@@ -117,12 +128,16 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
             className="!py-0"
             label="Date of Birth"
             type="Date"
+            onChange={(e) => setProfile({...profile, DateOfBirth: e.target.value})}
+            value={profile?.DateOfBirth}
             isTransulent={viewMode}
           />
           <InputField
             className="!py-0"
             label="Place of Birth"
+            value={student?.profile.PlaceOfBirth}
             isTransulent={viewMode}
+            onChange={(e) => setProfile({...profile, PlaceOfBirth: e.target.value})}
           />
           <InputField
             className="!py-0"
@@ -130,7 +145,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
             type="Email"
             isTransulent={true}
             value={student?.email}
-            onChange={(e) => setStudent({...student, email: e.target.value})}
+            onChange={(e) => setProfile({...profile, email: e.target.value})}
           />
         </div>
 
@@ -138,7 +153,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
         <div className="mt-15">
           <h3 className="font-bold mb-3">Academic Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <InputField className="!py-0" label="Grade" isTransulent={true} />
+            <InputField className="!py-0" label="Grade" value={student?.classLevels[0].name} isTransulent={true} />
             <InputField
               className="!py-0"
               label="Student ID"
