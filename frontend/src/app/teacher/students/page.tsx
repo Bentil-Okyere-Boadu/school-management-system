@@ -5,13 +5,13 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import FilterButton from "@/components/common/FilterButton";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
-// import { useDebouncer } from "@/hooks/generalHooks";
+import { useDebouncer } from "@/hooks/generalHooks";
 import { useGetStudents } from "@/hooks/teacher";
 import React, { useState } from "react";
 
 const Students = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  // const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
 
@@ -22,7 +22,7 @@ const Students = () => {
   ];
 
   const handleSearch = (query: string) => {
-    // setSearchQuery(query);
+    setSearchQuery(query);
     console.log(query);
     setCurrentPage(1); // Reset to first page when searching
   };
@@ -36,7 +36,14 @@ const Students = () => {
     setCurrentPage(page);
   };
 
-  const {studentsData} = useGetStudents();
+  const {studentsData, paginationValues} = useGetStudents(    
+    currentPage,
+    useDebouncer(searchQuery),
+    selectedStatus,
+    "", 
+    "", 
+    10
+  );
 
   return (
     <div>
@@ -63,7 +70,7 @@ const Students = () => {
       <StudentsTable students={studentsData} />
       <Pagination
         currentPage={currentPage}
-        totalPages={1}
+        totalPages={paginationValues?.totalPages || 1}
         onPageChange={handlePageChange}
       />
     </div>

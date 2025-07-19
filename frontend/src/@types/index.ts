@@ -14,10 +14,17 @@ export interface User {
   status: string;
   school: School;
   gender: string;
+  phoneContact: string;
   profile: {
     avatarUrl?: string;
     otherName?: string;
     DateOfBirth?: string,
+    optionalPhoneContact: string;
+    email: string;
+    PlaceOfBirth: string;
+    streetAddress: string;
+    phoneContact: string;
+    BoxAddress: string;
   }
   date: string;
 }
@@ -39,6 +46,10 @@ export interface Student extends User {
 export interface Teacher extends User {
   teacherId: string;
   isArchived: boolean;
+  phoneContact: string;
+  BoxAddress: string;
+  streetAddress: string;
+  optionalPhoneContact: string;
 }
 
 export interface Parent {
@@ -66,6 +77,7 @@ export enum Roles {
 export type Role = {
   id: string;
   name: keyof typeof Roles;
+  label?: string;
 };
 
 export type FeeStructure = {

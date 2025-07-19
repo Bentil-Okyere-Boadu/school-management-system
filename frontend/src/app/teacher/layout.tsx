@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { ClassesIcon, StudentsIcon } from "@/utils/icons";
+import { ClassesIcon, StudentsIcon, UsersIcon } from "@/utils/icons";
 
 import { useTeacherGetMe } from "@/hooks/teacher";
 
@@ -27,6 +27,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: ClassesIcon,      
       label: "Classes",
     },
+    {
+      icon: UsersIcon,      
+      label: "Profile",
+    },
   ];
 
 
@@ -37,6 +41,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/teacher/classes") {
       setActiveMenuItem("Classes");
+      setIsOverviewPage(true);
+    } else if (pathname === "/teacher/profile") {
+      setActiveMenuItem("Profile");
       setIsOverviewPage(true);
     } 
 
@@ -62,6 +69,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Classes":
         router.push("/teacher/classes");
+        break;
+      case "Profile":
+        router.push("/teacher/profile");
         break;
     }
     setIsSidebarOpen(false);
