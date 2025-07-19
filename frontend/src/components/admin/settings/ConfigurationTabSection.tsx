@@ -82,8 +82,6 @@ export const ConfigurationTabSection: React.FC = () => {
         if (calendar) {
             setSelectedCalendarData(calendar);
         }
-        console.log(selectedValue, "selectedValue");
-
     };
 
     const handleHolidaysInTermChange = (value: string | null) => {

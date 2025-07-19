@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, UsersIcon, SchoolsIcon } from "@/utils/icons";
+import { ProfileIcon, PaymentsIcon, ResultsIcon, AttendanceIcon } from "@/utils/icons";
 import { useStudentGetMe } from "@/hooks/student";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
@@ -18,19 +18,19 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
 
   const sidebarItems = [
     {
-      icon: DashboardIcon,
+      icon: ProfileIcon,
       label: "Profile",
     },
     {
-      icon: UsersIcon,      
+      icon: AttendanceIcon,      
       label: "Attendance",
     },
     {
-      icon: SchoolsIcon,      
+      icon: ResultsIcon,      
       label: "Results",
     },
     {
-      icon: SchoolsIcon,      
+      icon: PaymentsIcon,      
       label: "Payments",
     },
   ];

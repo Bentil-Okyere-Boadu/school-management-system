@@ -23,7 +23,6 @@ const Students = () => {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    console.log(query);
     setCurrentPage(1); // Reset to first page when searching
   };
 

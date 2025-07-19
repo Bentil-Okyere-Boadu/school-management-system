@@ -170,13 +170,25 @@ export interface Calendar {
 
 export interface Term {
   id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
+  name?: string;
+  startDate?: string;
+  endDate?: string;
   termName: string;
   holidays: Holiday[];
   academicCalendarId?: string;
   months?: Month[];
+  entries?: Entry[];
+  remarks?: string;
+}
+
+export interface Entry {
+  id: string;
+  name: string;
+  subject: string;
+  classScore: string;
+  examScore: string;
+  percentageScore: string;
+  grade: string;
 }
 
 export interface Holiday {
@@ -424,4 +436,14 @@ export interface StudentAttendanceData {
     totalAbsentCount: number,
     averageAttendanceRate: number
   }
+}
+
+export interface Payment {
+  feeTitle: string;
+  feeAmount: number;
+  dueDate: string;
+  status: string;
+  paymentMethod: string;
+  paidDate: string;
+  paidBy: string;
 }

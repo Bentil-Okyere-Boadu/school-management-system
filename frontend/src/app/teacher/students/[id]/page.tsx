@@ -43,7 +43,7 @@ const ViewStudentPage = () => {
         )}
         { activeTabKey === "attendance" && (
             <div>
-                <StudentAttendance/>
+                <StudentAttendance classLevelId={(studentData as Student).classLevels[0].id} />
             </div>
         )}
     </div>
