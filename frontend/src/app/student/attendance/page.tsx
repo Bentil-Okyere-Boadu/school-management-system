@@ -1,11 +1,14 @@
 "use client"
-import StudentAttendance from '@/components/admin/students/StudentAttendance'
+import ViewAttendance from '@/components/student/ViewAttendance'
+import { useStudentGetMe } from '@/hooks/student'
 import React from 'react'
 
 const StudentDashboard = () => {
+  const { me } = useStudentGetMe();
+
   return (
     <div>
-      <StudentAttendance/>
+      <ViewAttendance classLevelId={me?.classLevels[0].id}/>
     </div>
   )
 }

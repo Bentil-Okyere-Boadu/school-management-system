@@ -1,4 +1,4 @@
-import { Parent, Student, User } from "@/@types";
+import { ClassLevel, Parent, Profile, Student } from "@/@types";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -11,14 +11,14 @@ export const useStudentGetMe = () => {
         refetchOnWindowFocus: true
     })
 
-    const me = data?.data as User;
+    const me = data?.data as Student;
 
     return { me, isPending, refetch }
 }
 
 export const useUpdateStudentProfile = () => {
     return useMutation({
-        mutationFn: (studentDetails: Student) => {
+        mutationFn: (studentDetails: Partial<Profile>) => {
             return customAPI.put(`student/profile/me`, studentDetails);
         }
     })
@@ -49,45 +49,31 @@ export const useDeleteGuardian = (parentId: string) => {
 
 export const useGetClassAttendance = (
   classLevelId: string,
-  filterType: string = "month",
-  month?: string,
-  year?: string,
-  week?: string,
-  summaryOnly?: boolean
+  calendarId?: string
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly }],
+    queryKey: ['classAttendance', { classLevelId, calendarId }],
     queryFn: () => {
-      const queryBuilder = [];
-
-      if (filterType) {
-        queryBuilder.push(`filterType=${filterType}`);
-      }
-
-      if (month) {
-        queryBuilder.push(`month=${month}`);
-      }
-
-      if (year) {
-        queryBuilder.push(`year=${year}`);
-      }
-
-      if (week) {
-        queryBuilder.push(`week=${week}`);
-      }
-
-      if(summaryOnly) {
-        queryBuilder.push(`summaryOnly=${summaryOnly}`);
-      }
-
-      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
-      return customAPI.get(`/student/classes/${classLevelId}/attendance?${params}`);
+      return customAPI.get(`/student/classes/${classLevelId}/calendars/${calendarId}/attendance/grouped`);
     },
-    enabled: !!classLevelId, // only run if classLevelId is provided
+    enabled: !!calendarId, // only run if calendarId is provided
     refetchOnWindowFocus: true,
   });
 
-  const attendanceData = data?.data;
+  const studentAttendance = data?.data;
 
-  return { attendanceData, isLoading, refetch };
+  return { studentAttendance, isLoading, refetch };
 };
+
+export const useGetCalendars = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentCalendars'],
+    queryFn: () => {
+      return customAPI.get(`/student/calendars`)
+    }
+  })
+
+  const studentCalendars = data?.data as ClassLevel[];
+
+  return { studentCalendars, isLoading, refetch }
+}
