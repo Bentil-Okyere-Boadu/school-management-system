@@ -34,16 +34,17 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [newGuardian, setNewGuardian] = useState<Parent>(guardianObj);
   const [student, setStudent] = useState(studentData);
-  const [profile, setProfile] = useState<Partial<Profile>>({ 
-    firstName: studentData?.firstName, 
-    lastName: studentData?.lastName,
-    otherName: studentData?.profile?.otherName,
-    PlaceOfBirth: studentData?.profile.PlaceOfBirth,
-    DateOfBirth: studentData?.profile.DateOfBirth
-  })
+  const [profile, setProfile] = useState<Partial<Profile>>()
 
   useEffect(() => {
     setStudent(studentData);
+    setProfile({ 
+    firstName: studentData?.firstName || "", 
+    lastName: studentData?.lastName || "",
+    otherName: studentData?.profile?.otherName || "",
+    PlaceOfBirth: studentData?.profile?.PlaceOfBirth || "",
+    DateOfBirth: studentData?.profile?.DateOfBirth || ""
+  })
   }, [studentData]);
 
   const saveStudentData = () => {
@@ -135,7 +136,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
           <InputField
             className="!py-0"
             label="Place of Birth"
-            value={student?.profile.PlaceOfBirth}
+            value={profile?.PlaceOfBirth}
             isTransulent={viewMode}
             onChange={(e) => setProfile({...profile, PlaceOfBirth: e.target.value})}
           />
