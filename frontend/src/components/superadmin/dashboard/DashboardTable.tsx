@@ -66,12 +66,10 @@ export const DashboardTable = ({adminUsers, refetch}: UserTableProps) => {
 
   const handlePermissionChange = (value: string[]) => {
     setSelectedPermissions(value)
-    console.log("Selected permissions:", value);
   };
 
   const handleRoleDataChange = (value: string | null) => {
     setSelectedDataRole(value);
-    console.log("Selected role:", value);
   };
 
   const onArchiveUserMenuItemClick = (user: User) => {

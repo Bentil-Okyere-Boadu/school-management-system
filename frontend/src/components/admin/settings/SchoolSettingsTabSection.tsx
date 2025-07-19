@@ -45,6 +45,8 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const [selectedSchoolLogoFiles, setSelectedSchoolLogoFiles] = useState<File[]>([]);
   const [isConfirmDeleteSchoolLogoDialogOpen, setIsConfirmDeleteSchoolLogoDialogOpen] = useState(false);
   const [classLevels, setClassLevels] = useState<{value: string, label: string}[]>();
+  const [emailList, setEmailList] = useState<string[]>([]);
+  const [newEmail, setNewEmail] = useState("");
 
 
   const appliesTo = [
@@ -227,6 +229,20 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     })
   }
 
+  const isValidEmail = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const handleAddEmail = () => {
+    if (isValidEmail(newEmail)) {
+      setEmailList((prev) => [...prev, newEmail]);
+      setNewEmail("");
+    }
+  };
+
+  const handleRemoveEmail = (emailToRemove: string) => {
+    setEmailList((prev) => prev.filter((email) => email !== emailToRemove));
+  };
+
   return (
     <div className="pb-16">
       {/* <div className="flex justify-end">
@@ -260,7 +276,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
                     <CustomUnderlinedButton
                       text="Send Reminder"
                       textColor="text-gray-500"
-                      onClick={() => {}}
+                      onClick={() => setIsSendReminderDialogOpen(false)}
                       showIcon={false}
                     />
                     <CustomUnderlinedButton
@@ -464,21 +480,28 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           <InputField
             label="Emails"
             type="text"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
             rightButton={
-              <button type="button" className={`h-8 cursor-pointer text-sm font-semibold rounded-md border  bg-opacity-10  w-[98px]
-                ${false ? "border-[#AB58E7] text-[#AB58E7]" : "bg-[#ebebeb] border-zinc-400 text-zinc-500"}`} 
-                onClick={() => {}}>
+              <button
+                type="button"
+                  className={`h-8 cursor-pointer text-sm font-semibold rounded-md border bg-opacity-10 w-[98px]
+                    ${isValidEmail(newEmail)
+                      ? "border-[#AB58E7] text-[#AB58E7]"
+                      : "bg-[#ebebeb] border-zinc-400 text-zinc-500"
+                    }`}
+                  onClick={handleAddEmail}
+                  disabled={!isValidEmail(newEmail)}
+                >
                 Add email
               </button>
             }
           />
-          {["mike@gmsdf", "ab@gmai.com"].map((email, index) => (
+          {emailList?.map((email, index) => (
             <EmailItem
               key={index}
               email={email}
-              onIconClick={() => {
-                console.log("clicked");
-              }}
+              onIconClick={() => handleRemoveEmail(email)}
             />
           ))}
           
@@ -486,8 +509,8 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
             label="Send via"
             className="mb-8"
             placeholder="Please Select"
-            data={['Email', 'SMS']}
-            value={''}
+            data={[{label:'Email', value:'email'}]}
+            value={'email'}
             onChange={() => {}}
           />
         </div>

@@ -59,7 +59,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
   const [selectedReminderTitle, setSelectedReminderTitle] = useState<string>();
 
   const transmissionList = [
-    { label: 'Email', value: 'emalil' },
+    { label: 'Email', value: 'email' },
     { label: 'SMS', value: 'sms' }
   ];
   const reminderTitlesList = [
