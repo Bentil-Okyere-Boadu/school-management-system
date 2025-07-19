@@ -426,3 +426,13 @@ export interface StudentAttendanceData {
   student: Student;
   terms: Term[]
 }
+
+export interface Payment {
+  feeTitle: string;
+  feeAmount: number;
+  dueDate: string;
+  status: string;
+  paymentMethod: string;
+  paidDate: string;
+  paidBy: string;
+}

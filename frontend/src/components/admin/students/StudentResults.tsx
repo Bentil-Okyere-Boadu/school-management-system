@@ -5,6 +5,7 @@ import { CustomSelectTag } from "../../common/CustomSelectTag";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 import { Calendar } from "@/@types";
 import CustomButton from "@/components/Button";
+import { IconDownload } from "@tabler/icons-react";
 
 interface StudentResultProps {
   calendars: Calendar[];
@@ -50,6 +51,7 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
         <div className="flex justify-end">
           <CustomButton
             text="Export Report"
+            icon={<IconDownload size={16} />}
             onClick={() => {
               if (selectedCalendarData) onExportButtonClick?.(selectedCalendarData);
             }}

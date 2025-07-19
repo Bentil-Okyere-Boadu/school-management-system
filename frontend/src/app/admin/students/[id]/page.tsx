@@ -119,9 +119,6 @@ const ViewStudentPage = () => {
         ]
       },
     ];
-    const onExportButtonClick = (item: Calendar) => {
-      console.log("Exporting report for:", item);
-    };
 
   return (
     <div className='px-0.5'>
@@ -145,8 +142,7 @@ const ViewStudentPage = () => {
             <div>
                 <StudentResults 
                   calendars={calendars as Calendar[]}
-                  showExportButton={false}
-                  onExportButtonClick={onExportButtonClick} />
+                  showExportButton={false} />
             </div>
         )}
     </div>
