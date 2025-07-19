@@ -120,11 +120,25 @@ export class ClassLevelService {
     await this.classLevelRepository.remove(classLevel);
     return { message: 'Class level deleted successfully' };
   }
-  async findAll(admin: SchoolAdmin): Promise<ClassLevel[]> {
-    return this.classLevelRepository.find({
-      where: { school: { id: admin.school.id } },
-      relations: ['teachers', 'students'],
-    });
+  async findAll(
+    admin: SchoolAdmin,
+    query?: QueryString,
+  ): Promise<ClassLevel[]> {
+    const queryBuilder = this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoinAndSelect('classLevel.teachers', 'teacher')
+      .leftJoinAndSelect('classLevel.students', 'student')
+      .where('classLevel.school.id = :schoolId', { schoolId: admin.school.id });
+
+    if (query) {
+      const features = new APIFeatures(queryBuilder, query)
+        .filter()
+        .search(['name'])
+        .sort()
+        .paginate();
+      return features.getQuery().getMany();
+    }
+    return queryBuilder.getMany();
   }
 
   async getClassesForTeacher(teacherId: string, query?: QueryString) {

@@ -23,6 +23,8 @@ export interface AttendanceFilter {
   week?: number; // for week filter (week number of year)
   weekOfMonth?: number; // e.g. 2nd week in a given month
   summaryOnly?: boolean;
+  page?: number; // pagination: page number
+  limit?: number; // pagination: items per page
 }
 
 @Injectable()
@@ -179,7 +181,7 @@ export class AttendanceService {
     });
 
     /* ───────────── if summaryOnly = true, strip down ───────────── */
-    const students = filter.summaryOnly
+    const studentsRaw = filter.summaryOnly
       ? detailedStudents.map(
           ({ id, firstName, lastName, fullName, statistics }) => ({
             id,
@@ -191,8 +193,17 @@ export class AttendanceService {
         )
       : detailedStudents;
 
+    // ───────────── PAGINATION for students ─────────────
+    const page = filter.page && filter.page > 0 ? filter.page : 1;
+    const limit = filter.limit && filter.limit > 0 ? filter.limit : 10;
+    const total = studentsRaw.length;
+    const totalPages = Math.ceil(total / limit);
+    const startIdx = (page - 1) * limit;
+    const endIdx = startIdx + limit;
+    const students = studentsRaw.slice(startIdx, endIdx);
+
     // ───────────── summary for all students ─────────────
-    const summaryStats = students.reduce(
+    const summaryStats = studentsRaw.reduce(
       (acc, s) => {
         acc.totalMarkedDays += s.statistics.totalMarkedDays;
         acc.presentCount += s.statistics.presentCount;
@@ -226,6 +237,7 @@ export class AttendanceService {
           classLevel: { id: classLevel.id, name: classLevel.name },
           students,
           summary,
+          pagination: { total, page, limit, totalPages },
         }
       : {
           classLevel: { id: classLevel.id, name: classLevel.name },
@@ -236,6 +248,7 @@ export class AttendanceService {
           },
           students,
           summary,
+          pagination: { total, page, limit, totalPages },
         };
   }
 
