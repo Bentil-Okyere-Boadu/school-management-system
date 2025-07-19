@@ -238,3 +238,34 @@ export const useDeleteProfileImage = () => {
       }
   })
 }
+
+export const useGetStudentAttendance = (
+  classLevelId: string,
+  calendarId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentAttendance', { classLevelId, calendarId }],
+    queryFn: () => {
+      return customAPI.get(`/teacher/classes/${classLevelId}/calendars/${calendarId}/attendance/grouped`);
+    },
+    enabled: !!calendarId, // only run if calendarId is provided
+    refetchOnWindowFocus: true,
+  });
+
+  const studentAttendance = data?.data;
+
+  return { studentAttendance, isLoading, refetch };
+};
+
+export const useGetCalendars = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentCalendars'],
+    queryFn: () => {
+      return customAPI.get(`/teacher/calendars`)
+    }
+  })
+
+  const studentCalendars = data?.data as ClassLevel[];
+
+  return { studentCalendars, isLoading, refetch }
+}
