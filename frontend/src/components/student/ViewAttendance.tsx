@@ -154,7 +154,7 @@ const ViewAttendance = ({ classLevelId }: StudentAttendanceProps) => {
                                   new Date(date).getDay() === 0 ||
                                   new Date(date).getDay() === 6
                                     ? "bg-white none pointer-events-none"
-                                    : "bg-[#F9F5FF] cursor-pointer"
+                                    : "bg-[#F9F5FF]"
                                 } ${
                                   isHoliday &&
                                   "bg-[#FCEBCF] pointer-events-none"
