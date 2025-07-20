@@ -15,8 +15,12 @@ interface StudentPaymentsProps {
 }
 
 const StudentPayments: React.FC<StudentPaymentsProps>  = ({payments, onPayNowButtonClick, onExportReportButtonClick}) => {
+  const isHidden = false;
 
   return (
+
+    <>
+    {isHidden && (
     <div className="pb-8">
       <h1 className="text-md font-semibold text-neutral-800 mb-4">Upcoming Payments</h1>
       <div>
@@ -93,6 +97,15 @@ const StudentPayments: React.FC<StudentPaymentsProps>  = ({payments, onPayNowBut
         />
       <StudentPaymentHistoryTable payments={payments} />
     </div>
+    )}
+
+    {!isHidden && (
+      <div className="pb-8">
+        <p className="text-lg font-semibold text-gray-500">Payment Views</p>
+      </div>
+    )}
+    </>
+
   );
 }
 

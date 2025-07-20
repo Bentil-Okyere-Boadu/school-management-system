@@ -1,10 +1,10 @@
 "use client"
-import { Calendar, Student } from '@/@types';
+import { Calendar, Student, StudentAttendanceData } from '@/@types';
 import StudentAttendance from '@/components/admin/students/StudentAttendance';
 import StudentProfile from '@/components/admin/students/StudentProfile';
 import StudentResults from '@/components/admin/students/StudentResults';
 import TabBar from '@/components/common/TabBar';
-import { useGetSchoolUserById } from '@/hooks/school-admin';
+import { useAdminViewStudentAttendance, useGetCalendars, useGetSchoolUserById } from '@/hooks/school-admin';
 import { useParams } from 'next/navigation'
 import React, { useState } from 'react'
 
@@ -12,6 +12,12 @@ export type TabListItem = {
   tabLabel: string;
   tabKey: string;
 };
+
+interface AttendanceData {
+  studentAttendance: StudentAttendanceData;
+  isLoading: boolean;
+  refetch: () => void
+}
 
 const ViewStudentPage = () => {
     const {id} = useParams();
@@ -29,8 +35,20 @@ const ViewStudentPage = () => {
         { tabLabel: "Attendance", tabKey: "attendance" },
         { tabLabel: "Results", tabKey: "results" },
       ];
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
 
-    const calendars = [
+    const { studentAttendance } = useAdminViewStudentAttendance(
+      (schoolUser as Student)?.classLevels?.[0]?.id,
+      id as string,
+      selectedAcademicYear
+    ) as AttendanceData;
+    const { calendars } = useGetCalendars();
+
+    const handleSelectAcademicYear = (academicYearId: string) => {
+      setSelectedAcademicYear(academicYearId);
+    };
+
+    const calendarsTestData = [
       {
         "id": "fe5f4449-acdf-4c0d-ba39-1cf50b1f24d6",
         "name": "2022/2023 Color Calendar1",
@@ -135,13 +153,17 @@ const ViewStudentPage = () => {
         )}
         { activeTabKey === "attendance" && (
             <div>
-                <StudentAttendance classLevelId={(schoolUser as Student).classLevels[0].id}/>
+              <StudentAttendance 
+                studentAttendance={studentAttendance}
+                calendars={calendars}
+                onSelectAcademicYear={handleSelectAcademicYear}
+              />
             </div>
         )}
         { activeTabKey === "results" && (
             <div>
                 <StudentResults 
-                  calendars={calendars as Calendar[]}
+                  calendars={calendarsTestData as Calendar[]}
                   showExportButton={false} />
             </div>
         )}

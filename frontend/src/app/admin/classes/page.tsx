@@ -197,7 +197,7 @@ const ClassesPage = () => {
             isTransulent={false}
           /> 
           <Select
-            label="Teacher"
+            label="Class Teacher"
             placeholder="Pick teacher"
             data={allTeacherOptions || []}
             value={selectedTeacher}

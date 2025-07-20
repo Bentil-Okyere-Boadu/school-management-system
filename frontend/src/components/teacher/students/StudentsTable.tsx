@@ -56,6 +56,7 @@ const StudentsTable = ({ students }: StudentsTableProps) => {
                     {student?.profile?.otherName}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                    {student?.classLevels?.[0]?.name}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                     {student?.profile?.DateOfBirth}
