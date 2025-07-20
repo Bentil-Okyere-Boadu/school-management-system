@@ -5,7 +5,7 @@ import React, { useState } from "react";
 // import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Menu, MultiSelect, Select } from "@mantine/core";
 import { IconDots, IconMessageFilled } from "@tabler/icons-react";
-import { useGetClassAttendance, useTeacherAttendanceSummary } from "@/hooks/teacher";
+import { useGetClassAttendance } from "@/hooks/teacher";
 import { Pagination } from "@/components/common/Pagination";
 import { Dialog } from "@/components/common/Dialog";
 import StatCard from "./StatsCard";
@@ -34,7 +34,9 @@ interface AttendanceData {
     id: string;
     name: string;
   }
-  students: Student[]
+  students: Student[],
+  summary: Record<string, string>,
+  pagination: Record<string, number>
 }
 
 interface GetAttendanceSummary {
@@ -52,7 +54,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
 
   const { attendanceData } = useGetClassAttendance(classId, "month", '', '', "", true, startDate, endDate) as GetAttendanceSummary;
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(attendanceData?.pagination.page || 1);
   // const [searchQuery, setSearchQuery] = useState("");
   const [isSendReminderDialogOpen, setIsSendReminderDialogOpen] = useState(false);
   const [selectedTransmission, setSelectedTransmission] = useState<string[]>([]);
@@ -73,7 +75,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
   //   console.log(currentPage, searchQuery);
   // };
 
-   const {classSummary} = useTeacherAttendanceSummary(classId as string, startDate, endDate);
+   const classSummary = attendanceData?.summary
     const stats = [
       {
         label: "Total Attendance Count",
@@ -224,7 +226,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
 
       <Pagination
         currentPage={currentPage}
-        totalPages={1}
+        totalPages={attendanceData?.pagination.totalPages || 1}
         onPageChange={handlePageChange}
       />
 
