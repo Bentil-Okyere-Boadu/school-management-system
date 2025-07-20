@@ -67,6 +67,7 @@ export class SchoolAdminService {
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('student.classLevels', 'classLevel')
       .leftJoinAndSelect('student.profile', 'profile')
       .where('student.school.id = :schoolId', { schoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived: false });
