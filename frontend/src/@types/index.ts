@@ -3,6 +3,20 @@ export enum ButtonType {
   reset = "reset",
   button = "button",
 }
+
+export interface Profile {
+    avatarUrl?: string;
+    firstName?: string;
+    lastName?: string;
+    otherName?: string;
+    DateOfBirth?: string,
+    optionalPhoneContact: string;
+    email: string;
+    PlaceOfBirth: string;
+    streetAddress: string;
+    phoneContact: string;
+    BoxAddress: string;
+  }
 export interface User {
   id: string;
   email: string;
@@ -13,15 +27,22 @@ export interface User {
   role: Role;
   status: string;
   school: School;
-  profile: {
-    avatarUrl?: string;
-  }
+  gender: string;
+  phoneContact: string;
+  profile: Profile;
   date: string;
+}
+
+export interface ClassLevel {
+  id: string;
+  name: string;
+  description: string
 }
 
 export interface Student extends User {
   studentId: string;
   parents: Parent[];
+  classLevels: ClassLevel[];
   isInvitationAccepted: boolean;
   isArchived: boolean;
 }
@@ -29,6 +50,10 @@ export interface Student extends User {
 export interface Teacher extends User {
   teacherId: string;
   isArchived: boolean;
+  phoneContact: string;
+  BoxAddress: string;
+  streetAddress: string;
+  optionalPhoneContact: string;
 }
 
 export interface Parent {
@@ -56,6 +81,7 @@ export enum Roles {
 export type Role = {
   id: string;
   name: keyof typeof Roles;
+  label?: string;
 };
 
 export type FeeStructure = {
@@ -144,12 +170,25 @@ export interface Calendar {
 
 export interface Term {
   id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
+  name?: string;
+  startDate?: string;
+  endDate?: string;
   termName: string;
   holidays: Holiday[];
   academicCalendarId?: string;
+  months?: Month[];
+  entries?: Entry[];
+  remarks?: string;
+}
+
+export interface Entry {
+  id: string;
+  name: string;
+  subject: string;
+  classScore: string;
+  examScore: string;
+  percentageScore: string;
+  grade: string;
 }
 
 export interface Holiday {
@@ -368,4 +407,43 @@ export interface AttendanceParams {
   month?: number;
   year?: number;
   week?: number;
+}
+
+export interface Month {
+  month: number,
+  year: number,
+  attendance: {
+    classLevel: ClassLevel,
+    dateRange: {
+      startDate: string;
+      endDate: string;
+      dates: string[]
+    },
+    student: {
+      id: string;
+      attendanceByDate: Record<string, string>;
+    }
+  }
+}
+
+export interface StudentAttendanceData {
+  academicYear: string;
+  student: Student;
+  terms: Term[];
+  summary: {
+    totalAttendanceCount: number,
+    totalPresentCount: number,
+    totalAbsentCount: number,
+    averageAttendanceRate: number
+  }
+}
+
+export interface Payment {
+  feeTitle: string;
+  feeAmount: number;
+  dueDate: string;
+  status: string;
+  paymentMethod: string;
+  paidDate: string;
+  paidBy: string;
 }

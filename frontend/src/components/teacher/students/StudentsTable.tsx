@@ -2,11 +2,8 @@
 import { Student } from "@/@types";
 import { Menu } from "@mantine/core";
 import {
-  IconArchiveFilled,
   IconDots,
   IconEyeFilled,
-  IconSend,
-  IconTrashFilled,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -56,13 +53,12 @@ const StudentsTable = ({ students }: StudentsTableProps) => {
                     {student.lastName}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {student.profile?.otherName}
+                    {student?.profile?.otherName}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {student.classLevels[0].name}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {student.profile?.DateOfBirth}
+                    {student?.profile?.DateOfBirth}
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                     <div className="flex items-center justify-end pr-6">
@@ -75,28 +71,9 @@ const StudentsTable = ({ students }: StudentsTableProps) => {
                             leftSection={
                               <IconEyeFilled size={18} color="#AB58E7" />
                             }
-                            onClick={() => router.push(`/admin/students/${student.id}`)}
+                            onClick={() => router.push(`/teacher/students/${student.id}`)}
                           >
                             Full View
-                          </Menu.Item>
-                          <Menu.Item
-                            leftSection={<IconSend size={18} color="#AB58E7" />}
-                          >
-                            Transfer Records
-                          </Menu.Item>
-                          <Menu.Item
-                            leftSection={
-                              <IconArchiveFilled size={18} color="#AB58E7" />
-                            }
-                          >
-                            Archive Records
-                          </Menu.Item>
-                          <Menu.Item
-                            leftSection={
-                              <IconTrashFilled size={18} color="#AB58E7" />
-                            }
-                          >
-                            Delete Records
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>

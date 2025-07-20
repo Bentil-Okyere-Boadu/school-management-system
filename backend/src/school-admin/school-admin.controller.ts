@@ -262,6 +262,19 @@ export class SchoolAdminController {
     return this.attendanceService.getClassAttendance(filter);
   }
 
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('classes/:classLevelId/terms/:termId/attendance')
+  @Roles('school_admin')
+  async getClassAttendanceByTerm(
+    @Param('classLevelId') classLevelId: string,
+    @Param('termId') termId: string,
+  ) {
+    return this.attendanceService.getClassAttendanceByTerm(
+      classLevelId,
+      termId,
+    );
+  }
+
   @UseGuards(
     SchoolAdminJwtAuthGuard,
     ActiveUserGuard,
@@ -279,6 +292,49 @@ export class SchoolAdminController {
       applicationId,
       admin.school.id,
       body.archive,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('classes/:classLevelId/calendars/:calendarId/attendance')
+  @Roles('school_admin')
+  async getClassAttendanceByAcademicYear(
+    @Param('classLevelId') classLevelId: string,
+    @Param('calendarId') calendarId: string,
+  ) {
+    return this.attendanceService.getClassAttendanceByAcademicYear(
+      classLevelId,
+      calendarId,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('classes/:classLevelId/calendars/:calendarId/attendance/grouped')
+  @Roles('school_admin')
+  async getClassAttendanceGroupedByTermAndMonth(
+    @Param('classLevelId') classLevelId: string,
+    @Param('calendarId') calendarId: string,
+  ) {
+    return this.attendanceService.getClassAttendanceGroupedByTermAndMonth(
+      classLevelId,
+      calendarId,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get(
+    'classes/:classLevelId/students/:studentId/calendars/:calendarId/attendance/grouped',
+  )
+  @Roles('school_admin')
+  async getStudentAttendanceGroupedByTermAndMonth(
+    @Param('classLevelId') classLevelId: string,
+    @Param('studentId') studentId: string,
+    @Param('calendarId') calendarId: string,
+  ) {
+    return this.attendanceService.getStudentAttendanceGroupedByTermAndMonth(
+      classLevelId,
+      studentId,
+      calendarId,
     );
   }
 }

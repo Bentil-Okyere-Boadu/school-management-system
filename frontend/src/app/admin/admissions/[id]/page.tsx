@@ -334,42 +334,36 @@ const SingleAdmissionPage: React.FC = () => {
           <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
             <InputField
                 label="Name of Previous School"
-                required
                 isTransulent={true}
                 readOnly={true}
                 value={admissionData?.previousSchoolName}
             />
             <InputField
                 label="Previous School URL"
-                required
                 isTransulent={true}
                 readOnly={true}
                 value={admissionData?.previousSchoolUrl}
             />
             <InputField
                 label="Street Address"
-                required
                 isTransulent={true}
                 readOnly={true}
                 value={admissionData?.previousSchoolStreetAddress}
             />
             <InputField
                 label="City"
-                required
                 isTransulent={true}
                 readOnly={true}
                 value={admissionData?.previousSchoolCity}
             />
             <InputField
                 label="State"
-                required
                 isTransulent={true}
                 readOnly={true}
                 value={admissionData?.previousSchoolState}
             />
             <InputField
                 label="Country"
-                required
                 isTransulent={true}
                 readOnly={true}
                 value={admissionData?.previousSchoolCountry}
@@ -388,7 +382,6 @@ const SingleAdmissionPage: React.FC = () => {
             />
             <InputField
                 label="Grade / Class"
-                required
                 isTransulent={true}
                 readOnly={true}
                 value={admissionData?.previousSchoolGradeClass}

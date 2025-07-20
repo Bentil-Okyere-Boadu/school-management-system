@@ -61,11 +61,9 @@ const ClassesPage = () => {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
-    console.log(searchQuery);
   };
 
   const onEditClassLevelClick = (data: Partial<ClassLevel>) => {
-    console.log(data);
     setEditMode(true);
     setClassLevelId(data.id as string);
     setIsClassLevelDialogOpen(true);

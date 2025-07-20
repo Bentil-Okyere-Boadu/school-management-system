@@ -23,6 +23,8 @@ export interface AttendanceFilter {
   week?: number; // for week filter (week number of year)
   weekOfMonth?: number; // e.g. 2nd week in a given month
   summaryOnly?: boolean;
+  page?: number; // pagination: page number
+  limit?: number; // pagination: items per page
 }
 
 @Injectable()
@@ -41,6 +43,17 @@ export class AttendanceService {
   ) {}
 
   async getClassAttendance(filter: AttendanceFilter) {
+    // Default to current month/year if filterType is 'month' and not provided
+    if (filter.filterType === 'month') {
+      const now = new Date();
+      if (!filter.year) {
+        filter.year = now.getFullYear();
+      }
+      if (!filter.month) {
+        filter.month = now.getMonth() + 1; // JS months are 0-based
+      }
+    }
+
     const classLevel = await this.classLevelRepository.findOne({
       where: { id: filter.classLevelId },
       relations: ['students', 'school'],
@@ -78,8 +91,15 @@ export class AttendanceService {
       dateRange.startDate,
       dateRange.endDate,
     );
-    const totalDaysInRange = uniqueDates.length;
     const todayStr = new Date().toISOString().split('T')[0];
+
+    // Only count valid school days (not weekends or holidays)
+    const validSchoolDays = uniqueDates.filter((date) => {
+      const dayOfWeek = new Date(date).getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+      if (holidayDates.has(date)) return false;
+      return true;
+    });
 
     /* ───────────── build lookup map ───────────── */
     const attendanceMap: Map<string, Map<string, string>> = new Map();
@@ -124,21 +144,18 @@ export class AttendanceService {
         >,
       );
 
-      const relevantStatuses = Object.entries(attendanceByDate)
-        .filter(
-          ([date, status]) =>
-            date <= todayStr &&
-            status !== null &&
-            status !== 'holiday' &&
-            status !== 'weekend',
-        )
-        .map(([, status]) => status);
+      const relevantStatuses = validSchoolDays
+        .filter((date) => date <= todayStr)
+        .map((date) => attendanceByDate[date]);
 
       const presentCount = relevantStatuses.filter(
         (s) => s === 'present',
       ).length;
       const absentCount = relevantStatuses.filter((s) => s === 'absent').length;
       const totalMarkedDays = presentCount + absentCount;
+      const totalDaysInRange = validSchoolDays.filter(
+        (date) => date <= todayStr,
+      ).length;
 
       return {
         id: student.id,
@@ -164,7 +181,7 @@ export class AttendanceService {
     });
 
     /* ───────────── if summaryOnly = true, strip down ───────────── */
-    const students = filter.summaryOnly
+    const studentsRaw = filter.summaryOnly
       ? detailedStudents.map(
           ({ id, firstName, lastName, fullName, statistics }) => ({
             id,
@@ -176,11 +193,51 @@ export class AttendanceService {
         )
       : detailedStudents;
 
+    // ───────────── PAGINATION for students ─────────────
+    const page = filter.page && filter.page > 0 ? filter.page : 1;
+    const limit = filter.limit && filter.limit > 0 ? filter.limit : 10;
+    const total = studentsRaw.length;
+    const totalPages = Math.ceil(total / limit);
+    const startIdx = (page - 1) * limit;
+    const endIdx = startIdx + limit;
+    const students = studentsRaw.slice(startIdx, endIdx);
+
+    // ───────────── summary for all students ─────────────
+    const summaryStats = studentsRaw.reduce(
+      (acc, s) => {
+        acc.totalMarkedDays += s.statistics.totalMarkedDays;
+        acc.presentCount += s.statistics.presentCount;
+        acc.absentCount += s.statistics.absentCount;
+        acc.totalDaysInRange += s.statistics.totalDaysInRange;
+        return acc;
+      },
+      {
+        totalMarkedDays: 0,
+        presentCount: 0,
+        absentCount: 0,
+        totalDaysInRange: 0,
+      },
+    );
+    const averageAttendanceRate =
+      summaryStats.totalDaysInRange > 0
+        ? Math.round(
+            (summaryStats.presentCount / summaryStats.totalDaysInRange) * 100,
+          )
+        : 0;
+    const summary = {
+      totalAttendanceCount: summaryStats.totalMarkedDays,
+      totalPresentCount: summaryStats.presentCount,
+      totalAbsentCount: summaryStats.absentCount,
+      averageAttendanceRate,
+    };
+
     /* ───────────── return based on summary flag ───────────── */
     return filter.summaryOnly
       ? {
           classLevel: { id: classLevel.id, name: classLevel.name },
           students,
+          summary,
+          pagination: { total, page, limit, totalPages },
         }
       : {
           classLevel: { id: classLevel.id, name: classLevel.name },
@@ -190,6 +247,8 @@ export class AttendanceService {
             dates: uniqueDates,
           },
           students,
+          summary,
+          pagination: { total, page, limit, totalPages },
         };
   }
 
@@ -213,6 +272,13 @@ export class AttendanceService {
     const today = new Date();
     let startDate: Date;
     let endDate: Date;
+    if (
+      (filter.filterType === 'week' || filter.filterType === 'month') &&
+      (!filter.month || !filter.year)
+    ) {
+      if (!filter.year) filter.year = today.getFullYear();
+      if (!filter.month) filter.month = today.getMonth() + 1;
+    }
 
     switch (filter.filterType) {
       case 'day':
@@ -544,5 +610,224 @@ export class AttendanceService {
       dateRange: classAttendance.dateRange,
       student,
     };
+  }
+
+  /**
+   * Returns attendance grouped by term and by month within each term for a class and academic year.
+   * Structure: { academicYear, terms: [{ termName, startDate, endDate, months: [{ month, year, attendance }] }] }
+   */
+  async getClassAttendanceGroupedByTermAndMonth(
+    classLevelId: string,
+    academicCalendarId: string,
+  ) {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) throw new NotFoundException('Class not found');
+
+    const calendar = await this.academicCalendarRepository.findOne({
+      where: { id: academicCalendarId },
+      relations: ['school', 'terms'],
+    });
+    if (!calendar) throw new NotFoundException('Academic calendar not found');
+    if (calendar.school.id !== classLevel.school.id) {
+      throw new BadRequestException(
+        'Calendar does not belong to the same school',
+      );
+    }
+
+    // Sort terms by startDate
+    const terms = [...calendar.terms].sort((a, b) =>
+      a.startDate.localeCompare(b.startDate),
+    );
+    const result = {
+      academicYear: calendar.name,
+      terms: [] as any[],
+      summary: {},
+    };
+
+    let totalMarkedDays = 0;
+    let presentCount = 0;
+    let absentCount = 0;
+    let totalDaysInRange = 0;
+    for (const term of terms) {
+      const termStart = new Date(term.startDate);
+      const termEnd = new Date(term.endDate);
+      const months: { month: number; year: number; attendance: any }[] = [];
+      const current = new Date(
+        termStart.getFullYear(),
+        termStart.getMonth(),
+        1,
+      );
+      while (current <= termEnd) {
+        const year = current.getFullYear();
+        const month = current.getMonth() + 1; // JS: 0-based
+        // Calculate the month's start and end within the term
+        const monthStart = new Date(year, current.getMonth(), 1);
+        const monthEnd = new Date(year, current.getMonth() + 1, 0);
+        if (monthStart < termStart) monthStart.setTime(termStart.getTime());
+        if (monthEnd > termEnd) monthEnd.setTime(termEnd.getTime());
+        // Get attendance for this month in this term
+        const attendance = await this.getClassAttendance({
+          classLevelId,
+          filterType: 'custom',
+          startDate: monthStart.toISOString().split('T')[0],
+          endDate: monthEnd.toISOString().split('T')[0],
+        });
+        months.push({ month, year, attendance });
+        if (attendance.summary) {
+          totalMarkedDays += attendance.summary.totalAttendanceCount || 0;
+          presentCount += attendance.summary.totalPresentCount || 0;
+          absentCount += attendance.summary.totalAbsentCount || 0;
+          totalDaysInRange += attendance.summary.totalAttendanceCount || 0;
+        }
+        // Move to next month
+        current.setMonth(current.getMonth() + 1);
+        current.setDate(1);
+      }
+      result.terms.push({
+        termName: term.termName,
+        startDate: term.startDate,
+        endDate: term.endDate,
+        months,
+      });
+    }
+    const averageAttendanceRate =
+      totalDaysInRange > 0
+        ? Math.round((presentCount / totalDaysInRange) * 100)
+        : 0;
+    const summary = {
+      totalAttendanceCount: totalMarkedDays,
+      totalPresentCount: presentCount,
+      totalAbsentCount: absentCount,
+      averageAttendanceRate,
+    };
+    result.summary = summary;
+    return result;
+  }
+
+  /**
+   * Returns grouped attendance by term and month for a single student in a class and academic year.
+   */
+  async getStudentAttendanceGroupedByTermAndMonth(
+    classLevelId: string,
+    studentId: string,
+    academicCalendarId: string,
+  ) {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) {
+      const calendar = await this.academicCalendarRepository.findOne({
+        where: { id: academicCalendarId },
+        relations: ['school'],
+      });
+      return {
+        academicYear: calendar ? calendar.name : '',
+        student: { id: studentId },
+        terms: [],
+        summary: {
+          totalAttendanceCount: 0,
+          totalPresentCount: 0,
+          totalAbsentCount: 0,
+          averageAttendanceRate: 0,
+        },
+      };
+    }
+    const student = classLevel.students.find((s) => s.id === studentId);
+    if (!student)
+      throw new NotFoundException('Student not found in this class');
+
+    const calendar = await this.academicCalendarRepository.findOne({
+      where: { id: academicCalendarId },
+      relations: ['school', 'terms'],
+    });
+    if (!calendar) throw new NotFoundException('Academic calendar not found');
+    if (calendar.school.id !== classLevel.school.id) {
+      throw new BadRequestException(
+        'Calendar does not belong to the same school',
+      );
+    }
+
+    // Sort terms by startDate
+    const terms = [...calendar.terms].sort((a, b) =>
+      a.startDate.localeCompare(b.startDate),
+    );
+    const result = {
+      academicYear: calendar.name,
+      student: {
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        fullName: `${student.firstName} ${student.lastName}`,
+      },
+      terms: [] as any[],
+      summary: {},
+    };
+
+    let totalMarkedDays = 0;
+    let presentCount = 0;
+    let absentCount = 0;
+    let totalDaysInRange = 0;
+    for (const term of terms) {
+      const termStart = new Date(term.startDate);
+      const termEnd = new Date(term.endDate);
+      const months: { month: number; year: number; attendance: any }[] = [];
+      const current = new Date(
+        termStart.getFullYear(),
+        termStart.getMonth(),
+        1,
+      );
+      while (current <= termEnd) {
+        const year = current.getFullYear();
+        const month = current.getMonth() + 1;
+        const monthStart = new Date(year, current.getMonth(), 1);
+        const monthEnd = new Date(year, current.getMonth() + 1, 0);
+        if (monthStart < termStart) monthStart.setTime(termStart.getTime());
+        if (monthEnd > termEnd) monthEnd.setTime(termEnd.getTime());
+        // Get attendance for this month in this term, for this student only
+        const attendance = await this.getStudentAttendance(
+          classLevelId,
+          studentId,
+          {
+            filterType: 'custom',
+            startDate: monthStart.toISOString().split('T')[0],
+            endDate: monthEnd.toISOString().split('T')[0],
+            classLevelId,
+            summaryOnly: false,
+          },
+        );
+        months.push({ month, year, attendance });
+        if (attendance.student && attendance.student.statistics) {
+          totalMarkedDays += attendance.student.statistics.totalMarkedDays || 0;
+          presentCount += attendance.student.statistics.presentCount || 0;
+          absentCount += attendance.student.statistics.absentCount || 0;
+          totalDaysInRange +=
+            attendance.student.statistics.totalDaysInRange || 0;
+        }
+        current.setMonth(current.getMonth() + 1);
+        current.setDate(1);
+      }
+      result.terms.push({
+        termName: term.termName,
+        startDate: term.startDate,
+        endDate: term.endDate,
+        months,
+      });
+    }
+    const averageAttendanceRate =
+      totalDaysInRange > 0
+        ? Math.round((presentCount / totalDaysInRange) * 100)
+        : 0;
+    const summary = {
+      totalAttendanceCount: totalMarkedDays,
+      totalPresentCount: presentCount,
+      totalAbsentCount: absentCount,
+      averageAttendanceRate,
+    };
+    result.summary = summary;
+    return result;
   }
 }

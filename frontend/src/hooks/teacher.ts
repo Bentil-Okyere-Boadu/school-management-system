@@ -1,4 +1,4 @@
-import { ClassLevel, User } from "@/@types";
+import { ClassLevel, Student, Teacher, User } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -11,7 +11,7 @@ export const useTeacherGetMe = () => {
         refetchOnWindowFocus: true
     })
 
-    const me = data?.data as User;
+    const me = data?.data as Teacher;
 
     return { me, isPending, refetch }
 }
@@ -62,10 +62,12 @@ export const useGetClassAttendance = (
   month?: string,
   year?: string,
   week?: string,
-  summaryOnly?: boolean
+  summaryOnly?: boolean,
+  startDate?: string,
+  endDate?: string
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly }],
+    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly, startDate, endDate }],
     queryFn: () => {
       const queryBuilder = [];
 
@@ -82,11 +84,19 @@ export const useGetClassAttendance = (
       }
 
       if (week) {
-        queryBuilder.push(`week=${week}`);
+        queryBuilder.push(`weekOfMonth=${week}`);
       }
 
       if(summaryOnly) {
         queryBuilder.push(`summaryOnly=${summaryOnly}`);
+      }
+      
+      if(startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+      
+      if(endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
       }
 
       const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
@@ -119,14 +129,143 @@ export const usePostClassAttendance = (classLevelId: string) => {
   });
 };
 
-export const useTeacherAttendanceSummary = (classLevelId: string) => {
+export const useTeacherAttendanceSummary = (classLevelId: string, startDate?: string, endDate?: string) => {
   const { data, isLoading } = useQuery({
-    queryKey: ['summary', classLevelId],
+    queryKey: ['summary', classLevelId, startDate, endDate],
     queryFn: () => {
-      return customAPI.get(`teacher/${classLevelId}/summary`);
+      const queryBuilder = [];
+      if(startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+      
+      if(endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
+      }
+
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+      return customAPI.get(`teacher/${classLevelId}/summary?${params}`);
     }
   })
 
   const classSummary = data?.data;
   return {classSummary, isLoading}
+}
+
+export const useGetStudents = (page=1,search: string = "", status: string = "", role: string = "", roleLabel?: string,  limit?: number ) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['allStudents', { page, search, status, role, roleLabel, limit }],
+    queryFn: () => {
+      const queryBuilder = [];
+      if(search) {
+          queryBuilder.push(`search=${search}`);
+      }
+
+      if(status) {
+          queryBuilder.push(`status=${status}`);
+      }
+      
+      if(role) {
+          queryBuilder.push(`role=${role}`);
+      }
+      
+      if(page) {
+          queryBuilder.push(`page=${page}`);
+      }
+      
+      if(roleLabel) {
+          queryBuilder.push(`roleLabel=${roleLabel}`);
+      }
+
+      if(limit) {
+          queryBuilder.push(`limit=${limit}`);
+      }
+      
+      const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+      
+      return customAPI.get(`/teacher/students?${params}`);
+    },
+    refetchOnWindowFocus: true
+});
+
+  const studentsData = data?.data?.data;
+  const paginationValues = data?.data.meta;
+  return { studentsData, isLoading, refetch, paginationValues }
+}
+
+export const useGetStudentById = (id: string, options?: UseQueryOptions) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['student', id],
+        queryFn: () => {
+            return customAPI.get(`/teacher/users/${id}`);
+        },
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+         ...options,
+    })
+
+    const studentData = (data as {data: User | Student})?.data ;
+
+    return { studentData, isLoading, refetch }
+}
+
+export const useEditTeacherInfo = () => {
+  return useMutation({
+    mutationFn: (teacherData: Partial<Teacher>) => {
+      return customAPI.put('/teacher/profile/me', teacherData);
+    }
+  })
+}
+
+export const useUploadProfileImage = (id: string) => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post(`/profiles/teacher/${id}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteProfileImage = () => {
+  return useMutation({
+      mutationFn: (id: string) => {
+          return customAPI.delete(`/profiles/teacher/${id}/avatar`)
+      }
+  })
+}
+
+export const useGetStudentAttendance = (
+  classLevelId: string,
+  calendarId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentAttendance', { classLevelId, calendarId }],
+    queryFn: () => {
+      return customAPI.get(`/teacher/classes/${classLevelId}/calendars/${calendarId}/attendance/grouped`);
+    },
+    enabled: !!calendarId, // only run if calendarId is provided
+    refetchOnWindowFocus: true,
+  });
+
+  const studentAttendance = data?.data;
+
+  return { studentAttendance, isLoading, refetch };
+};
+
+export const useGetCalendars = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentCalendars'],
+    queryFn: () => {
+      return customAPI.get(`/teacher/calendars`)
+    }
+  })
+
+  const studentCalendars = data?.data as ClassLevel[];
+
+  return { studentCalendars, isLoading, refetch }
 }

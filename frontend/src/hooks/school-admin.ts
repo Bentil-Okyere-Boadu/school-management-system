@@ -668,10 +668,12 @@ export const useGetClassAttendance = (
   month?: string,
   year?: string,
   week?: string,
-  summaryOnly?: boolean
+  summaryOnly?: boolean,
+  startDate?: string,
+  endDate?: string
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly }],
+    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly, startDate, endDate }],
     queryFn: () => {
       const queryBuilder = [];
 
@@ -688,11 +690,19 @@ export const useGetClassAttendance = (
       }
 
       if (week) {
-        queryBuilder.push(`week=${week}`);
+        queryBuilder.push(`weekOfMonth=${week}`);
       }
 
       if(summaryOnly) {
         queryBuilder.push(`summaryOnly=${summaryOnly}`);
+      }
+      
+      if(startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+      
+      if(endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
       }
 
       const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
@@ -722,3 +732,21 @@ export const usePostClassAttendance = (classLevelId: string) => {
       customAPI.post(`/school-admin/classes/${classLevelId}/attendance`, payload),
   });
 };
+
+export const useAdminViewStudentAttendance = (
+    classLevelId: string,
+    studentId: string,
+    calendarId: string
+) => {
+    const {data, isLoading, refetch} = useQuery({
+        queryKey: ['adminStudentAttendance', studentId, calendarId, classLevelId],
+        queryFn: () => {
+            return customAPI.get(`school-admin/classes/${classLevelId}/students/${studentId}/calendars/${calendarId}/attendance/grouped`);
+        },
+        enabled: !!calendarId,
+        refetchOnWindowFocus: true
+    })
+
+    const studentAttendance = data?.data;
+    return { studentAttendance, isLoading, refetch };
+}
