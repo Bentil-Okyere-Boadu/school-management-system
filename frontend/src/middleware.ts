@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
 
 //See "Matching Paths" below to learn more
 export const config = {
-    matcher: ['/superadmin/:path*', '/admin/:path*', '/teacher/:path*'],    
+    matcher: ['/superadmin/:path*', '/admin/:path*', '/teacher/:path*', '/student/:path*'],    
   }
 
 export async function updateSession(request: NextRequest) {

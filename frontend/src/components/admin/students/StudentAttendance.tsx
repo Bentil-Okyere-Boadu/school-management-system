@@ -1,47 +1,32 @@
+"use client";
+
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import InputField from "@/components/InputField";
-import {
-  useAdminViewStudentAttendance,
-  useGetCalendars,
-} from "@/hooks/school-admin";
 import Image from "next/image";
-import { useParams } from "next/navigation";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import React, { useState } from "react";
-import { StudentAttendanceData } from "@/@types";
+import React from "react";
+import { Calendar, StudentAttendanceData } from "@/@types";
 
-interface AttendanceData {
-  studentAttendance: StudentAttendanceData;
-  isLoading: boolean;
-  refetch: () => void
-}
+
 interface StudentAttendanceProps {
-  classLevelId: string;
+  studentAttendance: StudentAttendanceData;
+  calendars: Calendar[]
+  onSelectAcademicYear: (academicYearId: string) => void;
 }
 
-const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
-  const { id } = useParams();
+const StudentAttendance = ({  
+  studentAttendance,
+  calendars = [],
+  onSelectAcademicYear}: StudentAttendanceProps) => {
 
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
-
-  const { studentAttendance } = useAdminViewStudentAttendance(
-    classLevelId,
-    id as string,
-    selectedAcademicYear
-  ) as AttendanceData;
-  const { calendars } = useGetCalendars();
-
-  const academicYears = calendars.map((calendar) => {
-    return { value: calendar.id, label: calendar.name };
-  });
-
-  const handleSelectAcademicYear = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const selected = event.target.value;
-    setSelectedAcademicYear(selected);
-  };
+  const academicYears = [
+    { label: "Academic Year", value: "" },
+    ...calendars.map((calendar) => ({
+      value: calendar.id,
+      label: calendar.name,
+    })),
+  ];
 
   const presentPercentage = (studentAttendance?.summary.totalPresentCount / studentAttendance?.summary.totalAttendanceCount) * 100 || 0 + '%'
   const absentPercentage = (studentAttendance?.summary.totalAbsentCount / studentAttendance?.summary.totalAttendanceCount) * 100 || 0 + '%'
@@ -53,8 +38,7 @@ const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
         <div className="mb-5">Select Academic Year</div>
         <CustomSelectTag
           options={academicYears}
-          optionLabel="Academic Year"
-          onOptionItemClick={handleSelectAcademicYear}
+          onOptionItemClick={(e) => onSelectAcademicYear(e.target.value)}
         />
       </div>
       <div className="my-5">
@@ -156,7 +140,7 @@ const StudentAttendance = ({ classLevelId }: StudentAttendanceProps) => {
                                   new Date(date).getDay() === 0 ||
                                   new Date(date).getDay() === 6
                                     ? "bg-white none pointer-events-none"
-                                    : "bg-[#F9F5FF] cursor-pointer"
+                                    : "bg-[#F9F5FF]"
                                 } ${
                                   isHoliday &&
                                   "bg-[#FCEBCF] pointer-events-none"
