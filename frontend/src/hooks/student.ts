@@ -77,3 +77,26 @@ export const useGetCalendars = () => {
 
   return { studentCalendars, isLoading, refetch }
 }
+
+export const useUploadProfileImage = (id: string) => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post(`/profiles/student/${id}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteProfileImage = () => {
+  return useMutation({
+      mutationFn: (id: string) => {
+          return customAPI.delete(`/profiles/student/${id}/avatar`)
+      }
+  })
+}

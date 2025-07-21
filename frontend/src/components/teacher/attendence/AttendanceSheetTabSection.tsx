@@ -49,6 +49,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
   const [currentWeek, setCurrentWeek] = useState("");
   // const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loadingCell, setLoadingCell] = useState<{ studentId: string; date: string } | null>(null);
   
 
   const queryClient = useQueryClient();
@@ -125,6 +126,8 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
       ],
     };
 
+    setLoadingCell({ studentId: student.id, date: selectedDate }); // start loading
+
     markClassAttendanceMutation(payload, {
       onSuccess: () => {
         toast.success('Attendance marked successfully.');
@@ -133,6 +136,9 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+      onSettled: () => {
+        setLoadingCell(null); // stop loading
       },
     });
   };
@@ -187,7 +193,9 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                           } ${isHoliday && 'bg-[#FCEBCF] pointer-events-none'}`}
                           onClick={() => handleStudentAttendance(student, date)}
                         >
-                          {isHoliday ? (
+                          {loadingCell?.studentId === student.id && loadingCell?.date === date ? (
+                            <div className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                          ) : isHoliday ? (
                             <span className="text-[11px] font-bold text-black-500 rotate-[-45deg] whitespace-nowrap">Holiday</span>
                           ) : icon ? (
                             <Image src={icon} alt={present ? "Present" : "Absent"} className="w-5 h-5 object-contain" width={20} height={20} />
