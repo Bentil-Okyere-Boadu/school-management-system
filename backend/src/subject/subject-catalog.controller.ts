@@ -1,0 +1,146 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SubjectCatalog } from './subject-catalog.entity';
+import { SchoolAdminJwtAuthGuard } from '../school-admin/guards/school-admin-jwt-auth.guard';
+import { ActiveUserGuard } from '../auth/guards/active-user.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { SchoolAdmin } from '../school-admin/school-admin.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+
+@Controller('subject-catalog')
+@UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+@Roles('school_admin')
+export class SubjectCatalogController {
+  constructor(
+    @InjectRepository(SubjectCatalog)
+    private readonly subjectCatalogRepository: Repository<SubjectCatalog>,
+  ) {}
+
+  @Post()
+  async create(
+    @Body('name') name: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ): Promise<SubjectCatalog> {
+    if (!admin.school) {
+      throw new NotFoundException('Admin is not associated with a school');
+    }
+    const subject = this.subjectCatalogRepository.create({
+      name,
+      school: admin.school,
+    });
+    return this.subjectCatalogRepository.save(subject);
+  }
+
+  @Get()
+  async findAll(@CurrentUser() admin: SchoolAdmin) {
+    if (!admin.school) {
+      throw new NotFoundException('Admin is not associated with a school');
+    }
+
+    const catalogs = await this.subjectCatalogRepository.find({
+      where: { school: { id: admin.school.id } },
+      relations: ['subjects', 'subjects.teacher', 'subjects.classLevels'],
+    });
+
+    const subjects = catalogs.flatMap((catalog) =>
+      catalog.subjects.map((subject) => ({
+        id: subject.id,
+        subjectCatalog: {
+          id: catalog.id,
+          name: catalog.name,
+        },
+        teacher: subject.teacher
+          ? {
+              id: subject.teacher.id,
+              firstName: subject.teacher.firstName,
+              lastName: subject.teacher.lastName,
+              fullName: `${subject.teacher.firstName} ${subject.teacher.lastName}`,
+              email: subject.teacher.email,
+            }
+          : null,
+        classLevels: (subject.classLevels || []).map((cl) => ({
+          id: cl.id,
+          name: cl.name,
+        })),
+      })),
+    );
+
+    return subjects;
+  }
+  @Get(':id')
+  async findOne(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    if (!admin.school) {
+      throw new NotFoundException('Admin is not associated with a school');
+    }
+
+    const catalog = await this.subjectCatalogRepository.findOneOrFail({
+      where: { id, school: { id: admin.school.id } },
+      relations: ['subjects', 'subjects.teacher', 'subjects.classLevels'],
+    });
+
+    return catalog.subjects.map((subject) => ({
+      id: subject.id,
+      subjectCatalog: {
+        id: catalog.id,
+        name: catalog.name,
+      },
+      teacher: subject.teacher
+        ? {
+            id: subject.teacher.id,
+            firstName: subject.teacher.firstName,
+            lastName: subject.teacher.lastName,
+            fullName: `${subject.teacher.firstName} ${subject.teacher.lastName}`,
+            email: subject.teacher.email,
+          }
+        : null,
+      classLevels: (subject.classLevels || []).map((cl) => ({
+        id: cl.id,
+        name: cl.name,
+      })),
+    }))[0];
+  }
+
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body('name') name: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ): Promise<SubjectCatalog> {
+    if (!admin.school) {
+      throw new NotFoundException('Admin is not associated with a school');
+    }
+    const subject = await this.subjectCatalogRepository.findOneOrFail({
+      where: { id, school: { id: admin.school.id } },
+    });
+    subject.name = name;
+    return this.subjectCatalogRepository.save(subject);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    if (!admin.school) {
+      throw new NotFoundException('Admin is not associated with a school');
+    }
+    const subject = await this.subjectCatalogRepository.findOneOrFail({
+      where: { id, school: { id: admin.school.id } },
+    });
+    if (!subject) {
+      throw new NotFoundException('Subject catalog not found');
+    }
+    await this.subjectCatalogRepository.delete(subject.id);
+    return { message: 'Subject catalog deleted successfully' };
+  }
+}
