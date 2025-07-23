@@ -16,7 +16,7 @@ export class GradingSystem {
   maxRange: number;
 
   @ManyToOne(() => School, (school) => school.gradingSystems, {
-    //  onDelete: 'CASCADE',
+    onDelete: 'CASCADE',
   })
   school: School;
 }
