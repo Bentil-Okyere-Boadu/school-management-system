@@ -19,6 +19,9 @@ export class SubjectCatalog {
   @Column({ unique: true })
   name: string;
 
+  @Column({ nullable: true })
+  description: string;
+
   @ManyToOne(() => School, { eager: true, nullable: false })
   @JoinColumn({ name: 'school_id' })
   school: School;
@@ -31,4 +34,4 @@ export class SubjectCatalog {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}
