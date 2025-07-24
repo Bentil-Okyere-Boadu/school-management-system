@@ -18,8 +18,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
-import { ClassLevel } from 'src/class-level/class-level.entity';
-
 @Controller('subject-catalog')
 @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
 @Roles('school_admin')
@@ -32,6 +30,7 @@ export class SubjectCatalogController {
   @Post()
   async create(
     @Body('name') name: string,
+    @Body('description') description: string,
     @CurrentUser() admin: SchoolAdmin,
   ): Promise<SubjectCatalog> {
     if (!admin.school) {
@@ -40,6 +39,7 @@ export class SubjectCatalogController {
     const subject = this.subjectCatalogRepository.create({
       name,
       school: admin.school,
+      description,
     });
     return this.subjectCatalogRepository.save(subject);
   }
@@ -52,33 +52,8 @@ export class SubjectCatalogController {
 
     const catalogs = await this.subjectCatalogRepository.find({
       where: { school: { id: admin.school.id } },
-      relations: ['subjects', 'subjects.teacher', 'subjects.classLevels'],
     });
-
-    const subjects = catalogs.flatMap((catalog) =>
-      catalog.subjects.map((subject) => ({
-        id: subject.id,
-        subjectCatalog: {
-          id: catalog.id,
-          name: catalog.name,
-        },
-        teacher: subject.teacher
-          ? {
-              id: subject.teacher.id,
-              firstName: subject.teacher.firstName,
-              lastName: subject.teacher.lastName,
-              fullName: `${subject.teacher.firstName} ${subject.teacher.lastName}`,
-              email: subject.teacher.email,
-            }
-          : null,
-        classLevels: (subject.classLevels || []).map((cl) => ({
-          id: cl.id,
-          name: cl.name,
-        })),
-      })),
-    );
-
-    return subjects;
+    return catalogs;
   }
   @Get(':id')
   async findOne(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
@@ -86,37 +61,39 @@ export class SubjectCatalogController {
       throw new NotFoundException('Admin is not associated with a school');
     }
 
-    const catalog = await this.subjectCatalogRepository.findOneOrFail({
-      where: { id, school: { id: admin.school.id } },
-      relations: ['subjects', 'subjects.teacher', 'subjects.classLevels'],
-    });
+    const catalogs = await this.subjectCatalogRepository
+      .createQueryBuilder('catalog')
+      .leftJoin('catalog.subjects', 'subject')
+      .leftJoin('subject.teacher', 'teacher')
+      .leftJoin('subject.classLevels', 'classLevel')
+      .where('catalog.id = :id', { id })
+      .andWhere('catalog.school_id = :schoolId', { schoolId: admin.school.id })
+      .select([
+        'catalog.id',
+        'catalog.name',
+        'catalog.description',
+        'subject.id',
+        'subjectCatalog.id',
+        'subjectCatalog.name',
+        'teacher.id',
+        'teacher.firstName',
+        'teacher.lastName',
+        'teacher.email',
+        'classLevel.id',
+        'classLevel.name',
+      ])
+      .addSelect('subjectCatalog.id')
+      .leftJoin('subject.subjectCatalog', 'subjectCatalog')
+      .getMany();
 
-    return catalog.subjects.map((subject) => ({
-      id: subject.id,
-      subjectCatalog: {
-        id: catalog.id,
-        name: catalog.name,
-      },
-      teacher: subject.teacher
-        ? {
-            id: subject.teacher.id,
-            firstName: subject.teacher.firstName,
-            lastName: subject.teacher.lastName,
-            fullName: `${subject.teacher.firstName} ${subject.teacher.lastName}`,
-            email: subject.teacher.email,
-          }
-        : null,
-      classLevels: (subject.classLevels || []).map((cl) => ({
-        id: cl.id,
-        name: cl.name,
-      })),
-    }))[0];
+    return catalogs;
   }
 
   @Put(':id')
   async update(
     @Param('id') id: string,
     @Body('name') name: string,
+    @Body('description') description: string,
     @CurrentUser() admin: SchoolAdmin,
   ): Promise<SubjectCatalog> {
     if (!admin.school) {
@@ -126,6 +103,7 @@ export class SubjectCatalogController {
       where: { id, school: { id: admin.school.id } },
     });
     subject.name = name;
+    subject.description = description;
     return this.subjectCatalogRepository.save(subject);
   }
 
