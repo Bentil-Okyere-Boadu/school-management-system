@@ -447,3 +447,15 @@ export interface Payment {
   paidDate: string;
   paidBy: string;
 }
+
+export interface Subject {
+  id?: string;
+  name: string;
+  description: string;
+}
+
+export interface AssignSubjectTeacherPayload {
+    subjectCatalogId: string;
+    classLevelIds: string[];
+    teacherId: string;
+}

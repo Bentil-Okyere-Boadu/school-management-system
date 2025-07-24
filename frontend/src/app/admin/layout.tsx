@@ -41,6 +41,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: ClassesIcon,      
       label: "Classes",
     },
+    {
+      icon: '',
+      label: "Subjects"
+    }
   ];
 
   useEffect(() => {
@@ -65,6 +69,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/subjects") {
+      setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
     }
     
@@ -120,6 +127,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Settings":
         router.push("/admin/settings");
+        break;
+      case "Subjects":
+        router.push("/admin/subjects");
         break;
     }
     setIsSidebarOpen(false);
