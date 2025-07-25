@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, ClassesIcon } from "@/utils/icons";
+import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, SubjectIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
 
@@ -38,11 +38,11 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Attendance",
     },
     {
-      icon: ClassesIcon,      
+      icon: ClassroomIcon,      
       label: "Classes",
     },
     {
-      icon: '',
+      icon: SubjectIcon,
       label: "Subjects"
     }
   ];

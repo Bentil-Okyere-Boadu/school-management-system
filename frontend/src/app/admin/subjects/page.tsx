@@ -1,6 +1,9 @@
+"use client"
 import React, { useState } from "react";
 import { TabListItem } from "../admissions/page";
 import TabBar from "@/components/common/TabBar";
+import Subjects from "@/components/admin/subjects/Subjects";
+import SubjectAssignment from "@/components/admin/subjects/SubjectAssignment";
 
 const SubjectsPage = () => {
   const [activeTabKey, setActiveTabKey] = useState("subjects");
@@ -22,8 +25,16 @@ const SubjectsPage = () => {
         onItemClick={handleItemClick}
       />
 
-      {activeTabKey === "subjects" && <div></div>}
-      {activeTabKey === "assign-subjects" && <div></div>}
+      {activeTabKey === "subjects" && (
+        <div>
+            <Subjects/>
+        </div>
+        )}
+      {activeTabKey === "assign-subjects" && (
+        <div>
+            <SubjectAssignment/>
+        </div>
+        )}
     </div>
   );
 };

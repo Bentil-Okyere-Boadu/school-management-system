@@ -761,7 +761,7 @@ export const useGetAllSubjects = (enabled: boolean = true) => {
         refetchOnWindowFocus: true
     })
 
-    const subjects = data?.data
+    const subjects: Subject[] = data?.data
 
     return { subjects, isLoading, refetch }
 }
