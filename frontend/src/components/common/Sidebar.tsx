@@ -48,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         ))}
       </nav>
-      { isSchoolAdminDashboard? (<nav className="pt-[100px]">
+      { isSchoolAdminDashboard? (<nav className="pt-[60px]">
         <p className="mb-2 ml-4 text-xs text-neutral-500">OTHER</p>
           <button
             key={'settings'}

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, ClassesIcon } from "@/utils/icons";
+import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, SubjectIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
 
@@ -38,9 +38,13 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Attendance",
     },
     {
-      icon: ClassesIcon,      
+      icon: ClassroomIcon,      
       label: "Classes",
     },
+    {
+      icon: SubjectIcon,
+      label: "Subjects"
+    }
   ];
 
   useEffect(() => {
@@ -65,6 +69,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/subjects") {
+      setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
     }
     
@@ -120,6 +127,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Settings":
         router.push("/admin/settings");
+        break;
+      case "Subjects":
+        router.push("/admin/subjects");
         break;
     }
     setIsSidebarOpen(false);
