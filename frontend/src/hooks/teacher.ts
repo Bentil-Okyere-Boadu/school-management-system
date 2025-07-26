@@ -269,3 +269,24 @@ export const useGetCalendars = () => {
 
   return { studentCalendars, isLoading, refetch }
 }
+
+export const useGetSubjectClasses = (search: string = "") => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['subjectClasses', { search }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+            console.log(params)
+
+            return customAPI.get(`/subject/my-classes`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const classLevels = data?.data as ClassLevel[] || [] ;
+
+    return { classLevels, isLoading, refetch }
+}
