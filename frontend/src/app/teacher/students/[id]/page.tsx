@@ -32,10 +32,10 @@ const ViewStudentPage = () => {
     
     const handleItemClick = (item: TabListItem) => {
         setActiveTabKey(item.tabKey);
-        updateTab(item.tabKey)
+        setTabInUrl(item.tabKey);
     };
 
-    const updateTab = (tab: string) => {
+    const setTabInUrl = (tab: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", tab);
       router.push(`?${params.toString()}`);

@@ -5,7 +5,7 @@ import StudentProfile from '@/components/admin/students/StudentProfile';
 import StudentResults from '@/components/admin/students/StudentResults';
 import TabBar from '@/components/common/TabBar';
 import { useAdminViewStudentAttendance, useGetCalendars, useGetSchoolUserById } from '@/hooks/school-admin';
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import React, { useState } from 'react'
 
 export type TabListItem = {
@@ -21,14 +21,24 @@ interface AttendanceData {
 
 const ViewStudentPage = () => {
     const {id} = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
 
     const {schoolUser, refetch} = useGetSchoolUserById(id as string)
-
-    const [activeTabKey, setActiveTabKey] = useState('student-profile');
     
-     const handleItemClick = (item: TabListItem) => {
-        setActiveTabKey(item.tabKey);
-      };
+    const tabFromUrl = searchParams.get("tab");
+    const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'student-profile');
+    
+    const handleItemClick = (item: TabListItem) => {
+      setActiveTabKey(item.tabKey);
+      setTabInUrl(item.tabKey);
+    };
+
+    const setTabInUrl = (tab: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", tab);
+      router.push(`?${params.toString()}`);
+    };
 
     const defaultNavItems: TabListItem[] = [
         { tabLabel: "Student Profile", tabKey: "student-profile" },

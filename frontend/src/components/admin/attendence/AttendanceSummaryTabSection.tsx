@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 // import { SearchBar } from "@/components/common/SearchBar";
 import StatCard from '@/components/admin/attendence/StatsCard';
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
@@ -63,6 +63,12 @@ export const AttendanceSummaryTabSection: React.FC = () => {
 
   const [selectedClass, setSelectedClass] = useState(getClasses[0]?.value);
 
+  useEffect(() => {
+    if (getClasses.length > 0 && !selectedClass) {
+      setSelectedClass(getClasses[0].value);
+    }
+  }, [getClasses, selectedClass]);
+
   const { attendanceData } = useGetClassAttendance(
     selectedClass,
     "month",
@@ -77,25 +83,25 @@ export const AttendanceSummaryTabSection: React.FC = () => {
     const stats = [
     {
       label: "Total Attendance Count",
-      value: attendanceData?.summary.totalAttendanceCount as unknown as string,
+      value: String(attendanceData?.summary.totalAttendanceCount ?? 0),
       fromColor: "#2B62E5",
       toColor: "#8FB5FF",
     },
     {
       label: "Total Present Count",
-      value: attendanceData?.summary.totalPresentCount as unknown as string,
+      value: String(attendanceData?.summary.totalPresentCount ?? 0),
       fromColor: "#B55CF3",
       toColor: "#D9A6FD",
     },
     {
       label: "Total Absent Count",
-      value: attendanceData?.summary.totalAbsentCount as unknown as string,
+      value: String(attendanceData?.summary.totalAbsentCount ?? 0),
       fromColor: "#F15580",
       toColor: "#F88FB3",
     },
     {
       label: "Average Attendance Rate",
-      value: attendanceData?.summary.averageAttendanceRate+ '%',
+      value: `${attendanceData?.summary.averageAttendanceRate ?? 0}%`,
       fromColor: "#30C97A",
       toColor: "#8DF4B8",
     },

@@ -59,7 +59,7 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
 
   useEffect(() => {
     prepopulateProfileSettings()
-  }, [])
+  }, [schoolAdminInfo])
 
   const queryClient = useQueryClient();
   

@@ -4,7 +4,7 @@ import TabBar from "@/components/common/TabBar";
 import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
 import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import SchoolPeople from "@/components/superadmin/schools/SchoolPeople";
 import { Calendar } from "@/@types";
@@ -18,13 +18,23 @@ export type TabListItem = {
 const SingleSchoolPage: React.FC = () => {
   const params = useParams();
   const schoolId = params.id;
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const { school } = useGetSchoolById(schoolId as string);
 
-  const [activeTabKey, setActiveTabKey] = useState('school-settings');
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'school-settings');
 
   const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
+    setTabInUrl(item.tabKey);
+  };
+
+  const setTabInUrl = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.push(`?${params.toString()}`);
   };
 
   const defaultNavItems: TabListItem[] = [
@@ -63,7 +73,7 @@ const SingleSchoolPage: React.FC = () => {
         
         {activeTabKey === "people" && (
           <div>
-            <SchoolPeople users={school.users}/>
+            <SchoolPeople users={school?.users}/>
           </div>
         )}
 
