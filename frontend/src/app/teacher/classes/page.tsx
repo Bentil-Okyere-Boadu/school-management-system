@@ -25,6 +25,10 @@ const ClassesPage = () => {
     router.push(`/teacher/classes/${data.id}/attendance`)
   }
 
+  const onNavigateToGradingClick = (data: ClassLevel) => {
+    router.push(`/teacher/classes/${data.id}/grading`)
+  }
+
   return (
     <div className="pb-8">
       <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
@@ -37,7 +41,8 @@ const ClassesPage = () => {
             classData={data}
             studentCount={data?.studentCount}
             showGoToAttendance={true}
-            onNavigateClick={onNavigateToAttendance}
+            onNavigateToAttendanceClick={onNavigateToAttendance}
+            onNavigateToGradingClick={onNavigateToGradingClick}
           />
         ))}
       </section>

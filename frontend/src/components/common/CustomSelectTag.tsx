@@ -11,15 +11,16 @@ interface SelectTagProps {
   options: OptionItem[];
   value?: string;
   optionLabel?: string;
+  selectClassName?: string;
   onOptionItemClick: (event: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
 
-export const CustomSelectTag: React.FC<SelectTagProps> = ({options, value, optionLabel, onOptionItemClick}) => {
+export const CustomSelectTag: React.FC<SelectTagProps> = ({options, value, optionLabel,selectClassName, onOptionItemClick}) => {
   return (
     <section className="flex gap-2 items-center text-sm text-zinc-700">
       <select
-        className="appearance-none flex overflow-hidden gap-3 self-stretch px-2 py-1 my-auto bg-white rounded min-w-[159px] text-zinc-700 cursor-pointer"
+        className={`appearance-none flex overflow-hidden gap-3 self-stretch px-2 py-1 my-auto bg-white rounded min-w-[159px] text-zinc-700 cursor-pointer ${selectClassName}`}
         value={value}
         onChange={onOptionItemClick}
         aria-label="Filter by category"

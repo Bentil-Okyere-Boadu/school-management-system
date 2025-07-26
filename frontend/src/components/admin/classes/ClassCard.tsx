@@ -10,7 +10,8 @@ interface ClassCardProps {
   onDeleteClick?: (id: string) => void;
   showEditAndDelete?: boolean
   showGoToAttendance?: boolean,
-  onNavigateClick?: (item: ClassLevel) => void;
+  onNavigateToAttendanceClick?: (item: ClassLevel) => void;
+  onNavigateToGradingClick?: (item: ClassLevel) => void;
   studentCount?: number;
 }
 
@@ -20,7 +21,8 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   onDeleteClick,
   showEditAndDelete = false,
   showGoToAttendance = false,
-  onNavigateClick,
+  onNavigateToAttendanceClick,
+  onNavigateToGradingClick,
   studentCount,
 }) => {
   return (
@@ -64,9 +66,14 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       {
         showGoToAttendance && (
           <div className="mt-4 pt-2 border-t border-gray-100">
-            <span onClick={() => onNavigateClick?.(classData)} className="inline-block text-xs font-medium text-purple-800 bg-purple-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
-              Go to Attendance View
-            </span> 
+            <div className="flex justify-between items-center gap-1 flex-wrap">
+              <span onClick={() => onNavigateToAttendanceClick?.(classData)} className="inline-block text-xs font-medium text-purple-800 bg-purple-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
+                Go to Attendance View
+              </span> 
+              <span onClick={() => onNavigateToGradingClick?.(classData)} className="inline-block text-xs font-medium text-blue-800 bg-blue-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
+                Go to Grading View
+              </span> 
+            </div>
           </div>
         )
       }

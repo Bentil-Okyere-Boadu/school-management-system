@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 
 interface SearchBarProps {
   placeholder?: string;
@@ -14,11 +14,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
     onSearch(value);
+  };
+
+  const handleContainerClick = () => {
+    inputRef.current?.focus();
   };
 
   return (
@@ -27,7 +32,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         isFocused
           ? "ring-2 ring-purple-500 ring-opacity-50"
           : "border border-transparent"
-      } transition-all duration-200`}
+      } transition-all duration-200 cursor-text`}
+      onClick={handleContainerClick}
     >
       <svg
         width="20"
@@ -45,6 +51,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         </g>
       </svg>
       <input
+        ref={inputRef}
         type="text"
         className="bg-transparent w-full outline-none text-gray-700 placeholder-gray-500"
         placeholder={placeholder}

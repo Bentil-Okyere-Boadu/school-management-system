@@ -17,7 +17,6 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
     const [selectedAcademicCalendar, setSelectedAcademicCalendar] = useState('')
     const [calendarOptions, setCalendarOptions] = useState<{ value: string; label: string }[]>([]);
     const [selectedCalendarData, setSelectedCalendarData] = useState<typeof calendars[0] | null>(null);
-    const isHidden = false;
 
 
     useEffect(() => {
@@ -46,8 +45,6 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
 
 
   return (
-    <>
-    {isHidden && (
     <div className="pb-8">
       <h1 className="text-md font-semibold text-neutral-800 mb-4">Academic Report</h1>
       {showExportButton &&(
@@ -133,14 +130,6 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
         )}
       </div>
     </div>
-    )}
-
-    {!isHidden && (
-      <div className="pb-8">
-        <p className="text-lg font-semibold text-gray-500">Results Views</p>
-      </div>
-    )}
-    </>
   );
 }
 
