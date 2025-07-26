@@ -8,6 +8,7 @@ import { ClassLevel } from '../class-level/class-level.entity';
 import { SubjectCatalog } from './subject-catalog.entity';
 import { SubjectCatalogController } from './subject-catalog.controller';
 import { School } from 'src/school/school.entity';
+import { StudentGrade } from './student-grade.entity';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { School } from 'src/school/school.entity';
       ClassLevel,
       SubjectCatalog,
       School,
+      StudentGrade,
     ]),
   ],
   providers: [SubjectService],
