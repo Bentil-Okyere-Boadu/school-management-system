@@ -79,25 +79,25 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
     const stats = [
       {
         label: "Total Attendance Count",
-        value: classSummary?.totalAttendanceCount,
+        value: String(classSummary?.totalAttendanceCount ?? 0),
         fromColor: "#2B62E5",
         toColor: "#8FB5FF",
       },
       {
         label: "Total Present Count",
-        value: classSummary?.totalPresentCount,
+        value: String(classSummary?.totalPresentCount ?? 0),
         fromColor: "#B55CF3",
         toColor: "#D9A6FD",
       },
       {
         label: "Total Absent Count",
-        value: classSummary?.totalAbsentCount,
+        value: String(classSummary?.totalAbsentCount ?? 0),
         fromColor: "#F15580",
         toColor: "#F88FB3",
       },
       {
         label: "Average Attendance Rate",
-        value: classSummary?.averageAttendanceRate + "%",
+        value: String(classSummary?.averageAttendanceRate ?? 0) + "%",
         fromColor: "#30C97A",
         toColor: "#8DF4B8",
       },
