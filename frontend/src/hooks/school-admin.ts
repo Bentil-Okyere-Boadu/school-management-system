@@ -772,6 +772,7 @@ export const useGetSubjectById = (id: string) => {
         queryFn: () => {
             return customAPI.get(`/subject-catalog/${id}`);
         },
+        enabled: id.length > 0,
         refetchOnWindowFocus: true
     })
 
@@ -812,10 +813,10 @@ export const useAssignSubjectTeacher = () => {
     })
 }
 
-export const useUpdateSubjectTeacher = () => {
+export const useUpdateSubjectTeacher = (id: string) => {
     return useMutation({
         mutationFn: (payload: AssignSubjectTeacherPayload) => {
-            return customAPI.patch(`/subject/${payload.subjectCatalogId}`, payload);
+            return customAPI.patch(`/subject/${id}`, payload);
         }
     })
 }
