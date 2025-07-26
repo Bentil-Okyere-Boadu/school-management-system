@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { ClassesIcon, StudentsIcon, ProfileIcon } from "@/utils/icons";
+import { ClassroomIcon, StudentsIcon, ProfileIcon } from "@/utils/icons";
 
 import { useTeacherGetMe } from "@/hooks/teacher";
 
@@ -24,7 +24,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Students",
     },
     {
-      icon: ClassesIcon,      
+      icon: ClassroomIcon,      
       label: "Classes",
     },
     {

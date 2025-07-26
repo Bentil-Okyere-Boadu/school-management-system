@@ -129,7 +129,7 @@ const AdminDashboard = () => {
   return (
     <div>
 
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full mx-0.5" />
 
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
         {stats.map((stat, index) => (

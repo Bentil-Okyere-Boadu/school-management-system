@@ -9,6 +9,7 @@ import { IconCopy, IconExternalLink } from '@tabler/icons-react';
 import { toast } from 'react-toastify';
 import { useDebouncer } from "@/hooks/generalHooks";
 import { Pagination } from "@/components/common/Pagination";
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export interface MetricCardProps {
   value: string;
@@ -27,18 +28,28 @@ export type TabListItem = {
 
 const Admissions = () => {
   const [isCopied, setIsCopied] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const defaultNavItems: TabListItem[] = [
     { tabLabel: "Admissions Analytics", tabKey: "admissions-analytics" },
     { tabLabel: "Admissions List", tabKey: "admissions-list" },
   ];
-  const [activeTabKey, setActiveTabKey] = useState('admissions-analytics');
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'admissions-analytics');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilterStatus, setSelectedFilterStatus] = useState("");
 
   const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
+    setTabInUrl(item.tabKey);
+  };
+
+  const setTabInUrl = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.push(`?${params.toString()}`);
   };
 
   const {me} = useGetMe();
