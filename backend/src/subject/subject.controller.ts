@@ -55,72 +55,72 @@ export class SubjectController {
     return { message: 'Subject deleted successfully' };
   }
 
-  @UseGuards(TeacherJwtAuthGuard)
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
   async getMyClasses(@CurrentUser() teacher: Teacher) {
     return this.subjectService.getClassesForTeacher(teacher.id);
   }
 
-  // @UseGuards(TeacherJwtAuthGuard)
-  // @Get('students-for-grading')
-  // async getStudentsForGrading(
-  //   @CurrentUser() teacher: Teacher,
-  //   @Query('classLevelId') classLevelId: string,
-  //   @Query('subjectId') subjectId: string,
-  //   @Query('academicCalendarId') academicCalendarId?: string,
-  //   @Query('academicTermId') academicTermId?: string,
-  // ) {
-  //   let termId = academicTermId;
-  //   let calendarId = academicCalendarId;
+  @UseGuards(TeacherJwtAuthGuard)
+  @Get('students-for-grading')
+  async getStudentsForGrading(
+    @CurrentUser() teacher: Teacher,
+    @Query('classLevelId') classLevelId: string,
+    @Query('subjectId') subjectId: string,
+    @Query('academicCalendarId') academicCalendarId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    let termId = academicTermId;
+    let calendarId = academicCalendarId;
 
-  //   // If only term is provided, infer calendar from term
-  //   if (termId && !calendarId) {
-  //     // Use repository call to get the term with calendar
-  //     const term = await this.academicCalendarService['termRepository'].findOne(
-  //       {
-  //         where: { id: termId },
-  //         relations: ['academicCalendar'],
-  //       },
-  //     );
-  //     if (!term) throw new NotFoundException('Academic term not found');
-  //     calendarId = term.academicCalendar.id;
-  //   }
+    // If only term is provided, infer calendar from term
+    if (termId && !calendarId) {
+      // Use repository call to get the term with calendar
+      const term = await this.academicCalendarService['termRepository'].findOne(
+        {
+          where: { id: termId },
+          relations: ['academicCalendar'],
+        },
+      );
+      if (!term) throw new NotFoundException('Academic term not found');
+      calendarId = term.academicCalendar.id;
+    }
 
-  //   // If only calendar is provided, get latest term in that calendar
-  //   if (!termId && calendarId) {
-  //     const latestTerm = await this.academicCalendarService.getLatestTerm(
-  //       String(calendarId),
-  //     );
-  //     if (!latestTerm)
-  //       throw new NotFoundException('No academic term found for this calendar');
-  //     termId = latestTerm.id;
-  //   }
+    // If only calendar is provided, get latest term in that calendar
+    if (!termId && calendarId) {
+      const latestTerm = await this.academicCalendarService.getLatestTerm(
+        String(calendarId),
+      );
+      if (!latestTerm)
+        throw new NotFoundException('No academic term found for this calendar');
+      termId = latestTerm.id;
+    }
 
-  //   // If neither is provided, use current calendar and latest term for teacher's school
-  //   if (!termId && !calendarId) {
-  //     const calendar =
-  //       await this.academicCalendarService.getCurrentAcademicCalendar(
-  //         teacher.school.id,
-  //       );
-  //     if (!calendar)
-  //       throw new NotFoundException(
-  //         'No academic calendar found for your school',
-  //       );
-  //     calendarId = calendar.id;
-  //     const latestTerm = await this.academicCalendarService.getLatestTerm(
-  //       String(calendarId),
-  //     );
-  //     if (!latestTerm)
-  //       throw new NotFoundException('No academic term found for your school');
-  //     termId = latestTerm.id;
-  //   }
+    // If neither is provided, use current calendar and latest term for teacher's school
+    if (!termId && !calendarId) {
+      const calendar =
+        await this.academicCalendarService.getCurrentAcademicCalendar(
+          teacher.school.id,
+        );
+      if (!calendar)
+        throw new NotFoundException(
+          'No academic calendar found for your school',
+        );
+      calendarId = calendar.id;
+      const latestTerm = await this.academicCalendarService.getLatestTerm(
+        String(calendarId),
+      );
+      if (!latestTerm)
+        throw new NotFoundException('No academic term found for your school');
+      termId = latestTerm.id;
+    }
 
-  //   return this.subjectService.getStudentsForGrading(
-  //     classLevelId,
-  //     subjectId,
-  //     String(termId),
-  //   );
-  // }
+    return this.subjectService.getStudentsForGrading(
+      classLevelId,
+      subjectId,
+      String(termId),
+    );
+  }
 
   // @UseGuards(TeacherJwtAuthGuard)
   // @Post('submit-grades')
