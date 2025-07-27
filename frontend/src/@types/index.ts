@@ -459,3 +459,22 @@ export interface AssignSubjectTeacherPayload {
     classLevelIds: string[];
     teacherId: string;
 }
+
+export interface ClassSubjectInfo {
+  classLevel: ClassLevel;
+  subjects: {
+    id: string;
+    name: string;
+  }[];
+};
+
+export type PostGradesPayload = {
+  classLevelId: string;
+  subjectId: string;
+  academicTermId: string;
+  grades: {
+    studentId: string;
+    classScore: number;
+    examScore: number;
+  }[];
+};

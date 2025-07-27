@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, Student, Teacher, User } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -269,3 +269,63 @@ export const useGetCalendars = () => {
 
   return { studentCalendars, isLoading, refetch }
 }
+
+export const useGetSubjectClasses = (search: string = "") => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['subjectClasses', { search }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/subject/my-classes?${params}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const classSubjects = data?.data as ClassSubjectInfo[] || [] ;
+
+    return { classSubjects, isLoading, refetch }
+}
+
+export const useGetStudentsForGrading = (
+  classLevelId?: string,
+  subjectId?: string,
+  academicCalendarId?: string,
+  academicTermId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "studentsForGrading",
+      { classLevelId, subjectId, academicCalendarId, academicTermId }
+    ],
+    queryFn: () => {
+      const queryParams = [];
+
+      if (classLevelId) queryParams.push(`classLevelId=${classLevelId}`);
+      if (subjectId) queryParams.push(`subjectId=${subjectId}`);
+      if (academicCalendarId) queryParams.push(`academicCalendarId=${academicCalendarId}`);
+      if (academicTermId) queryParams.push(`academicTermId=${academicTermId}`);
+
+      const queryString = queryParams.length ? `?${queryParams.join("&")}` : "";
+
+      return customAPI.get(`/subject/students-for-grading${queryString}`);
+    },
+    enabled: !!classLevelId && !!subjectId && !!academicCalendarId && !!academicTermId,
+    refetchOnWindowFocus: true,
+  });
+
+  const studentsForGrading = data?.data;
+
+  return { studentsForGrading, isLoading, refetch };
+};
+
+
+export const usePostStudentGrades = () => {
+  return useMutation({
+    mutationFn: (payload: PostGradesPayload) =>
+      customAPI.post(`/subject/submit-grades`, payload),
+  });
+};
