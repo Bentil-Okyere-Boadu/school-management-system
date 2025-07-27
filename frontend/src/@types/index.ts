@@ -459,3 +459,11 @@ export interface AssignSubjectTeacherPayload {
     classLevelIds: string[];
     teacherId: string;
 }
+
+export interface ClassSubjectInfo {
+  classLevel: ClassLevel;
+  subject: {
+    id: string;
+    name: string;
+  };
+};

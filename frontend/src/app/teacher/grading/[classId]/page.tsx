@@ -7,6 +7,7 @@ import CustomButton from '@/components/Button';
 import { SearchBar } from '@/components/common/SearchBar';
 import { Pagination } from '@/components/common/Pagination';
 import TableInputField from '@/components/common/TableInputField';
+import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses,  } from '@/hooks/teacher';
 
 type StudentGrading = {
   id: number;
@@ -93,40 +94,98 @@ const ClassGrading = () => {
   const [currentSubject, setCurrentSubject] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [termOptions, setTermOptions] = useState([{ label: "Term", value: "" }]);
+
+
+  const { classSubjects } = useGetSubjectClasses();
 
   const handleSelectChange = (
     event: React.ChangeEvent<HTMLSelectElement>,
     type: "academicYear" | "term" | "class" | "subject"
   ) => {
     const value = event.target.value;
-    if (type === "term") setCurrentTerm(value);
-    else if (type === "academicYear") setCurrentAcademicYear(value);
-    else if (type === "class") setCurrentClass(value);
-    else if (type === "subject") setCurrentSubject(value);
+
+    if (type === "academicYear") {
+      setCurrentAcademicYear(value);
+
+      const selectedCalendar = studentCalendars.find(c => c.id === value);
+      const terms = selectedCalendar?.terms || [];
+
+      const formattedTerms = [
+        { label: "Term", value: "" },
+        ...terms.map(term => ({
+          label: term.termName,
+          value: term.id
+        }))
+      ];
+
+      setTermOptions(formattedTerms);
+      setCurrentTerm(terms[0]?.id ?? "");
+    } else if (type === "term") {
+      setCurrentTerm(value);
+    } else if (type === "class") {
+      setCurrentClass(value);
+    } else if (type === "subject") {
+      setCurrentSubject(value);
+    }
   };
 
-  const termOptions = [
-    { label: "Term", value: "" },
-    { label: "1st Term", value: "1" },
-    { label: "2nd Term", value: "2" },
-  ];
+
+  const { studentCalendars } = useGetCalendars();
 
   const academicYearOptions = [
     { label: "Academic Year", value: "" },
-    { label: "2022 Academic Year", value: "1" },
-    { label: "2020 Academic Year", value: "2" },
+    ...(studentCalendars ?? []).map((calendar) => ({
+      value: calendar?.id,
+      label: calendar?.name,
+    })),
   ];
 
-  const classOptions = [
-    { label: "Class", value: "" },
-    { label: "Class 1", value: "1" },
-    { label: "Class 2", value: "2" },
-  ];
+  useEffect(() => {
+    if (studentCalendars && studentCalendars.length > 0) {
+      const firstCalendar = studentCalendars[0];
+      setCurrentAcademicYear(firstCalendar.id);
+
+      const terms = firstCalendar.terms || [];
+      const formattedTerms = [
+        { label: "Term", value: "" },
+        ...terms.map(term => ({
+          label: term.termName,
+          value: term.id
+        }))
+      ];
+
+      setTermOptions(formattedTerms);
+      if (terms.length > 0) {
+        setCurrentTerm(terms[0].id);
+      }
+    }
+
+    if (classId) {
+      const classIdStr = classId.toString();
+      setCurrentClass(classIdStr);
+
+      const matchedSubjects = classSubjects?.filter(
+        (item) => item.classLevel.id === classIdStr
+      );
+
+      if (matchedSubjects?.length) {
+        // Set first subject as default
+        setCurrentSubject(matchedSubjects[0].subject.id);
+      }
+    }
+  }, [studentCalendars, classId, classSubjects]);
 
   const subjectOptions = [
     { label: "Subject", value: "" },
-    { label: "Maths", value: "1" },
-    { label: "French", value: "2" },
+    ...(
+      classSubjects
+        ?.filter(item => item.classLevel.id === currentClass)
+        .map(item => ({
+          label: item.subject.name,
+          value: item.subject.id,
+        })) ?? []
+    )
   ];
 
   const handleSearch = (query: string) => {
@@ -166,11 +225,27 @@ const ClassGrading = () => {
     console.log(studentScores, "here")
   }
 
+  const { studentsForGrading } = useGetStudentsForGrading(
+    classId as string,
+    currentSubject,
+    currentAcademicYear,
+    currentTerm
+  );
+
+  console.log(studentsForGrading, "here")
+
   return (
     <div className="pb-8">
       <div>
         <div className="flex gap-3 flex-wrap">
-          <CustomSelectTag selectClassName="py-1.5" value={currentClass} options={classOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "class")} />
+          <CustomSelectTag
+            selectClassName="py-1.5"
+            value={currentClass}
+            options={[
+              { label: classSubjects?.find(item => item.classLevel.id === currentClass)?.classLevel.name ?? "Selected Class", value: currentClass }
+            ]}
+            onOptionItemClick={() => {}}
+          />
           <CustomSelectTag selectClassName="py-1.5" value={currentSubject} options={subjectOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "subject")} />
         </div>
 
@@ -179,12 +254,11 @@ const ClassGrading = () => {
           <div className="flex gap-3 flex-wrap">
             <CustomSelectTag selectClassName="py-2.5" value={currentAcademicYear} options={academicYearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "academicYear")} />
             <CustomSelectTag selectClassName="py-2.5" value={currentTerm} options={termOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "term")} />
-            <SearchBar onSearch={handleSearch} placeholder='Search by name' className="w-[366px] py-[-3px] max-md:w-full" />
+            <SearchBar onSearch={handleSearch} placeholder='Search by name' className="w-[366px] py-[-3px] max-md:w-full mx-0.5" />
           </div>
 
           <CustomButton text="Save Changes" onClick={onSaveChanges} />
         </div>
-
 
         <section className="bg-white">
           <div className="overflow-x-auto">

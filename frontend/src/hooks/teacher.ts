@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, Student, Teacher, User } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -279,14 +279,45 @@ export const useGetSubjectClasses = (search: string = "") => {
                 queryBuilder.push(`search=${search}`);
             }
             const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
-            console.log(params)
 
-            return customAPI.get(`/subject/my-classes`);
+            return customAPI.get(`/subject/my-classes?${params}`);
         },
         refetchOnWindowFocus: true
     })
 
-    const classLevels = data?.data as ClassLevel[] || [] ;
+    const classSubjects = data?.data as ClassSubjectInfo[] || [] ;
 
-    return { classLevels, isLoading, refetch }
+    return { classSubjects, isLoading, refetch }
 }
+
+export const useGetStudentsForGrading = (
+  classLevelId?: string,
+  subjectId?: string,
+  academicCalendarId?: string,
+  academicTermId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "studentsForGrading",
+      { classLevelId, subjectId, academicCalendarId, academicTermId }
+    ],
+    queryFn: () => {
+      const queryParams = [];
+
+      if (classLevelId) queryParams.push(`classLevelId=${classLevelId}`);
+      if (subjectId) queryParams.push(`subjectId=${subjectId}`);
+      if (academicCalendarId) queryParams.push(`academicCalendarId=${academicCalendarId}`);
+      if (academicTermId) queryParams.push(`academicTermId=${academicTermId}`);
+
+      const queryString = queryParams.length ? `?${queryParams.join("&")}` : "";
+
+      return customAPI.get(`/subject/students-for-grading${queryString}`);
+    },
+    enabled: !!classLevelId && !!subjectId && !!academicCalendarId && !!academicTermId,
+    refetchOnWindowFocus: true,
+  });
+
+  const studentsForGrading = data?.data;
+
+  return { studentsForGrading, isLoading, refetch };
+};

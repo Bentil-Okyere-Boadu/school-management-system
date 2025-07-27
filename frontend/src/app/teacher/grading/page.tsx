@@ -15,18 +15,14 @@ const ClassesPage = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { classLevels } = useGetSubjectClasses(useDebouncer(searchQuery));
+  const { classSubjects } = useGetSubjectClasses(useDebouncer(searchQuery));
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
 
-  const onNavigateToAttendance = (data: ClassLevel) => {
-    router.push(`/teacher/classes/${data.id}/attendance`)
-  }
-
   const onNavigateToGradingClick = (data: ClassLevel) => {
-    router.push(`/teacher/classes/${data.id}/grading`)
+    router.push(`/teacher/grading/${data.id}`)
   }
 
   return (
@@ -35,19 +31,17 @@ const ClassesPage = () => {
         <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
       </div>
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-6 px-0.5">
-        {classLevels?.map((data, index) => (
+        {classSubjects?.map((data, index) => (
           <ClassCard
             key={index + "12"}
-            classData={data}
-            studentCount={data?.studentCount}
-            showGoToAttendance={true}
-            onNavigateToAttendanceClick={onNavigateToAttendance}
+            classData={data?.classLevel}
+            showGoToGrading={true}
             onNavigateToGradingClick={onNavigateToGradingClick}
           />
         ))}
       </section>
       {
-        classLevels.length === 0 && (
+        classSubjects.length === 0 && (
             <NoAvailableEmptyState message="No class available" />
           )
       }

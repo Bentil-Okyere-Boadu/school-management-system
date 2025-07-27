@@ -75,7 +75,7 @@ const ViewStudentPage = () => {
         )}
         { activeTabKey === "attendance" && (
             <div>
-                <StudentAttendance  
+              <StudentAttendance  
                 studentAttendance={studentAttendance}
                 calendars={studentCalendars}
                 onSelectAcademicYear={handleSelectAcademicYear}
