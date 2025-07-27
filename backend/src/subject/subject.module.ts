@@ -9,6 +9,12 @@ import { SubjectCatalog } from './subject-catalog.entity';
 import { SubjectCatalogController } from './subject-catalog.controller';
 import { School } from 'src/school/school.entity';
 import { StudentGrade } from './student-grade.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { Student } from 'src/student/student.entity';
+import { GradingSystem } from 'src/grading-system/grading-system.entity';
+import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
+import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 
 @Module({
   imports: [
@@ -19,9 +25,14 @@ import { StudentGrade } from './student-grade.entity';
       SubjectCatalog,
       School,
       StudentGrade,
+      AcademicCalendar,
+      AcademicTerm,
+      Student,
+      GradingSystem,
+      Holiday,
     ]),
   ],
-  providers: [SubjectService],
+  providers: [SubjectService, AcademicCalendarService],
   controllers: [SubjectController, SubjectCatalogController],
   exports: [TypeOrmModule],
 })
