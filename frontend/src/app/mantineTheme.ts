@@ -23,6 +23,13 @@ export const mantineOverrides: MantineThemeOverride = {
         dropdown: '!outline !outline-1 !outline-purple-500',
       },
     },
+    Textarea: {
+      classNames: {
+        label: '!text-xs !text-zinc-600 !font-normal mb-2',
+        input: '!border-solid !border-[0.5px] !border-zinc-500 text-zinc-800 !bg-transparent',
+        dropdown: '!outline !outline-1 !outline-purple-500',
+      },
+    },
     TagsInput: {
       classNames: {
         label: '!text-xs !text-zinc-600 !font-normal mb-2',

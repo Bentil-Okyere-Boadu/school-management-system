@@ -31,8 +31,7 @@ const ClassesPage = () => {
   const { mutate: editMutation, isPending: pendingEdit } = useEditClassLevel(classLevelId);
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteClassLevel();
   const { mutate: createMutation, isPending: pendingCreate } = useCreateClassLevel();
-
-  const { paginationValues: paginatedTeacherValues, schoolUsers: schoolTeachers } = useGetSchoolUsers(
+const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     currentPage,
     "",
     "",
@@ -45,8 +44,9 @@ const ClassesPage = () => {
     value: teacher.id,
     label: `${teacher.firstName} ${teacher.lastName}`,
   }));
+  
 
-  const { paginationValues: paginatedStudentValues, schoolUsers: schoolStudents } = useGetSchoolUsers(
+  const { schoolUsers: schoolStudents } = useGetSchoolUsers(
     currentPage,
     "",
     "",
@@ -54,9 +54,6 @@ const ClassesPage = () => {
     "Student",
     500
   );
-
-  console.log(paginatedStudentValues, paginatedTeacherValues);
-
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);

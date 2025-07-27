@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -749,4 +749,82 @@ export const useAdminViewStudentAttendance = (
 
     const studentAttendance = data?.data;
     return { studentAttendance, isLoading, refetch };
+}
+
+export const useGetAllSubjects = (enabled: boolean = true) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['allSubjects'],
+        queryFn: () => {
+            return customAPI.get('/subject-catalog');
+        },
+        enabled,
+        refetchOnWindowFocus: true
+    })
+
+    const subjects: Subject[] = data?.data
+
+    return { subjects, isLoading, refetch }
+}
+
+export const useGetSubjectById = (id: string) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['allSubjects', id],
+        queryFn: () => {
+            return customAPI.get(`/subject-catalog/${id}`);
+        },
+        enabled: id.length > 0,
+        refetchOnWindowFocus: true
+    })
+
+    const subjects = data?.data
+
+    return { subjects, isLoading, refetch }
+}
+
+export const useCreateSubject = () => {
+    return useMutation({
+        mutationFn: (subject: Subject) => {
+            return customAPI.post(`/subject-catalog`, subject);
+        }
+    })
+}
+
+export const useUpdateSubject = () => {
+    return useMutation({
+        mutationFn: (subject: Subject) => {
+            return customAPI.put(`/subject-catalog/${subject.id}`, subject);
+        }
+    })
+}
+
+export const useDeleteSubject = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/subject-catalog/${id}`);
+        }
+    })
+}
+
+export const useAssignSubjectTeacher = () => {
+    return useMutation({
+        mutationFn: (payload: AssignSubjectTeacherPayload) => {
+            return customAPI.post(`/subject`, payload);
+        }
+    })
+}
+
+export const useUpdateSubjectTeacher = (id: string) => {
+    return useMutation({
+        mutationFn: (payload: AssignSubjectTeacherPayload) => {
+            return customAPI.patch(`/subject/${id}`, payload);
+        }
+    })
+}
+
+export const useRemoveSubjectAssignment = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/subject/${id}`);
+        }
+    })
 }

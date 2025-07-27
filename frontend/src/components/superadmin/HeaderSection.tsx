@@ -92,16 +92,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData]);
 
   const onHandleBreadCrumbPress = () => {
-     switch (getSignedInRole()) {
-      case Roles.SCHOOL_ADMIN:
-        router.push(`/admin/${activeMenuItem?.toLowerCase()}`)
-        break;
-      case Roles.SUPER_ADMIN:
-        router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
-        break;
-      default:
-        window.history.back();
-    }
+    window.history.back();
   };
 
   const onHandleLogout = () => {
