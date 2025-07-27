@@ -122,25 +122,25 @@ export class SubjectController {
     );
   }
 
-  // @UseGuards(TeacherJwtAuthGuard)
-  // @Post('submit-grades')
-  // async submitGrades(
-  //   @CurrentUser() teacher: any,
-  //   @Body()
-  //   body: {
-  //     classLevelId: string;
-  //     subjectId: string;
-  //     academicTermId: string;
-  //     grades: Array<{
-  //       studentId: string;
-  //       classScore: number;
-  //       examScore: number;
-  //     }>;
-  //   },
-  // ) {
-  //   return this.subjectService.submitGrades({
-  //     ...body,
-  //     teacherId: teacher.id,
-  //   });
-  // }
+  @UseGuards(TeacherJwtAuthGuard)
+  @Post('submit-grades')
+  async submitGrades(
+    @CurrentUser() teacher: Teacher,
+    @Body()
+    body: {
+      classLevelId: string;
+      subjectId: string;
+      academicTermId: string;
+      grades: Array<{
+        studentId: string;
+        classScore: number; // 30%
+        examScore: number; // 70%
+      }>;
+    },
+  ) {
+    return this.subjectService.submitGrades({
+      ...body,
+      teacherId: teacher.id,
+    });
+  }
 }
