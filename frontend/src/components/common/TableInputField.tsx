@@ -35,7 +35,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
             type={type}
             disabled={isTransulent}
             {...props}
-            className={`px-3 py-2.5 h-10  text-zinc-800 w-full
+            className={`px-3 py-2.5 h-10 rounded border-gray-300 border-[0.1px] text-zinc-800 w-full 
               ${isPasswordField ? "text-2xl font-bold" : "text-base"}
               ${isTransulent ? "bg-[#8787871A] bg-opacity-10 !border-none outline-none" : ""}
               ${rightButton ? "pr-26" : ""}

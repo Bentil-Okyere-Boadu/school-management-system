@@ -7,10 +7,12 @@ import CustomButton from '@/components/Button';
 import { SearchBar } from '@/components/common/SearchBar';
 import { Pagination } from '@/components/common/Pagination';
 import TableInputField from '@/components/common/TableInputField';
-import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses,  } from '@/hooks/teacher';
+import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses, usePostStudentGrades,  } from '@/hooks/teacher';
+import { ErrorResponse, PostGradesPayload } from '@/@types';
+import { toast } from 'react-toastify';
 
 type StudentGrading = {
-  id: number;
+  id: string;
   firstName: string;
   lastName: string;
   studentId: string;
@@ -19,73 +21,25 @@ type StudentGrading = {
   totalScore: number;
 };
 
+export type RawStudentScore = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  studentId: string;
+  otherName: string | null;
+  scores: {
+    classScore: number;
+    examScore: number;
+    totalScore: number;
+  };
+};
+
+
 const ClassGrading = () => {
 
   const { classId } = useParams();
 
-  const studentGradingList: StudentGrading[] = [
-    {
-      id: 1,
-      firstName: "Ama",
-      lastName: "Boateng",
-      studentId: "STD001",
-      classScore: undefined,
-      examScore: 60,
-      totalScore: 85,
-    },
-    {
-      id: 2,
-      firstName: "Kwame",
-      lastName: "Mensah",
-      studentId: "STD002",
-      classScore: undefined,
-      examScore: 65,
-      totalScore: 93,
-    },
-    {
-      id: 3,
-      firstName: "Akosua",
-      lastName: "Owusu",
-      studentId: "STD003",
-      classScore: 22,
-      examScore: undefined,
-      totalScore: 80,
-    },
-    {
-      id: 4,
-      firstName: "Kojo",
-      lastName: "Tetteh",
-      studentId: "STD004",
-      classScore: 30,
-      examScore: 62,
-      totalScore: 92,
-    },
-    {
-      id: 5,
-      firstName: "Efua",
-      lastName: "Nkrumah",
-      studentId: "STD005",
-      classScore: undefined,
-      examScore: 64,
-      totalScore: 91,
-    },
-    {
-      id: 6,
-      firstName: "Yaw",
-      lastName: "Johnson",
-      studentId: "STD006",
-      classScore: 24,
-      examScore: undefined,
-      totalScore: 83,
-    }
-  ];
   const [studentScores, setStudentScores] = useState<StudentGrading[]>([]);
-
-
-  useEffect(() => {
-    const initialData: StudentGrading[] = studentGradingList;
-    setStudentScores(initialData);
-  }, []);
 
 
   const [currentTerm, setCurrentTerm] = useState("");
@@ -165,25 +119,24 @@ const ClassGrading = () => {
       const classIdStr = classId.toString();
       setCurrentClass(classIdStr);
 
-      const matchedSubjects = classSubjects?.filter(
+      const matchedItem = classSubjects?.find(
         (item) => item.classLevel.id === classIdStr
       );
 
-      if (matchedSubjects?.length) {
-        // Set first subject as default
-        setCurrentSubject(matchedSubjects[0].subject.id);
+      if (matchedItem?.subjects?.length) {
+        setCurrentSubject(matchedItem.subjects[0].id);
       }
     }
-  }, [studentCalendars, classId, classSubjects]);
+    }, [studentCalendars, classId, classSubjects]);
 
   const subjectOptions = [
     { label: "Subject", value: "" },
     ...(
       classSubjects
-        ?.filter(item => item.classLevel.id === currentClass)
-        .map(item => ({
-          label: item.subject.name,
-          value: item.subject.id,
+        ?.find(item => item.classLevel.id === currentClass)
+        ?.subjects.map(subject => ({
+          label: subject.name,
+          value: subject.id,
         })) ?? []
     )
   ];
@@ -198,32 +151,59 @@ const ClassGrading = () => {
     setCurrentPage(page);
   };
 
-  const handleScoreChange = (
-    id: number,
-    type: 'classScore' | 'examScore',
-    value: string
-  ) => {
-    const score = parseFloat(value) || 0;
-
+  const handleScoreChange = (studentId: string, field: "classScore" | "examScore", value: string) => {
+    const numericValue = Number(value);
     setStudentScores((prev) =>
-      prev.map((student) =>
-        student.id === id
-          ? {
-              ...student,
-              [type]: score,
-              totalScore:
-                type === 'classScore'
-                  ? score + (student.examScore ?? 0)
-                  : (student.classScore ?? 0) + score,
-            }
-          : student
-      )
+      prev.map((student) => {
+        if (student.id.toString() === studentId) {
+          const updatedStudent = {
+            ...student,
+            [field]: numericValue,
+          };
+          // update totalScore as sum of class + exam
+          updatedStudent.totalScore = (updatedStudent.classScore || 0) + (updatedStudent.examScore || 0);
+          return updatedStudent;
+        }
+        return student;
+      })
     );
   };
 
-  const onSaveChanges = () => {
-    console.log(studentScores, "here")
-  }
+
+
+  const { mutate: postGradesMutation } = usePostStudentGrades();
+
+  const handleSubmitGrades = () => {
+    if (!currentClass || !currentSubject || !currentTerm) {
+      toast.error("Missing required fields");
+      return;
+    }
+
+    const grades = studentScores.map((student) => ({
+      studentId: student.id,
+      classScore: student.classScore || 0,
+      examScore: student.examScore || 0,
+    }));
+
+    const payload: PostGradesPayload = {
+      classLevelId: currentClass,
+      subjectId: currentSubject,
+      academicTermId: currentTerm,
+      grades,
+    };
+
+    postGradesMutation(payload, {
+      onSuccess: () => {
+        toast.success("Grades submitted successfully");
+      },
+      onError: (error: unknown) => {
+        toast.error(
+          JSON.stringify((error as ErrorResponse)?.response?.data?.message || "Submission failed")
+        );
+      },
+    });
+  };
+
 
   const { studentsForGrading } = useGetStudentsForGrading(
     classId as string,
@@ -232,7 +212,19 @@ const ClassGrading = () => {
     currentTerm
   );
 
-  console.log(studentsForGrading, "here")
+  useEffect(() => {
+    if (studentsForGrading?.students?.length) {
+      const normalized = studentsForGrading.students.map((s: RawStudentScore) => ({
+        ...s,
+        classScore: s.scores?.classScore || 0,
+        examScore: s.scores?.examScore || 0,
+        totalScore: s.scores?.totalScore || 0,
+      }));
+      setStudentScores(normalized);
+    } else {
+      setStudentScores([]);
+    }
+  }, [studentsForGrading]);
 
   return (
     <div className="pb-8">
@@ -257,7 +249,7 @@ const ClassGrading = () => {
             <SearchBar onSearch={handleSearch} placeholder='Search by name' className="w-[366px] py-[-3px] max-md:w-full mx-0.5" />
           </div>
 
-          <CustomButton text="Save Changes" onClick={onSaveChanges} />
+          <CustomButton text="Save Changes" onClick={() => handleSubmitGrades()} />
         </div>
 
         <section className="bg-white">
@@ -299,7 +291,7 @@ const ClassGrading = () => {
                       <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                         {student.studentId}
                       </td>
-                      <td className="text-sm py-1 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                      <td className="text-sm px-3 py-1 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                         <TableInputField
                           value={student?.classScore?.toString()}
                           placeholder="Enter class score"
@@ -308,7 +300,7 @@ const ClassGrading = () => {
                           }
                         />
                       </td>
-                      <td className="text-sm py-1 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                      <td className="text-sm py-1 px-3 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                         <TableInputField
                           value={student?.examScore?.toString()}
                           placeholder="Enter exam score"

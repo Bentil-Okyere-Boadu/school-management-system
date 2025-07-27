@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -320,4 +320,12 @@ export const useGetStudentsForGrading = (
   const studentsForGrading = data?.data;
 
   return { studentsForGrading, isLoading, refetch };
+};
+
+
+export const usePostStudentGrades = () => {
+  return useMutation({
+    mutationFn: (payload: PostGradesPayload) =>
+      customAPI.post(`/subject/submit-grades`, payload),
+  });
 };
