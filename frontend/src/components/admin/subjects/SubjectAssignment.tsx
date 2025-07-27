@@ -64,8 +64,12 @@ const SubjectAssignment = () => {
   subjectOptions.unshift({ label: "Select Subject", value: "" });
 
   const onAddNewPress = () => {
-    setIsCreate(true);
-    setIsOpen(true);
+    if(selectedDropdownSubject){
+      setIsCreate(true);
+      setIsOpen(true);
+    } else {
+      toast.warn('Please select a subject to add a new subject assignment' )
+    }
   };
 
   const onOptionFilterItemClick = (
