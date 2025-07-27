@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subject } from './subject.entity';
@@ -207,39 +211,49 @@ export class SubjectService {
       relations: ['classLevels', 'subjectCatalog'],
     });
 
-    // Flatten and deduplicate class levels, but keep subject info
     const classLevelMap = new Map();
     for (const subject of subjects) {
       for (const level of subject.classLevels) {
         if (!classLevelMap.has(level.id)) {
           classLevelMap.set(level.id, {
             classLevel: { id: level.id, name: level.name },
-            subject: { id: subject.id, name: subject.subjectCatalog.name },
+            subjects: [],
           });
         }
+
+        classLevelMap.get(level.id).subjects.push({
+          id: subject.id,
+          name: subject.subjectCatalog.name,
+        });
       }
     }
-    return Array.from(classLevelMap.values()) as {
-      classLevel: { id: string; name: string };
-      subject: { id: string; name: string };
-    }[];
+    return Array.from(classLevelMap.values());
   }
 
   async getStudentsForGrading(
     classLevelId: string,
     subjectId: string,
-    academicTermId: string,
+    academicTermId?: string,
   ) {
-    // Fetch class level with students
+    if (!classLevelId) {
+      throw new BadRequestException('classLevel is required');
+    }
+    // Fetch class level with students and their profiles
     const classLevel = await this.classLevelRepository.findOne({
       where: { id: classLevelId },
-      relations: ['students'],
+      relations: ['students', 'students.profile'],
     });
+
     if (!classLevel) throw new NotFoundException('Class level not found');
 
-    // Fetch subject
+    // Fetch subject with catalog to get subject name
+
+    if (!subjectId) {
+      throw new BadRequestException('subject is required');
+    }
     const subject = await this.subjectRepository.findOne({
       where: { id: subjectId },
+      relations: ['subjectCatalog'],
     });
     if (!subject) throw new NotFoundException('Subject not found');
 
@@ -249,7 +263,6 @@ export class SubjectService {
       relations: ['academicCalendar'],
     });
     if (!academicTerm) throw new NotFoundException('Academic term not found');
-    const academicCalendar = academicTerm.academicCalendar;
 
     // Fetch existing grades for this subject/class/term
     const grades = await this.studentGradeRepository.find({
@@ -260,99 +273,164 @@ export class SubjectService {
       },
       relations: ['student'],
     });
+
     const gradeMap = new Map(grades.map((g) => [g.student.id, g]));
 
-    // Return students with their grade if available
-    return classLevel.students.map((student) => ({
-      student,
-      grade: gradeMap.get(student.id) || null,
-    }));
+    // Return students with their grades or empty scores
+    return {
+      metadata: {
+        subject: {
+          id: subject.id,
+          name: subject.subjectCatalog.name,
+        },
+        classLevel: {
+          id: classLevel.id,
+          name: classLevel.name,
+        },
+        academicTerm: {
+          id: academicTerm.id,
+          name: academicTerm.termName,
+        },
+        academicCalendar: {
+          id: academicTerm.academicCalendar.id,
+          name: academicTerm.academicCalendar.name,
+        },
+      },
+      students: classLevel.students.map((student) => {
+        const existingGrade = gradeMap.get(student.id);
+        return {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          studentId: student.studentId, // if you have this field
+          otherName: student.profile.otherName,
+          scores: {
+            classScore: existingGrade?.classScore || 0, // 30%
+            examScore: existingGrade?.examScore || 0, // 70%
+            totalScore: existingGrade?.totalScore || 0,
+            //  grade: existingGrade?.grade || '',
+          },
+        };
+      }),
+    };
   }
 
-  // async submitGrades({
-  //   classLevelId,
-  //   subjectId,
-  //   academicTermId,
-  //   teacherId,
-  //   grades, // [{ studentId, classScore, examScore }]
-  // }: {
-  //   classLevelId: string;
-  //   subjectId: string;
-  //   academicTermId: string;
-  //   teacherId: string;
-  //   grades: Array<{ studentId: string; classScore: number; examScore: number }>;
-  // }) {
-  //   // Fetch required entities
-  //   const classLevel = await this.classLevelRepository.findOne({
-  //     where: { id: classLevelId },
-  //   });
-  //   if (!classLevel) throw new NotFoundException('Class level not found');
-  //   const subject = await this.subjectRepository.findOne({
-  //     where: { id: subjectId },
-  //   });
-  //   if (!subject) throw new NotFoundException('Subject not found');
-  //   const academicTerm = await this.academicTermRepository.findOne({
-  //     where: { id: academicTermId },
-  //     relations: ['academicCalendar'],
-  //   });
-  //   if (!academicTerm) throw new NotFoundException('Academic term not found');
-  //   const academicCalendar = academicTerm.academicCalendar;
-  //   const teacher = await this.teacherRepository.findOne({
-  //     where: { id: teacherId },
-  //   });
-  //   if (!teacher) throw new NotFoundException('Teacher not found');
+  async submitGrades({
+    classLevelId,
+    subjectId,
+    academicTermId,
+    teacherId,
+    grades,
+  }: {
+    classLevelId: string;
+    subjectId: string;
+    academicTermId: string;
+    teacherId: string;
+    grades: Array<{ studentId: string; classScore: number; examScore: number }>;
+  }) {
+    // Validate all required entities
+    const [classLevel, subject, academicTerm, teacher] = await Promise.all([
+      this.classLevelRepository.findOne({
+        where: { id: classLevelId },
+      }),
+      this.subjectRepository.findOne({
+        where: { id: subjectId },
+        relations: ['school'],
+      }),
+      this.academicTermRepository.findOne({
+        where: { id: academicTermId },
+        relations: ['academicCalendar'],
+      }),
+      this.teacherRepository.findOne({
+        where: { id: teacherId },
+      }),
+    ]);
 
-  //   // Fetch grading system for the school
-  //   const gradingSystem = await this.gradingSystemRepository.find({
-  //     where: { school: { id: subject.school.id } },
-  //   });
-  //   if (!gradingSystem || gradingSystem.length === 0)
-  //     throw new NotFoundException('Grading system not found');
+    if (!classLevel) throw new NotFoundException('Class level not found');
+    if (!subject) throw new NotFoundException('Subject not found');
+    if (!academicTerm) throw new NotFoundException('Academic term not found');
+    if (!teacher) throw new NotFoundException('Teacher not found');
 
-  //   // Save or update grades
-  //   const results = [];
-  //   for (const g of grades) {
-  //     const student = await this.studentRepository.findOne({
-  //       where: { id: g.studentId },
-  //     });
-  //     if (!student) continue;
-  //     const totalScore = g.classScore + g.examScore;
-  //     // Find grade
-  //     const gradeObj = gradingSystem.find(
-  //       (gs) => totalScore >= gs.minRange && totalScore <= gs.maxRange,
-  //     );
-  //     const grade = gradeObj ? gradeObj.grade : 'N/A';
-  //     // Upsert
-  //     let studentGrade = await this.studentGradeRepository.findOne({
-  //       where: {
-  //         student: { id: student.id },
-  //         subject: { id: subject.id },
-  //         classLevel: { id: classLevel.id },
-  //         academicTerm: { id: academicTerm.id },
-  //       },
-  //     });
-  //     if (!studentGrade) {
-  //       studentGrade = this.studentGradeRepository.create({
-  //         student,
-  //         subject,
-  //         classLevel,
-  //         academicTerm,
-  //         academicCalendar,
-  //         teacher,
-  //         classScore: g.classScore,
-  //         examScore: g.examScore,
-  //         totalScore,
-  //         grade,
-  //       });
-  //     } else {
-  //       studentGrade.classScore = g.classScore;
-  //       studentGrade.examScore = g.examScore;
-  //       studentGrade.totalScore = totalScore;
-  //       studentGrade.grade = grade;
-  //     }
-  //     await this.studentGradeRepository.save(studentGrade);
-  //     results.push(studentGrade);
-  //   }
-  //   return results;
-  // }
+    // Fetch grading system for the school
+    const gradingSystem = await this.gradingSystemRepository.find({
+      where: { school: { id: subject.school.id } },
+      order: { minRange: 'DESC' }, // Order by range to find correct grade
+    });
+
+    if (!gradingSystem?.length) {
+      throw new NotFoundException('Grading system not found for this school');
+    }
+
+    // Validate scores
+    for (const grade of grades) {
+      if (grade.classScore < 0 || grade.classScore > 30) {
+        throw new BadRequestException(
+          `Class score must be between 0 and 30 for student ${grade.studentId}`,
+        );
+      }
+      if (grade.examScore < 0 || grade.examScore > 70) {
+        throw new BadRequestException(
+          `Exam score must be between 0 and 70 for student ${grade.studentId}`,
+        );
+      }
+    }
+
+    // Process grades in batch
+    const results = await Promise.all(
+      grades.map(async (g) => {
+        const student = await this.studentRepository.findOne({
+          where: { id: g.studentId },
+        });
+
+        if (!student) {
+          throw new NotFoundException(`Student ${g.studentId} not found`);
+        }
+
+        const totalScore = g.classScore + g.examScore;
+
+        // Find appropriate grade based on total score
+        const gradeObj = gradingSystem.find(
+          (gs) => totalScore >= gs.minRange && totalScore <= gs.maxRange,
+        );
+
+        // Upsert the grade
+        const studentGrade =
+          (await this.studentGradeRepository.findOne({
+            where: {
+              student: { id: student.id },
+              subject: { id: subject.id },
+              classLevel: { id: classLevel.id },
+              academicTerm: { id: academicTerm.id },
+            },
+          })) ||
+          this.studentGradeRepository.create({
+            student,
+            subject,
+            classLevel,
+            academicTerm,
+            academicCalendar: academicTerm.academicCalendar,
+            teacher,
+          });
+
+        // Update grade data
+        studentGrade.classScore = g.classScore;
+        studentGrade.examScore = g.examScore;
+        studentGrade.totalScore = totalScore;
+        studentGrade.grade = gradeObj?.grade || 'N/A';
+
+        return this.studentGradeRepository.save(studentGrade);
+      }),
+    );
+
+    return {
+      message: 'Grades submitted successfully',
+      data: results.map((grade) => ({
+        studentId: grade.student.id,
+        classScore: grade.classScore,
+        examScore: grade.examScore,
+        totalScore: grade.totalScore,
+        grade: grade.grade,
+      })),
+    };
+  }
 }
