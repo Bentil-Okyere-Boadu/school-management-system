@@ -211,22 +211,23 @@ export class SubjectService {
       relations: ['classLevels', 'subjectCatalog'],
     });
 
-    // Flatten and deduplicate class levels, but keep subject info
     const classLevelMap = new Map();
     for (const subject of subjects) {
       for (const level of subject.classLevels) {
         if (!classLevelMap.has(level.id)) {
           classLevelMap.set(level.id, {
             classLevel: { id: level.id, name: level.name },
-            subject: { id: subject.id, name: subject.subjectCatalog.name },
+            subjects: [],
           });
         }
+
+        classLevelMap.get(level.id).subjects.push({
+          id: subject.id,
+          name: subject.subjectCatalog.name,
+        });
       }
     }
-    return Array.from(classLevelMap.values()) as {
-      classLevel: { id: string; name: string };
-      subject: { id: string; name: string };
-    }[];
+    return Array.from(classLevelMap.values());
   }
 
   async getStudentsForGrading(
