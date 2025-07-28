@@ -7,13 +7,11 @@ import {
   Param,
   Delete,
   Get,
-  Request,
   Query,
   NotFoundException,
 } from '@nestjs/common';
 import { SubjectService } from './subject.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
-import { Subject } from './subject.entity';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
@@ -23,6 +21,9 @@ import { UpdateSubjectDto } from './dto/update-subject.dto';
 import { TeacherJwtAuthGuard } from '../teacher/guards/teacher-jwt-auth.guard';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
+import { Student } from 'src/student/student.entity';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { StudentJwtAuthGuard } from 'src/student/guards/student-jwt-auth.guard';
 
 @Controller('subject')
 export class SubjectController {
@@ -60,8 +61,29 @@ export class SubjectController {
   async getMyClasses(@CurrentUser() teacher: Teacher) {
     return this.subjectService.getClassesForTeacher(teacher.id);
   }
+  @Get('students/:studentId/results/:academicCalendarId')
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  async getStudentResults(
+    @Param('studentId') studentId: string,
+    @Param('academicCalendarId') academicCalendarId: string,
+  ) {
+    return this.subjectService.getStudentResults(studentId, academicCalendarId);
+  }
 
-  @UseGuards(TeacherJwtAuthGuard)
+  @Get('students/results/:academicCalendarId')
+  @Roles('student')
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  async getMyResult(
+    @CurrentUser() student: Student,
+    @Param('academicCalendarId') academicCalendarId: string,
+  ) {
+    return this.subjectService.getStudentResults(
+      student.id,
+      academicCalendarId,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('students-for-grading')
   async getStudentsForGrading(
     @CurrentUser() teacher: Teacher,
