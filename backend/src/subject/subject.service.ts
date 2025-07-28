@@ -308,13 +308,71 @@ export class SubjectService {
             classScore: existingGrade?.classScore || 0, // 30%
             examScore: existingGrade?.examScore || 0, // 70%
             totalScore: existingGrade?.totalScore || 0,
-            //  grade: existingGrade?.grade || '',
+            grade: existingGrade?.grade || '',
           },
         };
       }),
     };
   }
+  async getStudentResults(studentId: string, academicCalendarId: string) {
+    const calendar = await this.academicCalendarRepository.findOne({
+      where: { id: academicCalendarId },
+      relations: ['terms'],
+    });
 
+    if (!calendar) {
+      throw new NotFoundException('Academic calendar not found');
+    }
+
+    // Sort terms by startDate
+    const sortedTerms = calendar.terms.sort((a, b) =>
+      a.startDate.localeCompare(b.startDate),
+    );
+
+    // Get all grades for this student in this calendar
+    const grades = await this.studentGradeRepository.find({
+      where: {
+        student: { id: studentId },
+        academicCalendar: { id: academicCalendarId },
+      },
+      relations: [
+        'subject',
+        'subject.subjectCatalog',
+        'academicTerm',
+        'classLevel',
+      ],
+    });
+
+    // Group grades by term
+    const termResults = await Promise.all(
+      sortedTerms.map(async (term) => {
+        const termGrades = grades.filter(
+          (grade) => grade.academicTerm.id === term.id,
+        );
+
+        return {
+          termName: term.termName,
+          subjects: termGrades.map((grade) => ({
+            subject: grade.subject.subjectCatalog.name,
+            classScore: grade.classScore,
+            examScore: grade.examScore,
+            totalScore: grade.totalScore,
+            grade: grade.grade,
+            percentage: ((grade.totalScore / 100) * 100).toFixed(0) + '%',
+          })),
+          teacherRemarks: 'Good performance, keep it up!', // You can add actual remarks if you store them
+        };
+      }),
+    );
+
+    return {
+      studentInfo: {
+        academicYear: calendar.name,
+        class: grades[0]?.classLevel.name,
+      },
+      terms: termResults,
+    };
+  }
   async submitGrades({
     classLevelId,
     subjectId,
