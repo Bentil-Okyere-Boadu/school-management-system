@@ -478,3 +478,26 @@ export type PostGradesPayload = {
     examScore: number;
   }[];
 };
+
+export interface SubjectResult {
+  subject: string;
+  classScore: number;
+  examScore: number;
+  totalScore: number;
+  grade: string;
+  percentage: string;
+}
+
+export interface TermResult {
+  termName: string;
+  subjects: SubjectResult[];
+  teacherRemarks: string;
+}
+
+export interface StudentResultsResponse {
+  studentInfo: {
+    academicYear: string;
+    class: string;
+  };
+  terms: TermResult[];
+}

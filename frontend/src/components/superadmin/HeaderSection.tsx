@@ -63,7 +63,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     queryKey: ['teacherClass', classId]
   });
 
-  const isTeacherStudentDetailPage = pathName.includes(`/admin/students/${params.id}`);
+  const isTeacherStudentDetailPage = pathName.includes(`/teacher/students/${params.id}`);
   const {studentData} = useGetStudentById(params.id as string, {
     enabled: isTeacherStudentDetailPage,
     queryKey: ['student', params.id],

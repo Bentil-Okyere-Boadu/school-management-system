@@ -3,21 +3,21 @@
 import React, { useEffect, useState } from "react";
 import { CustomSelectTag } from "../../common/CustomSelectTag";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
-import { Calendar } from "@/@types";
+import { Calendar, StudentResultsResponse } from "@/@types";
 import CustomButton from "@/components/Button";
 import { IconDownload } from "@tabler/icons-react";
 
 interface StudentResultProps {
   calendars: Calendar[];
+  studentResults: StudentResultsResponse;
   showExportButton?: boolean;
-  onExportButtonClick?: (item: Calendar) => void;
+  onExportButtonClick?: (item: StudentResultsResponse) => void;
+  onCalendarChange?: (calendarId: string) => void;
 }
 
-const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportButton, onExportButtonClick}) => {
+const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportButton, studentResults, onExportButtonClick, onCalendarChange }) => {
     const [selectedAcademicCalendar, setSelectedAcademicCalendar] = useState('')
     const [calendarOptions, setCalendarOptions] = useState<{ value: string; label: string }[]>([]);
-    const [selectedCalendarData, setSelectedCalendarData] = useState<typeof calendars[0] | null>(null);
-
 
     useEffect(() => {
       const options = calendars?.map((calendar) => ({
@@ -27,9 +27,9 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
 
       setCalendarOptions(options);
 
-      if (calendars.length > 0) {
+      if (calendars?.length > 0) {
           setSelectedAcademicCalendar(calendars[0].id);
-          setSelectedCalendarData(calendars[0]);
+          onCalendarChange?.(calendars[0].id);
       }
         
     }, [calendars]);
@@ -37,10 +37,7 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
     const handleAcademicCalendarChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
       const selectedValue = event.target.value;
       setSelectedAcademicCalendar(selectedValue)
-      const calendar = calendars.find(c => c.id === selectedValue);
-      if (calendar) {
-          setSelectedCalendarData(calendar);
-      }
+      onCalendarChange?.(selectedValue);
     };
 
 
@@ -53,80 +50,73 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
             text="Export Report"
             icon={<IconDownload size={16} />}
             onClick={() => {
-              if (selectedCalendarData) onExportButtonClick?.(selectedCalendarData);
+              onExportButtonClick?.(studentResults);
             }}
           />
         </div>
       )}
 
-      {calendars?.length > 0 && <CustomSelectTag options={calendarOptions} value={selectedAcademicCalendar} onOptionItemClick={handleAcademicCalendarChange} />}
+      {calendars?.length > 0 && (
+        <CustomSelectTag
+          options={calendarOptions}
+          value={selectedAcademicCalendar}
+          onOptionItemClick={handleAcademicCalendarChange}
+        />
+      )}
+
       <div>
-        { calendars?.length > 0  && (
-        <div>
-          <p className="text-sm font-semibold text-[#878787] my-5">{selectedCalendarData?.name}</p>
-          {
-            selectedCalendarData?.terms?.map((term, index) => (
+        {studentResults?.terms?.length > 0 ? (
+          <div>
+            <p className="text-sm font-semibold text-[#878787] my-5">
+              {studentResults?.studentInfo?.academicYear}
+            </p>
+
+            {studentResults.terms.map((term, index) => (
               <div key={index} className="mb-10">
-                <h1 className="text-md font-semibold text-neutral-800 my-2">Term {index + 1}</h1>
+                <h1 className="text-md font-semibold text-neutral-800 my-2">
+                  {term.termName || `Term ${index + 1}`}
+                </h1>
+
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="">
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-                        Subject
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-                        Class Score
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-                        Exam Score
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-                        Percentage Score
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-                        Grade
-                      </th>
+                    <tr>
+                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Subject</th>
+                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Class Score</th>
+                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Exam Score</th>
+                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Percentage Score</th>
+                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Grade</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {
-                      Array.isArray(term?.entries) && term.entries.length > 0 && term.entries.map((data, index) => (
-                        <tr className="border-b border-solid border-b-gray-200" key={index + "12"}>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-                            {data.subject}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-                            {data.classScore}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-                            {data.examScore}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-                            {data.percentageScore}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-                            {data.grade}
-                          </td>
+                    {term.subjects?.length > 0 ? (
+                      term.subjects.map((data, i) => (
+                        <tr key={i} className="border-b border-solid border-b-gray-200">
+                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">{data.subject}</td>
+                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">{data.classScore}</td>
+                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">{data.examScore}</td>
+                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">{data.percentage}</td>
+                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">{data.grade}</td>
                         </tr>
-                      )) 
-                    }
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-sm text-gray-500">
+                          <NoAvailableEmptyState message="No subjects available for this term." />
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
+
                 <div>
                   <p className="text-xs text-[#878787] mt-4 mb-1">Teacher&apos;s Remark</p>
-                  <p className="text-sm pl-1">{term?.remarks}</p>
+                  <p className="text-sm pl-1">{term.teacherRemarks}</p>
                 </div>
               </div>
-            ))
-          }
-
-          {selectedCalendarData?.terms?.length === 0 && (
-            <NoAvailableEmptyState message="No terms available yet." />
-          )}
-        </div>
-        )}
-        { calendars?.length === 0 && (
-          <NoAvailableEmptyState message="No academic calendar available yet." />
+            ))}
+          </div>
+        ) : (
+          <NoAvailableEmptyState message="No results available yet." />
         )}
       </div>
     </div>
