@@ -28,12 +28,12 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Classes",
     },
     {
-      icon: ProfileIcon,      
-      label: "Profile",
-    },
-    {
       icon: SubjectIcon,      
       label: "Grading",
+    },
+    {
+      icon: ProfileIcon,      
+      label: "Profile",
     },
   ];
 

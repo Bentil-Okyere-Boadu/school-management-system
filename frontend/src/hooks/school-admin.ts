@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -828,3 +828,24 @@ export const useRemoveSubjectAssignment = () => {
         }
     })
 }
+
+export const useGetStudentResults = (
+  studentId: string,
+  academicCalendarId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentResults', studentId, academicCalendarId],
+    queryFn: () => {
+      return customAPI.get(`/subject/students/${studentId}/results/${academicCalendarId}`);
+    },
+    enabled: options?.enabled ?? Boolean(studentId && academicCalendarId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const resultsData = (data as {data: StudentResultsResponse})?.data || {};
+
+  return { resultsData, isLoading, refetch };
+};
+
