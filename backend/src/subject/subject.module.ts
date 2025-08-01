@@ -15,6 +15,7 @@ import { Student } from 'src/student/student.entity';
 import { GradingSystem } from 'src/grading-system/grading-system.entity';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
+import { StudentTermRemark } from './student-term-remark.entity';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
       Student,
       GradingSystem,
       Holiday,
+      StudentTermRemark,
     ]),
   ],
   providers: [SubjectService, AcademicCalendarService],

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Subject } from './subject.entity';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { Teacher } from '../teacher/teacher.entity';
@@ -18,6 +18,7 @@ import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entit
 import { AcademicCalendar } from '../academic-calendar/entitites/academic-calendar.entity';
 import { Student } from '../student/student.entity';
 import { GradingSystem } from '../grading-system/grading-system.entity';
+import { StudentTermRemark } from './student-term-remark.entity';
 
 @Injectable()
 export class SubjectService {
@@ -42,6 +43,8 @@ export class SubjectService {
     private studentRepository: Repository<Student>,
     @InjectRepository(GradingSystem)
     private gradingSystemRepository: Repository<GradingSystem>,
+    @InjectRepository(StudentTermRemark)
+    private remarkRepository: Repository<StudentTermRemark>,
   ) {}
 
   async create(createSubjectDto: CreateSubjectDto, admin: SchoolAdmin) {
@@ -314,6 +317,47 @@ export class SubjectService {
       }),
     };
   }
+
+  async submitTermRemarks(
+    teacherId: string,
+    data: {
+      studentId: string;
+      academicTermId: string;
+      remarks: string;
+    },
+  ) {
+    const [student, teacher, academicTerm] = await Promise.all([
+      this.studentRepository.findOne({ where: { id: data.studentId } }),
+      this.teacherRepository.findOne({ where: { id: teacherId } }),
+      this.academicTermRepository.findOne({
+        where: { id: data.academicTermId },
+      }),
+    ]);
+
+    if (!student) throw new NotFoundException('Student not found');
+    if (!teacher) throw new NotFoundException('Teacher not found');
+    if (!academicTerm) throw new NotFoundException('Academic term not found');
+
+    // Find existing remark or create new one
+    let remark = await this.remarkRepository.findOne({
+      where: {
+        student: { id: student.id },
+        academicTerm: { id: academicTerm.id },
+      },
+    });
+
+    if (!remark) {
+      remark = this.remarkRepository.create({
+        student,
+        teacher,
+        academicTerm,
+      });
+    }
+
+    remark.remarks = data.remarks;
+    return this.remarkRepository.save(remark);
+  }
+
   async getStudentResults(studentId: string, academicCalendarId: string) {
     const calendar = await this.academicCalendarRepository.findOne({
       where: { id: academicCalendarId },
@@ -350,6 +394,14 @@ export class SubjectService {
           (grade) => grade.academicTerm.id === term.id,
         );
 
+        const termRemark = await this.remarkRepository.findOne({
+          where: {
+            student: { id: studentId },
+            academicTerm: { id: term.id },
+          },
+          relations: ['teacher'],
+        });
+
         return {
           termName: term.termName,
           subjects: termGrades.map((grade) => ({
@@ -360,7 +412,10 @@ export class SubjectService {
             grade: grade.grade,
             percentage: ((grade.totalScore / 100) * 100).toFixed(0) + '%',
           })),
-          teacherRemarks: 'Good performance, keep it up!', // You can add actual remarks if you store them
+          teacherRemarks: termRemark?.remarks || '',
+          remarksBy: termRemark
+            ? `${termRemark.teacher.firstName} ${termRemark.teacher.lastName}`
+            : '',
         };
       }),
     );
@@ -373,6 +428,103 @@ export class SubjectService {
       terms: termResults,
     };
   }
+
+  async getStudentResultsByTerm(
+    studentId: string,
+    academicCalendarId: string,
+    academicTermId: string,
+  ) {
+    const [calendar, academicTerm, student] = await Promise.all([
+      this.academicCalendarRepository.findOne({
+        where: { id: academicCalendarId },
+      }),
+      this.academicTermRepository.findOne({ where: { id: academicTermId } }),
+      this.studentRepository.findOne({ where: { id: studentId } }),
+    ]);
+
+    if (!calendar) throw new NotFoundException('Academic calendar not found');
+    if (!academicTerm) throw new NotFoundException('Academic term not found');
+    if (!student) throw new NotFoundException('Student not found');
+
+    const studentGrades = await this.studentGradeRepository.find({
+      where: {
+        student: { id: studentId },
+        academicCalendar: { id: academicCalendarId },
+        academicTerm: { id: academicTermId },
+      },
+      relations: ['subject', 'subject.subjectCatalog', 'classLevel'],
+    });
+
+    if (!studentGrades.length) {
+      throw new NotFoundException('No results found for student in this term');
+    }
+
+    const subjectIds = studentGrades.map((g) => g.subject.id);
+    const allGradesInTerm = await this.studentGradeRepository.find({
+      where: {
+        academicCalendar: { id: academicCalendarId },
+        academicTerm: { id: academicTermId },
+        subject: { id: In(subjectIds) },
+      },
+      relations: ['subject', 'student'],
+    });
+
+    const toOrdinal = (n: number): string => {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+
+    const resultWithPercentile = studentGrades.map((grade) => {
+      const subjectGrades = allGradesInTerm.filter(
+        (g) => g.subject.id === grade.subject.id,
+      );
+
+      subjectGrades.sort((a, b) => b.totalScore - a.totalScore);
+
+      const rank =
+        subjectGrades.findIndex((g) => g.student.id === studentId) + 1;
+      const totalStudents = subjectGrades.length;
+
+      const percentile =
+        totalStudents > 1
+          ? Math.round(((totalStudents - rank) / (totalStudents - 1)) * 100)
+          : 100;
+
+      return {
+        subject: grade.subject.subjectCatalog.name,
+        classScore: grade.classScore,
+        examScore: grade.examScore,
+        totalScore: grade.totalScore,
+        grade: grade.grade,
+        percentage: `${Math.round((grade.totalScore / 100) * 100)}%`,
+        percentile: `${percentile}th`,
+        rank: toOrdinal(rank),
+      };
+    });
+
+    const termRemark = await this.remarkRepository.findOne({
+      where: {
+        student: { id: studentId },
+        academicTerm: { id: academicTermId },
+      },
+      relations: ['teacher'],
+    });
+
+    return {
+      studentInfo: {
+        academicYear: calendar.name,
+        term: academicTerm.termName,
+        class: studentGrades[0]?.classLevel.name,
+      },
+      subjects: resultWithPercentile,
+      teacherRemarks: termRemark?.remarks || '',
+      remarksBy: termRemark
+        ? `${termRemark.teacher.firstName} ${termRemark.teacher.lastName}`
+        : '',
+    };
+  }
+
   async submitGrades({
     classLevelId,
     subjectId,
