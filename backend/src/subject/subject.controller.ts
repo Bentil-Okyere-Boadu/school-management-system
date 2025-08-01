@@ -9,6 +9,7 @@ import {
   Get,
   Query,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { SubjectService } from './subject.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
@@ -68,6 +69,38 @@ export class SubjectController {
     @Param('academicCalendarId') academicCalendarId: string,
   ) {
     return this.subjectService.getStudentResults(studentId, academicCalendarId);
+  }
+
+  @Get('students/results/:studendId')
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  async getStudentResultsByTerm(
+    @Param('studentId') studentId: string,
+    @Query('academicCalendarId') academicCalendarId: string,
+    @Query('academicTermId') academicTermId: string,
+  ) {
+    if (!academicCalendarId || !academicTermId) {
+      throw new BadRequestException('calendarId and termId are required');
+    }
+    return this.subjectService.getStudentResultsByTerm(
+      studentId,
+      academicCalendarId,
+      academicTermId,
+    );
+  }
+
+  @Post('students/:studentId/terms/:termId/remarks')
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  async submitTermRemarks(
+    @CurrentUser() teacher: Teacher,
+    @Param('studentId') studentId: string,
+    @Param('termId') termId: string,
+    @Body() body: { remarks: string },
+  ) {
+    return this.subjectService.submitTermRemarks(teacher.id, {
+      studentId,
+      academicTermId: termId,
+      remarks: body.remarks,
+    });
   }
 
   @Get('students/results/:academicCalendarId')
