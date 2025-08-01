@@ -13,7 +13,7 @@ const customAPI: AxiosInstance = axios.create({
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
     "Referrer-Policy": "no-referrer",
-    "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_API_URL,
+    "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_API_URL || "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization"
   },
