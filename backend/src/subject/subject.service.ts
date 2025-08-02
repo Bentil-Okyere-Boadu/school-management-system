@@ -456,7 +456,8 @@ export class SubjectService {
     });
 
     if (!studentGrades.length) {
-      throw new NotFoundException('No results found for student in this term');
+      // throw new NotFoundException('No results found for student in this term');
+      return [];
     }
 
     const subjectIds = studentGrades.map((g) => g.subject.id);
