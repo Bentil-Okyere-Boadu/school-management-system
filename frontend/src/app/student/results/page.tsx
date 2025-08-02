@@ -25,7 +25,7 @@ const StudentResultsView = () => {
       <StudentResults 
         calendars={studentCalendars}
         studentResults={studentResults}
-        showExportButton={true}
+        showExportButton={false}
         onExportButtonClick={onExportButtonClick}
         onCalendarChange={(calendarId) => setSelectedResultYear(calendarId)} />
     </div>
