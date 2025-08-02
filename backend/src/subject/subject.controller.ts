@@ -71,8 +71,8 @@ export class SubjectController {
     return this.subjectService.getStudentResults(studentId, academicCalendarId);
   }
 
-  @Get('students/results/:studendId')
-  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('students/term-results/:studendId')
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   async getStudentResultsByTerm(
     @Param('studentId') studentId: string,
     @Query('academicCalendarId') academicCalendarId: string,

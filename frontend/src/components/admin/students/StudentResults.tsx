@@ -108,10 +108,12 @@ const StudentResults: React.FC<StudentResultProps>  = ({calendars, showExportBut
                   </tbody>
                 </table>
 
-                <div>
-                  <p className="text-xs text-[#878787] mt-4 mb-1">Teacher&apos;s Remark</p>
-                  <p className="text-sm pl-1">{term.teacherRemarks}</p>
-                </div>
+                {term.subjects?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-[#878787] mt-4 mb-1">Teacher&apos;s Remark</p>
+                    <p className="text-sm pl-1">{term.teacherRemarks}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -486,6 +486,8 @@ export interface SubjectResult {
   totalScore: number;
   grade: string;
   percentage: string;
+  percentile: string;
+  rank: string;
 }
 
 export interface TermResult {
@@ -498,6 +500,10 @@ export interface StudentResultsResponse {
   studentInfo: {
     academicYear: string;
     class: string;
+    term: string;
   };
   terms: TermResult[];
+  subjects: SubjectResult[];
+  teacherRemarks: string;
+  remarksBy: string;
 }

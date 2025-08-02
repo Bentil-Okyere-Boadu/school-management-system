@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -265,7 +265,7 @@ export const useGetCalendars = () => {
     }
   })
 
-  const studentCalendars = data?.data as Calendar[];
+  const studentCalendars = data?.data as Calendar[] || [];
 
   return { studentCalendars, isLoading, refetch }
 }
@@ -327,5 +327,45 @@ export const usePostStudentGrades = () => {
   return useMutation({
     mutationFn: (payload: PostGradesPayload) =>
       customAPI.post(`/subject/submit-grades`, payload),
+  });
+};
+
+export const useGetStudentTermResults = (
+  studentId: string,
+  academicCalendarId: string,
+  academicTermId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentResults', studentId, academicCalendarId, academicTermId],
+    queryFn: () => {
+      return customAPI.get(
+        `/subject/students/term-results/${studentId}`,
+        {
+          params: {
+            academicCalendarId,
+            academicTermId,
+          },
+        }
+      );
+    },
+    enabled: options?.enabled ?? Boolean(studentId && academicCalendarId && academicTermId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const resultsData = (data as { data: StudentResultsResponse })?.data || {};
+
+  return { resultsData, isLoading, refetch };
+};
+
+
+export const useSubmitStudentTermRemarks = (studentId: string, termId: string) => {
+  return useMutation({
+    mutationFn: (remarks: string) => {
+      return customAPI.post(`/subject/students/${studentId}/terms/${termId}/remarks`, {
+        remarks,
+      });
+    },
   });
 };
