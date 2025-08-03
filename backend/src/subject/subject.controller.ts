@@ -25,6 +25,7 @@ import { AcademicCalendarService } from '../academic-calendar/academic-calendar.
 import { Student } from 'src/student/student.entity';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { StudentJwtAuthGuard } from 'src/student/guards/student-jwt-auth.guard';
+import { QueryString } from 'src/common/api-features/api-features';
 
 @Controller('subject')
 export class SubjectController {
@@ -59,8 +60,11 @@ export class SubjectController {
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
-  async getMyClasses(@CurrentUser() teacher: Teacher) {
-    return this.subjectService.getClassesForTeacher(teacher.id);
+  async getMyClasses(
+    @CurrentUser() teacher: Teacher,
+    @Query() query: QueryString,
+  ) {
+    return this.subjectService.getClassesForTeacher(teacher.id, query);
   }
   @Get('students/:studentId/results/:academicCalendarId')
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

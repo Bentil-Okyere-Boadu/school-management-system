@@ -19,6 +19,7 @@ import { AcademicCalendar } from '../academic-calendar/entitites/academic-calend
 import { Student } from '../student/student.entity';
 import { GradingSystem } from '../grading-system/grading-system.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
+import { QueryString } from 'src/common/api-features/api-features';
 
 @Injectable()
 export class SubjectService {
@@ -208,7 +209,7 @@ export class SubjectService {
     await this.subjectRepository.delete(subject.id);
   }
 
-  async getClassesForTeacher(teacherId: string) {
+  async getClassesForTeacher(teacherId: string, query?: QueryString) {
     const subjects = await this.subjectRepository.find({
       where: { teacher: { id: teacherId } },
       relations: ['classLevels', 'subjectCatalog'],
@@ -218,19 +219,59 @@ export class SubjectService {
     for (const subject of subjects) {
       for (const level of subject.classLevels) {
         if (!classLevelMap.has(level.id)) {
+          // Get student count for this class level
+          const studentCount = await this.classLevelRepository
+            .createQueryBuilder('classLevel')
+            .leftJoin('classLevel.students', 'student')
+            .where('classLevel.id = :classLevelId', { classLevelId: level.id })
+            .getCount();
+
           classLevelMap.set(level.id, {
-            classLevel: { id: level.id, name: level.name },
+            classLevel: {
+              id: level.id,
+              name: level.name,
+              description: level.description,
+              studentCount,
+            },
             subjects: [],
           });
         }
 
-        classLevelMap.get(level.id).subjects.push({
+        const classLevelData = classLevelMap.get(level.id);
+        classLevelData.subjects.push({
           id: subject.id,
           name: subject.subjectCatalog.name,
         });
       }
     }
-    return Array.from(classLevelMap.values());
+
+    let results = Array.from(classLevelMap.values()) as {
+      classLevel: {
+        id: string;
+        name: string;
+        description?: string;
+        studentCount: number;
+      };
+      subjects: { id: string; name: string }[];
+    }[];
+
+    if (query && query.search) {
+      const searchTerm = query.search.toLowerCase();
+      results = results.filter(
+        (item) =>
+          item.classLevel.name.toLowerCase().includes(searchTerm) ||
+          item.classLevel.description?.toLowerCase().includes(searchTerm),
+      );
+    }
+    if (query) {
+      const page = parseInt(query.page!) || 1;
+      const limit = parseInt(query.limit!) || 10;
+      const skip = (page - 1) * limit;
+
+      results = results.slice(skip, skip + limit);
+    }
+
+    return results;
   }
 
   async getStudentsForGrading(
@@ -456,8 +497,7 @@ export class SubjectService {
     });
 
     if (!studentGrades.length) {
-      // throw new NotFoundException('No results found for student in this term');
-      return [];
+      throw new NotFoundException('No results found for student in this term');
     }
 
     const subjectIds = studentGrades.map((g) => g.subject.id);
