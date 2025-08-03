@@ -10,6 +10,7 @@ interface ClassCardProps {
   onDeleteClick?: (id: string) => void;
   showEditAndDelete?: boolean
   showGoToAttendance?: boolean,
+  showGoToGrading?: boolean,
   onNavigateToAttendanceClick?: (item: ClassLevel) => void;
   onNavigateToGradingClick?: (item: ClassLevel) => void;
   studentCount?: number;
@@ -21,6 +22,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   onDeleteClick,
   showEditAndDelete = false,
   showGoToAttendance = false,
+  showGoToGrading = false,
   onNavigateToAttendanceClick,
   onNavigateToGradingClick,
   studentCount,
@@ -64,15 +66,19 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       </div>
 
       {
-        showGoToAttendance && (
+        (showGoToAttendance || showGoToGrading) && (
           <div className="mt-4 pt-2 border-t border-gray-100">
             <div className="flex justify-between items-center gap-1 flex-wrap">
+              {showGoToAttendance &&
               <span onClick={() => onNavigateToAttendanceClick?.(classData)} className="inline-block text-xs font-medium text-purple-800 bg-purple-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
                 Go to Attendance View
-              </span> 
+              </span>
+              }
+              {showGoToGrading &&
               <span onClick={() => onNavigateToGradingClick?.(classData)} className="inline-block text-xs font-medium text-blue-800 bg-blue-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
                 Go to Grading View
               </span> 
+              }
             </div>
           </div>
         )

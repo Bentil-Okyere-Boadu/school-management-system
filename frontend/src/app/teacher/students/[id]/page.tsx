@@ -6,7 +6,7 @@ import { Student, StudentAttendanceData } from '@/@types';
 import StudentAttendance from '@/components/admin/students/StudentAttendance';
 import StudentProfile from '@/components/admin/students/StudentProfile';
 import TabBar from '@/components/common/TabBar';
-import { useGetStudentById, useAdminViewStudentAttendance, useGetCalendars,  } from '@/hooks/teacher';
+import { useGetStudentById, useAdminViewStudentAttendance, useGetCalendars, useGetStudentTermResults,  } from '@/hooks/teacher';
 import StudentResults from '@/components/teacher/students/StudentResults';
 
 export type TabListItem = {
@@ -60,6 +60,19 @@ const ViewStudentPage = () => {
       setSelectedAcademicYear(academicYearId);
     };
 
+    const [selectedResultYear, setSelectedResultYear] = useState("");
+    const [selectedResultTerm, setSelectedResultTerm] = useState("");
+
+    const { resultsData: studentResultsData } = useGetStudentTermResults(
+      id as string,
+      selectedResultYear,
+      selectedResultTerm,
+      {
+        enabled: !!id && !!selectedResultYear && !!selectedResultTerm,
+        queryKey: ['studentResults', id, selectedResultYear, selectedResultTerm],
+      }
+    );
+
   return (
     <div className='px-0.5'>
         <TabBar 
@@ -75,7 +88,7 @@ const ViewStudentPage = () => {
         )}
         { activeTabKey === "attendance" && (
             <div>
-                <StudentAttendance  
+              <StudentAttendance  
                 studentAttendance={studentAttendance}
                 calendars={studentCalendars}
                 onSelectAcademicYear={handleSelectAcademicYear}
@@ -85,7 +98,13 @@ const ViewStudentPage = () => {
 
         { activeTabKey === "results" && (
           <div>
-            <StudentResults />
+            <StudentResults
+              calendars={studentCalendars}
+              studentResults={studentResultsData}
+              studentId={id as string}
+              onCalendarChange={(calendarId) => setSelectedResultYear(calendarId)}
+              onTermChange={(termId) => setSelectedResultTerm(termId)}
+            />
           </div>
         )}
     </div>

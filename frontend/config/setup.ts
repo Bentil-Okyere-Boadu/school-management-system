@@ -13,6 +13,9 @@ const customAPI: AxiosInstance = axios.create({
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
     "Referrer-Policy": "no-referrer",
+    "Access-Control-Allow-Credentials": true,
+    "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_BE_URL || "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
   },
 });
 

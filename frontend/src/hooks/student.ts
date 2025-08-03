@@ -1,5 +1,5 @@
-import { ClassLevel, Parent, Profile, Student } from "@/@types";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { Calendar, Parent, Profile, Student, StudentResultsResponse } from "@/@types";
+import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
 export const useStudentGetMe = () => {
@@ -73,7 +73,7 @@ export const useGetCalendars = () => {
     }
   })
 
-  const studentCalendars = data?.data as ClassLevel[];
+  const studentCalendars = data?.data as Calendar[] || [];
 
   return { studentCalendars, isLoading, refetch }
 }
@@ -100,3 +100,23 @@ export const useDeleteProfileImage = () => {
       }
   })
 }
+
+
+export const useGetMyResults = (
+  academicCalendarId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['myStudentResults', academicCalendarId],
+    queryFn: () => {
+      return customAPI.get(`/subject/students/results/${academicCalendarId}`);
+    },
+    enabled: options?.enabled ?? Boolean(academicCalendarId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const resultsData = (data as { data: StudentResultsResponse })?.data || {};
+
+  return { resultsData, isLoading, refetch };
+};

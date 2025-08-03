@@ -11,7 +11,7 @@ import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
-import { useGetTeacherClassById } from "@/hooks/teacher";
+import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -25,6 +25,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   const pathName = usePathname();
   const params = useParams();
   const schoolId = params.id;
+  const classId = params.classId as string | undefined;
 
   const getSignedInRole = () => {
     if(pathName.startsWith('/admin')) {
@@ -54,11 +55,19 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     queryKey: ['admission', params.id]
   });
 
-  const isTeacherAttendancePage = pathName.includes(`/teacher/classes/${params.classId}`);
-    const { classData } = useGetTeacherClassById(params.classId as string, {
-    enabled: isTeacherAttendancePage,
-    queryKey: ['teacherClass', params.classId]
+  const isClassDetailPage = !!classId && (
+    pathName.includes(`/teacher/classes/${classId}`) || pathName.includes(`/teacher/grading/${classId}`)
+  );
+  const { classData } = useGetTeacherClassById(classId ?? '', {
+    enabled: isClassDetailPage,
+    queryKey: ['teacherClass', classId]
   });
+
+  const isTeacherStudentDetailPage = pathName.includes(`/teacher/students/${params.id}`);
+  const {studentData} = useGetStudentById(params.id as string, {
+    enabled: isTeacherStudentDetailPage,
+    queryKey: ['student', params.id],
+  })
 
   const signedInRole = getSignedInRole();
 
@@ -75,8 +84,12 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
       return `${admissionData.studentFirstName} ${admissionData.studentLastName}`;
     }
 
-    if (classData) {
-      return `${classData?.name || ''}` || "";
+    if (classData?.name) {
+      return classData.name;
+    }
+
+    if(studentData) {
+      return `${studentData?.firstName ?? ''} ${studentData?.lastName ?? ''}`;
     }
 
     if (signedInRole === Roles.SUPER_ADMIN) {
@@ -89,7 +102,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
     // Default fallback (e.g., teacher, student)
     return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
-  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData]);
+  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData, classData, studentData]);
 
   const onHandleBreadCrumbPress = () => {
     window.history.back();

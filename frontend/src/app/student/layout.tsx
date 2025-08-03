@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { ProfileIcon, PaymentsIcon, ResultsIcon, AttendanceIcon } from "@/utils/icons";
+import { ProfileIcon, ResultsIcon, AttendanceIcon } from "@/utils/icons";
 import { useStudentGetMe } from "@/hooks/student";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
@@ -29,10 +29,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: ResultsIcon,      
       label: "Results",
     },
-    {
-      icon: PaymentsIcon,      
-      label: "Payments",
-    },
+    // {
+    //   icon: PaymentsIcon,      
+    //   label: "Payments",
+    // },
   ];
 
 
