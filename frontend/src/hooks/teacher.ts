@@ -337,7 +337,7 @@ export const useGetStudentTermResults = (
   options?: UseQueryOptions
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['studentResults', studentId, academicCalendarId, academicTermId],
+    queryKey: ['studentTermResults', studentId, academicCalendarId, academicTermId],
     queryFn: () => {
       return customAPI.get(
         `/subject/students/term-results/${studentId}`,

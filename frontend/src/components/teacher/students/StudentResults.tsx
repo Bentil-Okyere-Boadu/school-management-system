@@ -8,6 +8,7 @@ import { Calendar, ErrorResponse, StudentResultsResponse } from "@/@types";
 import { Textarea } from "@mantine/core";
 import { useSubmitStudentTermRemarks } from "@/hooks/teacher";
 import { toast } from "react-toastify";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface StudentResultProps {
   calendars: Calendar[];
@@ -29,6 +30,8 @@ const StudentResults: React.FC<StudentResultProps> = ({
   const [selectedTermId, setSelectedTermId] = useState("");
   const [termOptions, setTermOptions] = useState<{ value: string; label: string }[]>([]);
   const [termRemarks, setTermRemarks] = useState("");
+
+  const queryClient = useQueryClient();
 
   // Populate calendar dropdown options
   useEffect(() => {
@@ -103,7 +106,8 @@ const StudentResults: React.FC<StudentResultProps> = ({
   const onSaveChanges = () => {
     updateRemarks(termRemarks, {
       onSuccess: () => {
-        toast.success('Remark submitted successfully')
+        toast.success('Remark submitted successfully');
+        queryClient.invalidateQueries({ queryKey: ['studentTermResults']});
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -150,8 +154,8 @@ const StudentResults: React.FC<StudentResultProps> = ({
                   <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Class Score</th>
                   <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Exam Score</th>
                   <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Percentage</th>
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Percentile</th>
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Rank</th>
+                  {/* <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Percentile</th>
+                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Rank</th> */}
                   <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Grade</th>
                 </tr>
               </thead>
@@ -162,8 +166,8 @@ const StudentResults: React.FC<StudentResultProps> = ({
                     <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.classScore}</td>
                     <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.examScore}</td>
                     <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.percentage}</td>
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.percentile}</td>
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.rank}</td>
+                    {/* <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.percentile}</td>
+                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.rank}</td> */}
                     <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.grade}</td>
                   </tr>
                 ))}
