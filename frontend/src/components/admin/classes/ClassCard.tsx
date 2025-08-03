@@ -14,6 +14,7 @@ interface ClassCardProps {
   onNavigateToAttendanceClick?: (item: ClassLevel) => void;
   onNavigateToGradingClick?: (item: ClassLevel) => void;
   studentCount?: number;
+  showClassTeacher?: boolean;
 }
 
 export const ClassCard: React.FC<ClassCardProps> = ({
@@ -26,6 +27,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   onNavigateToAttendanceClick,
   onNavigateToGradingClick,
   studentCount,
+  showClassTeacher = true,
 }) => {
   return (
     <div
@@ -42,13 +44,15 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       </div>
 
       <div className="mt-4 flex flex-col gap-2 text-sm text-gray-700">
-        <div className="flex justify-between">
-            <div className="flex gap-1.5 items-center">
-                <IconUserStar size={18} className="text-gray-500" />
-                <span className="text-gray-500">Class Teacher:</span>
-            </div>
-          <span className="font-medium">{classData?.teachers?.[0]?.firstName} {classData?.teachers?.[0]?.lastName}</span>
-        </div>
+        {showClassTeacher && 
+          <div className="flex justify-between">
+              <div className="flex gap-1.5 items-center">
+                  <IconUserStar size={18} className="text-gray-500" />
+                  <span className="text-gray-500">Class Teacher:</span>
+              </div>
+            <span className="font-medium">{classData?.teachers?.[0]?.firstName} {classData?.teachers?.[0]?.lastName}</span>
+          </div>
+        }
         <div className="flex justify-between">
             <div className="flex gap-1.5 items-center">
                 <IconSchool size={18} className="text-gray-500" />

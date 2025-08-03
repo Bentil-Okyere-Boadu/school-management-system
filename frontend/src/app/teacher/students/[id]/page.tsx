@@ -69,7 +69,7 @@ const ViewStudentPage = () => {
       selectedResultTerm,
       {
         enabled: !!id && !!selectedResultYear && !!selectedResultTerm,
-        queryKey: ['studentResults', id, selectedResultYear, selectedResultTerm],
+        queryKey: ['studentTermResults', id, selectedResultYear, selectedResultTerm],
       }
     );
 

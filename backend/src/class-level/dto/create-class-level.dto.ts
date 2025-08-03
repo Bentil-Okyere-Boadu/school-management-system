@@ -9,6 +9,10 @@ export class CreateClassLevelDto {
   description?: string;
 
   @IsOptional()
+  @IsUUID('4')
+  classTeacherId?: string;
+
+  @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
   teacherIds?: string[];

@@ -28,7 +28,8 @@ export class ClassLevelService {
     createClassLevelDto: CreateClassLevelDto,
     admin: SchoolAdmin,
   ): Promise<ClassLevel> {
-    const { name, description, teacherIds, studentIds } = createClassLevelDto;
+    const { name, description, teacherIds, studentIds, classTeacherId } =
+      createClassLevelDto;
 
     // Check if any student is already assigned to a class
     if (studentIds && studentIds.length > 0) {
@@ -58,6 +59,19 @@ export class ClassLevelService {
       school: { id: admin.school.id },
     });
 
+    // Assign class teacher if provided
+    if (classTeacherId) {
+      const classTeacher = await this.teacherRepository.findOne({
+        where: { id: classTeacherId, school: { id: admin.school.id } },
+      });
+      if (!classTeacher) {
+        throw new NotFoundException(
+          `Teacher with ID ${classTeacherId} not found in this school`,
+        );
+      }
+      classLevel.classTeacher = classTeacher;
+    }
+
     if (teacherIds) {
       classLevel.teachers = await this.teacherRepository.findBy({
         id: In(teacherIds),
@@ -79,7 +93,7 @@ export class ClassLevelService {
   ): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id, school: { id: admin.school.id } },
-      relations: ['teachers', 'students'],
+      relations: ['teachers', 'students', 'classTeacher'],
     });
 
     if (!classLevel) {
@@ -92,6 +106,22 @@ export class ClassLevelService {
     }
     if (updateClassLevelDto.description) {
       classLevel.description = updateClassLevelDto.description;
+    }
+
+    // Update class teacher if provided
+    if (updateClassLevelDto.classTeacherId) {
+      const classTeacher = await this.teacherRepository.findOne({
+        where: {
+          id: updateClassLevelDto.classTeacherId,
+          school: { id: admin.school.id },
+        },
+      });
+      if (!classTeacher) {
+        throw new NotFoundException(
+          `Teacher with ID ${updateClassLevelDto.classTeacherId} not found in this school`,
+        );
+      }
+      classLevel.classTeacher = classTeacher;
     }
 
     // Update teacher associations
@@ -145,7 +175,7 @@ export class ClassLevelService {
   async findOne(id: string, admin: SchoolAdmin): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id, school: { id: admin.school.id } },
-      relations: ['teachers', 'students'],
+      relations: ['teachers', 'students', 'classTeacher'],
     });
 
     if (!classLevel) {
@@ -174,6 +204,7 @@ export class ClassLevelService {
       .createQueryBuilder('classLevel')
       .leftJoinAndSelect('classLevel.teachers', 'teacher')
       .leftJoinAndSelect('classLevel.students', 'student')
+      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
       .where('classLevel.school.id = :schoolId', { schoolId: admin.school.id });
 
     if (query) {
@@ -188,7 +219,30 @@ export class ClassLevelService {
       .createQueryBuilder('classLevel')
       .leftJoinAndSelect('classLevel.students', 'student')
       .leftJoinAndSelect('classLevel.teachers', 'teacher')
+      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
       .where('teacher.id = :teacherId', { teacherId })
+      .loadRelationCountAndMap(
+        'classLevel.studentCount',
+        'classLevel.students',
+      );
+
+    if (query) {
+      const features = new APIFeatures(queryBuilder, query).search(['name']);
+      return features.getQuery().getMany();
+    }
+    return queryBuilder.getMany();
+  }
+
+  async getClassesWhereTeacherIsClassTeacher(
+    teacherId: string,
+    query?: QueryString,
+  ) {
+    const queryBuilder = this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoinAndSelect('classLevel.students', 'student')
+      .leftJoinAndSelect('classLevel.teachers', 'teacher')
+      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
+      .where('classTeacher.id = :teacherId', { teacherId })
       .loadRelationCountAndMap(
         'classLevel.studentCount',
         'classLevel.students',

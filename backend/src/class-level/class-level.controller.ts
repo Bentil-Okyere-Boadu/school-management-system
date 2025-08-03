@@ -60,6 +60,20 @@ export class ClassLevelController {
   ) {
     return this.classLevelService.findAll(admin, query);
   }
+
+  // @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
+  // @Get('teacher/:teacherId/class-teacher')
+  // @Roles('school_admin')
+  // async getClassesWhereTeacherIsClassTeacher(
+  //   @Param('teacherId') teacherId: string,
+  //   @Query() query: QueryString,
+  // ) {
+  //   return this.classLevelService.getClassesWhereTeacherIsClassTeacher(
+  //     teacherId,
+  //     query,
+  //   );
+  // }
+
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
   @Delete(':id')
   async remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
