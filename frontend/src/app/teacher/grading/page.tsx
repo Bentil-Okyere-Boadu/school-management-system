@@ -36,6 +36,8 @@ const ClassesPage = () => {
             key={index + "12"}
             classData={data?.classLevel}
             showGoToGrading={true}
+            studentCount={data?.classLevel?.studentCount}
+            showClassTeacher={false}
             onNavigateToGradingClick={onNavigateToGradingClick}
           />
         ))}
