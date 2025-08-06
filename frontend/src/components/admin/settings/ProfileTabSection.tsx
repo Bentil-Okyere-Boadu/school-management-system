@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { ErrorResponse } from "@/@types";
 import { Dialog } from "@/components/common/Dialog";
-import FileUploadArea from "@/components/common/FileUploadArea";;
+import FileUploadArea from "@/components/common/FileUploadArea";
 
 interface ProfileTabSectionProps {
   schoolAdminInfo: {
@@ -59,7 +59,7 @@ export const ProfileTabSection: React.FC<ProfileTabSectionProps> = ({ schoolAdmi
 
   useEffect(() => {
     prepopulateProfileSettings()
-  }, [])
+  }, [schoolAdminInfo])
 
   const queryClient = useQueryClient();
   

@@ -5,6 +5,7 @@ import { SchoolSettingsTabSection } from "@/components/admin/settings/SchoolSett
 import { ConfigurationTabSection } from "@/components/admin/settings/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/admin/settings/ProfileTabSection";
 import { useGetClassLevels, useGetMySchool, useGetSchoolAdminInfo } from "@/hooks/school-admin";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export type TabListItem = {
   tabLabel: string;
@@ -13,13 +14,23 @@ export type TabListItem = {
 
 
 const AdminSchoolSettings: React.FC = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  const [activeTabKey, setActiveTabKey] = useState('school-settings');
-    const { school: schoolData } = useGetMySchool();
-    const { classLevels } = useGetClassLevels();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'school-settings');
+  const { school: schoolData } = useGetMySchool();
+  const { classLevels } = useGetClassLevels();
 
   const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
+    setTabInUrl(item.tabKey);
+  };
+
+  const setTabInUrl = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.push(`?${params.toString()}`);
   };
 
   const defaultNavItems: TabListItem[] = [

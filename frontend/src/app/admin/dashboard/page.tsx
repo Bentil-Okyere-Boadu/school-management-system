@@ -80,7 +80,7 @@ const AdminDashboard = () => {
         valueColor: "#F081AE",
       },
       {
-        value: dashboardStats?.averageAttendanceRate + "%" || '0%',
+        value: (dashboardStats?.averageAttendanceRate ?? 0) + "%",
         label: "Average Attendance Rate",
         iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/ba656832819e22052f838d66aeb1b30662f1df92?placeholderIfAbsent=true",
         iconAlt: "Attendance Icon",
@@ -129,7 +129,7 @@ const AdminDashboard = () => {
   return (
     <div>
 
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full mx-0.5" />
 
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 py-6 px-0.5">
         {stats.map((stat, index) => (

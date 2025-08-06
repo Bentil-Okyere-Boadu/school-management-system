@@ -1,11 +1,11 @@
 "use client"
-import { Student } from '@/@types';
+import { Calendar, Student, StudentAttendanceData } from '@/@types';
 import StudentAttendance from '@/components/admin/students/StudentAttendance';
 import StudentProfile from '@/components/admin/students/StudentProfile';
 import StudentResults from '@/components/admin/students/StudentResults';
 import TabBar from '@/components/common/TabBar';
-import { useGetSchoolUserById } from '@/hooks/school-admin';
-import { useParams } from 'next/navigation'
+import { useAdminViewStudentAttendance, useGetCalendars, useGetSchoolUserById, useGetStudentResults } from '@/hooks/school-admin';
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import React, { useState } from 'react'
 
 export type TabListItem = {
@@ -13,22 +13,58 @@ export type TabListItem = {
   tabKey: string;
 };
 
+interface AttendanceData {
+  studentAttendance: StudentAttendanceData;
+  isLoading: boolean;
+  refetch: () => void
+}
+
 const ViewStudentPage = () => {
     const {id} = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
 
     const {schoolUser, refetch} = useGetSchoolUserById(id as string)
-
-    const [activeTabKey, setActiveTabKey] = useState('student-profile');
     
-     const handleItemClick = (item: TabListItem) => {
-        setActiveTabKey(item.tabKey);
-      };
+    const tabFromUrl = searchParams.get("tab");
+    const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'student-profile');
+    
+    const handleItemClick = (item: TabListItem) => {
+      setActiveTabKey(item.tabKey);
+      setTabInUrl(item.tabKey);
+    };
+
+    const setTabInUrl = (tab: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", tab);
+      router.push(`?${params.toString()}`);
+    };
 
     const defaultNavItems: TabListItem[] = [
         { tabLabel: "Student Profile", tabKey: "student-profile" },
         { tabLabel: "Attendance", tabKey: "attendance" },
         { tabLabel: "Results", tabKey: "results" },
       ];
+    
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
+    const [selectedResultYear, setSelectedResultYear] = useState("");
+
+    const { studentAttendance } = useAdminViewStudentAttendance(
+      (schoolUser as Student)?.classLevels?.[0]?.id,
+      id as string,
+      selectedAcademicYear
+    ) as AttendanceData;
+    const { calendars } = useGetCalendars();
+
+
+    const handleSelectAcademicYear = (academicYearId: string) => {
+      setSelectedAcademicYear(academicYearId);
+    };
+
+    const { resultsData: studentResults } = useGetStudentResults(id as string, selectedResultYear, {
+      enabled: !!id && !!selectedResultYear,
+      queryKey: ['studentResult', id, selectedResultYear],
+    });
 
   return (
     <div className='px-0.5'>
@@ -45,12 +81,21 @@ const ViewStudentPage = () => {
         )}
         { activeTabKey === "attendance" && (
             <div>
-                <StudentAttendance/>
+              <StudentAttendance 
+                studentAttendance={studentAttendance}
+                calendars={calendars}
+                onSelectAcademicYear={handleSelectAcademicYear}
+              />
             </div>
         )}
         { activeTabKey === "results" && (
             <div>
-                <StudentResults/>
+                <StudentResults 
+                  calendars={calendars as Calendar[]}
+                  studentResults={studentResults}
+                  showExportButton={false}
+                  onCalendarChange={(calendarId) => setSelectedResultYear(calendarId)}
+                />
             </div>
         )}
     </div>

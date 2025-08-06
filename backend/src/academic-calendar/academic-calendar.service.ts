@@ -355,4 +355,48 @@ export class AcademicCalendarService {
 
     await this.calendarRepository.remove(calendar);
   }
+
+  // Utility: Get current academic calendar for a school
+  async getCurrentAcademicCalendar(
+    schoolId: string,
+  ): Promise<AcademicCalendar | null> {
+    const calendars = await this.calendarRepository.find({
+      where: { school: { id: schoolId } },
+      relations: ['terms'],
+    });
+    const today = new Date();
+    for (const calendar of calendars) {
+      if (
+        calendar.terms.some(
+          (term) =>
+            new Date(term.startDate) <= today &&
+            today <= new Date(term.endDate),
+        )
+      ) {
+        return calendar;
+      }
+    }
+    // Fallback: return the most recent calendar by first term's startDate
+    return (
+      calendars.sort((a, b) => {
+        const aStart = a.terms[0]?.startDate || '';
+        const bStart = b.terms[0]?.startDate || '';
+        return bStart.localeCompare(aStart);
+      })[0] || null
+    );
+  }
+
+  // Utility: Get latest term for a calendar
+  async getLatestTerm(calendarId: string): Promise<AcademicTerm | null> {
+    const terms = await this.termRepository.find({
+      where: { academicCalendar: { id: calendarId } },
+      order: { startDate: 'DESC' },
+    });
+    const today = new Date();
+    return (
+      terms.find((term) => new Date(term.startDate) <= today) ||
+      terms[0] ||
+      null
+    );
+  }
 }

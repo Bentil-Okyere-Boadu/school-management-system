@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ClassLevelService } from './class-level.service';
@@ -16,6 +17,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
+import { QueryString } from 'src/common/api-features/api-features';
 
 @Controller('class-level')
 @Roles('school_admin')
@@ -52,9 +54,26 @@ export class ClassLevelController {
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
   @Get()
   @Roles('school_admin')
-  async findAll(@CurrentUser() admin: SchoolAdmin) {
-    return this.classLevelService.findAll(admin);
+  async findAll(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
+  ) {
+    return this.classLevelService.findAll(admin, query);
   }
+
+  // @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
+  // @Get('teacher/:teacherId/class-teacher')
+  // @Roles('school_admin')
+  // async getClassesWhereTeacherIsClassTeacher(
+  //   @Param('teacherId') teacherId: string,
+  //   @Query() query: QueryString,
+  // ) {
+  //   return this.classLevelService.getClassesWhereTeacherIsClassTeacher(
+  //     teacherId,
+  //     query,
+  //   );
+  // }
+
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
   @Delete(':id')
   async remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {

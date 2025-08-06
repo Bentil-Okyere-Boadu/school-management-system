@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { ClassLevel } from './class-level.entity';
@@ -7,6 +11,7 @@ import { Teacher } from '../teacher/teacher.entity';
 import { Student } from '../student/student.entity';
 import { CreateClassLevelDto } from './dto/create-class-level.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 
 @Injectable()
 export class ClassLevelService {
@@ -23,13 +28,49 @@ export class ClassLevelService {
     createClassLevelDto: CreateClassLevelDto,
     admin: SchoolAdmin,
   ): Promise<ClassLevel> {
-    const { name, description, teacherIds, studentIds } = createClassLevelDto;
+    const { name, description, teacherIds, studentIds, classTeacherId } =
+      createClassLevelDto;
+
+    // Check if any student is already assigned to a class
+    if (studentIds && studentIds.length > 0) {
+      const alreadyAssigned = await this.studentRepository.find({
+        where: { id: In(studentIds), classLevels: { id: In([]) } },
+        relations: ['classLevels'],
+      });
+      const studentsWithClass = alreadyAssigned.filter(
+        (s) => s.classLevels && s.classLevels.length > 0,
+      );
+      if (studentsWithClass.length > 0) {
+        const namesWithClasses = studentsWithClass
+          .map((s) => {
+            const classNames = s.classLevels.map((cl) => cl.name).join(', ');
+            return `${s.firstName} ${s.lastName} (Class: ${classNames})`;
+          })
+          .join(', ');
+        throw new ConflictException(
+          `Student(s) already assigned to a class: ${namesWithClasses}`,
+        );
+      }
+    }
 
     const classLevel = this.classLevelRepository.create({
       name,
       description,
       school: { id: admin.school.id },
     });
+
+    // Assign class teacher if provided
+    if (classTeacherId) {
+      const classTeacher = await this.teacherRepository.findOne({
+        where: { id: classTeacherId, school: { id: admin.school.id } },
+      });
+      if (!classTeacher) {
+        throw new NotFoundException(
+          `Teacher with ID ${classTeacherId} not found in this school`,
+        );
+      }
+      classLevel.classTeacher = classTeacher;
+    }
 
     if (teacherIds) {
       classLevel.teachers = await this.teacherRepository.findBy({
@@ -52,7 +93,7 @@ export class ClassLevelService {
   ): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id, school: { id: admin.school.id } },
-      relations: ['teachers', 'students'],
+      relations: ['teachers', 'students', 'classTeacher'],
     });
 
     if (!classLevel) {
@@ -67,6 +108,22 @@ export class ClassLevelService {
       classLevel.description = updateClassLevelDto.description;
     }
 
+    // Update class teacher if provided
+    if (updateClassLevelDto.classTeacherId) {
+      const classTeacher = await this.teacherRepository.findOne({
+        where: {
+          id: updateClassLevelDto.classTeacherId,
+          school: { id: admin.school.id },
+        },
+      });
+      if (!classTeacher) {
+        throw new NotFoundException(
+          `Teacher with ID ${updateClassLevelDto.classTeacherId} not found in this school`,
+        );
+      }
+      classLevel.classTeacher = classTeacher;
+    }
+
     // Update teacher associations
     if (updateClassLevelDto.teacherIds) {
       classLevel.teachers = await this.teacherRepository.findBy({
@@ -76,18 +133,49 @@ export class ClassLevelService {
 
     // Update student associations
     if (updateClassLevelDto.studentIds) {
-      classLevel.students = await this.studentRepository.findBy({
-        id: In(updateClassLevelDto.studentIds),
+      // Check if any student is already assigned to a class (other than this one)
+      const students = await this.studentRepository.find({
+        where: { id: In(updateClassLevelDto.studentIds) },
+        relations: ['classLevels'],
       });
+      const studentsWithOtherClass = students.filter(
+        (s) => s.classLevels && s.classLevels.some((cl) => cl.id !== id),
+      );
+      if (studentsWithOtherClass.length > 0) {
+        const namesWithClasses = studentsWithOtherClass
+          .map((s) => {
+            const classNames = s.classLevels
+              .filter((cl) => cl.id !== id)
+              .map((cl) => cl.name)
+              .join(', ');
+            return `${s.firstName} ${s.lastName} (Class: ${classNames})`;
+          })
+          .join(', ');
+        throw new ConflictException(
+          `Student(s) already assigned to another class: ${namesWithClasses}`,
+        );
+      }
+      classLevel.students = students;
     }
 
     return this.classLevelRepository.save(classLevel);
   }
-
+  async getClassLevelNameById(
+    id: string,
+  ): Promise<{ id: string; name: string }> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id },
+      select: ['id', 'name'],
+    });
+    if (!classLevel) {
+      throw new NotFoundException(`Class level with ID ${id} not found`);
+    }
+    return classLevel;
+  }
   async findOne(id: string, admin: SchoolAdmin): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id, school: { id: admin.school.id } },
-      relations: ['teachers', 'students'],
+      relations: ['teachers', 'students', 'classTeacher'],
     });
 
     if (!classLevel) {
@@ -108,10 +196,62 @@ export class ClassLevelService {
     await this.classLevelRepository.remove(classLevel);
     return { message: 'Class level deleted successfully' };
   }
-  async findAll(admin: SchoolAdmin): Promise<ClassLevel[]> {
-    return this.classLevelRepository.find({
-      where: { school: { id: admin.school.id } },
-      relations: ['teachers', 'students'],
-    });
+  async findAll(
+    admin: SchoolAdmin,
+    query?: QueryString,
+  ): Promise<ClassLevel[]> {
+    const queryBuilder = this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoinAndSelect('classLevel.teachers', 'teacher')
+      .leftJoinAndSelect('classLevel.students', 'student')
+      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
+      .where('classLevel.school.id = :schoolId', { schoolId: admin.school.id });
+
+    if (query) {
+      const features = new APIFeatures(queryBuilder, query).search(['name']);
+      return features.getQuery().getMany();
+    }
+    return queryBuilder.getMany();
+  }
+
+  async getClassesForTeacher(teacherId: string, query?: QueryString) {
+    const queryBuilder = this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoinAndSelect('classLevel.students', 'student')
+      .leftJoinAndSelect('classLevel.teachers', 'teacher')
+      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
+      .where('teacher.id = :teacherId', { teacherId })
+      .loadRelationCountAndMap(
+        'classLevel.studentCount',
+        'classLevel.students',
+      );
+
+    if (query) {
+      const features = new APIFeatures(queryBuilder, query).search(['name']);
+      return features.getQuery().getMany();
+    }
+    return queryBuilder.getMany();
+  }
+
+  async getClassesWhereTeacherIsClassTeacher(
+    teacherId: string,
+    query?: QueryString,
+  ) {
+    const queryBuilder = this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoinAndSelect('classLevel.students', 'student')
+      .leftJoinAndSelect('classLevel.teachers', 'teacher')
+      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
+      .where('classTeacher.id = :teacherId', { teacherId })
+      .loadRelationCountAndMap(
+        'classLevel.studentCount',
+        'classLevel.students',
+      );
+
+    if (query) {
+      const features = new APIFeatures(queryBuilder, query).search(['name']);
+      return features.getQuery().getMany();
+    }
+    return queryBuilder.getMany();
   }
 }

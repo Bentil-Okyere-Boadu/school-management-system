@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -661,3 +661,191 @@ export const useGetAdminDashboardStats = () => {
 
     return { dashboardStats, isPending }
 }
+
+export const useGetClassAttendance = (
+  classLevelId: string,
+  filterType: string = "month",
+  month?: string,
+  year?: string,
+  week?: string,
+  summaryOnly?: boolean,
+  startDate?: string,
+  endDate?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly, startDate, endDate }],
+    queryFn: () => {
+      const queryBuilder = [];
+
+      if (filterType) {
+        queryBuilder.push(`filterType=${filterType}`);
+      }
+
+      if (month) {
+        queryBuilder.push(`month=${month}`);
+      }
+
+      if (year) {
+        queryBuilder.push(`year=${year}`);
+      }
+
+      if (week) {
+        queryBuilder.push(`weekOfMonth=${week}`);
+      }
+
+      if(summaryOnly) {
+        queryBuilder.push(`summaryOnly=${summaryOnly}`);
+      }
+      
+      if(startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+      
+      if(endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
+      }
+
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+      return customAPI.get(`/school-admin/classes/${classLevelId}/attendance?${params}`);
+    },
+    enabled: !!classLevelId, // only run if classLevelId is provided
+    refetchOnWindowFocus: true,
+  });
+
+  const attendanceData = data?.data;
+
+  return { attendanceData, isLoading, refetch };
+};
+
+interface AttendanceRecord {
+  studentId: string;
+  status: 'present' | 'absent';
+}
+interface PostAttendancePayload {
+  date: string;
+  records: AttendanceRecord[];
+}
+
+export const usePostClassAttendance = (classLevelId: string) => {
+  return useMutation({
+    mutationFn: (payload: PostAttendancePayload) =>
+      customAPI.post(`/school-admin/classes/${classLevelId}/attendance`, payload),
+  });
+};
+
+export const useAdminViewStudentAttendance = (
+    classLevelId: string,
+    studentId: string,
+    calendarId: string
+) => {
+    const {data, isLoading, refetch} = useQuery({
+        queryKey: ['adminStudentAttendance', studentId, calendarId, classLevelId],
+        queryFn: () => {
+            return customAPI.get(`school-admin/classes/${classLevelId}/students/${studentId}/calendars/${calendarId}/attendance/grouped`);
+        },
+        enabled: !!calendarId,
+        refetchOnWindowFocus: true
+    })
+
+    const studentAttendance = data?.data;
+    return { studentAttendance, isLoading, refetch };
+}
+
+export const useGetAllSubjects = (enabled: boolean = true) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['allSubjects'],
+        queryFn: () => {
+            return customAPI.get('/subject-catalog');
+        },
+        enabled,
+        refetchOnWindowFocus: true
+    })
+
+    const subjects: Subject[] = data?.data
+
+    return { subjects, isLoading, refetch }
+}
+
+export const useGetSubjectById = (id: string) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['allSubjects', id],
+        queryFn: () => {
+            return customAPI.get(`/subject-catalog/${id}`);
+        },
+        enabled: id.length > 0,
+        refetchOnWindowFocus: true
+    })
+
+    const subjects = data?.data
+
+    return { subjects, isLoading, refetch }
+}
+
+export const useCreateSubject = () => {
+    return useMutation({
+        mutationFn: (subject: Subject) => {
+            return customAPI.post(`/subject-catalog`, subject);
+        }
+    })
+}
+
+export const useUpdateSubject = () => {
+    return useMutation({
+        mutationFn: (subject: Subject) => {
+            return customAPI.put(`/subject-catalog/${subject.id}`, subject);
+        }
+    })
+}
+
+export const useDeleteSubject = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/subject-catalog/${id}`);
+        }
+    })
+}
+
+export const useAssignSubjectTeacher = () => {
+    return useMutation({
+        mutationFn: (payload: AssignSubjectTeacherPayload) => {
+            return customAPI.post(`/subject`, payload);
+        }
+    })
+}
+
+export const useUpdateSubjectTeacher = (id: string) => {
+    return useMutation({
+        mutationFn: (payload: AssignSubjectTeacherPayload) => {
+            return customAPI.patch(`/subject/${id}`, payload);
+        }
+    })
+}
+
+export const useRemoveSubjectAssignment = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/subject/${id}`);
+        }
+    })
+}
+
+export const useGetStudentResults = (
+  studentId: string,
+  academicCalendarId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentResults', studentId, academicCalendarId],
+    queryFn: () => {
+      return customAPI.get(`/subject/students/${studentId}/results/${academicCalendarId}`);
+    },
+    enabled: options?.enabled ?? Boolean(studentId && academicCalendarId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const resultsData = (data as {data: StudentResultsResponse})?.data || {};
+
+  return { resultsData, isLoading, refetch };
+};
+

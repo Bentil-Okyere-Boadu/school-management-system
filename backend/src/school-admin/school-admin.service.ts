@@ -67,6 +67,8 @@ export class SchoolAdminService {
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('student.classLevels', 'classLevel')
+      .leftJoinAndSelect('student.profile', 'profile')
       .where('student.school.id = :schoolId', { schoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived: false });
 
@@ -82,14 +84,26 @@ export class SchoolAdminService {
     const total = await featuresWithoutPagination.getQuery().getCount();
 
     const featuresWithPagination = featuresWithoutPagination.paginate();
-    const data = await featuresWithPagination.getQuery().getMany();
+    const students = await featuresWithPagination.getQuery().getMany();
+
+    // Sign profile URLs
+    const signedStudents = await Promise.all(
+      students.map(async (student) => {
+        if (student.profile?.id) {
+          student.profile = await this.profileService.getProfileWithImageUrl(
+            student.profile.id,
+          );
+        }
+        return student;
+      }),
+    );
 
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data,
+      data: signedStudents,
       meta: {
         total,
         page,
@@ -296,7 +310,7 @@ export class SchoolAdminService {
         id: userId,
         school: { id: schoolId },
       },
-      relations: ['profile'],
+      relations: ['profile', 'classLevels'],
     });
 
     if (student) {

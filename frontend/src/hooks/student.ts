@@ -1,5 +1,5 @@
-import { Parent, Student, User } from "@/@types";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { Calendar, Parent, Profile, Student, StudentResultsResponse } from "@/@types";
+import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
 export const useStudentGetMe = () => {
@@ -11,14 +11,14 @@ export const useStudentGetMe = () => {
         refetchOnWindowFocus: true
     })
 
-    const me = data?.data as User;
+    const me = data?.data as Student;
 
     return { me, isPending, refetch }
 }
 
 export const useUpdateStudentProfile = () => {
     return useMutation({
-        mutationFn: (studentDetails: Student) => {
+        mutationFn: (studentDetails: Partial<Profile>) => {
             return customAPI.put(`student/profile/me`, studentDetails);
         }
     })
@@ -46,3 +46,77 @@ export const useDeleteGuardian = (parentId: string) => {
         }
     });
 }
+
+export const useGetClassAttendance = (
+  classLevelId: string,
+  calendarId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['classAttendance', { classLevelId, calendarId }],
+    queryFn: () => {
+      return customAPI.get(`/student/classes/${classLevelId}/calendars/${calendarId}/attendance/grouped`);
+    },
+    enabled: !!calendarId, // only run if calendarId is provided
+    refetchOnWindowFocus: true,
+  });
+
+  const studentAttendance = data?.data;
+
+  return { studentAttendance, isLoading, refetch };
+};
+
+export const useGetCalendars = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentCalendars'],
+    queryFn: () => {
+      return customAPI.get(`/student/calendars`)
+    }
+  })
+
+  const studentCalendars = data?.data as Calendar[] || [];
+
+  return { studentCalendars, isLoading, refetch }
+}
+
+export const useUploadProfileImage = (id: string) => {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return customAPI.post(`/profiles/student/${id}/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};
+
+export const useDeleteProfileImage = () => {
+  return useMutation({
+      mutationFn: (id: string) => {
+          return customAPI.delete(`/profiles/student/${id}/avatar`)
+      }
+  })
+}
+
+
+export const useGetMyResults = (
+  academicCalendarId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['myStudentResults', academicCalendarId],
+    queryFn: () => {
+      return customAPI.get(`/subject/students/results/${academicCalendarId}`);
+    },
+    enabled: options?.enabled ?? Boolean(academicCalendarId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const resultsData = (data as { data: StudentResultsResponse })?.data || {};
+
+  return { resultsData, isLoading, refetch };
+};

@@ -31,8 +31,7 @@ const ClassesPage = () => {
   const { mutate: editMutation, isPending: pendingEdit } = useEditClassLevel(classLevelId);
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteClassLevel();
   const { mutate: createMutation, isPending: pendingCreate } = useCreateClassLevel();
-
-  const { paginationValues: paginatedTeacherValues, schoolUsers: schoolTeachers } = useGetSchoolUsers(
+const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     currentPage,
     "",
     "",
@@ -45,8 +44,9 @@ const ClassesPage = () => {
     value: teacher.id,
     label: `${teacher.firstName} ${teacher.lastName}`,
   }));
+  
 
-  const { paginationValues: paginatedStudentValues, schoolUsers: schoolStudents } = useGetSchoolUsers(
+  const { schoolUsers: schoolStudents } = useGetSchoolUsers(
     currentPage,
     "",
     "",
@@ -55,17 +55,12 @@ const ClassesPage = () => {
     500
   );
 
-  console.log(paginatedStudentValues, paginatedTeacherValues);
-
-
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
-    console.log(searchQuery);
   };
 
   const onEditClassLevelClick = (data: Partial<ClassLevel>) => {
-    console.log(data);
     setEditMode(true);
     setClassLevelId(data.id as string);
     setIsClassLevelDialogOpen(true);
@@ -157,7 +152,9 @@ const ClassesPage = () => {
           {classLevels?.map((data, index) => (
             <ClassCard
               key={index + "12"}
+              showEditAndDelete={true}
               classData={data}
+              studentCount={data?.students?.length}
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
             />
@@ -197,7 +194,7 @@ const ClassesPage = () => {
             isTransulent={false}
           /> 
           <Select
-            label="Teacher"
+            label="Class Teacher"
             placeholder="Pick teacher"
             data={allTeacherOptions || []}
             value={selectedTeacher}

@@ -12,6 +12,7 @@ import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
+import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -26,6 +27,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   const pathName = usePathname();
   const params = useParams();
   const schoolId = params.id;
+  const classId = params.classId as string | undefined;
 
   const getSignedInRole = () => {
     if(pathName.startsWith('/admin')) {
@@ -55,6 +57,20 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     queryKey: ['admission', params.id]
   });
 
+  const isClassDetailPage = !!classId && (
+    pathName.includes(`/teacher/classes/${classId}`) || pathName.includes(`/teacher/grading/${classId}`)
+  );
+  const { classData } = useGetTeacherClassById(classId ?? '', {
+    enabled: isClassDetailPage,
+    queryKey: ['teacherClass', classId]
+  });
+
+  const isTeacherStudentDetailPage = pathName.includes(`/teacher/students/${params.id}`);
+  const {studentData} = useGetStudentById(params.id as string, {
+    enabled: isTeacherStudentDetailPage,
+    queryKey: ['student', params.id],
+  })
+
   const signedInRole = getSignedInRole();
 
   const displayTitle: string = useMemo(() => {
@@ -70,6 +86,14 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
       return `${admissionData.studentFirstName} ${admissionData.studentLastName}`;
     }
 
+    if (classData?.name) {
+      return classData.name;
+    }
+
+    if(studentData) {
+      return `${studentData?.firstName ?? ''} ${studentData?.lastName ?? ''}`;
+    }
+
     if (signedInRole === Roles.SUPER_ADMIN) {
       return school?.name;
     }
@@ -80,17 +104,10 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
     // Default fallback (e.g., teacher, student)
     return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
-  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData]);
+  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData, classData, studentData]);
 
   const onHandleBreadCrumbPress = () => {
-     switch (getSignedInRole()) {
-      case Roles.SCHOOL_ADMIN:
-        router.push(`/admin/${activeMenuItem?.toLowerCase()}`)
-        break;
-      case Roles.SUPER_ADMIN:
-        router.push(`/superadmin/${activeMenuItem?.toLowerCase()}`);
-        break;
-    }
+    window.history.back();
   };
 
   const onHandleLogout = () => {

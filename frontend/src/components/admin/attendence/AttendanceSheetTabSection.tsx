@@ -1,132 +1,195 @@
 "use client";
 
-import React, { useState } from "react";
-import { SearchBar } from "@/components/common/SearchBar";
+import React, { useEffect, useState } from "react";
+// import { SearchBar } from "@/components/common/SearchBar";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
-import Image from 'next/image'
-import Mark from '@/images/Mark.svg'
-import Cancel from '@/images/Cancel.svg'
+import Image from "next/image";
+import Mark from "@/images/Mark.svg";
+import Cancel from "@/images/Cancel.svg";
+import { useGetClassAttendance } from "@/hooks/school-admin";
+import { useGetClassLevels } from "@/hooks/school-admin";
+import { Pagination } from "@/components/common/Pagination";
 
-export const AttendanceSheetTabSection: React.FC= () => {
+interface Student {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  attendanceByDate: Record<string, "present" | "absent" | "weekend" | "holiday" | null>;
+}
 
-  const data = [
-    {
-      name: 'Brooklyn Simmons',
-      grade: '10th',
-      attendance: [true, true, true, true, true, false, true, true, true, true, true, true, false, true, true, true, true, true, true, true, false, true, true, true, true, true, true, false, true, false]
-    },
-    {
-      name: 'Jenny Wilson',
-      grade: 'Class 9',
-      attendance: [false, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, true, false, true]
-    },
-    {
-      name: 'Floyd Miles',
-      grade: 'Class 5',
-      attendance: [false, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, true, false, true]
-    },
-    {
-      name: 'Devon Lane',
-      grade: '9th',
-      attendance: [true, true, true, true, true, false, true, true, true, true, true, true, false, true, true, true, true, true, true, true, false, true, true, true, true, true, true, false, true, true]
-    },
-    {
-      name: 'Jane Cooper',
-      grade: '11th',
-      attendance: [true, true, true, true, true, false, true, true, true, true, true, true, false, true, true, true, true, true, true, true, false, true, true, true, true, true, true, false, true, true]
-    },
-    {
-      name: 'Leslie Alexander',
-      grade: 'Class 3',
-      attendance: [false, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, true, false, true]
-    },
-    {
-      name: 'Jerome Bell',
-      grade: '7th',
-      attendance: [true, true, true, true, true, false, true, true, true, true, true, true, false, true, true, true, true, true, true, true, false, true, true, true, true, true, true, false, true, true]
-    },
-    {
-      name: 'Darlene Robertson',
-      grade: '6th',
-      attendance: [false, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, true, false, true]
-    },
-      {
-      name: 'Devon Lane',
-      grade: '9th',
-      attendance: [true, true, true, true, true, false, true, true, true, true, true, true, false, true, true, true, true, true, true, true, false, true, true, true, true, true, true, false, true, true]
-    },
+interface AttendanceData {
+  classLevel: {
+    id: string;
+    name: string;
+  }
+  dateRange: {
+    startDate: string;
+    endDate: string;
+    dates: string[];
+  };
+  students: Student[];
+}
+
+interface GetClassAttendance {
+  attendanceData: AttendanceData; 
+  refetch: () => void;
+} 
+
+export const AttendanceSheetTabSection = () => {
+  const [currentYear, setCurrentYear] = useState("");
+  const [currentMonth, setCurrentMonth] = useState("");
+  const [currentWeek, setCurrentWeek] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  // const [searchQuery, setSearchQuery] = useState("");
+
+
+  const { classLevels } = useGetClassLevels();
+  
+  const getClasses = classLevels.map((classLevel) => { 
+    return { value: classLevel.id, label: classLevel.name}
+  })
+  
+  
+  const { attendanceData } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, currentWeek) as GetClassAttendance;
+  
+  useEffect(() => {
+    if (getClasses.length > 0 && !selectedClass) {
+      setSelectedClass(getClasses[0].value);
+    }
+  }, [getClasses, selectedClass]);
+
+  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month" | "week") => {
+    const value = event.target.value;
+    if (type === "year") setCurrentYear(value);
+    else if (type === "month") setCurrentMonth(value);
+    else if (type === "week") setCurrentWeek(value);
+  };
+
+  const handleClassChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    setSelectedClass(value)
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const monthOptions = [
+    { label: 'Month', value: '' },
+    ...Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(0, i);
+      return {
+        label: date.toLocaleString('default', { month: 'long' }),
+        value: String(i + 1),
+      };
+    })
   ];
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
+  const currentYearNumber = new Date().getFullYear();
+  const yearOptions = [
+    { label: "Year", value: "" },
+    ...Array.from({ length: 10 }, (_, i) => {
+      const year = currentYearNumber - i;
+      return { label: String(year), value: String(year) };
+    }),
+  ];
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-    console.log(currentPage, searchQuery);
-  };
+  const weekOptions = [
+    { label: "Week", value: "" },
+    { label: "Week 1", value: "1" },
+    { label: "Week 2", value: "2" },
+    { label: "Week 3", value: "3" },
+    { label: "Week 4", value: "4" },
+    { label: "Week 5", value: "5" },
+  ];
 
-  const handleStudentAttendance = (student: object) => {
-    console.log(student);
-  };
+  // const handleSearch = (query: string) => setSearchQuery(query);
 
+  // const filteredStudents = attendanceData?.students?.filter((student: Student) =>
+  //   student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+  // ) ?? [];
 
   return (
     <div className="pb-8">
-
-      <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
 
       <div className="flex gap-3 my-6">
-        <CustomSelectTag value={'Week'} options={[{label: 'Week', value: 'week'}]} onOptionItemClick={() => {}} />
-        <CustomSelectTag value={'Month'} options={[{label: 'Month', value: 'month'}]}  onOptionItemClick={() => {}} />
-        <CustomSelectTag value={'Year'} options={[{label: 'Year', value: 'year'}]}  onOptionItemClick={() => {}} />
+        <CustomSelectTag value={currentWeek} options={weekOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} />
+        <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
+        <CustomSelectTag value={currentYear} options={yearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />
+        <CustomSelectTag value={selectedClass} options={getClasses} onOptionItemClick={(e) => handleClassChange(e as React.ChangeEvent<HTMLSelectElement>)} />
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[1200px] grid grid-cols-[200px_140px_repeat(30,3rem)]">
-          {/* Header */}
-          <div className="sticky left-0 z-10 bg-gray-100 px-4 py-5 text-xs font-medium text-gray-500">Name</div>
-          <div className="sticky left-[200px] z-10 bg-gray-100 px-4 py-5 text-xs font-medium text-gray-500">Class/Grade</div>
-          {Array.from({ length: 30 }, (_, i) => (
-            <div
-              key={i}
-              className="px-2 py-5 text-xs font-medium text-gray-500 text-center bg-gray-100"
-            >
-              {i + 1}
-            </div>
-          ))}
+        <div className="min-w-fit relative">
+          <div className={`min-w-fit grid`} style={{ gridTemplateColumns: `200px 140px repeat(${attendanceData?.dateRange?.dates?.length || 0}, 3rem)` }}>
+            {/* Header */}
+            <div className="sticky left-0 z-10 bg-gray-100 px-4 py-5 text-xs font-medium text-gray-500">Name</div>
+            <div className="sticky left-[200px] z-10 bg-gray-100 px-4 py-5 text-xs font-medium text-gray-500">Class/Grade</div>
+            {attendanceData?.dateRange?.dates?.map((date, i) => (
+              <div key={i} className="px-2 py-5 text-xs font-medium text-gray-500 text-center bg-gray-100">
+                {new Date(date).getDate()}
+              </div>
+            ))}
 
-          {/* Body */}
-          {data.map((student, sIdx) => (
-            <React.Fragment key={sIdx}>
-              <div className="sticky left-0 z-10 bg-white px-4 py-5 border-b border-gray-200 whitespace-nowrap">
-                {student.name}
-              </div>
-              <div className="sticky left-[200px] z-10 bg-white px-4 py-5 border-b border-gray-200">
-                {student.grade}
-              </div>
-              {student.attendance.map((present, dIdx) => (
-                <div
-                  key={dIdx}
-                  className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center ${
-                    (dIdx + 1) % 7 === 0 ? "bg-purple-100" : "bg-white"
-                  }`}
-                  onClick={()=>{handleStudentAttendance(student)}}
-                >
-                  <Image
-                    src={present ? Mark : Cancel}
-                    alt={present ? "Present" : "Absent"}
-                    className="w-5 h-5 object-contain"
-                    width={20}
-                    height={20}
-                  />
+            {/* Body */}
+            {attendanceData?.students?.length > 0 ? 
+              (
+                attendanceData?.students?.map((student: Student) => (
+                  <React.Fragment key={student.id}>
+                    <div className="sticky left-0 z-10 bg-white px-4 py-5 border-b border-gray-200 whitespace-nowrap">
+                      {student.fullName}
+                    </div>
+                    <div className="sticky left-[200px] z-10 bg-white px-4 py-5 border-b border-gray-200">
+                      {attendanceData?.classLevel?.name}
+                    </div>
+                    {attendanceData?.dateRange?.dates?.map((date) => {
+                      const status = student.attendanceByDate[date];
+                      const present = status === "present";
+                      const isWeekend = status === "weekend";
+                      const isHoliday = status === "holiday";
+                      const icon = status == null || isWeekend ? null : present ? Mark : Cancel;
+
+                      return (
+                        <div
+                          key={date}
+                          className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center ${
+                            new Date(date).getDay() === 0 || new Date(date).getDay() === 6
+                              ? "bg-white none pointer-events-none"
+                              : "bg-[#F9F5FF]"
+                          } ${isHoliday && 'bg-[#FCEBCF]'}`}
+                        >
+                          {isHoliday ? (
+                            <span className="text-[11px] font-bold text-black-500 rotate-[-45deg] whitespace-nowrap">Holiday</span>
+                          ) :  icon ? (
+                            <Image src={icon} alt={present ? "Present" : "Absent"} className="w-5 h-5 object-contain" width={20} height={20} />
+                          ) : (
+                            <span className="text-xs text-gray-300">–</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                ))
+              ) : (
+                <div className="col-span-full py-16 text-center font-semibold text-gray-600 bg-white">
+                  <div className="w-[90vw]">
+                    <p className="text-lg font-medium">No students found</p>
+                    <p className="text-sm text-gray-400 mt-1">Once students are added to the class, they will appear in this table.</p>
+                  </div>
                 </div>
-              ))}
-            </React.Fragment>
-          ))}
+              )}
+          </div>
         </div>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={1}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 };
- 

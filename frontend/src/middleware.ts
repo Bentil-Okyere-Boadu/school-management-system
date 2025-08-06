@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
 
 //See "Matching Paths" below to learn more
 export const config = {
-    matcher: ['/superadmin/:path*', '/admin/:path*', '/teacher/:path*'],    
+    matcher: ['/superadmin/:path*', '/admin/:path*', '/teacher/:path*', '/student/:path*'],    
   }
 
 export async function updateSession(request: NextRequest) {
@@ -58,7 +58,7 @@ export function handleLoginRedirectAndToken(
   const roleToRouteMap: Record<string, string> = {
     super_admin: "/superadmin/dashboard",
     school_admin: "/admin/dashboard",
-    teacher: "/teacher/dashboard",
+    teacher: "/teacher/students",
     student: "/student/profile",
   };
 

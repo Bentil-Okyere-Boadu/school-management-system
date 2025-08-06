@@ -26,6 +26,9 @@ export class ClassLevel {
   })
   school: School;
 
+  @ManyToOne(() => Teacher, { nullable: true })
+  classTeacher: Teacher;
+
   @ManyToMany(() => Teacher)
   @JoinTable({
     name: 'class_level_teachers',
