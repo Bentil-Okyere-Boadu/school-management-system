@@ -17,6 +17,7 @@ import { BaseException } from '../common/exceptions/base.exception';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 @Injectable()
 export class StudentService {
   private readonly logger = new Logger(StudentService.name);
@@ -27,6 +28,7 @@ export class StudentService {
     private emailService: EmailService,
     private invitationService: InvitationService,
     private readonly profileService: ProfileService,
+    private objectStorageService: ObjectStorageServiceService,
   ) {}
 
   /**
@@ -143,7 +145,18 @@ export class StudentService {
       );
       studentInfo.profile = profileWithUrl;
     }
-
+    if (studentInfo?.school.logoPath) {
+      try {
+        studentInfo.school.logoUrl =
+          await this.objectStorageService.getSignedUrl(
+            studentInfo.school.logoPath,
+          );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to get signed URL for school logo: ${studentInfo.id}${error}`,
+        );
+      }
+    }
     return studentInfo;
   }
   async updateProfile(
