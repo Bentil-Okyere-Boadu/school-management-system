@@ -30,6 +30,7 @@ import { QueryString } from 'src/common/api-features/api-features';
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
+import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
 
 @Controller('teacher')
 export class TeacherController {
@@ -134,7 +135,12 @@ export class TeacherController {
     return this.attendanceService.getClassAttendance(filter);
   }
 
-  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @UseGuards(
+    TeacherJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    IsClassTeacherGuard,
+  )
   @Post('classes/:classLevelId/attendance')
   @Roles('teacher')
   async markAttendance(

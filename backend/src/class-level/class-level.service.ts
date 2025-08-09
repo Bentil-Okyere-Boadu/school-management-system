@@ -31,15 +31,17 @@ export class ClassLevelService {
     const { name, description, teacherIds, studentIds, classTeacherId } =
       createClassLevelDto;
 
-    // Check if any student is already assigned to a class
+    // 1. Check if any student is already assigned to a class
     if (studentIds && studentIds.length > 0) {
-      const alreadyAssigned = await this.studentRepository.find({
-        where: { id: In(studentIds), classLevels: { id: In([]) } },
+      const students = await this.studentRepository.find({
+        where: { id: In(studentIds) },
         relations: ['classLevels'],
       });
-      const studentsWithClass = alreadyAssigned.filter(
+
+      const studentsWithClass = students.filter(
         (s) => s.classLevels && s.classLevels.length > 0,
       );
+
       if (studentsWithClass.length > 0) {
         const namesWithClasses = studentsWithClass
           .map((s) => {
@@ -53,14 +55,19 @@ export class ClassLevelService {
       }
     }
 
-    const classLevel = this.classLevelRepository.create({
-      name,
-      description,
-      school: { id: admin.school.id },
-    });
-
-    // Assign class teacher if provided
+    // 2. Check if class teacher is already assigned to another class
     if (classTeacherId) {
+      const existingClassWithTeacher = await this.classLevelRepository.findOne({
+        where: { classTeacher: { id: classTeacherId } },
+        relations: ['classTeacher'],
+      });
+
+      if (existingClassWithTeacher) {
+        throw new ConflictException(
+          `Class teacher is already assigned to class: ${existingClassWithTeacher.name}`,
+        );
+      }
+
       const classTeacher = await this.teacherRepository.findOne({
         where: { id: classTeacherId, school: { id: admin.school.id } },
       });
@@ -69,15 +76,31 @@ export class ClassLevelService {
           `Teacher with ID ${classTeacherId} not found in this school`,
         );
       }
-      classLevel.classTeacher = classTeacher;
     }
 
-    if (teacherIds) {
+    // 3. Create new class level
+    const classLevel = this.classLevelRepository.create({
+      name,
+      description,
+      school: { id: admin.school.id },
+    });
+
+    // Assign class teacher if provided
+    if (classTeacherId) {
+      classLevel.classTeacher = (await this.teacherRepository.findOneBy({
+        id: classTeacherId,
+      })) as Teacher;
+    }
+
+    // Assign other teachers
+    if (teacherIds && teacherIds.length > 0) {
       classLevel.teachers = await this.teacherRepository.findBy({
         id: In(teacherIds),
       });
     }
-    if (studentIds) {
+
+    // Assign students
+    if (studentIds && studentIds.length > 0) {
       classLevel.students = await this.studentRepository.findBy({
         id: In(studentIds),
       });
@@ -221,6 +244,7 @@ export class ClassLevelService {
       .leftJoinAndSelect('classLevel.teachers', 'teacher')
       .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
       .where('teacher.id = :teacherId', { teacherId })
+      .orWhere('classTeacher.id = :teacherId', { teacherId })
       .loadRelationCountAndMap(
         'classLevel.studentCount',
         'classLevel.students',
@@ -230,6 +254,7 @@ export class ClassLevelService {
       const features = new APIFeatures(queryBuilder, query).search(['name']);
       return features.getQuery().getMany();
     }
+    console.log('class', queryBuilder.getMany());
     return queryBuilder.getMany();
   }
 

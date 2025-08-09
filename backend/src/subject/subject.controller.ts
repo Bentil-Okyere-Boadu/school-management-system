@@ -26,6 +26,7 @@ import { Student } from 'src/student/student.entity';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { StudentJwtAuthGuard } from 'src/student/guards/student-jwt-auth.guard';
 import { QueryString } from 'src/common/api-features/api-features';
+import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
 
 @Controller('subject')
 export class SubjectController {
@@ -93,7 +94,12 @@ export class SubjectController {
   }
 
   @Post('students/:studentId/terms/:termId/remarks')
-  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @UseGuards(
+    TeacherJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    IsClassTeacherGuard,
+  )
   async submitTermRemarks(
     @CurrentUser() teacher: Teacher,
     @Param('studentId') studentId: string,
@@ -181,7 +187,7 @@ export class SubjectController {
     );
   }
 
-  @UseGuards(TeacherJwtAuthGuard)
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('submit-grades')
   async submitGrades(
     @CurrentUser() teacher: Teacher,
