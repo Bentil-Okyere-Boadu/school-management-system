@@ -66,7 +66,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     setIsClassLevelDialogOpen(true);
     setClassLevelName(data.name as string);
     setClassLevelDescription(data.description as string);
-    setSelectedTeacher(data.teachers?.[0]?.id || '');
+    setSelectedTeacher(data.classTeacher?.id || '');
 
     const students = (data.students) as User[];
     setSelectedStudents(students?.map((item) => item.id) || []);
@@ -76,7 +76,8 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     editMutation(
       { name: classLevelName, 
         description: classLevelDescription,
-        teacherIds: selectedTeacher ? [selectedTeacher] : [], 
+        // teacherIds: selectedTeacher ? [selectedTeacher] : [],
+        classTeacherId: selectedTeacher,
         studentIds: selectedStudents
       }, {
       onSuccess: () => {
@@ -95,7 +96,8 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
       { 
         name: classLevelName, 
         description: classLevelDescription, 
-        teacherIds: selectedTeacher ? [selectedTeacher] : [], 
+        // teacherIds: selectedTeacher ? [selectedTeacher] : [], 
+        classTeacherId: selectedTeacher,
         studentIds: selectedStudents
       }, {
       onSuccess: () => {
