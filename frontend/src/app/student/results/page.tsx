@@ -1,19 +1,15 @@
 "use client"
+
 import React, { useState } from 'react'
-import { StudentResultsResponse } from '@/@types';
 import StudentResults from '@/components/admin/students/StudentResults';
-import { useGetCalendars, useGetMyResults } from '@/hooks/student';
+import { useGetCalendars, useGetMyResults, useStudentGetMe } from '@/hooks/student';
 
 const StudentResultsView = () => {
 
   const [selectedResultYear, setSelectedResultYear] = useState("");
 
   const { studentCalendars } = useGetCalendars();
-
-  
-  const onExportButtonClick = (item: StudentResultsResponse) => {
-    console.log("Exporting report for:", item);
-  };
+  const {me} = useStudentGetMe();
 
   const { resultsData: studentResults } = useGetMyResults(selectedResultYear, {
     enabled: !!selectedResultYear,
@@ -25,8 +21,8 @@ const StudentResultsView = () => {
       <StudentResults 
         calendars={studentCalendars}
         studentResults={studentResults}
-        showExportButton={false}
-        onExportButtonClick={onExportButtonClick}
+        showExportButton={true}
+        studentData={me}
         onCalendarChange={(calendarId) => setSelectedResultYear(calendarId)} />
     </div>
   )
