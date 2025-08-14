@@ -24,6 +24,7 @@ import { ParentModule } from './parent/parent.module';
 import { AdmissionModule } from './admission/admission.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { SubjectModule } from './subject/subject.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -40,9 +41,9 @@ import { SubjectModule } from './subject/subject.module';
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity.{ts,js}'],
       synchronize: true,
-      ssl: {
-        rejectUnauthorized : false,
-      },
+      // ssl: {
+      //   rejectUnauthorized : false,
+      // },
       //logging: true,
     }),
     CommonModule,
@@ -66,6 +67,7 @@ import { SubjectModule } from './subject/subject.module';
     AdmissionModule,
     AttendanceModule,
     SubjectModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
