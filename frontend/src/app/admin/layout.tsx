@@ -6,6 +6,7 @@ import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
 import NotificationCard from "@/components/common/NotificationCard";
+import { Roles } from "@/@types";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -161,7 +162,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         onNotificationClick={() => {setShowNotification(!showNotification)}} />
         <main className="flex-1 pt-8 overflow-auto">
           {children}
-          {showNotification && <NotificationCard onClose={() => setShowNotification(false)} />}
+          {(showNotification && me.role.name === Roles.SCHOOL_ADMIN) && <NotificationCard user={me} onClose={() => setShowNotification(false)} />}
         </main>
       </section>
     </div>

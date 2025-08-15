@@ -71,7 +71,7 @@ export type AuthCredentials = Pick<User, "email" | "password">;
 export type SignUpPayload = Pick<User, "email" | "password" | "name" | "role">;
 
 export enum Roles {
-  SCHOOL_ADMIN = "admin",
+  SCHOOL_ADMIN = "school_admin",
   STUDENT = "student",
   TEACHER = "teacher",
   SUPER_ADMIN = "super_admin",
@@ -80,7 +80,7 @@ export enum Roles {
 
 export type Role = {
   id: string;
-  name: keyof typeof Roles;
+  name: Roles;
   label?: string;
 };
 
@@ -506,4 +506,22 @@ export interface StudentResultsResponse {
   subjects: SubjectResult[];
   teacherRemarks: string;
   remarksBy: string;
+}
+
+export enum NotificationType {
+  Admission = 'admission',
+  Attendance = 'attendance',
+  Results = 'results',
+  Fee = 'fee',
+  General = 'general',
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  read: boolean;
+  createdAt?: string;
+  schoolId: string;
 }

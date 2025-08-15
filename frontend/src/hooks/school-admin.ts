@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -848,4 +848,35 @@ export const useGetStudentResults = (
 
   return { resultsData, isLoading, refetch };
 };
+
+export const useGetNotifications = (schoolId: string) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['notifications'],
+        queryFn: () => {
+            return customAPI.get(`/notifications/school/${schoolId}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const notifications: Notification[] = data?.data || [];
+
+    return { notifications, isLoading, refetch }
+}
+
+
+export const useMarkNotificationAsRead = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.patch(`/notifications/${id}/markAsRead`);
+        }
+    })
+}
+
+export const useCreateNotification = () => {
+    return useMutation({
+        mutationFn: (notification: Notification) => {
+            return customAPI.post('/notifications', notification);
+        }
+    })
+}
 
