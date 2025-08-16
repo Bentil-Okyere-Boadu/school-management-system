@@ -8,7 +8,7 @@ const StudentDashboard = () => {
 
   return (
     <div>
-      <ViewAttendance classLevelId={me?.classLevels[0].id}/>
+      <ViewAttendance classLevelId={me?.classLevels[0]?.id}/>
     </div>
   )
 }

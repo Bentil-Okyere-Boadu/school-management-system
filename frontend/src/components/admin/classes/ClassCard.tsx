@@ -50,7 +50,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
                   <IconUserStar size={18} className="text-gray-500" />
                   <span className="text-gray-500">Class Teacher:</span>
               </div>
-            <span className="font-medium">{classData?.teachers?.[0]?.firstName} {classData?.teachers?.[0]?.lastName}</span>
+            <span className="font-medium">{classData?.classTeacher?.firstName} {classData?.classTeacher?.lastName}</span>
           </div>
         }
         <div className="flex justify-between">
@@ -61,7 +61,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
           <span className="font-medium">{studentCount}</span>
         </div>
         <div className="flex gap-1">
-            <div className="flex gap-1.5 items-center">
+            <div className="flex gap-1.5 flex-start ">
                 <IconScript size={18} className="text-gray-500" />
                 <span className="text-gray-500">Description:</span>
             </div>
