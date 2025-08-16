@@ -512,16 +512,15 @@ export enum NotificationType {
   Admission = 'admission',
   Attendance = 'attendance',
   Results = 'results',
-  Fee = 'fee',
   General = 'general',
 }
 
 export interface Notification {
-  id: string;
+  id?: string;
   title: string;
   message: string;
   type: NotificationType;
-  read: boolean;
+  read?: boolean;
   createdAt?: string;
   schoolId: string;
 }

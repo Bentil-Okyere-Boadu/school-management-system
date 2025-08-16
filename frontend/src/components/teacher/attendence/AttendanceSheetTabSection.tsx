@@ -6,11 +6,12 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import Image from "next/image";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/teacher";
-import { ErrorResponse } from "@/@types";
+import { usePostClassAttendance, useGetClassAttendance, useTeacherGetMe } from "@/hooks/teacher";
+import { ErrorResponse, NotificationType } from "@/@types";
 import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pagination } from "@/components/common/Pagination";
+import { useCreateNotification } from "@/hooks/school-admin";
 
 interface Student {
   id: string;
@@ -56,6 +57,8 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
 
   const { attendanceData, refetch } = useGetClassAttendance(classId, "month", currentMonth, currentYear, currentWeek) as GetClassAttendance;
   const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
+  const {mutate: createNotification} = useCreateNotification();
+  const {me} = useTeacherGetMe();
 
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month" | "week") => {
     const value = event.target.value;
@@ -131,6 +134,15 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
     markClassAttendanceMutation(payload, {
       onSuccess: () => {
         toast.success('Attendance marked successfully.');
+        
+        if(newStatus === 'absent') {
+          createNotification({
+            title: "Student Absent",
+            message: `${student.fullName} marked as ${newStatus} for ${new Date(selectedDate).toLocaleDateString()}`,
+            type: NotificationType.Attendance,
+            schoolId: me.school.id
+          });
+        }
         refetch();
         queryClient.invalidateQueries({ queryKey: ['summary']})
       },

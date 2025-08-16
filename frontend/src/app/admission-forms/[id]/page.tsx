@@ -6,11 +6,11 @@ import AdditionalInformationStep from '@/components/admission-forms/AdditionalIn
 import PreviewStep from '@/components/admission-forms/PreviewStep';
 import CustomButton from '@/components/Button';
 import Stepper from '@/components/common/Stepper';
-import { StudentInformation, Guardian, AdditionalInformation, ErrorResponse } from '@/@types/index';
+import { StudentInformation, Guardian, AdditionalInformation, ErrorResponse, NotificationType } from '@/@types/index';
 import { Dialog } from '@/components/common/Dialog';
 import { toast } from 'react-toastify';
 import { useParams, useRouter } from 'next/navigation';
-import { useGetAdmissionClassLevels, useSubmitAdmissionForm } from '@/hooks/school-admin';
+import { useCreateNotification, useGetAdmissionClassLevels, useSubmitAdmissionForm } from '@/hooks/school-admin';
 
 
 const AdmissionFormsPage = () => {
@@ -174,6 +174,20 @@ const AdmissionFormsPage = () => {
   }
 
   const {mutate: submitMutation, isPending: pendingCreate} = useSubmitAdmissionForm();
+  const {mutate: createNotification} = useCreateNotification();
+
+  const createNotificationForAdmission = () => {
+    createNotification({
+      title: "New Admission Application",
+      message: `${studentData.firstName} ${studentData.lastName} has submitted an admission application.`,
+      type: NotificationType.Admission,
+      schoolId: id as string,
+    }, {
+      onError: (error: unknown) => {
+        console.error("Failed to create notification:", error);
+      } 
+    });
+  }
 
   const handleAdmissionFormSubmit = () => {
     if (validateStudentData() && validateGuardians() && validateAdditionalInfo()) {
@@ -188,6 +202,8 @@ const AdmissionFormsPage = () => {
           onSuccess: () => {
             toast.success('Admission submitted successfully.');
             setIsConfirmApplicationSubmissionDialogOpen(false);
+            createNotificationForAdmission();
+            // Redirect to success page after a short delay
             setTimeout(() => {
               router.push(`/admission-forms/${id}/success`);
             }, 200)
