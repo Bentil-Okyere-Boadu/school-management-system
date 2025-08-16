@@ -26,6 +26,7 @@ const ViewStudentPage = () => {
     const searchParams = useSearchParams();
 
     const {studentData, refetch} = useGetStudentById(id as string)
+    const schoolId = studentData?.school.id;
 
     const tabFromUrl = searchParams.get("tab");
     const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || "student-profile");
@@ -102,6 +103,7 @@ const ViewStudentPage = () => {
               calendars={studentCalendars}
               studentResults={studentResultsData}
               studentId={id as string}
+              schoolId={schoolId}
               onCalendarChange={(calendarId) => setSelectedResultYear(calendarId)}
               onTermChange={(termId) => setSelectedResultTerm(termId)}
             />

@@ -15,6 +15,7 @@ interface StudentResultProps {
   calendars: Calendar[];
   studentResults: StudentResultsResponse;
   studentId: string;
+  schoolId: string;
   onCalendarChange?: (calendarId: string) => void;
   onTermChange?: (termId: string) => void;
 }
@@ -23,6 +24,7 @@ const StudentResults: React.FC<StudentResultProps> = ({
   calendars,
   studentResults,
   studentId,
+  schoolId,
   onCalendarChange,
   onTermChange,
 }) => {
@@ -110,7 +112,7 @@ const StudentResults: React.FC<StudentResultProps> = ({
         title: "Student Results Updated",
         message: `Results for student with ID:${studentId} have been updated.`,
         type: NotificationType.Results,
-        schoolId: 'id' as string,
+        schoolId: schoolId as string,
       }, {
         onError: (error: unknown) => {
           console.error("Failed to create notification:", error);
