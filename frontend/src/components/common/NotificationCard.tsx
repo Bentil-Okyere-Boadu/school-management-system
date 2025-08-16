@@ -1,55 +1,34 @@
 import { useRef } from 'react';
 import { useClickOutside } from '../../utils/useClickOutside';
 import { IconChevronRight } from '@tabler/icons-react';
-import Image from "next/image";
+// import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { User } from '@/@types';
+import { useGetNotifications, useMarkNotificationAsRead } from '@/hooks/school-admin';
 
 interface NotificationCardProps {
   onClose: () => void;
+  user: User
 }
 
-export default function NotificationCard({ onClose }: NotificationCardProps) {
+export default function NotificationCard({ onClose, user }: NotificationCardProps) {
     const ref = useRef<HTMLDivElement>(null);
     useClickOutside(ref, onClose);
     const router = useRouter();
+    const schoolId = user.school.id;
 
-    const notifications = [
-        {
-            id: 1,
-            user: 'stewiedewie',
-            action: 'Added a new attendance entry',
-            time: '0 min',
-            avatar: 'https://cdn.builder.io/api/v1/image/assets/TEMP/5cdc8e15cdd19351c9962680fff3b3636cd00e80?placeholderIfAbsent=true',
-            unread: true,
-        },
-        {
-            id: 2,
-            user: 'casianvelaris',
-            action: 'Paid Feeding Fee',
-            time: '0 min',
-            avatar: 'https://cdn.builder.io/api/v1/image/assets/TEMP/5cdc8e15cdd19351c9962680fff3b3636cd00e80?placeholderIfAbsent=true',
-            unread: true,
-        },
-        {
-            id: 3,
-            user: 'ohheyitsherbert',
-            action: 'Added new results entry',
-            time: '15 min',
-            avatar: 'https://cdn.builder.io/api/v1/image/assets/TEMP/5cdc8e15cdd19351c9962680fff3b3636cd00e80?placeholderIfAbsent=true',
-            unread: false,
-        },
-        {
-            id: 4,
-            user: 'magnolialysl',
-            action: 'Deleted attendance entry for class 3',
-            time: '28 min',
-            avatar: 'https://cdn.builder.io/api/v1/image/assets/TEMP/5cdc8e15cdd19351c9962680fff3b3636cd00e80?placeholderIfAbsent=true',
-            unread: false,
-        },
-    ];
+    const { notifications } = useGetNotifications(schoolId);
+    const { mutate: markAsRead } = useMarkNotificationAsRead();
 
-    const onHandleNotificationItemClick = (id: number) => {
+    const onHandleNotificationItemClick = (id: string) => {
+        markAsRead(id, {
+            onError: (err) => {
+                console.error("Error marking notification as read:", err);
+            }
+        });
+
         router.push(`/admin/notifications/${id}`);
+        
         onClose();
     }
 
@@ -61,19 +40,19 @@ export default function NotificationCard({ onClose }: NotificationCardProps) {
         <ul className="max-h-96 overflow-y-auto">
             {notifications.map((n) => (
                 <li onClick={() => onHandleNotificationItemClick(n.id)} key={n.id} className="px-4 py-2 hover:bg-gray-50 flex items-center gap-3 cursor-pointer">
-                    <Image
+                    {/* <Image
                         width={40}
                         height={40}
                         alt="User Avatar"
                         src={n.avatar}
                         className="mr-2.5 w-9 h-9 rounded-full object-cover shrink-0"
-                    />
+                    /> */}
                     <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{n.user}</p>
-                        <p className="text-sm text-gray-600">{n.action}</p>
-                        <p className="text-xs text-gray-400 mt-1">{n.time}</p>
+                        <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                        <p className="text-sm text-gray-600">{n.message}</p>
+                        <p className="text-xs text-gray-400 mt-1">{n.type}</p>
                     </div>
-                    {n.unread && <span className="w-2 h-2 bg-purple-500 rounded-full" />}
+                    {!n.read && <span className="w-2 h-2 bg-purple-500 rounded-full" />}
                     <IconChevronRight color='#5A6474' className='w-4 h-4' />
                 </li>
             ))}

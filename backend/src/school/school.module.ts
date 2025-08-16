@@ -10,10 +10,18 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { Profile } from 'src/profile/profile.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { Notification } from 'src/notification/notification.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([School, SchoolAdmin, Teacher, Student, Profile]),
+    TypeOrmModule.forFeature([
+      School,
+      SchoolAdmin,
+      Teacher,
+      Student,
+      Profile,
+      Notification,
+    ]),
     InvitationModule,
   ],
   providers: [SchoolService, ProfileService, ObjectStorageServiceService],

@@ -175,7 +175,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
                 />
                 <div className="flex flex-col">
                   <span className="text-base text-neutral-800">{user?.firstName} {user?.lastName}</span>
-                  <span className="text-xs text-zinc-600">{user?.role.name}</span>
+                  <span className="text-xs text-zinc-600">{user?.role.label}</span>
                 </div>
               </div>
             </Menu.Target>
