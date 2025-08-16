@@ -346,8 +346,7 @@ export class SubjectService {
           id: student.id,
           firstName: student.firstName,
           lastName: student.lastName,
-          studentId: student.studentId, // if you have this field
-          otherName: student.profile.otherName,
+          studentId: student.studentId,
           scores: {
             classScore: existingGrade?.classScore || 0, // 30%
             examScore: existingGrade?.examScore || 0, // 70%

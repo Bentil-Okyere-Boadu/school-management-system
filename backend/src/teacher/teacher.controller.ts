@@ -159,6 +159,21 @@ export class TeacherController {
       body.records,
     );
   }
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('me/is-class-teacher')
+  async checkIsClassTeacher(
+    @CurrentUser() teacher: Teacher,
+    @Query('classLevelId') classLevelId?: string,
+    @Query('studentId') studentId?: string,
+  ) {
+    return await this.TeacherService.checkIfClassTeacher(
+      teacher.id,
+      classLevelId,
+      studentId,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':classLevelId/summary')
   getClassAttendanceSummary(@Param('classLevelId') classLevelId: string) {
     return this.attendanceService.getClassAttendanceSummary(classLevelId);

@@ -16,6 +16,14 @@ import { GradingSystem } from 'src/grading-system/grading-system.entity';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
+import { TeacherService } from 'src/teacher/teacher.service';
+import { InvitationService } from 'src/invitation/invitation.service';
+import { EmailService } from 'src/common/services/email.service';
+import { ProfileService } from 'src/profile/profile.service';
+import { Role } from 'src/role/role.entity';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { Profile } from 'src/profile/profile.entity';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Module({
   imports: [
@@ -29,12 +37,23 @@ import { StudentTermRemark } from './student-term-remark.entity';
       AcademicCalendar,
       AcademicTerm,
       Student,
+      Role,
+      SchoolAdmin,
+      Profile,
       GradingSystem,
       Holiday,
       StudentTermRemark,
     ]),
   ],
-  providers: [SubjectService, AcademicCalendarService],
+  providers: [
+    SubjectService,
+    AcademicCalendarService,
+    TeacherService,
+    InvitationService,
+    EmailService,
+    ProfileService,
+    ObjectStorageServiceService,
+  ],
   controllers: [SubjectController, SubjectCatalogController],
   exports: [TypeOrmModule],
 })

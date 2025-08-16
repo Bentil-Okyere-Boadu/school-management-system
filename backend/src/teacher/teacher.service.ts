@@ -14,6 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { Student } from 'src/student/student.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
 
 @Injectable()
 export class TeacherService {
@@ -122,5 +124,48 @@ export class TeacherService {
     }
 
     return teacherInfo;
+  }
+
+  async checkIfClassTeacher(
+    userId: string,
+    classLevelId?: string,
+    studentId?: string,
+  ): Promise<{ isClassTeacher: boolean }> {
+    if (classLevelId) {
+      const classLevel = await this.teacherRepository.manager
+        .getRepository(ClassLevel)
+        .createQueryBuilder('classLevel')
+        .leftJoin('classLevel.classTeacher', 'classTeacher')
+        .where('classLevel.id = :id', { id: classLevelId })
+        .select(['classLevel.id', 'classTeacher.id'])
+        .getOne();
+
+      if (!classLevel) {
+        return { isClassTeacher: false };
+      }
+
+      return { isClassTeacher: classLevel?.classTeacher?.id === userId };
+    }
+
+    if (studentId) {
+      const student = await this.teacherRepository.manager
+        .getRepository(Student)
+        .findOne({
+          where: { id: studentId },
+          relations: ['classLevels', 'classLevels.classTeacher'],
+        });
+
+      if (!student) {
+        return { isClassTeacher: false };
+      }
+
+      const isClassTeacher = student.classLevels.some(
+        (classLevel) => classLevel?.classTeacher?.id === userId,
+      );
+
+      return { isClassTeacher };
+    }
+
+    return { isClassTeacher: false };
   }
 }
