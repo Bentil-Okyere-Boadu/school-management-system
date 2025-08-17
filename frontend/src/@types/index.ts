@@ -526,3 +526,22 @@ export interface Notification {
   createdAt?: string;
   schoolId: string;
 }
+
+export interface Reminder {
+  id: string;
+  title: string;              
+  message: string;          
+  status: string;
+  type: string; 
+  dateFrom?: string;          
+  to?: string;                
+  createdAt: string;           
+  updatedAt: string;           
+  recipientId?: string;  
+  sendToStudents: boolean;
+  sendToParents: boolean;
+  targetClassLevels: ClassLevel[]
+  targetStudents: Student[]
+  targetClassLevelIds: string[]
+  targetStudentIds: string[]
+}
