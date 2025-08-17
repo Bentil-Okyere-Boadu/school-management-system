@@ -42,7 +42,7 @@ export default function NotificationCard({ onClose, user }: NotificationCardProp
         Notifications
       </div>
       <ul className="max-h-96 overflow-y-auto">
-        {notifications.length < 0 ? notifications.map((n) => (
+        {notifications.length > 0 ? notifications.map((n) => (
           <li
             onClick={() => onHandleNotificationItemClick(n?.id as string)}
             key={n.id}
