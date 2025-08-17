@@ -84,8 +84,8 @@ const NotificationsPage: React.FC = () => {
             />
           </div>
 
-          <div className="max-w-2xl 2xl:max-w-3xl p-4 space-y-6 mt-4">
-            {notifications.map((note) => (
+          <div className="max-w-2xl 2xl:max-w-3xl p-4 space-y-6 mt-4 max-h-2/4 overflow-y-auto">
+            { notifications.length > 0 ? notifications.map((note) => (
               <div key={note.id} className="flex items-start gap-3">
                 <span
                   onClick={() => handleReadNotification(note.id as string)}
@@ -105,7 +105,9 @@ const NotificationsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+                <NoAvailableEmptyState message="No notifications available." />
+            )}
           </div>
         </div>
       )}
