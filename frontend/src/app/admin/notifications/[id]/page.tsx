@@ -8,6 +8,7 @@ import { useGetMe, useGetNotifications, useMarkNotificationAsRead } from "@/hook
 import { useQueryClient } from "@tanstack/react-query";
 import NotificationIcon from "@/components/common/NotificationIcon";
 import { NotificationSettings } from "@/components/admin/notifications/NotificationSettings";
+import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 
 
 const NotificationsPage: React.FC = () => {
