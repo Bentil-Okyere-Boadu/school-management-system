@@ -50,17 +50,17 @@ export const NotificationSettings: React.FC = () => {
     setTargetClassLevelIds(value);
   };
 
-    const { schoolUsers: allStudents } = useGetSchoolUsers(
-      1,
-      "",
-      "",
-      "",
-      "Student",
-      300
-    );
-    const allStudentOptions = allStudents?.map((student: Student) => {
-        return { value: student.id, label: `${student.firstName + ' ' + student.lastName}` };
-    });
+  const { schoolUsers: allStudents } = useGetSchoolUsers(
+    1,
+    "",
+    "",
+    "",
+    "Student",
+    300
+  );
+  const allStudentOptions = allStudents?.map((student: Student) => {
+      return { value: student.id, label: `${student.firstName + ' ' + student.lastName}` };
+  });
 
   const handleStudentsSelect = (value: string[]) => {
     setTargetStudentIds(value);
@@ -103,7 +103,6 @@ export const NotificationSettings: React.FC = () => {
   };
 
   const onEditReminderClick = (reminder: Reminder) => {
-    console.log(reminder)
     setEditMode(true);
     setReminderId(reminder.id);
     setTitle(reminder.title);
@@ -112,9 +111,9 @@ export const NotificationSettings: React.FC = () => {
     setStatus(reminder.status);
     setSendToStudents(reminder.sendToStudents);
     setSendToParents(reminder.sendToParents);
-    // setTargetClassLevelIds(reminder.targetClassLevels?.map(
-    //     (classLvl: { id: string }) => classLvl.id
-    // ) || []);
+    setTargetClassLevelIds(reminder.targetClassLevels?.map(
+        (classLvl: { id: string }) => classLvl.id
+    ) || []);
     setTargetStudentIds(reminder.targetStudents?.map(
         (student: { id: string }) => student.id
     ) || []);
@@ -268,37 +267,34 @@ export const NotificationSettings: React.FC = () => {
             onChange={(e) => setMessage(e.currentTarget.value)}
           />
 
-        <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={sendToStudents}
-                onChange={(e) => setSendToStudents(e.target.checked)}
-              />
-              Send to Students
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={sendToParents}
-                onChange={(e) => setSendToParents(e.target.checked)}
-              />
-              Send to Parents
-            </label>
-        </div>
-
-          {
-            isShow &&            
-                <MultiSelect
-                    label="Classes"
-                    placeholder="Select classes"
-                    data={allClassLvlOptions}
-                    onChange={handleClassesSelect}
-                    searchable
-                    value={targetClassLevelIds}
+          <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={sendToStudents}
+                  onChange={(e) => setSendToStudents(e.target.checked)}
                 />
-          }
+                Send to Students
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={sendToParents}
+                  onChange={(e) => setSendToParents(e.target.checked)}
+                />
+                Send to Parents
+              </label>
+          </div>
 
+          <MultiSelect
+              label="Classes"
+              placeholder="Select classes"
+              data={allClassLvlOptions}
+              onChange={handleClassesSelect}
+              searchable
+              value={targetClassLevelIds}
+          />
+          
           <MultiSelect
             label="Students"
             placeholder="Select Students"
