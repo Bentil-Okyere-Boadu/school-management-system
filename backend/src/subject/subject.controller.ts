@@ -76,7 +76,7 @@ export class SubjectController {
     return this.subjectService.getStudentResults(studentId, academicCalendarId);
   }
 
-  @Get('students/term-results/:studendId')
+  @Get('students/term-results/:studentId')
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   async getStudentResultsByTerm(
     @Param('studentId') studentId: string,
@@ -86,13 +86,13 @@ export class SubjectController {
     if (!academicCalendarId || !academicTermId) {
       throw new BadRequestException('calendarId and termId are required');
     }
+
     return this.subjectService.getStudentResultsByTerm(
       studentId,
       academicCalendarId,
       academicTermId,
     );
   }
-
   @Post('students/:studentId/terms/:termId/remarks')
   @UseGuards(
     TeacherJwtAuthGuard,
