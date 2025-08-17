@@ -4,13 +4,11 @@ import { SearchBar } from "@/components/common/SearchBar";
 import TabBar from "@/components/common/TabBar";
 import { TabListItem } from "@/components/common/TabItem";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
-import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
-import CustomUnderlinedButton from "@/components/admin/CustomUnderlinedButton";
-import InputField from "@/components/InputField";
-import { Textarea } from "@mantine/core";
 import { useGetMe, useGetNotifications, useMarkNotificationAsRead } from "@/hooks/school-admin";
 import { useQueryClient } from "@tanstack/react-query";
 import NotificationIcon from "@/components/common/NotificationIcon";
+import { NotificationSettings } from "@/components/admin/notifications/NotificationSettings";
+import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 
 
 const NotificationsPage: React.FC = () => {
@@ -29,8 +27,6 @@ const NotificationsPage: React.FC = () => {
   const { mutate: markAsRead } = useMarkNotificationAsRead();
 
   const queryClient = useQueryClient();
-
-  const feesStructure = [1, 2];
 
   const handleReadNotification = (id: string) => {
     markAsRead(id, {
@@ -84,8 +80,8 @@ const NotificationsPage: React.FC = () => {
             />
           </div>
 
-          <div className="max-w-2xl 2xl:max-w-3xl p-4 space-y-6 mt-4">
-            {notifications.map((note) => (
+          <div className="max-w-2xl 2xl:max-w-3xl p-4 space-y-6 mt-4 max-h-2/4 overflow-y-auto">
+            { notifications.length > 0 ? notifications.map((note) => (
               <div key={note.id} className="flex items-start gap-3">
                 <span
                   onClick={() => handleReadNotification(note.id as string)}
@@ -105,76 +101,15 @@ const NotificationsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+                <NoAvailableEmptyState message="No notifications available." />
+            )}
           </div>
         </div>
       )}
 
       {activeTabKey === "settings" && (
-        <div>
-          <SearchBar
-            onSearch={handleSearch}
-            className="w-[366px] max-md:w-full"
-          />
-
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-5">
-              <h1 className="text-md font-semibold text-neutral-800">
-                Message Reminders
-              </h1>
-              <CustomUnderlinedButton
-                text="Add New"
-                textColor="text-purple-500"
-                onClick={() => {}}
-                showIcon={false}
-              />
-            </div>
-            <div className="flex flex-col gap-4 mb-12 max-w-xl">
-              {feesStructure.length > 0 ? (
-                feesStructure?.map((feeStructure, index) => {
-                  return (
-                    <div
-                      key={index}
-                      className="bg-[#EAEAEAB3] px-6 pt-2 pb-6 rounded-sm"
-                    >
-                      <div className="flex justify-end gap-3">
-                        <CustomUnderlinedButton
-                          text="Edit"
-                          textColor="text-gray-500"
-                          onClick={() => {}}
-                          showIcon={false}
-                        />
-                        <CustomUnderlinedButton
-                          text="Delete"
-                          textColor="text-gray-500"
-                          onClick={() => {}}
-                          showIcon={false}
-                        />
-                      </div>
-                      <div className="grid gap-1 md:gap-3 grid-cols-1">
-                        <InputField
-                          label="Message Title"
-                          isTransulent={false}
-                          value={""}
-                          readOnly={true}
-                        />
-                        <Textarea
-                          label="Message"
-                          placeholder=""
-                          autosize
-                          minRows={5}
-                          maxRows={8}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <NoAvailableEmptyState message="No Message Reminders available, click ‘Add New’ to create one." />
-              )}
-            </div>
-          </div>
-        </div>
+        <NotificationSettings />
       )}
     </div>
   );

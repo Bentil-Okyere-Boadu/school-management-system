@@ -11,6 +11,7 @@ import {
 import { School } from 'src/school/school.entity';
 import { Student } from 'src/student/student.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
 
 export enum ReminderStatus {
   ACTIVE = 'active',
@@ -81,11 +82,13 @@ export class MessageReminder {
   })
   targetStudents: Student[];
 
-  @Column('simple-array', { nullable: true })
-  targetClassLevels: string[]; // Class level IDs for bulk targeting
-
-  @Column('simple-array', { nullable: true })
-  targetGrades: string[]; // Grade IDs for bulk targeting
+  @ManyToMany(() => ClassLevel, { eager: true })
+  @JoinTable({
+    name: 'message_reminder_class_levels',
+    joinColumn: { name: 'reminderId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'classLevelId', referencedColumnName: 'id' },
+  })
+  targetClassLevels: ClassLevel[];
 
   @CreateDateColumn()
   createdAt: Date;

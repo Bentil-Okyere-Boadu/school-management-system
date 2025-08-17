@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -849,12 +849,13 @@ export const useGetStudentResults = (
   return { resultsData, isLoading, refetch };
 };
 
-export const useGetNotifications = (schoolId: string) => {
+export const useGetNotifications = (schoolId: string | null | undefined) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['notifications'],
+        queryKey: ['notifications', schoolId],
         queryFn: () => {
             return customAPI.get(`/notifications/school/${schoolId}`);
         },
+        enabled: !!schoolId,
         refetchOnWindowFocus: true
     })
 
@@ -880,3 +881,67 @@ export const useCreateNotification = () => {
     })
 }
 
+export const useGetReminders = (
+  search: string = "",
+  status: string = "",
+  type: string = "",
+  dateFrom?: string,
+  dateTo?: string,
+  page?: number | string,
+//   limit?: number
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["allReminders", { search, status, type, dateFrom, dateTo, page }],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+
+      if (search) queryBuilder.push(`search=${search}`);
+      if (status) queryBuilder.push(`status=${status}`);
+      if (type) queryBuilder.push(`type=${type}`);
+      if (dateFrom) queryBuilder.push(`dateFrom=${dateFrom}`);
+      if (dateTo) queryBuilder.push(`to=${dateTo}`);
+      if (page) queryBuilder.push(`page=${page}`);
+    //   if (limit) queryBuilder.push(`limit=${limit}`);
+
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+
+      return customAPI.get(`/message-reminders?${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  console.log(data, "data here")
+
+  const allReminders = data?.data || [];
+//   const paginationValues = data?.data?.meta;
+
+  return { allReminders, isLoading, refetch };
+};
+
+/**
+ * REMINDERS CRUD
+ */
+
+export const useCreateReminder = () => {
+  return useMutation({
+    mutationFn: (reminder: Partial<Reminder>) => {
+      return customAPI.post('/message-reminders', reminder);
+    }
+  });
+};
+
+export const useDeleteReminder = () => {
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/message-reminders/${id}`);
+    }
+  });
+};
+
+export const useEditReminder = (id: string) => {
+  return useMutation({
+    mutationFn: (reminder: Partial<Reminder>) => {
+      return customAPI.patch(`/message-reminders/${id}`, reminder);
+    }
+  });
+};

@@ -161,7 +161,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
         </div>
 
         <div className="flex items-center flex-wrap gap-3">
-          <IconBell className="cursor-pointer size-6 mr-1" onClick={onNotificationClick} />
+          {signedInRole === Roles.SCHOOL_ADMIN && (<IconBell className="cursor-pointer size-6 mr-1" onClick={onNotificationClick} />)}
 
           <Menu shadow="md" width={200}>
             <Menu.Target>
