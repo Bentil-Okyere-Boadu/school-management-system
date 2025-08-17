@@ -18,7 +18,8 @@ import { School } from 'src/school/school.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
-import { NotificationService } from '../common/services/notification.service';
+import { EmailService } from '../common/services/email.service';
+import { SmsService } from '../common/services/sms.service';
 
 @Injectable()
 export class MessageReminderService {
@@ -35,7 +36,8 @@ export class MessageReminderService {
     private studentRepository: Repository<Student>,
     @InjectRepository(ClassLevel)
     private classLevelRepository: Repository<ClassLevel>,
-    private notificationService: NotificationService,
+    private emailService: EmailService,
+    private smsService: SmsService,
   ) {}
 
   async create(
@@ -118,9 +120,7 @@ export class MessageReminderService {
     return savedReminder;
   }
 
-  async findAll(
-    searchDto: SearchMessageReminderDto,
-  ): Promise<MessageReminder[]> {
+  async findAll(searchDto: SearchMessageReminderDto) {
     const queryBuilder = this.messageReminderRepository
       .createQueryBuilder('reminder')
       .leftJoinAndSelect('reminder.school', 'school')
@@ -161,10 +161,32 @@ export class MessageReminderService {
       );
     }
 
-    return queryBuilder.getMany();
+    const reminders = await queryBuilder.getMany();
+
+    // Enhance each reminder with class level objects
+    const enhancedReminders = await Promise.all(
+      reminders.map(async (reminder) => {
+        if (
+          reminder.targetClassLevels &&
+          reminder.targetClassLevels.length > 0
+        ) {
+          const classLevels = await this.classLevelRepository.find({
+            where: { id: In(reminder.targetClassLevels) },
+          });
+
+          return {
+            ...reminder,
+            targetClassLevelObjects: classLevels,
+          };
+        }
+        return reminder;
+      }),
+    );
+
+    return enhancedReminders;
   }
 
-  async findOne(id: string): Promise<MessageReminder> {
+  async findOne(id: string) {
     const reminder = await this.messageReminderRepository.findOne({
       where: { id },
       relations: [
@@ -172,6 +194,7 @@ export class MessageReminderService {
         'createdBy',
         'targetStudents',
         'targetStudents.parents',
+        'targetStudents.classLevels',
       ],
     });
 
@@ -179,13 +202,25 @@ export class MessageReminderService {
       throw new NotFoundException('Message reminder not found');
     }
 
+    // If there are target class level IDs, fetch the full class level objects
+    if (reminder.targetClassLevels && reminder.targetClassLevels.length > 0) {
+      const classLevels = await this.classLevelRepository.find({
+        where: { id: In(reminder.targetClassLevels) },
+      });
+
+      // Create response object with class level objects
+      const response = {
+        ...reminder,
+        targetClassLevelObjects: classLevels,
+      };
+
+      return response;
+    }
+
     return reminder;
   }
 
-  async update(
-    id: string,
-    updateDto: UpdateMessageReminderDto,
-  ): Promise<MessageReminder> {
+  async update(id: string, updateDto: UpdateMessageReminderDto) {
     const reminder = await this.findOne(id);
 
     // Update the reminder
@@ -205,7 +240,8 @@ export class MessageReminderService {
       await this.sendReminderNotifications(updatedReminder);
     }
 
-    return updatedReminder;
+    // Return the updated reminder with class level objects
+    return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
@@ -213,7 +249,7 @@ export class MessageReminderService {
     await this.messageReminderRepository.remove(reminder);
   }
 
-  async toggleStatus(id: string): Promise<MessageReminder> {
+  async toggleStatus(id: string) {
     const reminder = await this.findOne(id);
 
     reminder.status =
@@ -221,7 +257,10 @@ export class MessageReminderService {
         ? ReminderStatus.INACTIVE
         : ReminderStatus.ACTIVE;
 
-    return this.messageReminderRepository.save(reminder);
+    await this.messageReminderRepository.save(reminder);
+
+    // Return the updated reminder with class level objects
+    return this.findOne(id);
   }
 
   async sendReminderNotifications(reminder: MessageReminder): Promise<void> {
@@ -234,41 +273,105 @@ export class MessageReminderService {
       }
 
       let sentCount = 0;
+      let errorCount = 0;
 
       for (const student of reminder.targetStudents) {
         try {
           // Send to parents if enabled
           if (reminder.sendToParents && student.parents?.length > 0) {
             for (const parent of student.parents) {
-              if (parent.email) {
-                await this.notificationService.sendCustomNotification(
-                  parent.email,
-                  parent.phone,
-                  `${parent.firstName} ${parent.lastName}`,
-                  reminder.title,
-                  reminder.message,
+              try {
+                // Send email using EmailService directly
+                if (parent.email) {
+                  await this.emailService.sendNotificationEmail(
+                    parent.email,
+                    reminder.title,
+                    {
+                      name: `${parent.firstName} ${parent.lastName}`,
+                      message: reminder.message,
+                    },
+                  );
+                  sentCount++;
+                }
+
+                // Send SMS using SmsService directly for phone contacts
+                if (parent.phone) {
+                  await this.smsService.sendNotificationSms(
+                    parent.phone,
+                    `${parent.firstName} ${parent.lastName}`,
+                    reminder.message,
+                  );
+                  sentCount++;
+                }
+              } catch (parentError) {
+                errorCount++;
+                this.logger.error(
+                  `Failed to send notification to parent ${parent.id}: ${
+                    (parentError as Error).message
+                  }`,
+                  parentError,
                 );
-                sentCount++;
+                // Continue with other parents, don't block the process
               }
             }
           }
 
           // Send to students if enabled
-          if (reminder.sendToStudents && student?.profile?.phoneContact) {
-            await this.notificationService.sendCustomNotification(
-              student.email,
-              student?.profile?.phoneContact,
-              `${student.firstName} ${student.lastName}`,
-              reminder.title,
-              reminder.message,
-            );
-            sentCount++;
+          if (reminder.sendToStudents) {
+            // Send email using EmailService directly
+            if (student.email) {
+              try {
+                await this.emailService.sendNotificationEmail(
+                  student.email,
+                  reminder.title,
+                  {
+                    name: `${student.firstName} ${student.lastName}`,
+                    message: reminder.message,
+                  },
+                );
+                sentCount++;
+              } catch (emailError) {
+                errorCount++;
+                this.logger.error(
+                  `Failed to send email to student ${student.id}: ${
+                    (emailError as Error).message
+                  }`,
+                  emailError,
+                );
+                // Continue with SMS, don't block the process
+              }
+            }
+
+            // Send SMS using SmsService directly for phone contacts
+            if (student?.profile?.phoneContact) {
+              try {
+                await this.smsService.sendNotificationSms(
+                  student.profile.phoneContact,
+                  `${student.firstName} ${student.lastName}`,
+                  reminder.message,
+                );
+                sentCount++;
+              } catch (smsError) {
+                errorCount++;
+                this.logger.error(
+                  `Failed to send SMS to student ${student.id}: ${
+                    (smsError as Error).message
+                  }`,
+                  smsError,
+                );
+                // Continue with next student, don't block the process
+              }
+            }
           }
-        } catch (error) {
+        } catch (studentError) {
+          errorCount++;
           this.logger.error(
-            `Failed to send reminder notification to student ${student.id}`,
-            error,
+            `Failed to process student ${student.id}: ${
+              (studentError as Error).message
+            }`,
+            studentError,
           );
+          // Continue with next student, don't block the process
         }
       }
 
@@ -278,7 +381,7 @@ export class MessageReminderService {
       await this.messageReminderRepository.save(reminder);
 
       this.logger.log(
-        `Successfully sent reminder ${reminder.id} to ${sentCount} recipients`,
+        `Successfully sent reminder ${reminder.id} to ${sentCount} recipients (${errorCount} errors)`,
       );
     } catch (error) {
       this.logger.error(
