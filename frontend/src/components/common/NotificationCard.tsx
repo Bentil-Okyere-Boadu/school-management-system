@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { User } from '@/@types';
 import { useGetNotifications, useMarkNotificationAsRead } from '@/hooks/school-admin';
 import NotificationIcon from './NotificationIcon';
+import NoAvailableEmptyState from './NoAvailableEmptyState';
 
 interface NotificationCardProps {
   onClose: () => void;
@@ -41,7 +42,7 @@ export default function NotificationCard({ onClose, user }: NotificationCardProp
         Notifications
       </div>
       <ul className="max-h-96 overflow-y-auto">
-        {notifications.map((n) => (
+        {notifications.length > 0 ? notifications.map((n) => (
           <li
             onClick={() => onHandleNotificationItemClick(n?.id as string)}
             key={n.id}
@@ -56,7 +57,9 @@ export default function NotificationCard({ onClose, user }: NotificationCardProp
             {!n.read && <span className="w-2 h-2 bg-purple-500 rounded-full" />}
             <IconChevronRight color="#5A6474" className="w-4 h-4" />
           </li>
-        ))}
+        )) : (
+          <NoAvailableEmptyState message="No notifications available." />
+        )}
       </ul>
     </div>
   );
