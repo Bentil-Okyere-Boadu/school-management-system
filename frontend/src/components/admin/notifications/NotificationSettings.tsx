@@ -341,23 +341,23 @@ export const NotificationSettings: React.FC = () => {
               </label>
           </div>
 
-          <MultiSelect
-              label="Classes"
+          {targetStudentIds?.length === 0 && <MultiSelect
+              label="Send to students/parents in these classes"
               placeholder="Select classes"
               data={allClassLvlOptions}
               onChange={handleClassesSelect}
               searchable
               value={targetClassLevelIds}
-          />
+          />}
           
-          <MultiSelect
+          {targetClassLevelIds.length === 0 && <MultiSelect
             label="Students"
             placeholder="Select Students"
             data={allStudentOptions}
             onChange={handleStudentsSelect}
             searchable
             value={targetStudentIds}
-          />
+          />}
 
           <Select
             label="Type"
