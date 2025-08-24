@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MultiSelect, Select, Textarea } from "@mantine/core";
 import CustomUnderlinedButton from "@/components/common/CustomUnderlinedButton";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
@@ -30,6 +30,7 @@ export const NotificationSettings: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [reminderId, setReminderId] = useState("");
   const isShow = false;
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -41,13 +42,10 @@ export const NotificationSettings: React.FC = () => {
   const [sendToParents, setSendToParents] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
-  const [recurringDate, setRecurringDate] = useState("");
-  const [recurringTime, setRecurringTime] = useState("");
 
   const [reminderTypeOptions] = useState([
     { value: "immediate", label: "Immediate" },
     { value: "scheduled", label: "Scheduled" },
-    { value: "recurring", label: "Recurring" },
   ]);
 
   const { classLevels } = useGetClassLevels();
@@ -87,11 +85,9 @@ export const NotificationSettings: React.FC = () => {
   const handleReminderTypeChange = (value: string | null) => {
     if (value) {
       setType(value);
-      if(value === "immediate" || value === "recurring"){
-        setStatus("scheduled");
-      } else {
-        setStatus("active");
-      }
+      setTimeout(() => {
+          scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     }
   };
 
@@ -113,6 +109,8 @@ export const NotificationSettings: React.FC = () => {
     setReminderId("");
     setTargetClassLevelIds([]);
     setTargetStudentIds([]);
+    setScheduledDate("")
+    setScheduledTime("")
   };
 
   const onAddNewReminder = () => {
@@ -125,6 +123,16 @@ export const NotificationSettings: React.FC = () => {
     if (!date || !time) return null;
     return new Date(`${date}T${time}:00.000Z`).toISOString();
   };
+
+  const splitDateTime = (dateTime: string | null) => {
+  if (!dateTime || typeof dateTime !== "string") return { date: "", time: "" };
+    const d = new Date(dateTime);
+    const date = d.toISOString()?.slice(0, 10);
+    const time = d.toISOString()?.slice(11, 16);
+
+    return { date, time };
+  };
+
 
   const onEditReminderClick = (reminder: Reminder) => {
     setEditMode(true);
@@ -141,6 +149,13 @@ export const NotificationSettings: React.FC = () => {
     setTargetStudentIds(reminder.targetStudents?.map(
         (student: { id: string }) => student.id
     ) || []);
+
+    if (reminder.type === "scheduled" && reminder.scheduledAt) {
+      const { date, time } = splitDateTime(reminder.scheduledAt);
+      setScheduledDate(date);
+      setScheduledTime(time);
+    }
+
     setIsReminderDialogOpen(true);
   };
 
@@ -154,9 +169,10 @@ export const NotificationSettings: React.FC = () => {
     let scheduledAt = null;
     if(type === "scheduled"){
       scheduledAt = buildDateTime(scheduledDate, scheduledTime);
-    } else if (type === "recurring") {
-      scheduledAt = buildDateTime(recurringDate, recurringTime);
-    }
+      if(!scheduledDate || !scheduledTime){ 
+        return toast.error('Please fill schedule date and time.');
+      }
+    } 
     
     createMutation(
       { title, message, type, status, sendToStudents, sendToParents, targetClassLevelIds, targetStudentIds, scheduledAt },
@@ -175,8 +191,16 @@ export const NotificationSettings: React.FC = () => {
 
   // edit
   const editReminder = () => {
+    let scheduledAt = null;
+    if(type === "scheduled"){
+      scheduledAt = buildDateTime(scheduledDate, scheduledTime);
+      if(!scheduledDate || !scheduledTime){ 
+        return toast.error('Please fill schedule date and time.');
+      }
+    }
+
     editMutation(
-      { title, message, type, status, sendToStudents, sendToParents, targetClassLevelIds, targetStudentIds },
+      { title, message, type, status, sendToStudents, sendToParents, targetClassLevelIds, targetStudentIds, scheduledAt },
       {
         onSuccess: () => {
           toast.success("Reminder updated successfully.");
@@ -360,23 +384,6 @@ export const NotificationSettings: React.FC = () => {
             </>
           )}
 
-          {type === "recurring" && (
-            <>
-              <InputField
-                type="date"
-                label="Recurring Start Date"
-                value={recurringDate}
-                onChange={(e) => setRecurringDate(e.target.value)}
-              />
-              <InputField
-                type="time"
-                label="Recurring Start Time"
-                value={recurringTime}
-                onChange={(e) => setRecurringTime(e.target.value)}
-              />
-            </>
-          )}
-
           {isShow &&
             <InputField
                 className="!py-0"
@@ -386,6 +393,7 @@ export const NotificationSettings: React.FC = () => {
                 isTransulent={false}
             />
           }
+          <div ref={scrollRef}></div>
         </div>
       </Dialog>
 
