@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { MultiSelect, Textarea } from "@mantine/core";
+import { MultiSelect, Select, Textarea } from "@mantine/core";
 import CustomUnderlinedButton from "@/components/common/CustomUnderlinedButton";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 import { SearchBar } from "@/components/common/SearchBar";
@@ -39,7 +39,16 @@ export const NotificationSettings: React.FC = () => {
   const [targetStudentIds, setTargetStudentIds] = useState<string[]>([]);
   const [sendToStudents, setSendToStudents] = useState(false);
   const [sendToParents, setSendToParents] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [recurringDate, setRecurringDate] = useState("");
+  const [recurringTime, setRecurringTime] = useState("");
 
+  const [reminderTypeOptions] = useState([
+    { value: "immediate", label: "Immediate" },
+    { value: "scheduled", label: "Scheduled" },
+    { value: "recurring", label: "Recurring" },
+  ]);
 
   const { classLevels } = useGetClassLevels();
   const allClassLvlOptions = classLevels?.map((classLvl) => {
@@ -68,13 +77,23 @@ export const NotificationSettings: React.FC = () => {
 
   const { allReminders, refetch } = useGetReminders(
     searchQuery,
-    status,
-    type,
+    "", // status,
+    "", // type
     "", // dateFrom
     "", // dateTo
     "" // page
   );
 
+  const handleReminderTypeChange = (value: string | null) => {
+    if (value) {
+      setType(value);
+      if(value === "immediate" || value === "recurring"){
+        setStatus("scheduled");
+      } else {
+        setStatus("active");
+      }
+    }
+  };
 
   const { mutate: createMutation, isPending: pendingCreate } =
     useCreateReminder();
@@ -102,6 +121,11 @@ export const NotificationSettings: React.FC = () => {
     setIsReminderDialogOpen(true);
   };
 
+  const buildDateTime = (date: string, time: string) => {
+    if (!date || !time) return null;
+    return new Date(`${date}T${time}:00.000Z`).toISOString();
+  };
+
   const onEditReminderClick = (reminder: Reminder) => {
     setEditMode(true);
     setReminderId(reminder.id);
@@ -127,8 +151,15 @@ export const NotificationSettings: React.FC = () => {
 
   // create
   const createReminder = () => {
+    let scheduledAt = null;
+    if(type === "scheduled"){
+      scheduledAt = buildDateTime(scheduledDate, scheduledTime);
+    } else if (type === "recurring") {
+      scheduledAt = buildDateTime(recurringDate, recurringTime);
+    }
+    
     createMutation(
-      { title, message, type, status, sendToStudents, sendToParents, targetClassLevelIds, targetStudentIds },
+      { title, message, type, status, sendToStudents, sendToParents, targetClassLevelIds, targetStudentIds, scheduledAt },
       {
         onSuccess: () => {
           toast.success("Reminder created successfully.");
@@ -153,7 +184,7 @@ export const NotificationSettings: React.FC = () => {
           refetch();
         },
         onError: (error: unknown) => {
-            toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
         }
       }
     );
@@ -304,14 +335,47 @@ export const NotificationSettings: React.FC = () => {
             value={targetStudentIds}
           />
 
-          <InputField
-            className="!py-0"
+          <Select
             label="Type"
+            placeholder="Please Select"
+            data={reminderTypeOptions}
             value={type}
-            disabled={true}
-            onChange={(e) => setType(e.target.value)}
-            isTransulent={true}
+            onChange={handleReminderTypeChange}
           />
+
+          {type === "scheduled" && (
+            <>
+              <InputField
+                type="date"
+                label="Scheduled Date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+              />
+              <InputField
+                type="time"
+                label="Scheduled Time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+              />
+            </>
+          )}
+
+          {type === "recurring" && (
+            <>
+              <InputField
+                type="date"
+                label="Recurring Start Date"
+                value={recurringDate}
+                onChange={(e) => setRecurringDate(e.target.value)}
+              />
+              <InputField
+                type="time"
+                label="Recurring Start Time"
+                value={recurringTime}
+                onChange={(e) => setRecurringTime(e.target.value)}
+              />
+            </>
+          )}
 
           {isShow &&
             <InputField

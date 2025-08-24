@@ -9,17 +9,28 @@ import { useQueryClient } from "@tanstack/react-query";
 import NotificationIcon from "@/components/common/NotificationIcon";
 import { NotificationSettings } from "@/components/admin/notifications/NotificationSettings";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
+import { useSearchParams, useRouter } from "next/navigation";
 
 
 const NotificationsPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
+  const isShow = false;
+  const tabFromUrl = searchParams.get("tab");
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTabKey, setActiveTabKey] = useState('all-notifications');
+  const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'all-notifications');
 
   const defaultNavItems: TabListItem[] = [
     { tabLabel: "All Notifications", tabKey: "all-notifications" },
     { tabLabel: "Settings", tabKey: "settings" },
   ];
+
+  const setTabInUrl = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.push(`?${params.toString()}`);
+  };
 
   const {me} = useGetMe();
   const schoolId = me?.school.id;
@@ -46,6 +57,7 @@ const NotificationsPage: React.FC = () => {
 
   const handleItemClick = (item: TabListItem) => {
     setActiveTabKey(item.tabKey);
+    setTabInUrl(item.tabKey);
   };
 
   return (
@@ -62,23 +74,25 @@ const NotificationsPage: React.FC = () => {
             onSearch={handleSearch}
             className="w-[366px] max-md:w-full"
           />
-          <div className="flex gap-3 mt-6">
-            <CustomSelectTag
-              value={"Week"}
-              options={[{ label: "Week", value: "week" }]}
-              onOptionItemClick={() => {}}
-            />
-            <CustomSelectTag
-              value={"Month"}
-              options={[{ label: "Month", value: "month" }]}
-              onOptionItemClick={() => {}}
-            />
-            <CustomSelectTag
-              value={"Year"}
-              options={[{ label: "Year", value: "year" }]}
-              onOptionItemClick={() => {}}
-            />
-          </div>
+          {isShow &&
+            <div className="flex gap-3 mt-6">
+              <CustomSelectTag
+                value={"Week"}
+                options={[{ label: "Week", value: "week" }]}
+                onOptionItemClick={() => {}}
+              />
+              <CustomSelectTag
+                value={"Month"}
+                options={[{ label: "Month", value: "month" }]}
+                onOptionItemClick={() => {}}
+              />
+              <CustomSelectTag
+                value={"Year"}
+                options={[{ label: "Year", value: "year" }]}
+                onOptionItemClick={() => {}}
+              />
+            </div>  
+         }
 
           <div className="max-w-2xl 2xl:max-w-3xl p-4 space-y-6 mt-4 max-h-2/4 overflow-y-auto">
             { notifications.length > 0 ? notifications.map((note) => (
