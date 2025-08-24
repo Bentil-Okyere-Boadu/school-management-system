@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Between } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import {
   MessageReminder,
   ReminderStatus,
@@ -98,17 +98,18 @@ export class MessageReminderService {
     const schedDate = createDto.scheduledAt
       ? new Date(createDto.scheduledAt)
       : undefined;
-    const isFuture = !!schedDate && schedDate.getTime() > now.getTime();
 
     if (!createDto.type) {
-      createDto.type = isFuture
-        ? ReminderType.SCHEDULED
-        : ReminderType.IMMEDIATE;
+      createDto.type =
+        schedDate && schedDate.getTime() > now.getTime()
+          ? ReminderType.SCHEDULED
+          : ReminderType.IMMEDIATE;
     }
-    if (!createDto.status) {
-      createDto.status = isFuture
-        ? ReminderStatus.SCHEDULED
-        : ReminderStatus.ACTIVE;
+
+    if (createDto.type === ReminderType.IMMEDIATE) {
+      createDto.status = ReminderStatus.ACTIVE;
+    } else if (createDto.type === ReminderType.SCHEDULED) {
+      createDto.status = ReminderStatus.SCHEDULED;
     }
 
     const reminder = this.messageReminderRepository.create({
