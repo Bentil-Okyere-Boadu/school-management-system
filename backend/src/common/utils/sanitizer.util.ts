@@ -6,14 +6,13 @@ const SENSITIVE_FIELDS = [
   'resetPasswordExpires',
 ];
 
-/**
- * Recursively sanitize data by removing sensitive fields from objects and arrays.
- * @param data Any data structure (object, array, primitive)
- * @returns Sanitized data
- */
 export function sanitize<T>(data: T): any {
   if (Array.isArray(data)) {
     return data.map(sanitize);
+  }
+
+  if (data instanceof Date) {
+    return data;
   }
 
   if (data !== null && typeof data === 'object') {
@@ -24,7 +23,7 @@ export function sanitize<T>(data: T): any {
         continue;
       }
 
-      sanitized[key] = typeof value === 'object' ? sanitize(value) : value;
+      sanitized[key] = sanitize(value);
     }
 
     return sanitized;
@@ -33,7 +32,4 @@ export function sanitize<T>(data: T): any {
   return data;
 }
 
-/**
- * Sanitize an array of objects by removing sensitive fields recursively
- */
 export const sanitizeMany = <T>(arr: T[]): T[] => arr.map(sanitize);
