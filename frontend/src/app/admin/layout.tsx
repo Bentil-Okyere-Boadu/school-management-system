@@ -76,6 +76,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/subjects") {
       setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
+    } else if (pathname === "/admin/notifications") {
+      setActiveMenuItem("Notifications");
+      setIsOverviewPage(true);
     }
     
     // Detail Pages
