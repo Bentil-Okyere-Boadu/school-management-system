@@ -12,6 +12,7 @@ import { School } from 'src/school/school.entity';
 import { Student } from 'src/student/student.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { CommonModule } from '../common/common.module';
+import { ReminderScheduler } from './reminder.scheduler';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CommonModule } from '../common/common.module';
     CommonNotificationService,
     MessageReminderService,
     LocalNotificationService,
+    ReminderScheduler,
   ],
   controllers: [NotificationController, MessageReminderController],
   exports: [LocalNotificationService, MessageReminderService],
