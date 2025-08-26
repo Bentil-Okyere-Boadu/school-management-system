@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -12,7 +12,7 @@ export const useGetMySchool = (enabled: boolean = true) => {
         refetchOnWindowFocus: true
     })
 
-    const school = data?.data
+    const school = data?.data as School
 
     return { school, isLoading, refetch }
 }
