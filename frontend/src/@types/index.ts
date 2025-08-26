@@ -140,6 +140,7 @@ export interface School {
   createdAt: string; 
   updatedAt: string; 
   logoUrl: string;
+  calendlyUrl: string;
 }
 
 export enum AdmissionStatus {
