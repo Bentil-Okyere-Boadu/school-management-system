@@ -209,6 +209,118 @@ export class SubjectService {
     await this.subjectRepository.delete(subject.id);
   }
 
+  async approveClassResults(
+    classLevelId: string,
+    teacher: Teacher,
+    forceApprove = false,
+  ) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: teacher.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students'],
+    });
+    if (!classLevel) throw new NotFoundException('Class level not found');
+
+    const subjects = await this.subjectRepository.find({
+      where: {
+        classLevels: { id: classLevelId },
+        school: { id: teacher.school.id },
+      },
+      relations: ['subjectCatalog', 'teacher', 'classLevels'],
+    });
+
+    const grades = await this.studentGradeRepository.find({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+      relations: [
+        'student',
+        'subject',
+        'subject.subjectCatalog',
+        'subject.teacher',
+      ],
+    });
+
+    const gradeMap = new Map<string, StudentGrade>();
+    for (const grade of grades) {
+      gradeMap.set(`${grade.student.id}_${grade.subject.id}`, grade);
+    }
+
+    const missingGrades: Array<{
+      student: { id: string; firstName: string; lastName: string };
+      missingSubjects: Array<{
+        subjectId: string;
+        subjectName: string;
+        teacher: { id: string; firstName: string; lastName: string };
+      }>;
+    }> = [];
+
+    for (const student of classLevel.students) {
+      const missingSubjects: {
+        subjectId: string;
+        subjectName: string;
+        teacher: {
+          id: string;
+          firstName: string;
+          lastName: string;
+        };
+      }[] = [];
+      for (const subject of subjects) {
+        if (!gradeMap.has(`${student.id}_${subject.id}`)) {
+          missingSubjects.push({
+            subjectId: subject.id,
+            subjectName: subject.subjectCatalog.name,
+            teacher: {
+              id: subject.teacher.id,
+              firstName: subject.teacher.firstName,
+              lastName: subject.teacher.lastName,
+            },
+          });
+        }
+      }
+      if (missingSubjects.length) {
+        missingGrades.push({
+          student: {
+            id: student.id,
+            firstName: student.firstName,
+            lastName: student.lastName,
+          },
+          missingSubjects,
+        });
+      }
+    }
+
+    if (missingGrades.length > 0 && !forceApprove) {
+      return {
+        message: 'Some students have missing grades. Approval not completed.',
+        approved: false,
+        missingGrades,
+      };
+    }
+
+    for (const grade of grades) {
+      grade.isApproved = true;
+      await this.studentGradeRepository.save(grade);
+    }
+
+    return {
+      message:
+        'All entered results approved for this class in the latest term.',
+      approved: true,
+      approvedCount: grades.length,
+      term: latestTerm.termName,
+      missingGrades,
+    };
+  }
+
   async getClassesForTeacher(teacherId: string, query?: QueryString) {
     const subjects = await this.subjectRepository.find({
       where: { teacher: { id: teacherId } },
@@ -347,6 +459,7 @@ export class SubjectService {
           firstName: student.firstName,
           lastName: student.lastName,
           studentId: student.studentId,
+          isApproved: existingGrade ? existingGrade.isApproved : null,
           scores: {
             classScore: existingGrade?.classScore || 0, // 30%
             examScore: existingGrade?.examScore || 0, // 70%
@@ -556,6 +669,7 @@ export class SubjectService {
         academicYear: calendar.name,
         term: academicTerm.termName,
         class: studentGrades[0]?.classLevel.name,
+        isApproved: studentGrades[0]?.isApproved || false,
       },
       subjects: resultWithPercentile,
       teacherRemarks: termRemark?.remarks || '',

@@ -46,6 +46,9 @@ export class StudentGrade {
 
   @Column('float')
   totalScore: number;
+  
+  @Column({ type: 'boolean', default: false })
+  isApproved: boolean;
 
   @Column()
   grade: string;

@@ -58,7 +58,30 @@ export class SubjectController {
     await this.subjectService.remove(id, admin);
     return { message: 'Subject deleted successfully' };
   }
-
+  @UseGuards(
+    TeacherJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    IsClassTeacherGuard,
+  )
+  @UseGuards(
+    TeacherJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    IsClassTeacherGuard,
+  )
+  @Post('approve-class-results')
+  async approveClassResults(
+    @Body('classLevelId') classLevelId: string,
+    @CurrentUser() teacher: Teacher,
+    @Body('forceApprove') forceApprove?: boolean,
+  ) {
+    return this.subjectService.approveClassResults(
+      classLevelId,
+      teacher,
+      forceApprove,
+    );
+  }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
   async getMyClasses(
