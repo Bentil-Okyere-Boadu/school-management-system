@@ -891,11 +891,11 @@ export const useGetReminders = (
 //   limit?: number
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["allReminders", { search, status, type, dateFrom, dateTo, page }],
+    queryKey: ["allReminders", { search }],
     queryFn: () => {
       const queryBuilder: string[] = [];
 
-      if (search) queryBuilder.push(`search=${search}`);
+      if (search) queryBuilder.push(`search=${search?.toLowerCase()}`);
       if (status) queryBuilder.push(`status=${status}`);
       if (type) queryBuilder.push(`type=${type}`);
       if (dateFrom) queryBuilder.push(`dateFrom=${dateFrom}`);

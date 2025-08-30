@@ -545,4 +545,6 @@ export interface Reminder {
   targetStudents: Student[]
   targetClassLevelIds: string[]
   targetStudentIds: string[]
+  scheduledAt?: string | null;
+  recurringAt?: string | null;
 }

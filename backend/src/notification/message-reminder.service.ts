@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Between } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import {
   MessageReminder,
   ReminderStatus,
@@ -45,21 +45,13 @@ export class MessageReminderService {
     adminId: string,
     schoolId: string,
   ) {
-    const school = await this.schoolRepository.findOneBy({
-      id: schoolId,
-    });
-    if (!school) {
-      throw new NotFoundException('School not found');
-    }
+    const school = await this.schoolRepository.findOneBy({ id: schoolId });
+    if (!school) throw new NotFoundException('School not found');
 
     const admin = await this.schoolAdminRepository.findOneBy({ id: adminId });
-    if (!admin) {
-      throw new NotFoundException('Admin not found');
-    }
+    if (!admin) throw new NotFoundException('Admin not found');
 
-    // Determine target students based on the provided criteria
     let targetStudents: Student[] = [];
-
     if (createDto.targetStudentIds && createDto.targetStudentIds?.length > 0) {
       targetStudents = await this.studentRepository.findBy({
         id: In(createDto.targetStudentIds),
@@ -69,14 +61,13 @@ export class MessageReminderService {
       createDto.targetClassLevelIds &&
       createDto.targetClassLevelIds?.length > 0
     ) {
-      const students = await this.studentRepository.find({
+      targetStudents = await this.studentRepository.find({
         where: {
           school: { id: schoolId },
           classLevels: { id: In(createDto.targetClassLevelIds) },
         },
         relations: ['classLevels', 'parents'],
       });
-      targetStudents = students;
     } else if (
       createDto.targetGradeIds &&
       createDto.targetGradeIds?.length > 0
@@ -84,47 +75,72 @@ export class MessageReminderService {
       const classLevels = await this.classLevelRepository.find({
         where: { id: In(createDto.targetGradeIds) },
       });
-      const students = await this.studentRepository.find({
+      targetStudents = await this.studentRepository.find({
         where: {
           school: { id: schoolId },
           classLevels: { id: In(classLevels.map((cl) => cl.id)) },
         },
         relations: ['classLevels', 'parents'],
       });
-      targetStudents = students;
     }
 
-    // Fetch class level entities for the relationship
     let targetClassLevels: ClassLevel[] = [];
     if (
       createDto.targetClassLevelIds &&
-      createDto.targetClassLevelIds.length > 0
+      createDto.targetClassLevelIds?.length > 0
     ) {
       targetClassLevels = await this.classLevelRepository.find({
         where: { id: In(createDto.targetClassLevelIds) },
       });
     }
 
-    const messageReminder = this.messageReminderRepository.create({
+    const now = new Date();
+    const schedDate = createDto.scheduledAt
+      ? new Date(createDto.scheduledAt)
+      : undefined;
+
+    if (!createDto.type) {
+      createDto.type =
+        schedDate && schedDate.getTime() > now.getTime()
+          ? ReminderType.SCHEDULED
+          : ReminderType.IMMEDIATE;
+    }
+
+    if (createDto.type === ReminderType.IMMEDIATE) {
+      createDto.status = ReminderStatus.ACTIVE;
+    } else if (createDto.type === ReminderType.SCHEDULED) {
+      createDto.status = ReminderStatus.SCHEDULED;
+    }
+
+    const reminder = this.messageReminderRepository.create({
       ...createDto,
       school,
       createdBy: admin,
       targetStudents,
       targetClassLevels,
       totalRecipients: targetStudents.length,
-      scheduledAt: createDto.scheduledAt
-        ? new Date(createDto.scheduledAt)
-        : null,
+      scheduledAt: schedDate || null,
     });
 
-    const savedReminder =
-      await this.messageReminderRepository.save(messageReminder);
+    const savedReminder = await this.messageReminderRepository.save(reminder);
 
     if (
       savedReminder.type === ReminderType.IMMEDIATE &&
       savedReminder.status === ReminderStatus.ACTIVE
     ) {
       await this.sendReminderNotifications(savedReminder);
+    }
+
+    if (
+      savedReminder.type === ReminderType.SCHEDULED &&
+      savedReminder.status === ReminderStatus.SCHEDULED &&
+      savedReminder.scheduledAt &&
+      savedReminder.scheduledAt.getTime() <= Date.now()
+    ) {
+      await this.sendReminderNotifications(savedReminder);
+      savedReminder.status = ReminderStatus.ACTIVE;
+      savedReminder.lastSentAt = new Date();
+      await this.messageReminderRepository.save(savedReminder);
     }
 
     return savedReminder;
@@ -365,187 +381,5 @@ export class MessageReminderService {
       );
       throw new BadRequestException('Failed to send reminder notifications');
     }
-  }
-
-  async sendScheduledReminders(): Promise<void> {
-    const now = new Date();
-    const scheduledReminders = await this.messageReminderRepository.find({
-      where: {
-        status: ReminderStatus.SCHEDULED,
-        type: ReminderType.SCHEDULED,
-        scheduledAt: Between(
-          new Date(now.getTime() - 5 * 60 * 1000), // 5 minutes ago
-          new Date(now.getTime() + 5 * 60 * 1000), // 5 minutes from now
-        ),
-      },
-      relations: ['targetStudents', 'targetStudents.parents'],
-    });
-
-    for (const reminder of scheduledReminders) {
-      try {
-        await this.sendReminderNotifications(reminder);
-        reminder.status = ReminderStatus.ACTIVE;
-        await this.messageReminderRepository.save(reminder);
-      } catch (error) {
-        this.logger.error(
-          `Failed to send scheduled reminder ${reminder.id}`,
-          error,
-        );
-      }
-    }
-  }
-
-  async sendReminderToSpecificStudents(
-    reminderId: string,
-    studentIds: string[],
-  ): Promise<void> {
-    const reminder = await this.findOne(reminderId);
-
-    if (!reminder.targetStudents || reminder.targetStudents.length === 0) {
-      throw new BadRequestException(
-        'No target students found for this reminder',
-      );
-    }
-
-    // Filter students to only the specified ones
-    const filteredStudents = reminder.targetStudents.filter((student) =>
-      studentIds.includes(student.id),
-    );
-
-    if (filteredStudents.length === 0) {
-      throw new BadRequestException('No matching students found');
-    }
-
-    // Create a temporary reminder object with filtered students
-    const tempReminder = { ...reminder, targetStudents: filteredStudents };
-
-    await this.sendReminderNotifications(tempReminder);
-
-    // Update the main reminder's sent count
-    reminder.sentCount += filteredStudents.length;
-    reminder.lastSentAt = new Date();
-    await this.messageReminderRepository.save(reminder);
-  }
-
-  async getReminderStats(schoolId: string): Promise<{
-    total: number;
-    active: number;
-    inactive: number;
-    scheduled: number;
-    totalSent: number;
-  }> {
-    const [total, active, inactive, scheduled] = await Promise.all([
-      this.messageReminderRepository.count({
-        where: { school: { id: schoolId } },
-      }),
-      this.messageReminderRepository.count({
-        where: { school: { id: schoolId }, status: ReminderStatus.ACTIVE },
-      }),
-      this.messageReminderRepository.count({
-        where: { school: { id: schoolId }, status: ReminderStatus.INACTIVE },
-      }),
-      this.messageReminderRepository.count({
-        where: { school: { id: schoolId }, status: ReminderStatus.SCHEDULED },
-      }),
-    ]);
-
-    const totalSent = (await this.messageReminderRepository
-      .createQueryBuilder('reminder')
-      .select('SUM(reminder.sentCount)', 'total')
-      .where('reminder.school.id = :schoolId', { schoolId })
-      .getRawOne()) as { total: string };
-
-    return {
-      total,
-      active,
-      inactive,
-      scheduled,
-      totalSent: parseInt(totalSent?.total ?? '0'),
-    };
-  }
-
-  async getAvailableStudentsForTargeting(
-    schoolId: string,
-    searchTerm?: string,
-    classLevelIds?: string[],
-  ): Promise<Student[]> {
-    const queryBuilder = this.studentRepository
-      .createQueryBuilder('student')
-      .leftJoinAndSelect('student.parents', 'parents')
-      .leftJoinAndSelect('student.classLevels', 'classLevels')
-      .where('student.school.id = :schoolId', { schoolId })
-      .andWhere('student.isArchived = :isArchived', { isArchived: false });
-
-    if (searchTerm) {
-      queryBuilder.andWhere(
-        '(student.firstName LIKE :search OR student.lastName LIKE :search OR student.email LIKE :search)',
-        { search: `%${searchTerm}%` },
-      );
-    }
-
-    if (classLevelIds && classLevelIds.length > 0) {
-      queryBuilder.andWhere('classLevels.id IN (:...classLevelIds)', {
-        classLevelIds,
-      });
-    }
-
-    return queryBuilder
-      .orderBy('student.firstName', 'ASC')
-      .addOrderBy('student.lastName', 'ASC')
-      .getMany();
-  }
-
-  async getClassLevelsForSchool(schoolId: string) {
-    return this.classLevelRepository.find({
-      where: { school: { id: schoolId } },
-      order: { name: 'ASC' },
-    });
-  }
-
-  /**
-   * Migrate existing data from string arrays to proper relationships
-   * This method should be called once to update existing data
-   */
-  async migrateExistingData() {
-    this.logger.log('Starting migration of existing message reminder data...');
-
-    const reminders = await this.messageReminderRepository.find({
-      where: {},
-      relations: ['targetClassLevels'],
-    });
-
-    let migratedCount = 0;
-
-    for (const reminder of reminders) {
-      try {
-        // Check if this reminder needs migration (has string array data)
-        if (
-          reminder.targetClassLevels &&
-          Array.isArray(reminder.targetClassLevels)
-        ) {
-          // If it's already an array of ClassLevel entities, skip
-          if (
-            reminder.targetClassLevels.length > 0 &&
-            typeof reminder.targetClassLevels[0] === 'object'
-          ) {
-            continue;
-          }
-
-          // This is old data that needs migration
-          this.logger.log(`Migrating reminder ${reminder.id}...`);
-
-          // The data should already be migrated by the entity change
-          // This method is mainly for logging and verification
-          migratedCount++;
-        }
-      } catch (error) {
-        this.logger.error(`Failed to migrate reminder ${reminder.id}:`, error);
-      }
-    }
-
-    this.logger.log(
-      `Migration completed. ${migratedCount} reminders processed.`,
-    );
-    return { migratedCount, totalReminders: reminders.length };
   }
 }

@@ -6,6 +6,7 @@ import { User } from '@/@types';
 import { useGetNotifications, useMarkNotificationAsRead } from '@/hooks/school-admin';
 import NotificationIcon from './NotificationIcon';
 import NoAvailableEmptyState from './NoAvailableEmptyState';
+import CustomUnderlinedButton from './CustomUnderlinedButton';
 
 interface NotificationCardProps {
   onClose: () => void;
@@ -28,9 +29,15 @@ export default function NotificationCard({ onClose, user }: NotificationCardProp
             }
         });
 
-        router.push(`/admin/notifications/${id}`);
+        // router.push(`/admin/notifications/${id}`);
+        router.push('/admin/notifications');
         
         onClose();
+    }
+
+    const onGoToNotificationsView = () => {
+      router.push('/admin/notifications');
+      onClose();
     }
 
   return (
@@ -39,7 +46,16 @@ export default function NotificationCard({ onClose, user }: NotificationCardProp
       className="absolute right-8 top-16 mt-2 w-90 bg-white rounded-lg shadow-xl border border-gray-200 z-50"
     >
       <div className="px-4 py-3 border-b border-gray-100 text-sm font-semibold text-gray-700">
-        Notifications
+        <div className="flex justify-between items-center">
+          <span>Notifications</span>
+          <CustomUnderlinedButton
+            text="View All"
+            textColor="text-purple-500 text-sm"
+            onClick={() => onGoToNotificationsView() }
+            showIcon={false}
+          />
+        </div>
+        
       </div>
       <ul className="max-h-96 overflow-y-auto">
         {notifications.length > 0 ? notifications.map((n) => (

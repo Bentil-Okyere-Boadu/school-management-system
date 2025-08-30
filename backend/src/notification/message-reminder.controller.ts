@@ -51,32 +51,6 @@ export class MessageReminderController {
     return this.messageReminderService.findAll(searchDto);
   }
 
-  @Get('stats/:schoolId')
-  getStats(@Param('schoolId') schoolId: string) {
-    return this.messageReminderService.getReminderStats(schoolId);
-  }
-
-  @Get('available-students/:schoolId')
-  getAvailableStudents(
-    @Param('schoolId') schoolId: string,
-    @Query('search') search?: string,
-    @Query('classLevelIds') classLevelIds?: string,
-  ) {
-    const classLevelIdsArray = classLevelIds
-      ? classLevelIds.split(',')
-      : undefined;
-    return this.messageReminderService.getAvailableStudentsForTargeting(
-      schoolId,
-      search,
-      classLevelIdsArray,
-    );
-  }
-
-  @Get('class-levels/:schoolId')
-  getClassLevels(@Param('schoolId') schoolId: string) {
-    return this.messageReminderService.getClassLevelsForSchool(schoolId);
-  }
-
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.messageReminderService.findOne(id);
@@ -104,16 +78,5 @@ export class MessageReminderController {
       .then((reminder) =>
         this.messageReminderService.sendReminderNotifications(reminder),
       );
-  }
-
-  @Post(':id/send-to-students')
-  sendToSpecificStudents(
-    @Param('id') id: string,
-    @Body() body: { studentIds: string[] },
-  ) {
-    return this.messageReminderService.sendReminderToSpecificStudents(
-      id,
-      body.studentIds,
-    );
   }
 }
