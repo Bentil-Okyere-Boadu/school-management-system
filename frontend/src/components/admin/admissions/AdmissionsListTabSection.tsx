@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { SearchBar } from "@/components/common/SearchBar";
 import FilterButton from "@/components/common/FilterButton";
 import { CustomSelectTag, OptionItem } from "@/components/common/CustomSelectTag";
@@ -10,9 +10,10 @@ import { Menu } from "@mantine/core";
 import { IconDots, IconEyeFilled, IconTrashFilled } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
-import { useArchiveAdmission, useEditAdmission, useInterviewInvitation } from "@/hooks/school-admin";
+import { useArchiveAdmission, useEditAdmission, useGetMySchool, useInterviewInvitation } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import InputField from "@/components/InputField";
+import { PopupModal, useCalendlyEventListener } from "react-calendly";
 
 interface AdmissionsListTabProps {
   handleSearch: (term: string) => void;
@@ -32,7 +33,11 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
   const [interviewDate, setInterviewDate] = useState("");
   const [interviewTime, setInterviewTime] = useState("");
   const [statusChangePendingId, setStatusChangePendingId] = useState<string | null>(null);
+  const [openCalendlyModal, setOpenCalendlyModal] = useState<boolean>(false);
+  const [admissionEmail, setAdmissionEmail] = useState<string>('');
 
+  const { school } = useGetMySchool();
+  const popupRootRef = useRef<HTMLDivElement>(null);
   const statusFilterOptions = [
     { value: "", label: "Status" },
     { value: AdmissionStatus.SUBMITTED, label: "Application Submitted" },
@@ -56,11 +61,19 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
     if(sSelectedStatus == "interview-invite") {
       setInterviewTime("");
       setInterviewDate("");
-      setIsInterviewInviteDialogOpen(true);
+      setOpenCalendlyModal(true);
     } else {
+      setAdmissionEmail('');
       updateAdmissionStatus(sSelectedStatus, admissionId);
     }
   }
+
+  useCalendlyEventListener({
+    onEventScheduled: () => {
+      updateAdmissionStatus("interview-invite", admissionId);
+      setOpenCalendlyModal(false);
+      }
+  })
 
   const { mutate: archiveAdmissionMutation, isPending: pendingAdmissionDelete } = useArchiveAdmission(admissionId);
   const { mutate: editMutation } = useEditAdmission(admissionId);
@@ -122,7 +135,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
   }
 
   return (
-    <div>
+    <div ref={popupRootRef}>
       <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full ml-1" />
 
       <div className="flex flex-col items-end mb-4 px-1">
@@ -174,7 +187,10 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
                         status={admission.enrollmentStatus} 
                         isStatusChangePending={ statusChangePendingId === admission.id }
                         admissionId={admission.id}
-                        onStatusClick={(option, admissionId) => onHandleAdmissionStatusChange(option, admissionId)} /> 
+                        onStatusClick={(option, admissionId) => {
+                          setAdmissionEmail(admission.email);
+                          onHandleAdmissionStatusChange(option, admissionId)
+                        }} /> 
                     </div>
                   </td>
                   <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
@@ -204,8 +220,8 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
                 <tr>
                   <td colSpan={8}>
                     <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                      <p className="text-lg font-medium">No users found</p>
-                      <p className="text-sm text-gray-400 mt-1">Once users are added, they will appear in this table.</p>
+                      <p className="text-lg font-medium">There are no admissions at this moment.</p>
+                      <p className="text-sm text-gray-400 mt-1">Once admissions are added, they will appear in this table.</p>
                     </div>
                   </td>
                 </tr>
@@ -261,6 +277,20 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
           />
         </div>
       </Dialog>
+      <PopupModal
+        url={ school?.calendlyUrl || '' }
+        rootElement={popupRootRef.current as HTMLElement} 
+        onModalClose={() => setOpenCalendlyModal(false)} 
+        open={openCalendlyModal}
+        prefill={{
+          email: school?.email || '',
+          firstName: school?.name || '',
+          name: school?.name || '',
+          guests: [
+            admissionEmail
+          ]}
+        }
+        />
     </div>
   );
 };

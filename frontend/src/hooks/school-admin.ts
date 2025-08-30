@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -12,7 +12,7 @@ export const useGetMySchool = (enabled: boolean = true) => {
         refetchOnWindowFocus: true
     })
 
-    const school = data?.data
+    const school = data?.data as School
 
     return { school, isLoading, refetch }
 }
@@ -91,7 +91,7 @@ export const useResendAdminInvitation = ({id, role}: {id: string, role: string})
 
  export const useCreateSchool = () => {
     return useMutation({ 
-        mutationFn: (schoolDetails: {name: string, address: string, phone: string, email: string}) => {
+        mutationFn: (schoolDetails: {name: string, address: string, phone: string, email: string, calendlyUrl: string}) => {
             return customAPI.post(`/schools/create`, schoolDetails);
         }
     })
@@ -944,4 +944,12 @@ export const useEditReminder = (id: string) => {
       return customAPI.patch(`/message-reminders/${id}`, reminder);
     }
   });
+};
+
+export const useUpdateCalendlyUrl = () => {
+    return useMutation({
+        mutationFn: (payload: { calendlyUrl: string, schoolId: string }) => {
+            return customAPI.put('/schools/update-calendly-url', payload);
+        }
+    });
 };

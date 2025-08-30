@@ -9,7 +9,7 @@ import { GradingSystemTable } from "./GradingSystemTable";
 import SchoolCard from "@/components/common/SchoolCard";
 import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
-import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUploadSchoolLogoFile } from "@/hooks/school-admin";
+import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUpdateCalendlyUrl, useUploadSchoolLogoFile } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { ClassLevel, ErrorResponse, FeeStructure, School } from "@/@types";
 import { EmailItem } from "./EmailItem";
@@ -18,6 +18,7 @@ import FileUploadArea from "@/components/common/FileUploadArea";
 // import { FeeStructureTable } from "./FeeStructureTable";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdmissionPoliciesSection } from "./AdmissionPoliesSection";
+import Link from "next/link";
 
 interface SchoolSettingsTabSectionProps {
   schoolData: School;
@@ -47,6 +48,8 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const [classLevels, setClassLevels] = useState<{value: string, label: string}[]>();
   const [emailList, setEmailList] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState("");
+  const [calendlyUrl, setCalendlyUrl] = useState(schoolData?.calendlyUrl || '');
+  const [calendlyDialogOpen, setCalendlyDialogOpen] = useState(false);
 
 
   const appliesTo = [
@@ -243,6 +246,21 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     setEmailList((prev) => prev.filter((email) => email !== emailToRemove));
   };
 
+  const { mutate: updateCalendlyUrlMutation } = useUpdateCalendlyUrl();
+
+  const handleUpdateCalendlyUrl = () => {
+    updateCalendlyUrlMutation({calendlyUrl: calendlyUrl, schoolId: schoolData.id}, {
+      onSuccess: () => {
+        toast.success('Updated successfully.');
+        setCalendlyDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['mySchool']});
+      },
+      onError: (error: unknown) => {    
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      } 
+    })
+   }
+
   return (
     <div className="pb-16">
       {/* <div className="flex justify-end">
@@ -363,6 +381,44 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           )
         }
       </div>
+      
+      <div className="mt-8 w-1/4">
+        <div className="flex justify-between items-center">
+          <label className="text-sm font-semibold text-neutral-800">Calendly URL</label>
+          <CustomUnderlinedButton
+            text="Edit URL"
+            textColor="text-gray-500"
+            onClick={() => {
+              setCalendlyDialogOpen(true);
+              setCalendlyUrl(schoolData?.calendlyUrl);
+            }}
+            showIcon={true}
+          />
+        </div>
+
+        <Link href={schoolData?.calendlyUrl || ''} target="_blank" className="text-sm text-purple-600 underline mb-2 inline-block">
+          {schoolData?.calendlyUrl || ''}
+        </Link>
+        
+      </div>
+
+      <Dialog
+        isOpen={calendlyDialogOpen}
+        dialogTitle="Enter Calendly URL"
+        saveButtonText="Save Changes"
+        onClose={() => {
+          setCalendlyDialogOpen(false);
+          setCalendlyUrl('');
+        }}
+        onSave={handleUpdateCalendlyUrl}
+        busy={isLoading} 
+        >
+          <InputField
+          className="!py-0"
+          value={calendlyUrl}
+          onChange={(e) => setCalendlyUrl(e.target.value)}
+        />
+      </Dialog>
 
       {/* Fee structure dialog */}
       <Dialog

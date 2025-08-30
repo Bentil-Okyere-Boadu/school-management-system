@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class CreateSchoolDto {
   @IsNotEmpty()
@@ -16,4 +16,8 @@ export class CreateSchoolDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsNotEmpty()
+  @IsUrl()
+  calendlyUrl: string;
 }

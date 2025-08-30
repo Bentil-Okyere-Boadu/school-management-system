@@ -10,6 +10,7 @@ import {
   UploadedFile,
   BadRequestException,
   NotFoundException,
+  Put,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SchoolService } from './school.service';
@@ -17,6 +18,7 @@ import { School } from './school.entity';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { CreateSchoolDto } from './dto/create-school.dto';
+import { UpdateCalendlyUrlDto } from './dto/update-calendly-url.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
@@ -180,6 +182,30 @@ export class SchoolController {
       message: 'School logo uploaded successfully',
       logoUrl,
       school,
+    };
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('update-calendly-url')
+  @Roles('school_admin')
+  async updateCalendlyUrl(
+    @CurrentUser() user: SchoolAdmin,
+    @Body() body: UpdateCalendlyUrlDto,
+  ) {
+
+    if (user.school.id !== body.schoolId) {
+      throw new BadRequestException('You can only update your own school URL');
+    }
+
+    const updatedSchool = await this.schoolService.updateCalendlyUrl(
+      body.schoolId,
+      body.calendlyUrl
+    );
+
+
+    return {
+      message: 'Calendly URL updated successfully',
+      school: updatedSchool,
     };
   }
 }
