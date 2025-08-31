@@ -254,7 +254,6 @@ export class ClassLevelService {
       const features = new APIFeatures(queryBuilder, query).search(['name']);
       return features.getQuery().getMany();
     }
-    console.log('class', queryBuilder.getMany());
     return queryBuilder.getMany();
   }
 

@@ -20,6 +20,7 @@ import { Student } from '../student/student.entity';
 import { GradingSystem } from '../grading-system/grading-system.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
 import { QueryString } from 'src/common/api-features/api-features';
+import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 
 @Injectable()
 export class SubjectService {
@@ -46,6 +47,8 @@ export class SubjectService {
     private gradingSystemRepository: Repository<GradingSystem>,
     @InjectRepository(StudentTermRemark)
     private remarkRepository: Repository<StudentTermRemark>,
+    @InjectRepository(ClassLevelResultApproval)
+    private classLevelResultApprovalRepository: Repository<ClassLevelResultApproval>,
   ) {}
 
   async create(createSubjectDto: CreateSubjectDto, admin: SchoolAdmin) {
@@ -306,50 +309,88 @@ export class SubjectService {
       };
     }
 
-    for (const grade of grades) {
-      grade.isApproved = true;
-      await this.studentGradeRepository.save(grade);
+    let approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+    });
+    if (!approval) {
+      approval = this.classLevelResultApprovalRepository.create({
+        classLevel,
+        academicTerm: latestTerm,
+        approved: true,
+        approvedAt: new Date(),
+      });
+    } else {
+      approval.approved = true;
+      approval.approvedAt = new Date();
     }
+    await this.classLevelResultApprovalRepository.save(approval);
 
     return {
-      message:
-        'All entered results approved for this class in the latest term.',
+      message: 'Class level results approved for this term.',
       approved: true,
-      approvedCount: grades.length,
+      approvedAt: approval.approvedAt,
       term: latestTerm.termName,
       missingGrades,
     };
   }
-
   async getClassesForTeacher(teacherId: string, query?: QueryString) {
     const subjects = await this.subjectRepository.find({
       where: { teacher: { id: teacherId } },
       relations: ['classLevels', 'subjectCatalog'],
     });
 
-    const classLevelMap = new Map();
+    if (subjects.length === 0) {
+      return [];
+    }
+
+    const classLevelIds = [
+      ...new Set(subjects.flatMap((s) => s.classLevels.map((l) => l.id))),
+    ];
+
+    const counts = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoin('classLevel.students', 'student')
+      .where('classLevel.id IN (:...ids)', { ids: classLevelIds })
+      .select('classLevel.id', 'classLevelId')
+      .addSelect('COUNT(DISTINCT student.id)', 'count')
+      .groupBy('classLevel.id')
+      .getRawMany<{ classLevelId: string; count: string }>();
+
+    const countMap = new Map(
+      counts.map((c) => [c.classLevelId, parseInt(c.count, 10)]),
+    );
+
+    const classLevelMap = new Map<
+      string,
+      {
+        classLevel: {
+          id: string;
+          name: string;
+          description?: string;
+          studentCount: number;
+        };
+        subjects: { id: string; name: string }[];
+      }
+    >();
+
     for (const subject of subjects) {
       for (const level of subject.classLevels) {
         if (!classLevelMap.has(level.id)) {
-          // Get student count for this class level
-          const studentCount = await this.classLevelRepository
-            .createQueryBuilder('classLevel')
-            .leftJoin('classLevel.students', 'student')
-            .where('classLevel.id = :classLevelId', { classLevelId: level.id })
-            .getCount();
-
           classLevelMap.set(level.id, {
             classLevel: {
               id: level.id,
               name: level.name,
               description: level.description,
-              studentCount,
+              studentCount: countMap.get(level.id) || 0,
             },
             subjects: [],
           });
         }
 
-        const classLevelData = classLevelMap.get(level.id);
+        const classLevelData = classLevelMap.get(level.id)!;
         classLevelData.subjects.push({
           id: subject.id,
           name: subject.subjectCatalog.name,
@@ -357,17 +398,11 @@ export class SubjectService {
       }
     }
 
-    let results = Array.from(classLevelMap.values()) as {
-      classLevel: {
-        id: string;
-        name: string;
-        description?: string;
-        studentCount: number;
-      };
-      subjects: { id: string; name: string }[];
-    }[];
+    // 5. Convert map → array
+    let results = Array.from(classLevelMap.values());
 
-    if (query && query.search) {
+    // 6. Apply search filter
+    if (query?.search) {
       const searchTerm = query.search.toLowerCase();
       results = results.filter(
         (item) =>
@@ -375,11 +410,12 @@ export class SubjectService {
           item.classLevel.description?.toLowerCase().includes(searchTerm),
       );
     }
+
+    // 7. Apply pagination
     if (query) {
       const page = parseInt(query.page!) || 1;
       const limit = parseInt(query.limit!) || 10;
       const skip = (page - 1) * limit;
-
       results = results.slice(skip, skip + limit);
     }
 
@@ -432,7 +468,12 @@ export class SubjectService {
 
     const gradeMap = new Map(grades.map((g) => [g.student.id, g]));
 
-    // Return students with their grades or empty scores
+    const approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: academicTermId },
+      },
+    });
     return {
       metadata: {
         subject: {
@@ -451,6 +492,8 @@ export class SubjectService {
           id: academicTerm.academicCalendar.id,
           name: academicTerm.academicCalendar.name,
         },
+        isApproved: approval?.approved || false,
+        approvedAt: approval?.approvedAt,
       },
       students: classLevel.students.map((student) => {
         const existingGrade = gradeMap.get(student.id);
@@ -459,7 +502,6 @@ export class SubjectService {
           firstName: student.firstName,
           lastName: student.lastName,
           studentId: student.studentId,
-          isApproved: existingGrade ? existingGrade.isApproved : null,
           scores: {
             classScore: existingGrade?.classScore || 0, // 30%
             examScore: existingGrade?.examScore || 0, // 70%
@@ -612,6 +654,23 @@ export class SubjectService {
       throw new NotFoundException('No results found for student in this term');
     }
 
+    // Get the class level from the first grade (assuming all grades are for the same class level)
+    const classLevelId = studentGrades[0]?.classLevel?.id;
+
+    // Fetch approval status for this class level and term
+    let isApproved = false;
+    let approvedAt: Date | undefined = undefined;
+    if (classLevelId) {
+      const approval = await this.classLevelResultApprovalRepository.findOne({
+        where: {
+          classLevel: { id: classLevelId },
+          academicTerm: { id: academicTermId },
+        },
+      });
+      isApproved = approval?.approved || false;
+      approvedAt = approval?.approvedAt;
+    }
+
     const subjectIds = studentGrades.map((g) => g.subject.id);
     const allGradesInTerm = await this.studentGradeRepository.find({
       where: {
@@ -669,7 +728,8 @@ export class SubjectService {
         academicYear: calendar.name,
         term: academicTerm.termName,
         class: studentGrades[0]?.classLevel.name,
-        isApproved: studentGrades[0]?.isApproved || false,
+        isApproved,
+        approvedAt,
       },
       subjects: resultWithPercentile,
       teacherRemarks: termRemark?.remarks || '',
