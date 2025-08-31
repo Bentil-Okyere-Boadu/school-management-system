@@ -70,7 +70,7 @@ export const AdmissionsListTabSection: React.FC<AdmissionsListTabProps> = ({hand
 
   useCalendlyEventListener({
     onEventScheduled: () => {
-      updateAdmissionStatus("interview-invite", admissionId);
+      updateAdmissionStatus(AdmissionStatus.INTERVIEW_PENDING, admissionId);
       setOpenCalendlyModal(false);
       }
   })
