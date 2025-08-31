@@ -35,6 +35,9 @@ export class School {
   @Column({ nullable: true })
   email: string;
 
+  @Column({ nullable: true })
+  calendlyUrl: string;
+
   @Column({ type: 'varchar', nullable: true })
   logoPath: string | null;
 

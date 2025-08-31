@@ -13,6 +13,7 @@ import CustomBarChart from '@/components/admin/dashboard/CustomBarChart'
 import StatCard from '@/components/admin/dashboard/StatCard'
 import { SearchBar } from '@/components/common/SearchBar'
 import { useDebouncer } from "@/hooks/generalHooks";
+import Link from 'next/link'
 
 // Define validation schema with Zod
 const formSchema = z.object({
@@ -30,6 +31,9 @@ const formSchema = z.object({
   address: z.string().min(5, {
     message: 'Address must be at least 5 characters.',
   }),
+  calendlyUrl: z.string().url({
+    message: 'Please enter a valid URL.', 
+  })
 });
 
 const AdminDashboard = () => {
@@ -46,10 +50,11 @@ const AdminDashboard = () => {
       email: '',
       phone: '',
       address: '',
+      calendlyUrl: ''
     },
   });
 
-  const [ address, email, schoolName, phone ] = watch(['address', 'email', 'schoolName', 'phone'])
+  const [ address, email, schoolName, phone, calendlyUrl ] = watch(['address', 'email', 'schoolName', 'phone', 'calendlyUrl'])
 
   const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -105,7 +110,8 @@ const AdminDashboard = () => {
       name: schoolName, 
       address: address, 
       phone: phone, 
-      email: email
+      email: email,
+      calendlyUrl: calendlyUrl
     }, {
       onSuccess: () => {
         closeDialog();
@@ -184,6 +190,17 @@ const AdminDashboard = () => {
             isTransulent={isPending}
             {...register('phone')}
           />
+          <div>
+            <InputField
+              className="mb-1 !py-0"
+              label="Calendly URL"
+              isTransulent={isPending}
+              {...register('calendlyUrl')}
+            />
+            {<p className="text-sm">Click <Link href="https://calendly.com/scheduling" target="_blank" className="text-sm text-purple-600 hover:underline">
+              here 
+            </Link> to set up your meeting scheduling link on Calendly.</p>}
+          </div>
         </form>
       </Dialog>
     </div>

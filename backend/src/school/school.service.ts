@@ -264,4 +264,14 @@ export class SchoolService {
 
     return school;
   }
+
+  async updateCalendlyUrl(schoolId: string, calendlyUrl: string): Promise<School> {
+    const school = await this.schoolRepository.findOne({ where: { id: schoolId } });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+
+    school.calendlyUrl = calendlyUrl;
+    return this.schoolRepository.save(school);
+  }
 }
