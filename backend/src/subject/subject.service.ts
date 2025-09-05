@@ -212,9 +212,10 @@ export class SubjectService {
     await this.subjectRepository.delete(subject.id);
   }
 
-  async approveClassResults(
+  async toggleClassResultsApproval(
     classLevelId: string,
     teacher: Teacher,
+    action: 'approve' | 'unapprove' = 'approve',
     forceApprove = false,
   ) {
     const latestTerm = await this.academicTermRepository.findOne({
@@ -301,7 +302,28 @@ export class SubjectService {
       }
     }
 
-    if (missingGrades.length > 0 && !forceApprove) {
+    // Check if school admin has already approved - if so, class teacher cannot modify
+    let approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+    });
+
+    if (approval?.schoolAdminApproved) {
+      return {
+        message:
+          'Results have been approved by school admin. Only school admin can modify the approval status.',
+        approved: approval.approved,
+        schoolAdminApproved: approval.schoolAdminApproved,
+        schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+        term: latestTerm.termName,
+        missingGrades: [],
+      };
+    }
+
+    // For unapprove action, skip missing grades validation
+    if (action === 'approve' && missingGrades.length > 0 && !forceApprove) {
       return {
         message: 'Some students have missing grades. Approval not completed.',
         approved: false,
@@ -309,33 +331,165 @@ export class SubjectService {
       };
     }
 
+    if (!approval) {
+      approval = this.classLevelResultApprovalRepository.create({
+        classLevel,
+        academicTerm: latestTerm,
+        approved: action === 'approve',
+        approvedAt: action === 'approve' ? new Date() : undefined,
+        schoolAdminApproved: false,
+        schoolAdminApprovedAt: undefined,
+        approvedBySchoolAdmin: undefined,
+      });
+    } else {
+      approval.approved = action === 'approve';
+      approval.approvedAt = action === 'approve' ? new Date() : undefined;
+    }
+    await this.classLevelResultApprovalRepository.save(approval);
+
+    return {
+      message:
+        action === 'approve'
+          ? 'Class level results approved for this term.'
+          : 'Class level results unapproved for this term.',
+      approved: approval.approved,
+      approvedAt: approval.approvedAt,
+      schoolAdminApproved: approval.schoolAdminApproved,
+      schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+      term: latestTerm.termName,
+      missingGrades: action === 'approve' ? missingGrades : [],
+    };
+  }
+
+  async getClassResultsApprovalStatus(
+    classLevelId: string,
+    user: Teacher | SchoolAdmin,
+  ) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: user.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+    });
+
+    return {
+      isApproved: approval?.approved || false,
+      approvedAt: approval?.approvedAt,
+      schoolAdminApproved: approval?.schoolAdminApproved || false,
+      schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+      approvedBySchoolAdmin: approval?.approvedBySchoolAdmin,
+      term: latestTerm.termName,
+      termId: latestTerm.id,
+    };
+  }
+
+  async toggleSchoolAdminApproval(
+    classLevelId: string,
+    schoolAdmin: SchoolAdmin,
+    action: 'approve' | 'unapprove' = 'approve',
+  ) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: schoolAdmin.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+    });
+    if (!classLevel) throw new NotFoundException('Class level not found');
+
     let approval = await this.classLevelResultApprovalRepository.findOne({
       where: {
         classLevel: { id: classLevelId },
         academicTerm: { id: latestTerm.id },
       },
     });
+
     if (!approval) {
+      // Create new approval record if it doesn't exist
       approval = this.classLevelResultApprovalRepository.create({
         classLevel,
         academicTerm: latestTerm,
-        approved: true,
-        approvedAt: new Date(),
+        approved: false,
+        approvedAt: undefined,
+        schoolAdminApproved: action === 'approve',
+        schoolAdminApprovedAt: action === 'approve' ? new Date() : undefined,
+        approvedBySchoolAdmin: action === 'approve' ? schoolAdmin : undefined,
       });
     } else {
-      approval.approved = true;
-      approval.approvedAt = new Date();
+      // Update existing approval record
+      approval.schoolAdminApproved = action === 'approve';
+      approval.schoolAdminApprovedAt =
+        action === 'approve' ? new Date() : undefined;
+      approval.approvedBySchoolAdmin =
+        action === 'approve' ? schoolAdmin : undefined;
     }
+
     await this.classLevelResultApprovalRepository.save(approval);
 
     return {
-      message: 'Class level results approved for this term.',
-      approved: true,
+      message:
+        action === 'approve'
+          ? 'Class level results approved by school admin.'
+          : 'Class level results unapproved by school admin.',
+      approved: approval.approved,
       approvedAt: approval.approvedAt,
+      schoolAdminApproved: approval.schoolAdminApproved,
+      schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+      approvedBySchoolAdmin: approval.approvedBySchoolAdmin,
       term: latestTerm.termName,
-      missingGrades,
     };
   }
+
+  async getAllClassResultsApprovalStatus(schoolAdmin: SchoolAdmin) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: schoolAdmin.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const approvals = await this.classLevelResultApprovalRepository.find({
+      where: {
+        academicTerm: { id: latestTerm.id },
+        classLevel: { school: { id: schoolAdmin.school.id } },
+      },
+      relations: ['classLevel', 'approvedBySchoolAdmin'],
+    });
+
+    return {
+      term: latestTerm.termName,
+      termId: latestTerm.id,
+      approvals: approvals.map((approval) => ({
+        classLevelId: approval.classLevel.id,
+        className: approval.classLevel.name,
+        teacherApproved: approval.approved,
+        teacherApprovedAt: approval.approvedAt,
+        schoolAdminApproved: approval.schoolAdminApproved,
+        schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+        approvedBySchoolAdmin: approval.approvedBySchoolAdmin
+          ? {
+              id: approval.approvedBySchoolAdmin.id,
+              firstName: approval.approvedBySchoolAdmin.firstName,
+              lastName: approval.approvedBySchoolAdmin.lastName,
+            }
+          : null,
+      })),
+    };
+  }
+
   async getClassesForTeacher(teacherId: string, query?: QueryString) {
     const subjects = await this.subjectRepository.find({
       where: { teacher: { id: teacherId } },

@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { ClassLevel } from './class-level.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
+import { SchoolAdmin } from '../school-admin/school-admin.entity';
 
 @Entity()
 @Unique(['classLevel', 'academicTerm'])
@@ -25,4 +26,14 @@ export class ClassLevelResultApproval {
 
   @Column({ type: 'timestamp', nullable: true })
   approvedAt?: Date;
+
+  // School Admin approval fields
+  @Column({ default: false })
+  schoolAdminApproved: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  schoolAdminApprovedAt?: Date;
+
+  @ManyToOne(() => SchoolAdmin, { nullable: true })
+  approvedBySchoolAdmin?: SchoolAdmin;
 }

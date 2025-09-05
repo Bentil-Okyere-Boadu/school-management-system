@@ -65,24 +65,67 @@ export class SubjectController {
     RolesGuard,
     IsClassTeacherGuard,
   )
-  @UseGuards(
-    TeacherJwtAuthGuard,
-    ActiveUserGuard,
-    RolesGuard,
-    IsClassTeacherGuard,
-  )
-  @Post('approve-class-results')
-  async approveClassResults(
+  @Post('toggle-class-results-approval')
+  async toggleClassResultsApproval(
     @Body('classLevelId') classLevelId: string,
     @CurrentUser() teacher: Teacher,
+    @Body('action') action: 'approve' | 'unapprove' = 'approve',
     @Body('forceApprove') forceApprove?: boolean,
   ) {
-    return this.subjectService.approveClassResults(
+    return this.subjectService.toggleClassResultsApproval(
       classLevelId,
       teacher,
+      action,
       forceApprove,
     );
   }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('class-results-approval-status/:classLevelId')
+  async getClassResultsApprovalStatus(
+    @Param('classLevelId') classLevelId: string,
+    @CurrentUser() teacher: Teacher,
+  ) {
+    return this.subjectService.getClassResultsApprovalStatus(
+      classLevelId,
+      teacher,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/toggle-class-results-approval')
+  async toggleSchoolAdminApproval(
+    @Body('classLevelId') classLevelId: string,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+    @Body('action') action: 'approve' | 'unapprove' = 'approve',
+  ) {
+    return this.subjectService.toggleSchoolAdminApproval(
+      classLevelId,
+      schoolAdmin,
+      action,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/class-results-approval-status/:classLevelId')
+  async getSchoolAdminClassResultsApprovalStatus(
+    @Param('classLevelId') classLevelId: string,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.getClassResultsApprovalStatus(
+      classLevelId,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/all-class-results-approval-status')
+  async getAllClassResultsApprovalStatus(
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.getAllClassResultsApprovalStatus(schoolAdmin);
+  }
+
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
   async getMyClasses(

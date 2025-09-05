@@ -60,9 +60,17 @@ export class ClassLevelResultNotApprovedGuard implements CanActivate {
       },
     });
 
+    // Check if school admin has approved - if so, no modifications allowed
+    if (approval?.schoolAdminApproved) {
+      throw new ForbiddenException(
+        'The results for this class and academic term have been approved by school admin. Only school admin can modify them.',
+      );
+    }
+
+    // Check if class teacher has approved - if so, no modifications allowed unless school admin unapproves
     if (approval?.approved) {
       throw new ForbiddenException(
-        'The results for this class and academic term have already been approved. Please contact your administrator if you need them to be unlocked.',
+        'The results for this class and academic term have already been approved by class teacher. Please contact your administrator if you need them to be unlocked.',
       );
     }
 
