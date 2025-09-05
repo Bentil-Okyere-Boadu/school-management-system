@@ -30,6 +30,7 @@ import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calen
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
+import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar
       Holiday,
       AcademicCalendar,
       AcademicTerm,
+      ClassLevelResultApproval,
     ]),
     EmailModule,
     JwtModule.registerAsync({

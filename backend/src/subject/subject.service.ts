@@ -648,6 +648,8 @@ export class SubjectService {
         },
         isApproved: approval?.approved || false,
         approvedAt: approval?.approvedAt,
+        schoolAdminApproved: approval?.schoolAdminApproved || false,
+        schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
       },
       students: classLevel.students.map((student) => {
         const existingGrade = gradeMap.get(student.id);
@@ -814,6 +816,8 @@ export class SubjectService {
     // Fetch approval status for this class level and term
     let isApproved = false;
     let approvedAt: Date | undefined = undefined;
+    let schoolAdminApproved = false;
+    let schoolAdminApprovedAt: Date | undefined = undefined;
     if (classLevelId) {
       const approval = await this.classLevelResultApprovalRepository.findOne({
         where: {
@@ -823,6 +827,8 @@ export class SubjectService {
       });
       isApproved = approval?.approved || false;
       approvedAt = approval?.approvedAt;
+      schoolAdminApproved = approval?.schoolAdminApproved || false;
+      schoolAdminApprovedAt = approval?.schoolAdminApprovedAt;
     }
 
     const subjectIds = studentGrades.map((g) => g.subject.id);
@@ -884,6 +890,8 @@ export class SubjectService {
         class: studentGrades[0]?.classLevel.name,
         isApproved,
         approvedAt,
+        schoolAdminApproved,
+        schoolAdminApprovedAt,
       },
       subjects: resultWithPercentile,
       teacherRemarks: termRemark?.remarks || '',
