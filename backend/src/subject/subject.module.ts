@@ -24,6 +24,7 @@ import { Role } from 'src/role/role.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       GradingSystem,
       Holiday,
       StudentTermRemark,
+      ClassLevelResultApproval,
     ]),
   ],
   providers: [

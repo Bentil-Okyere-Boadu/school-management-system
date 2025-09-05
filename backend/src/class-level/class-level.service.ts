@@ -12,6 +12,9 @@ import { Student } from '../student/student.entity';
 import { CreateClassLevelDto } from './dto/create-class-level.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
+import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
+import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 
 @Injectable()
 export class ClassLevelService {
@@ -22,6 +25,11 @@ export class ClassLevelService {
     private teacherRepository: Repository<Teacher>,
     @InjectRepository(Student)
     private studentRepository: Repository<Student>,
+    private readonly academicCalendarService: AcademicCalendarService,
+    @InjectRepository(ClassLevelResultApproval)
+    private classLevelResultApprovalRepository: Repository<ClassLevelResultApproval>,
+    @InjectRepository(AcademicTerm)
+    private academicTermRepository: Repository<AcademicTerm>,
   ) {}
 
   async create(
@@ -232,30 +240,155 @@ export class ClassLevelService {
 
     if (query) {
       const features = new APIFeatures(queryBuilder, query).search(['name']);
-      return features.getQuery().getMany();
+      let classes = await features.getQuery().getMany();
+
+      const latestTerm = await this.academicTermRepository.findOne({
+        where: { academicCalendar: { school: { id: admin.school.id } } },
+        order: { startDate: 'DESC' },
+      });
+
+      if (latestTerm) {
+        const classLevelIds = classes.map((c) => c.id);
+        const classLevelApprovals =
+          await this.classLevelResultApprovalRepository.find({
+            where: {
+              classLevel: { id: In(classLevelIds) },
+              academicTerm: { id: latestTerm.id },
+            },
+          });
+        const approvalMap = new Map<string, ClassLevelResultApproval>(
+          classLevelApprovals.map((approval) => [
+            approval.classLevel.id,
+            approval,
+          ]),
+        );
+        classes = classes.map((classLevel) => {
+          const approval = approvalMap.get(classLevel.id);
+          return {
+            ...classLevel,
+            isApproved: approval?.approved || false,
+            approvedAt: approval?.approvedAt,
+            schoolAdminApproved: approval?.schoolAdminApproved || false,
+            schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+          };
+        });
+      }
+      return classes;
     }
-    return queryBuilder.getMany();
+    let classes = await queryBuilder.getMany();
+
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: admin.school.id } } },
+      order: { startDate: 'DESC' },
+    });
+
+    if (latestTerm) {
+      const classLevelIds = classes.map((c) => c.id);
+      const classLevelApprovals =
+        await this.classLevelResultApprovalRepository.find({
+          where: {
+            classLevel: { id: In(classLevelIds) },
+            academicTerm: { id: latestTerm.id },
+          },
+        });
+      const approvalMap = new Map<string, ClassLevelResultApproval>(
+        classLevelApprovals.map((approval) => [
+          approval.classLevel.id,
+          approval,
+        ]),
+      );
+      classes = classes.map((classLevel) => {
+        const approval = approvalMap.get(classLevel.id);
+        return {
+          ...classLevel,
+          isApproved: approval?.approved || false,
+          approvedAt: approval?.approvedAt,
+          schoolAdminApproved: approval?.schoolAdminApproved || false,
+          schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+        };
+      });
+    }
+    return classes;
   }
 
   async getClassesForTeacher(teacherId: string, query?: QueryString) {
-    const queryBuilder = this.classLevelRepository
+    const teacher = await this.teacherRepository.findOne({
+      where: { id: teacherId },
+      relations: ['school'],
+    });
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found');
+    }
+
+    const currentCalendar =
+      await this.academicCalendarService.getCurrentAcademicCalendar(
+        teacher.school.id,
+      );
+    if (!currentCalendar) {
+      return [];
+    }
+
+    const latestTerm = await this.academicCalendarService.getLatestTerm(
+      currentCalendar.id,
+    );
+    if (!latestTerm) {
+      return [];
+    }
+
+    const classes = await this.classLevelRepository
       .createQueryBuilder('classLevel')
       .leftJoinAndSelect('classLevel.students', 'student')
       .leftJoinAndSelect('classLevel.teachers', 'teacher')
       .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
       .where('teacher.id = :teacherId', { teacherId })
       .orWhere('classTeacher.id = :teacherId', { teacherId })
-      .loadRelationCountAndMap(
-        'classLevel.studentCount',
-        'classLevel.students',
-      );
+      .loadRelationCountAndMap('classLevel.studentCount', 'classLevel.students')
+      .getMany();
+
+    if (classes.length === 0) {
+      return [];
+    }
+
+    const classLevelIds = classes.map((c) => c.id);
+    const classLevelApprovals =
+      await this.classLevelResultApprovalRepository.find({
+        where: {
+          classLevel: { id: In(classLevelIds) },
+          academicTerm: { id: latestTerm.id },
+        },
+      });
+
+    const approvalMap = new Map<string, ClassLevelResultApproval>(
+      classLevelApprovals.map((approval) => [approval.classLevel.id, approval]),
+    );
+
+    const results = classes.map((classLevel) => {
+      const approval = approvalMap.get(classLevel.id);
+      return {
+        ...classLevel,
+        isApproved: approval?.approved || false,
+        approvedAt: approval?.approvedAt,
+        schoolAdminApproved: approval?.schoolAdminApproved || false,
+        schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+      };
+    });
 
     if (query) {
-      const features = new APIFeatures(queryBuilder, query).search(['name']);
-      return features.getQuery().getMany();
+      // Temporarily create a mock query builder for APIFeatures to apply search and pagination on the `results` array
+      let filteredResults = results;
+      if (query.search) {
+        const searchTerm = query.search.toLowerCase();
+        filteredResults = filteredResults.filter((item) =>
+          item.name.toLowerCase().includes(searchTerm),
+        );
+      }
+      const page = parseInt(query.page!) || 1;
+      const limit = parseInt(query.limit!) || 10;
+      const skip = (page - 1) * limit;
+      return filteredResults.slice(skip, skip + limit);
     }
-    console.log('class', queryBuilder.getMany());
-    return queryBuilder.getMany();
+
+    return results;
   }
 
   async getClassesWhereTeacherIsClassTeacher(

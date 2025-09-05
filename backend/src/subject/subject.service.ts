@@ -20,6 +20,7 @@ import { Student } from '../student/student.entity';
 import { GradingSystem } from '../grading-system/grading-system.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
 import { QueryString } from 'src/common/api-features/api-features';
+import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 
 @Injectable()
 export class SubjectService {
@@ -46,6 +47,8 @@ export class SubjectService {
     private gradingSystemRepository: Repository<GradingSystem>,
     @InjectRepository(StudentTermRemark)
     private remarkRepository: Repository<StudentTermRemark>,
+    @InjectRepository(ClassLevelResultApproval)
+    private classLevelResultApprovalRepository: Repository<ClassLevelResultApproval>,
   ) {}
 
   async create(createSubjectDto: CreateSubjectDto, admin: SchoolAdmin) {
@@ -209,35 +212,339 @@ export class SubjectService {
     await this.subjectRepository.delete(subject.id);
   }
 
+  async toggleClassResultsApproval(
+    classLevelId: string,
+    teacher: Teacher,
+    action: 'approve' | 'unapprove' = 'approve',
+    forceApprove = false,
+  ) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: teacher.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['students'],
+    });
+    if (!classLevel) throw new NotFoundException('Class level not found');
+
+    const subjects = await this.subjectRepository.find({
+      where: {
+        classLevels: { id: classLevelId },
+        school: { id: teacher.school.id },
+      },
+      relations: ['subjectCatalog', 'teacher', 'classLevels'],
+    });
+
+    const grades = await this.studentGradeRepository.find({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+      relations: [
+        'student',
+        'subject',
+        'subject.subjectCatalog',
+        'subject.teacher',
+      ],
+    });
+
+    const gradeMap = new Map<string, StudentGrade>();
+    for (const grade of grades) {
+      gradeMap.set(`${grade.student.id}_${grade.subject.id}`, grade);
+    }
+
+    const missingGrades: Array<{
+      student: { id: string; firstName: string; lastName: string };
+      missingSubjects: Array<{
+        subjectId: string;
+        subjectName: string;
+        teacher: { id: string; firstName: string; lastName: string };
+      }>;
+    }> = [];
+
+    for (const student of classLevel.students) {
+      const missingSubjects: {
+        subjectId: string;
+        subjectName: string;
+        teacher: {
+          id: string;
+          firstName: string;
+          lastName: string;
+        };
+      }[] = [];
+      for (const subject of subjects) {
+        if (!gradeMap.has(`${student.id}_${subject.id}`)) {
+          missingSubjects.push({
+            subjectId: subject.id,
+            subjectName: subject.subjectCatalog.name,
+            teacher: {
+              id: subject.teacher.id,
+              firstName: subject.teacher.firstName,
+              lastName: subject.teacher.lastName,
+            },
+          });
+        }
+      }
+      if (missingSubjects.length) {
+        missingGrades.push({
+          student: {
+            id: student.id,
+            firstName: student.firstName,
+            lastName: student.lastName,
+          },
+          missingSubjects,
+        });
+      }
+    }
+
+    // Check if school admin has already approved - if so, class teacher cannot modify
+    let approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+    });
+
+    if (approval?.schoolAdminApproved) {
+      return {
+        message:
+          'Results have been approved by school admin. Only school admin can modify the approval status.',
+        approved: approval.approved,
+        schoolAdminApproved: approval.schoolAdminApproved,
+        schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+        term: latestTerm.termName,
+        missingGrades: [],
+      };
+    }
+
+    // For unapprove action, skip missing grades validation
+    if (action === 'approve' && missingGrades.length > 0 && !forceApprove) {
+      return {
+        message: 'Some students have missing grades. Approval not completed.',
+        approved: false,
+        missingGrades,
+      };
+    }
+
+    if (!approval) {
+      approval = this.classLevelResultApprovalRepository.create({
+        classLevel,
+        academicTerm: latestTerm,
+        approved: action === 'approve',
+        approvedAt: action === 'approve' ? new Date() : undefined,
+        schoolAdminApproved: false,
+        schoolAdminApprovedAt: undefined,
+        approvedBySchoolAdmin: undefined,
+      });
+    } else {
+      approval.approved = action === 'approve';
+      approval.approvedAt = action === 'approve' ? new Date() : undefined;
+    }
+    await this.classLevelResultApprovalRepository.save(approval);
+
+    return {
+      message:
+        action === 'approve'
+          ? 'Class level results approved for this term.'
+          : 'Class level results unapproved for this term.',
+      approved: approval.approved,
+      approvedAt: approval.approvedAt,
+      schoolAdminApproved: approval.schoolAdminApproved,
+      schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+      term: latestTerm.termName,
+      missingGrades: action === 'approve' ? missingGrades : [],
+    };
+  }
+
+  async getClassResultsApprovalStatus(
+    classLevelId: string,
+    user: Teacher | SchoolAdmin,
+  ) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: user.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+    });
+
+    return {
+      isApproved: approval?.approved || false,
+      approvedAt: approval?.approvedAt,
+      schoolAdminApproved: approval?.schoolAdminApproved || false,
+      schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+      approvedBySchoolAdmin: approval?.approvedBySchoolAdmin,
+      term: latestTerm.termName,
+      termId: latestTerm.id,
+    };
+  }
+
+  async toggleSchoolAdminApproval(
+    classLevelId: string,
+    schoolAdmin: SchoolAdmin,
+    action: 'approve' | 'unapprove' = 'approve',
+  ) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: schoolAdmin.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+    });
+    if (!classLevel) throw new NotFoundException('Class level not found');
+
+    let approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: latestTerm.id },
+      },
+    });
+
+    if (!approval) {
+      // Create new approval record if it doesn't exist
+      approval = this.classLevelResultApprovalRepository.create({
+        classLevel,
+        academicTerm: latestTerm,
+        approved: false,
+        approvedAt: undefined,
+        schoolAdminApproved: action === 'approve',
+        schoolAdminApprovedAt: action === 'approve' ? new Date() : undefined,
+        approvedBySchoolAdmin: action === 'approve' ? schoolAdmin : undefined,
+      });
+    } else {
+      // Update existing approval record
+      approval.schoolAdminApproved = action === 'approve';
+      approval.schoolAdminApprovedAt =
+        action === 'approve' ? new Date() : undefined;
+      approval.approvedBySchoolAdmin =
+        action === 'approve' ? schoolAdmin : undefined;
+    }
+
+    await this.classLevelResultApprovalRepository.save(approval);
+
+    return {
+      message:
+        action === 'approve'
+          ? 'Class level results approved by school admin.'
+          : 'Class level results unapproved by school admin.',
+      approved: approval.approved,
+      approvedAt: approval.approvedAt,
+      schoolAdminApproved: approval.schoolAdminApproved,
+      schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+      approvedBySchoolAdmin: approval.approvedBySchoolAdmin,
+      term: latestTerm.termName,
+    };
+  }
+
+  async getAllClassResultsApprovalStatus(schoolAdmin: SchoolAdmin) {
+    const latestTerm = await this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: schoolAdmin.school.id } } },
+      order: { startDate: 'DESC' },
+      relations: ['academicCalendar'],
+    });
+    if (!latestTerm)
+      throw new NotFoundException('No academic term found for this school');
+
+    const approvals = await this.classLevelResultApprovalRepository.find({
+      where: {
+        academicTerm: { id: latestTerm.id },
+        classLevel: { school: { id: schoolAdmin.school.id } },
+      },
+      relations: ['classLevel', 'approvedBySchoolAdmin'],
+    });
+
+    return {
+      term: latestTerm.termName,
+      termId: latestTerm.id,
+      approvals: approvals.map((approval) => ({
+        classLevelId: approval.classLevel.id,
+        className: approval.classLevel.name,
+        teacherApproved: approval.approved,
+        teacherApprovedAt: approval.approvedAt,
+        schoolAdminApproved: approval.schoolAdminApproved,
+        schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
+        approvedBySchoolAdmin: approval.approvedBySchoolAdmin
+          ? {
+              id: approval.approvedBySchoolAdmin.id,
+              firstName: approval.approvedBySchoolAdmin.firstName,
+              lastName: approval.approvedBySchoolAdmin.lastName,
+            }
+          : null,
+      })),
+    };
+  }
+
   async getClassesForTeacher(teacherId: string, query?: QueryString) {
     const subjects = await this.subjectRepository.find({
       where: { teacher: { id: teacherId } },
       relations: ['classLevels', 'subjectCatalog'],
     });
 
-    const classLevelMap = new Map();
+    if (subjects.length === 0) {
+      return [];
+    }
+
+    const classLevelIds = [
+      ...new Set(subjects.flatMap((s) => s.classLevels.map((l) => l.id))),
+    ];
+
+    const counts = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoin('classLevel.students', 'student')
+      .where('classLevel.id IN (:...ids)', { ids: classLevelIds })
+      .select('classLevel.id', 'classLevelId')
+      .addSelect('COUNT(DISTINCT student.id)', 'count')
+      .groupBy('classLevel.id')
+      .getRawMany<{ classLevelId: string; count: string }>();
+
+    const countMap = new Map(
+      counts.map((c) => [c.classLevelId, parseInt(c.count, 10)]),
+    );
+
+    const classLevelMap = new Map<
+      string,
+      {
+        classLevel: {
+          id: string;
+          name: string;
+          description?: string;
+          studentCount: number;
+        };
+        subjects: { id: string; name: string }[];
+      }
+    >();
+
     for (const subject of subjects) {
       for (const level of subject.classLevels) {
         if (!classLevelMap.has(level.id)) {
-          // Get student count for this class level
-          const studentCount = await this.classLevelRepository
-            .createQueryBuilder('classLevel')
-            .leftJoin('classLevel.students', 'student')
-            .where('classLevel.id = :classLevelId', { classLevelId: level.id })
-            .getCount();
-
           classLevelMap.set(level.id, {
             classLevel: {
               id: level.id,
               name: level.name,
               description: level.description,
-              studentCount,
+              studentCount: countMap.get(level.id) || 0,
             },
             subjects: [],
           });
         }
 
-        const classLevelData = classLevelMap.get(level.id);
+        const classLevelData = classLevelMap.get(level.id)!;
         classLevelData.subjects.push({
           id: subject.id,
           name: subject.subjectCatalog.name,
@@ -245,17 +552,11 @@ export class SubjectService {
       }
     }
 
-    let results = Array.from(classLevelMap.values()) as {
-      classLevel: {
-        id: string;
-        name: string;
-        description?: string;
-        studentCount: number;
-      };
-      subjects: { id: string; name: string }[];
-    }[];
+    // 5. Convert map → array
+    let results = Array.from(classLevelMap.values());
 
-    if (query && query.search) {
+    // 6. Apply search filter
+    if (query?.search) {
       const searchTerm = query.search.toLowerCase();
       results = results.filter(
         (item) =>
@@ -263,11 +564,12 @@ export class SubjectService {
           item.classLevel.description?.toLowerCase().includes(searchTerm),
       );
     }
+
+    // 7. Apply pagination
     if (query) {
       const page = parseInt(query.page!) || 1;
       const limit = parseInt(query.limit!) || 10;
       const skip = (page - 1) * limit;
-
       results = results.slice(skip, skip + limit);
     }
 
@@ -320,7 +622,12 @@ export class SubjectService {
 
     const gradeMap = new Map(grades.map((g) => [g.student.id, g]));
 
-    // Return students with their grades or empty scores
+    const approval = await this.classLevelResultApprovalRepository.findOne({
+      where: {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: academicTermId },
+      },
+    });
     return {
       metadata: {
         subject: {
@@ -339,6 +646,10 @@ export class SubjectService {
           id: academicTerm.academicCalendar.id,
           name: academicTerm.academicCalendar.name,
         },
+        isApproved: approval?.approved || false,
+        approvedAt: approval?.approvedAt,
+        schoolAdminApproved: approval?.schoolAdminApproved || false,
+        schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
       },
       students: classLevel.students.map((student) => {
         const existingGrade = gradeMap.get(student.id);
@@ -499,6 +810,27 @@ export class SubjectService {
       throw new NotFoundException('No results found for student in this term');
     }
 
+    // Get the class level from the first grade (assuming all grades are for the same class level)
+    const classLevelId = studentGrades[0]?.classLevel?.id;
+
+    // Fetch approval status for this class level and term
+    let isApproved = false;
+    let approvedAt: Date | undefined = undefined;
+    let schoolAdminApproved = false;
+    let schoolAdminApprovedAt: Date | undefined = undefined;
+    if (classLevelId) {
+      const approval = await this.classLevelResultApprovalRepository.findOne({
+        where: {
+          classLevel: { id: classLevelId },
+          academicTerm: { id: academicTermId },
+        },
+      });
+      isApproved = approval?.approved || false;
+      approvedAt = approval?.approvedAt;
+      schoolAdminApproved = approval?.schoolAdminApproved || false;
+      schoolAdminApprovedAt = approval?.schoolAdminApprovedAt;
+    }
+
     const subjectIds = studentGrades.map((g) => g.subject.id);
     const allGradesInTerm = await this.studentGradeRepository.find({
       where: {
@@ -556,6 +888,10 @@ export class SubjectService {
         academicYear: calendar.name,
         term: academicTerm.termName,
         class: studentGrades[0]?.classLevel.name,
+        isApproved,
+        approvedAt,
+        schoolAdminApproved,
+        schoolAdminApprovedAt,
       },
       subjects: resultWithPercentile,
       teacherRemarks: termRemark?.remarks || '',
