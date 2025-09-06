@@ -37,6 +37,8 @@ export interface ClassLevel {
   id: string;
   name: string;
   description: string
+  isApproved: boolean,
+  schoolAdminApproved: boolean
 }
 
 export interface Student extends User {

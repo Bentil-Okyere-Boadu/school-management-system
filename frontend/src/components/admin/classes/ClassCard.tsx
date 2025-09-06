@@ -15,6 +15,9 @@ interface ClassCardProps {
   onNavigateToGradingClick?: (item: ClassLevel) => void;
   studentCount?: number;
   showClassTeacher?: boolean;
+  showApproval?: boolean;
+  isApproved?: boolean;
+  onApprovalClick?: (item: ClassLevel) => void;
 }
 
 export const ClassCard: React.FC<ClassCardProps> = ({
@@ -28,6 +31,9 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   onNavigateToGradingClick,
   studentCount,
   showClassTeacher = true,
+  showApproval = false,
+  isApproved = false,
+  onApprovalClick,
 }) => {
   return (
     <div
@@ -82,6 +88,15 @@ export const ClassCard: React.FC<ClassCardProps> = ({
               <span onClick={() => onNavigateToGradingClick?.(classData)} className="inline-block text-xs font-medium text-blue-800 bg-blue-100 px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow">
                 Go to Grading View
               </span> 
+              }
+              {showApproval && 
+              <span
+                onClick={() => onApprovalClick?.(classData)}
+                className={`inline-block text-xs font-medium px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow
+                  ${isApproved ? "text-red-800 bg-red-100 hover:bg-red-200" : "text-green-800 bg-green-100 hover:bg-green-200" }`}
+              >
+                {isApproved ? "Disapprove Result" : "Approve Result"}
+              </span>
               }
             </div>
           </div>
