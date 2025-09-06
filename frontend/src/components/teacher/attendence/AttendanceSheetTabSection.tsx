@@ -6,12 +6,14 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import Image from "next/image";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import { usePostClassAttendance, useGetClassAttendance, useTeacherGetMe } from "@/hooks/teacher";
-import { ErrorResponse, NotificationType } from "@/@types";
+import { usePostClassAttendance, useGetClassAttendance, useTeacherGetMe, useApproveClassResults } from "@/hooks/teacher";
+import { ErrorResponse, MissingGrade, NotificationType } from "@/@types";
 import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pagination } from "@/components/common/Pagination";
 import { useCreateNotification } from "@/hooks/school-admin";
+import { Button } from "@mantine/core";
+import { Dialog } from "@/components/common/Dialog";
 
 interface Student {
   id: string;
@@ -51,6 +53,9 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
   // const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingCell, setLoadingCell] = useState<{ studentId: string; date: string } | null>(null);
+
+  const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
+  const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
   
 
   const queryClient = useQueryClient();
@@ -59,6 +64,9 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
   const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
   const {mutate: createNotification} = useCreateNotification();
   const {me} = useTeacherGetMe();
+  const { mutate: approveResults, isPending: approveResultPending } = useApproveClassResults();
+
+  // const {isClassTeacher} = useIsClassTeacher(classId as string);
 
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month" | "week") => {
     const value = event.target.value;
@@ -155,14 +163,63 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
     });
   };
 
+
+  const onApproveClassResult = () => {
+    const payload = {
+      classLevelId: classId,
+      action: "approve",
+      forceApprove: false,
+    };
+    
+    approveResults(payload, {
+      onSuccess: (data) => {
+        if(data?.data?.missingGrades?.length > 0) {
+          setMissingGrades(data?.data?.missingGrades);
+          setIsMissingGradesDialogOpen(true);
+        } else {
+          // no missing subject scores
+          onConfirmClassResultApproval();
+        }
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+    });
+  }
+
+  const onConfirmClassResultApproval = () => {
+    const payload = {
+      classLevelId: classId,
+      action: "approve",
+      forceApprove: true,
+    };
+
+    approveResults(payload, {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: ['classResults'] });
+        console.log(data?.data, "response")
+        setIsMissingGradesDialogOpen(false);
+        toast.success('Class results approved successfully');
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+    });
+  }
+
   return (
     <div className="pb-8 px-0.5">
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full px-0.5" /> */}
 
-      <div className="flex gap-3 my-6">
+      <div className="flex gap-3 my-6 justify-between">
+        <div className="flex gap-3">
         <CustomSelectTag value={currentWeek} options={weekOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} />
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
         <CustomSelectTag value={currentYear} options={yearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />
+        </div>
+        <Button onClick={() => onApproveClassResult()} disabled={approveResultPending}>
+          Approve Result
+        </Button>
       </div>
 
       <div className="overflow-x-auto">
@@ -236,6 +293,52 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
         totalPages={1}
         onPageChange={handlePageChange}
         />
+
+      {/* Missing Grades Dialog */}
+      <Dialog 
+        isOpen={isMissingGradesDialogOpen}
+        busy={false}
+        dialogTitle="Missing Grades"
+        subheader="Some students have missing grades. Approval not completed."
+        saveButtonText="Confirm Approval"
+        onSave={() => {onConfirmClassResultApproval()}} 
+        onClose={() => setIsMissingGradesDialogOpen(false)}
+      >
+        <div className="my-3">
+          <ol className="relative border-l border-gray-200">
+            {missingGrades?.map((item) => (
+              <li key={item.student.id} className="mb-10 ml-4">
+                {/* Student marker */}
+                <div className="absolute -left-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-[#AB58E7] ring-4 ring-white"></div>
+
+                {/* Student info */}
+                <h3 className="text-base font-semibold text-gray-900">
+                  {item.student.firstName} {item.student.lastName}
+                </h3>
+                <p className="mb-2 text-sm text-gray-500">
+                  {item.missingSubjects.length} missing subject score
+                  {item.missingSubjects.length > 1 ? "s" : ""}
+                </p>
+
+                {/* Subject badges */}
+                <div className="flex flex-wrap gap-2">
+                  {item.missingSubjects.map((subject) => (
+                    <span
+                      key={subject.subjectId}
+                      className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1 text-sm"
+                    >
+                      <span className="font-medium">{subject.subjectName}</span>
+                      <span className="text-xs text-gray-500">
+                        {subject.teacher.firstName} {subject.teacher.lastName}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </Dialog>
     </div>
   );
 };
