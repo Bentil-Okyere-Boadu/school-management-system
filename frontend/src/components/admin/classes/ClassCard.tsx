@@ -76,7 +76,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
       </div>
 
       {
-        (showGoToAttendance || showGoToGrading) && (
+        (showGoToAttendance || showGoToGrading || showApproval) && (
           <div className="mt-4 pt-2 border-t border-gray-100">
             <div className="flex justify-between items-center gap-1 flex-wrap">
               {showGoToAttendance &&

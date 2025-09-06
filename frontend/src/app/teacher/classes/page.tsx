@@ -21,8 +21,7 @@ const ClassesPage = () => {
 
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
   const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
-  const [selectedClassId, setSelectedClassId] = useState('');
-
+  const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
 
   const { mutate: approveResults, isPending: approveResultPending } = useApproveClassResults();
 
@@ -34,12 +33,20 @@ const ClassesPage = () => {
     router.push(`/teacher/classes/${data.id}/attendance`)
   }
 
-  const onApproveClassResult = (classId: string) => {
+  const onApproveOrDisApproveClassResult = (classData: ClassLevel) => {
+    if(classData?.isApproved || classData?.schoolAdminApproved) {
+      onDisApproveClassResult(classData)
+    } else {
+      onApproveClassResult(classData)
+    }
+  }
+
+  const onApproveClassResult = (classData: ClassLevel) => {
     if(approveResultPending) return;
     
-    setSelectedClassId(classId);
+    setSelectedClass(classData);
     const payload = {
-      classLevelId: classId,
+      classLevelId: classData?.id,
       action: "approve",
       forceApprove: false,
     };
@@ -51,7 +58,7 @@ const ClassesPage = () => {
           setIsMissingGradesDialogOpen(true);
         } else {
           // no missing subject scores
-          onConfirmClassResultApproval(classId);
+          onConfirmClassResultApproval(classData);
         }
       },
       onError: (error: unknown) => {
@@ -60,9 +67,9 @@ const ClassesPage = () => {
     });
   }
 
-  const onConfirmClassResultApproval = (classId?: string) => {
+  const onConfirmClassResultApproval = (classData?: ClassLevel) => {
     const payload = {
-      classLevelId: classId || selectedClassId,
+      classLevelId: classData?.id || selectedClass?.id as string,
       action: "approve",
       forceApprove: true,
     };
@@ -79,6 +86,27 @@ const ClassesPage = () => {
     });
   }
 
+    const onDisApproveClassResult = (classData?: ClassLevel) => {
+      if(approveResultPending) return;
+      
+      setSelectedClass(classData as ClassLevel);
+      const payload = {
+        classLevelId: classData?.id as string,
+        action: "unapprove",
+        forceApprove: true,
+      };
+  
+      approveResults(payload, {
+        onSuccess: () => {
+          refetchTeacherClasses();
+          toast.success('Class results disapproved successfully');
+        },
+        onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+        },
+      });
+    }
+
   return (
     <div className="pb-8">
       <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
@@ -94,7 +122,7 @@ const ClassesPage = () => {
             showApproval={true}
             isApproved={data?.isApproved || data?.schoolAdminApproved}
             onNavigateToAttendanceClick={onNavigateToAttendance}
-            onApprovalClick={() => onApproveClassResult(data?.id)}
+            onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
           />
         ))}
       </section>

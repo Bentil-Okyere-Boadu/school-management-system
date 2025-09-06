@@ -6,8 +6,8 @@ import { Dialog } from '@/components/common/Dialog';
 import { SearchBar } from '@/components/common/SearchBar';
 import InputField from '@/components/InputField';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
-import { ErrorResponse, ClassLevel, User } from "@/@types";
-import { useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetClassLevels, useGetSchoolUsers } from "@/hooks/school-admin";
+import { ErrorResponse, ClassLevel, User, MissingGrade } from "@/@types";
+import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetClassLevels, useGetSchoolUsers } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { Select } from '@mantine/core';
 import { useDebouncer } from '@/hooks/generalHooks';
@@ -26,6 +26,12 @@ const ClassesPage = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<string>();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+
+  const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
+  const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
+  const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
+
+  const { mutate: approveResults, isPending: approveResultPending } = useAdminApproveClassResults();
 
   const { classLevels, refetch } = useGetClassLevels(useDebouncer(searchQuery));
   const { mutate: editMutation, isPending: pendingEdit } = useEditClassLevel(classLevelId);
@@ -143,6 +149,80 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     setSelectedTeacher(event);
   };
 
+  const onApproveOrDisApproveClassResult = (classData: ClassLevel) => {
+    if(classData?.isApproved || classData?.schoolAdminApproved) {
+      onDisApproveClassResult(classData)
+    } else {
+      onApproveClassResult(classData)
+    }
+  }
+
+  const onApproveClassResult = (classData: ClassLevel) => {
+    if(approveResultPending) return;
+    
+    setSelectedClass(classData);
+    const payload = {
+      classLevelId: classData?.id,
+      action: "approve",
+      forceApprove: false,
+    };
+    
+    approveResults(payload, {
+      onSuccess: (data) => {
+        if(data?.data?.missingGrades?.length > 0) {
+          setMissingGrades(data?.data?.missingGrades);
+          setIsMissingGradesDialogOpen(true);
+        } else {
+          // no missing subject scores
+          onConfirmClassResultApproval(classData);
+        }
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+    });
+  }
+
+  const onConfirmClassResultApproval = (classData?: ClassLevel) => {
+    const payload = {
+      classLevelId: classData?.id || selectedClass?.id as string,
+      action: "approve",
+      forceApprove: true,
+    };
+
+    approveResults(payload, {
+      onSuccess: () => {
+        refetch();
+        setIsMissingGradesDialogOpen(false);
+        toast.success('Class results approved successfully');
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+    });
+  }
+
+  const onDisApproveClassResult = (classData?: ClassLevel) => {
+    if(approveResultPending) return;
+    
+    setSelectedClass(classData as ClassLevel);
+    const payload = {
+      classLevelId: classData?.id as string,
+      action: "unapprove",
+      forceApprove: true,
+    };
+
+    approveResults(payload, {
+      onSuccess: () => {
+        refetch();
+        toast.success('Class results disapproved successfully');
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+    });
+  }
+
   return (
     <>
       <div className="pb-8">
@@ -156,9 +236,12 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
               key={index + "12"}
               showEditAndDelete={true}
               classData={data}
+              showApproval={true}
+              isApproved={data?.isApproved || data?.schoolAdminApproved}
               studentCount={data?.students?.length}
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
+              onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
             />
           ))}
         </section>
@@ -228,6 +311,53 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
           <p>
             Are you sure you want to delete this class? You will loose all related information
           </p>
+        </div>
+      </Dialog>
+
+
+      {/* Missing Grades Dialog */}
+      <Dialog 
+        isOpen={isMissingGradesDialogOpen}
+        busy={false}
+        dialogTitle="Missing Grades"
+        subheader="Some students have missing grades. Approval not completed."
+        saveButtonText="Confirm Approval"
+        onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
+        onClose={() => setIsMissingGradesDialogOpen(false)}
+      >
+        <div className="my-3">
+          <ol className="relative border-l border-gray-200">
+            {missingGrades?.map((item) => (
+              <li key={item.student.id} className="mb-10 ml-4">
+                {/* Student marker */}
+                <div className="absolute -left-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-[#AB58E7] ring-4 ring-white"></div>
+
+                {/* Student info */}
+                <h3 className="text-base font-semibold text-gray-900">
+                  {item.student.firstName} {item.student.lastName}
+                </h3>
+                <p className="mb-2 text-sm text-gray-500">
+                  {item.missingSubjects.length} missing subject score
+                  {item.missingSubjects.length > 1 ? "s" : ""}
+                </p>
+
+                {/* Subject badges */}
+                <div className="flex flex-wrap gap-2">
+                  {item.missingSubjects.map((subject) => (
+                    <span
+                      key={subject.subjectId}
+                      className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1 text-sm"
+                    >
+                      <span className="font-medium">{subject.subjectName}</span>
+                      <span className="text-xs text-gray-500">
+                        {subject.teacher.firstName} {subject.teacher.lastName}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </Dialog>
     </>
