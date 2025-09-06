@@ -352,7 +352,7 @@ export class SubjectService {
         action === 'approve'
           ? 'Class level results approved for this term.'
           : 'Class level results unapproved for this term.',
-      approved: approval.approved,
+      isApproved: approval.approved,
       approvedAt: approval.approvedAt,
       schoolAdminApproved: approval.schoolAdminApproved,
       schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
@@ -443,7 +443,7 @@ export class SubjectService {
         action === 'approve'
           ? 'Class level results approved by school admin.'
           : 'Class level results unapproved by school admin.',
-      approved: approval.approved,
+      isApproved: approval.approved,
       approvedAt: approval.approvedAt,
       schoolAdminApproved: approval.schoolAdminApproved,
       schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
