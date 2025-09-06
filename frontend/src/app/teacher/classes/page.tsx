@@ -120,7 +120,8 @@ const ClassesPage = () => {
             studentCount={data?.studentCount}
             showGoToAttendance={true}
             showApproval={true}
-            isApproved={data?.isApproved || data?.schoolAdminApproved}
+            isApproved={data?.isApproved}
+            approvalText={data?.isApproved ? 'Unsubmit Result' : 'Submit Result'}
             onNavigateToAttendanceClick={onNavigateToAttendance}
             onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
           />

@@ -18,6 +18,7 @@ interface ClassCardProps {
   showApproval?: boolean;
   isApproved?: boolean;
   onApprovalClick?: (item: ClassLevel) => void;
+  approvalText?: string;
 }
 
 export const ClassCard: React.FC<ClassCardProps> = ({
@@ -34,6 +35,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   showApproval = false,
   isApproved = false,
   onApprovalClick,
+  approvalText = '',
 }) => {
   return (
     <div
@@ -95,7 +97,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
                 className={`inline-block text-xs font-medium px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow
                   ${isApproved ? "text-red-800 bg-red-100 hover:bg-red-200" : "text-green-800 bg-green-100 hover:bg-green-200" }`}
               >
-                {isApproved ? "Disapprove Result" : "Approve Result"}
+                {approvalText}
               </span>
               }
             </div>

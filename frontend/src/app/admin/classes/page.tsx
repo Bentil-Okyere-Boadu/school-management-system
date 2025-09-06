@@ -150,7 +150,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
   };
 
   const onApproveOrDisApproveClassResult = (classData: ClassLevel) => {
-    if(classData?.isApproved || classData?.schoolAdminApproved) {
+    if(classData?.schoolAdminApproved) {
       onDisApproveClassResult(classData)
     } else {
       onApproveClassResult(classData)
@@ -159,28 +159,28 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
 
   const onApproveClassResult = (classData: ClassLevel) => {
     if(approveResultPending) return;
-    
+
     setSelectedClass(classData);
-    const payload = {
-      classLevelId: classData?.id,
-      action: "approve",
-      forceApprove: false,
-    };
-    
-    approveResults(payload, {
-      onSuccess: (data) => {
-        if(data?.data?.missingGrades?.length > 0) {
-          setMissingGrades(data?.data?.missingGrades);
-          setIsMissingGradesDialogOpen(true);
-        } else {
-          // no missing subject scores
-          onConfirmClassResultApproval(classData);
-        }
-      },
-      onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-      },
-    });
+
+    if(classData.isApproved){
+      const payload = {
+        classLevelId: classData?.id,
+        action: "approve",
+        forceApprove: true,
+      };
+
+      approveResults(payload, {
+        onSuccess: () => {
+          refetch();
+          toast.success('Class results approved successfully');
+        },
+        onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+        },
+      });
+    } else {
+      onConfirmClassResultApproval(classData);
+    }
   }
 
   const onConfirmClassResultApproval = (classData?: ClassLevel) => {
@@ -237,7 +237,8 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
               showEditAndDelete={true}
               classData={data}
               showApproval={true}
-              isApproved={data?.isApproved || data?.schoolAdminApproved}
+              isApproved={data?.schoolAdminApproved}
+              approvalText={data?.schoolAdminApproved ? 'Disapprove Results' : 'Approve Results'}
               studentCount={data?.students?.length}
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
@@ -326,38 +327,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
         onClose={() => setIsMissingGradesDialogOpen(false)}
       >
         <div className="my-3">
-          <ol className="relative border-l border-gray-200">
-            {missingGrades?.map((item) => (
-              <li key={item.student.id} className="mb-10 ml-4">
-                {/* Student marker */}
-                <div className="absolute -left-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-[#AB58E7] ring-4 ring-white"></div>
-
-                {/* Student info */}
-                <h3 className="text-base font-semibold text-gray-900">
-                  {item.student.firstName} {item.student.lastName}
-                </h3>
-                <p className="mb-2 text-sm text-gray-500">
-                  {item.missingSubjects.length} missing subject score
-                  {item.missingSubjects.length > 1 ? "s" : ""}
-                </p>
-
-                {/* Subject badges */}
-                <div className="flex flex-wrap gap-2">
-                  {item.missingSubjects.map((subject) => (
-                    <span
-                      key={subject.subjectId}
-                      className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1 text-sm"
-                    >
-                      <span className="font-medium">{subject.subjectName}</span>
-                      <span className="text-xs text-gray-500">
-                        {subject.teacher.firstName} {subject.teacher.lastName}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ol>
+            <p>Class teacher has not submitted some results yet, would you still like to proceed to approve results ?</p>
         </div>
       </Dialog>
     </>
