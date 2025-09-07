@@ -179,7 +179,8 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
         },
       });
     } else {
-      onConfirmClassResultApproval(classData);
+      // onConfirmClassResultApproval(classData);
+      setIsMissingGradesDialogOpen(true);
     }
   }
 
@@ -316,18 +317,18 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
       </Dialog>
 
 
-      {/* Missing Grades Dialog */}
+      {/* Class Results Approval Dialog */}
       <Dialog 
         isOpen={isMissingGradesDialogOpen}
         busy={false}
-        dialogTitle="Missing Grades"
-        subheader="Some students have missing grades. Approval not completed."
+        dialogTitle="Class Results Approval"
+        subheader=""
         saveButtonText="Confirm Approval"
         onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
         onClose={() => setIsMissingGradesDialogOpen(false)}
       >
         <div className="my-3">
-            <p>Class teacher has not submitted some results yet, would you still like to proceed to approve results ?</p>
+            <p>Class teacher has not submitted results yet, would you still like to proceed to approve results ?</p>
         </div>
       </Dialog>
     </>
