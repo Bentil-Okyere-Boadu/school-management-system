@@ -26,11 +26,11 @@ export class Subject {
   @JoinColumn({ name: 'subject_catalog_id' })
   subjectCatalog: SubjectCatalog;
 
-  @ManyToOne(() => Teacher, { eager: true, nullable: false })
+  @ManyToOne(() => Teacher, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'teacher_id' })
   teacher: Teacher;
 
-  @ManyToOne(() => School, { eager: true, nullable: false })
+  @ManyToOne(() => School, { eager: true, nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'school_id' })
   school: School;
 

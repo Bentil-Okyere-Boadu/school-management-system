@@ -31,7 +31,7 @@ export class SchoolAdmin {
   @Column({ default: 'pending' })
   status: string;
 
-  @ManyToOne(() => Role, { eager: true })
+  @ManyToOne(() => Role, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn()
   role: Role;
 
@@ -48,7 +48,7 @@ export class SchoolAdmin {
   resetPasswordToken: string;
 
   @ManyToOne(() => School, (school) => school.admins, {
-    // onDelete: 'CASCADE',
+    onDelete: 'CASCADE',
     eager: true,
   })
   school: School;

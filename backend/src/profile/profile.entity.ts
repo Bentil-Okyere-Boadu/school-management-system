@@ -65,7 +65,7 @@ export class Profile {
   @Column({ nullable: true })
   optionalPhoneContactTwo?: string;
 
-  @OneToOne(() => SchoolAdmin, (admin) => admin.profile)
+  @OneToOne(() => SchoolAdmin, (admin) => admin.profile, { onDelete: 'CASCADE' })
   @JoinColumn()
   schoolAdmin: SchoolAdmin;
 
@@ -81,16 +81,19 @@ export class Profile {
   @JoinColumn()
   teacher: Teacher;
 
-  @OneToOne(() => Parent, (parent) => parent.profile)
+  @OneToOne(() => Parent, (parent) => parent.profile, { onDelete: 'CASCADE' })
   @JoinColumn()
   parent: Parent;
 
-  @OneToOne(() => SuperAdmin, (admin) => admin.profile)
+  @OneToOne(() => SuperAdmin, (admin) => admin.profile, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   superAdmin: SuperAdmin;
 
   @OneToOne(() => School, {
     eager: true,
+    onDelete: 'CASCADE',
   })
   @JoinColumn()
   school: School;

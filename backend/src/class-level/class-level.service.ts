@@ -63,29 +63,6 @@ export class ClassLevelService {
       }
     }
 
-    // 2. Check if class teacher is already assigned to another class
-    if (classTeacherId) {
-      const existingClassWithTeacher = await this.classLevelRepository.findOne({
-        where: { classTeacher: { id: classTeacherId } },
-        relations: ['classTeacher'],
-      });
-
-      if (existingClassWithTeacher) {
-        throw new ConflictException(
-          `Class teacher is already assigned to class: ${existingClassWithTeacher.name}`,
-        );
-      }
-
-      const classTeacher = await this.teacherRepository.findOne({
-        where: { id: classTeacherId, school: { id: admin.school.id } },
-      });
-      if (!classTeacher) {
-        throw new NotFoundException(
-          `Teacher with ID ${classTeacherId} not found in this school`,
-        );
-      }
-    }
-
     // 3. Create new class level
     const classLevel = this.classLevelRepository.create({
       name,
