@@ -11,7 +11,10 @@ export function sanitize<T>(data: T): any {
     return data.map(sanitize);
   }
 
-  if (data instanceof Date) {
+  if (
+    data instanceof Date ||
+    Object.prototype.toString.call(data) === '[object Date]'
+  ) {
     return data;
   }
 

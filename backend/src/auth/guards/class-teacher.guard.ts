@@ -9,9 +9,11 @@ export class IsClassTeacherGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    const { classLevelId, studentId } = request.params as {
-      classLevelId?: string;
-      studentId?: string;
+
+    // Take from params OR body
+    const { classLevelId, studentId } = {
+      classLevelId: request.params?.classLevelId ?? request.body?.classLevelId,
+      studentId: request.params?.studentId ?? request.body?.studentId,
     };
 
     const { isClassTeacher } = await this.teacherService.checkIfClassTeacher(

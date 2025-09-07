@@ -60,6 +60,8 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
   const {mutate: createNotification} = useCreateNotification();
   const {me} = useTeacherGetMe();
 
+  // const {isClassTeacher} = useIsClassTeacher(classId as string);
+
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, type: "year" | "month" | "week") => {
     const value = event.target.value;
     if (type === "year") setCurrentYear(value);
@@ -155,14 +157,17 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
     });
   };
 
+
   return (
     <div className="pb-8 px-0.5">
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full px-0.5" /> */}
 
-      <div className="flex gap-3 my-6">
+      <div className="flex gap-3 my-6 justify-between">
+        <div className="flex gap-3">
         <CustomSelectTag value={currentWeek} options={weekOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} />
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
         <CustomSelectTag value={currentYear} options={yearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />
+        </div>
       </div>
 
       <div className="overflow-x-auto">

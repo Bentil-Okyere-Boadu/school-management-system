@@ -13,6 +13,7 @@ interface DialogProps {
   children: ReactNode;
   backdropOpacity?: number;
   busy?: boolean;
+  subheader?: string;
 }
 
 export const Dialog: React.FC<DialogProps> = ({
@@ -23,7 +24,8 @@ export const Dialog: React.FC<DialogProps> = ({
   onSave,
   children,
   backdropOpacity = 0.7,
-  busy = false
+  busy = false,
+  subheader= ''
 }) => {
 
   useEffect(() => {
@@ -75,6 +77,9 @@ export const Dialog: React.FC<DialogProps> = ({
             <IconX stroke={2} />
           </button>
         </div>
+        {subheader && (
+          <div className='px-4 pb-2 text-sm text-gray-600'>{subheader}</div>
+        )}
 
         {/* Scrollable Content */}
         <div className="overflow-y-auto flex-1 mb-2 px-4">

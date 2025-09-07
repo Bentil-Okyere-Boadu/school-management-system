@@ -27,6 +27,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { StudentJwtAuthGuard } from 'src/student/guards/student-jwt-auth.guard';
 import { QueryString } from 'src/common/api-features/api-features';
 import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
+import { ClassLevelResultNotApprovedGuard } from 'src/auth/guards/classLevelResultNotApproved.guard';
 
 @Controller('subject')
 export class SubjectController {
@@ -57,6 +58,72 @@ export class SubjectController {
   async remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     await this.subjectService.remove(id, admin);
     return { message: 'Subject deleted successfully' };
+  }
+  @UseGuards(
+    TeacherJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    IsClassTeacherGuard,
+  )
+  @Post('toggle-class-results-approval')
+  async toggleClassResultsApproval(
+    @Body('classLevelId') classLevelId: string,
+    @CurrentUser() teacher: Teacher,
+    @Body('action') action: 'approve' | 'unapprove' = 'approve',
+    @Body('forceApprove') forceApprove?: boolean,
+  ) {
+    return this.subjectService.toggleClassResultsApproval(
+      classLevelId,
+      teacher,
+      action,
+      forceApprove,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('class-results-approval-status/:classLevelId')
+  async getClassResultsApprovalStatus(
+    @Param('classLevelId') classLevelId: string,
+    @CurrentUser() teacher: Teacher,
+  ) {
+    return this.subjectService.getClassResultsApprovalStatus(
+      classLevelId,
+      teacher,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/toggle-class-results-approval')
+  async toggleSchoolAdminApproval(
+    @Body('classLevelId') classLevelId: string,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+    @Body('action') action: 'approve' | 'unapprove' = 'approve',
+  ) {
+    return this.subjectService.toggleSchoolAdminApproval(
+      classLevelId,
+      schoolAdmin,
+      action,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/class-results-approval-status/:classLevelId')
+  async getSchoolAdminClassResultsApprovalStatus(
+    @Param('classLevelId') classLevelId: string,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.getClassResultsApprovalStatus(
+      classLevelId,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/all-class-results-approval-status')
+  async getAllClassResultsApprovalStatus(
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.getAllClassResultsApprovalStatus(schoolAdmin);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -99,6 +166,7 @@ export class SubjectController {
     ActiveUserGuard,
     RolesGuard,
     IsClassTeacherGuard,
+    ClassLevelResultNotApprovedGuard,
   )
   async submitTermRemarks(
     @CurrentUser() teacher: Teacher,
@@ -187,7 +255,12 @@ export class SubjectController {
     );
   }
 
-  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @UseGuards(
+    TeacherJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    ClassLevelResultNotApprovedGuard,
+  )
   @Post('submit-grades')
   async submitGrades(
     @CurrentUser() teacher: Teacher,

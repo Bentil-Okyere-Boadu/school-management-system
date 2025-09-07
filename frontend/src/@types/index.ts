@@ -37,6 +37,8 @@ export interface ClassLevel {
   id: string;
   name: string;
   description: string
+  isApproved: boolean,
+  schoolAdminApproved: boolean
 }
 
 export interface Student extends User {
@@ -547,4 +549,26 @@ export interface Reminder {
   targetStudentIds: string[]
   scheduledAt?: string | null;
   recurringAt?: string | null;
+}
+
+export interface ApproveClassResultsPayload {
+  classLevelId: string;
+  forceApprove: boolean;
+};
+
+export interface MissingGradesResponse {
+  message: string;
+  approved: boolean;
+  missingGrades: MissingGrade[];
+}
+
+export interface MissingGrade {
+  student: Student;
+  missingSubjects: MissingSubject[];
+}
+
+export interface MissingSubject {
+  subjectId: string;
+  subjectName: string;
+  teacher: Teacher;
 }

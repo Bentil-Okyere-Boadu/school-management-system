@@ -47,7 +47,6 @@ export class StudentGrade {
   @Column('float')
   totalScore: number;
 
-  @Column()
   grade: string;
 
   @CreateDateColumn()
@@ -55,4 +54,4 @@ export class StudentGrade {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}
