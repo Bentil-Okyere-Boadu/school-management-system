@@ -28,7 +28,7 @@ const ClassesPage = () => {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
-  const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
+  // const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
 
   const { mutate: approveResults, isPending: approveResultPending } = useAdminApproveClassResults();
