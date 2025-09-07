@@ -141,7 +141,7 @@ const ClassesPage = () => {
         dialogTitle="Missing Grades"
         subheader="Some students have missing grades. Approval not completed."
         saveButtonText="Confirm Approval"
-        onSave={() => {onConfirmClassResultApproval(selectedClassId)}} 
+        onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
         onClose={() => setIsMissingGradesDialogOpen(false)}
       >
         <div className="my-3">
