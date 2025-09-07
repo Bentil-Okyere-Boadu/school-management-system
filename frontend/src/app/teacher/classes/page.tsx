@@ -78,7 +78,7 @@ const ClassesPage = () => {
       onSuccess: () => {
         refetchTeacherClasses();
         setIsMissingGradesDialogOpen(false);
-        toast.success('Class results approved successfully');
+        toast.success('Class results submitted successfully');
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -99,7 +99,7 @@ const ClassesPage = () => {
       approveResults(payload, {
         onSuccess: () => {
           refetchTeacherClasses();
-          toast.success('Class results disapproved successfully');
+          toast.success('Class results unsubmitted successfully');
         },
         onError: (error: unknown) => {
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -140,7 +140,7 @@ const ClassesPage = () => {
         busy={false}
         dialogTitle="Missing Grades"
         subheader="Some students have missing grades. Approval not completed."
-        saveButtonText="Confirm Approval"
+        saveButtonText="Confirm"
         onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
         onClose={() => setIsMissingGradesDialogOpen(false)}
       >
