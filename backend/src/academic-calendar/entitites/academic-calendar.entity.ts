@@ -17,7 +17,7 @@ export class AcademicCalendar {
   name: string;
 
   @ManyToOne(() => School, (school) => school.academicCalendars, {
-    //   onDelete: 'CASCADE',
+    onDelete: 'CASCADE',
   })
   school: School;
 

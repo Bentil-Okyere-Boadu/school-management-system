@@ -38,10 +38,13 @@ export class Teacher {
     onDelete: 'CASCADE',
   })
   profile: Profile;
-  @ManyToOne(() => Role, { eager: true })
+  @ManyToOne(() => Role, { eager: true, nullable: true, onDelete: 'SET NULL' })
   role: Role;
 
-  @ManyToOne(() => School, (school) => school.teachers, { eager: true })
+  @ManyToOne(() => School, (school) => school.teachers, {
+    eager: true,
+    onDelete: 'CASCADE',
+  })
   school: School;
 
   @Column({ default: 'pending' })

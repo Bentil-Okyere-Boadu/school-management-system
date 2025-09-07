@@ -15,10 +15,10 @@ export class ClassLevelResultApproval {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => ClassLevel, { eager: true })
+  @ManyToOne(() => ClassLevel, { eager: true, onDelete: 'CASCADE' })
   classLevel: ClassLevel;
 
-  @ManyToOne(() => AcademicTerm, { eager: true })
+  @ManyToOne(() => AcademicTerm, { eager: true, onDelete: 'CASCADE' })
   academicTerm: AcademicTerm;
 
   @Column({ default: false })
@@ -34,6 +34,6 @@ export class ClassLevelResultApproval {
   @Column({ type: 'timestamp', nullable: true })
   schoolAdminApprovedAt?: Date;
 
-  @ManyToOne(() => SchoolAdmin, { nullable: true })
+  @ManyToOne(() => SchoolAdmin, { nullable: true, onDelete: 'SET NULL' })
   approvedBySchoolAdmin?: SchoolAdmin;
 }

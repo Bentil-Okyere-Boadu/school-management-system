@@ -22,11 +22,14 @@ export class SubjectCatalog {
   @Column({ nullable: true })
   description: string;
 
-  @ManyToOne(() => School, { eager: true, nullable: false })
+  @ManyToOne(() => School, { eager: true, nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'school_id' })
   school: School;
 
-  @OneToMany(() => Subject, (subject) => subject.subjectCatalog)
+  @OneToMany(() => Subject, (subject) => subject.subjectCatalog, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   subjects: Subject[];
 
   @CreateDateColumn()

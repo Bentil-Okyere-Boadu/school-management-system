@@ -20,22 +20,22 @@ export class StudentGrade {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Student, { eager: true })
+  @ManyToOne(() => Student, { eager: true, onDelete: 'CASCADE' })
   student: Student;
 
-  @ManyToOne(() => Subject, { eager: true })
+  @ManyToOne(() => Subject, { eager: true, onDelete: 'CASCADE' })
   subject: Subject;
 
-  @ManyToOne(() => ClassLevel, { eager: true })
+  @ManyToOne(() => ClassLevel, { eager: true, onDelete: 'CASCADE' })
   classLevel: ClassLevel;
 
-  @ManyToOne(() => AcademicTerm, { eager: true })
+  @ManyToOne(() => AcademicTerm, { eager: true, onDelete: 'CASCADE' })
   academicTerm: AcademicTerm;
 
-  @ManyToOne(() => AcademicCalendar, { eager: true })
+  @ManyToOne(() => AcademicCalendar, { eager: true, onDelete: 'CASCADE' })
   academicCalendar: AcademicCalendar;
 
-  @ManyToOne(() => Teacher, { eager: true })
+  @ManyToOne(() => Teacher, { eager: true, nullable: true, onDelete: 'SET NULL' })
   teacher: Teacher;
 
   @Column('float')
