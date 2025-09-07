@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -368,4 +368,35 @@ export const useSubmitStudentTermRemarks = (studentId: string, termId: string) =
       });
     },
   });
+};
+
+export const useApproveClassResults = () => {
+  return useMutation({
+    mutationFn: (payload: ApproveClassResultsPayload) =>
+      customAPI.post(`/subject/toggle-class-results-approval`, payload),
+  });
+};
+
+interface isClassTeacherData {
+  isClassTeacher: boolean;
+}
+
+export const useIsClassTeacher = (
+  classLevelId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isPending, refetch } = useQuery({
+    queryKey: ["isClassTeacher", classLevelId],
+    queryFn: () =>
+      customAPI.get(
+        `/teacher/me/is-class-teacher?classLevelId=${classLevelId}`
+      ),
+    enabled: options?.enabled ?? Boolean(classLevelId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const isClassTeacher = (data as { data: isClassTeacherData })?.data.isClassTeacher;
+
+  return { isClassTeacher, isPending, refetch };
 };

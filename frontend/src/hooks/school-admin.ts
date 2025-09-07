@@ -1,6 +1,6 @@
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -952,4 +952,11 @@ export const useUpdateCalendlyUrl = () => {
             return customAPI.put('/schools/update-calendly-url', payload);
         }
     });
+};
+
+export const useAdminApproveClassResults = () => {
+  return useMutation({
+    mutationFn: (payload: ApproveClassResultsPayload) =>
+      customAPI.post(`/subject/school-admin/toggle-class-results-approval`, payload),
+  });
 };
