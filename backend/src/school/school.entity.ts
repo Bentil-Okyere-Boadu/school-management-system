@@ -56,22 +56,34 @@ export class School {
   @Column({ nullable: true, unique: true })
   schoolCode: string;
 
-  @OneToMany(() => SchoolAdmin, (admin) => admin.school)
+  @OneToMany(() => SchoolAdmin, (admin) => admin.school, { onDelete: 'CASCADE' })
   admins: SchoolAdmin[];
 
-  @OneToMany(() => Student, (student) => student.school)
+  @OneToMany(() => Student, (student) => student.school, { onDelete: 'CASCADE' })
   students: Student[];
 
-  @OneToMany(() => ClassLevel, (classLevel) => classLevel.school)
+  @OneToMany(() => ClassLevel, (classLevel) => classLevel.school, {
+    onDelete: 'CASCADE',
+  })
   classLevels: ClassLevel[];
 
-  @OneToMany(() => AdmissionPolicy, (admissionPolicy) => admissionPolicy.school)
+  @OneToMany(
+    () => AdmissionPolicy,
+    (admissionPolicy) => admissionPolicy.school,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
   admissionPolicies: AdmissionPolicy[];
 
-  @OneToMany(() => GradingSystem, (gradingSystem) => gradingSystem.school)
+  @OneToMany(() => GradingSystem, (gradingSystem) => gradingSystem.school, {
+    onDelete: 'CASCADE',
+  })
   gradingSystems: GradingSystem[];
 
-  @OneToMany(() => FeeStructure, (feeStructure) => feeStructure.school)
+  @OneToMany(() => FeeStructure, (feeStructure) => feeStructure.school, {
+    onDelete: 'CASCADE',
+  })
   feeStructures: FeeStructure[];
 
   @OneToOne(() => Profile, (profile) => profile.school, { cascade: true })
@@ -80,10 +92,13 @@ export class School {
   @OneToMany(
     () => AcademicCalendar,
     (academicCalendar) => academicCalendar.school,
+    {
+      onDelete: 'CASCADE',
+    },
   )
   academicCalendars: AcademicCalendar[];
 
-  @OneToMany(() => Teacher, (teacher) => teacher.school)
+  @OneToMany(() => Teacher, (teacher) => teacher.school, { onDelete: 'CASCADE' })
   teachers: Teacher[];
 
   @CreateDateColumn()

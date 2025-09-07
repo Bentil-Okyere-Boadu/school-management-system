@@ -26,7 +26,7 @@ export class ClassLevel {
   })
   school: School;
 
-  @ManyToOne(() => Teacher, { nullable: true })
+  @ManyToOne(() => Teacher, { nullable: true, onDelete: 'SET NULL' })
   classTeacher: Teacher;
 
   @ManyToMany(() => Teacher)

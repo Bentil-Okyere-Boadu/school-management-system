@@ -18,13 +18,13 @@ export class StudentTermRemark {
   @Column({ type: 'text' })
   remarks: string;
 
-  @ManyToOne(() => Student, { nullable: false })
+  @ManyToOne(() => Student, { nullable: false, onDelete: 'CASCADE' })
   student: Student;
 
-  @ManyToOne(() => Teacher, { nullable: false })
+  @ManyToOne(() => Teacher, { nullable: true, onDelete: 'SET NULL' })
   teacher: Teacher;
 
-  @ManyToOne(() => AcademicTerm, { nullable: false })
+  @ManyToOne(() => AcademicTerm, { nullable: false, onDelete: 'CASCADE' })
   academicTerm: AcademicTerm;
 
   @CreateDateColumn()

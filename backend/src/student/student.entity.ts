@@ -45,12 +45,12 @@ export class Student {
   @Column()
   password: string; // For PIN storage
 
-  @ManyToOne(() => Role, { eager: true })
+  @ManyToOne(() => Role, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn()
   role: Role;
 
   @ManyToOne(() => School, (school) => school.students, {
-    //onDelete: 'CASCADE',
+    onDelete: 'CASCADE',
     eager: true,
   })
   school: School;
