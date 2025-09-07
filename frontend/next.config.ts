@@ -41,7 +41,13 @@ const nextConfig: NextConfig = {
       ]
     }
     ]
-  }
+  },
+  rewrites: async () => [
+    {
+      source: "/api/v1/:path*",
+      destination: "https://sms-backend-9gyh.onrender.com/api/v1/:path*", // Replace with your backend URL
+    }
+  ]
 };
 
 export default nextConfig;
