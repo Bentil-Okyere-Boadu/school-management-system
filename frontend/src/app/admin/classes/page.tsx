@@ -6,7 +6,7 @@ import { Dialog } from '@/components/common/Dialog';
 import { SearchBar } from '@/components/common/SearchBar';
 import InputField from '@/components/InputField';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
-import { ErrorResponse, ClassLevel, User, MissingGrade } from "@/@types";
+import { ErrorResponse, ClassLevel, User } from "@/@types";
 import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetClassLevels, useGetSchoolUsers } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { Select } from '@mantine/core';
