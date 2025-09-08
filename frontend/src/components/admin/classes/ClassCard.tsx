@@ -3,6 +3,7 @@
 import React from "react";
 import { IconTrash, IconEdit, IconSchool, IconUserStar, IconScript } from "@tabler/icons-react";
 import { ClassLevel } from "@/@types";
+import { Tooltip } from '@mantine/core';
 
 interface ClassCardProps {
   classData: ClassLevel;
@@ -19,6 +20,7 @@ interface ClassCardProps {
   isApproved?: boolean;
   onApprovalClick?: (item: ClassLevel) => void;
   approvalText?: string;
+  tooltipText?: string;
 }
 
 export const ClassCard: React.FC<ClassCardProps> = ({
@@ -36,6 +38,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   isApproved = false,
   onApprovalClick,
   approvalText = '',
+  tooltipText = '',
 }) => {
   return (
     <div
@@ -92,13 +95,22 @@ export const ClassCard: React.FC<ClassCardProps> = ({
               </span> 
               }
               {showApproval && 
-              <span
-                onClick={() => onApprovalClick?.(classData)}
-                className={`inline-block text-xs font-medium px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow
-                  ${isApproved ? "text-red-800 bg-red-100 hover:bg-red-200" : "text-green-800 bg-green-100 hover:bg-green-200" }`}
-              >
-                {approvalText}
-              </span>
+                <Tooltip
+                  multiline
+                  w={240}
+                  withArrow
+                  disabled={!tooltipText}
+                  transitionProps={{ duration: 200 }}
+                  label={tooltipText}
+                >
+                  <span
+                    onClick={() => onApprovalClick?.(classData)}
+                    className={`inline-block text-xs font-medium px-3 py-1 rounded-full cursor-pointer hover:shadow-md transition-shadow
+                      ${isApproved ? "text-red-800 bg-red-100 hover:bg-red-200" : "text-green-800 bg-green-100 hover:bg-green-200" }`}
+                  >
+                    {approvalText}
+                  </span>
+                </Tooltip>
               }
             </div>
           </div>

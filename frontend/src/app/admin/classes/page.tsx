@@ -6,7 +6,7 @@ import { Dialog } from '@/components/common/Dialog';
 import { SearchBar } from '@/components/common/SearchBar';
 import InputField from '@/components/InputField';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
-import { ErrorResponse, ClassLevel, User, MissingGrade } from "@/@types";
+import { ErrorResponse, ClassLevel, User } from "@/@types";
 import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetClassLevels, useGetSchoolUsers } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { Select } from '@mantine/core';
@@ -28,7 +28,6 @@ const ClassesPage = () => {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
-  const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
 
   const { mutate: approveResults, isPending: approveResultPending } = useAdminApproveClassResults();
@@ -172,7 +171,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
       approveResults(payload, {
         onSuccess: () => {
           refetch();
-          toast.success('Class results approved successfully');
+          toast.success('Class results locked successfully');
         },
         onError: (error: unknown) => {
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -195,7 +194,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
       onSuccess: () => {
         refetch();
         setIsMissingGradesDialogOpen(false);
-        toast.success('Class results approved successfully');
+        toast.success('Class results locked successfully');
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -216,7 +215,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     approveResults(payload, {
       onSuccess: () => {
         refetch();
-        toast.success('Class results disapproved successfully');
+        toast.success('Class results unlocked successfully');
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -239,8 +238,13 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
               classData={data}
               showApproval={true}
               isApproved={data?.schoolAdminApproved}
-              approvalText={data?.schoolAdminApproved ? 'Disapprove Results' : 'Approve Results'}
+              approvalText={data?.schoolAdminApproved ? 'UnLock Results' : 'Lock Results'}
               studentCount={data?.students?.length}
+              tooltipText={
+              data?.schoolAdminApproved
+                ? "Unlock the results to allow edits and resubmission by the class teacher."
+                : "Lock the results to prevent further changes and make them official."
+              }
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
               onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
@@ -321,14 +325,14 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
       <Dialog 
         isOpen={isMissingGradesDialogOpen}
         busy={false}
-        dialogTitle="Class Results Approval"
+        dialogTitle="Class Results Locking"
         subheader=""
-        saveButtonText="Confirm Approval"
+        saveButtonText="Confirm"
         onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
         onClose={() => setIsMissingGradesDialogOpen(false)}
       >
         <div className="my-3">
-            <p>Class teacher has not submitted results yet, would you still like to proceed to approve results ?</p>
+            <p>Class teacher has not submitted results yet, would you still like to proceed to lock results ?</p>
         </div>
       </Dialog>
     </>
