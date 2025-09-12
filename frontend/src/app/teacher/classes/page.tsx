@@ -84,7 +84,7 @@ const ClassesPage = () => {
             console.error("Failed to create notification:", error);
           },
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+            queryClient.invalidateQueries({ queryKey: ['notifications', 'myClassLevels'] });
           }
         });
       }
