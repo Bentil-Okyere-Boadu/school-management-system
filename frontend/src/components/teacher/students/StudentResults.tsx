@@ -4,12 +4,11 @@ import React, { useEffect, useState } from "react";
 import { CustomSelectTag } from "../../common/CustomSelectTag";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 import CustomButton from "@/components/Button";
-import { Calendar, ErrorResponse, NotificationType, StudentResultsResponse } from "@/@types";
+import { Calendar, ErrorResponse, StudentResultsResponse } from "@/@types";
 import { Textarea } from "@mantine/core";
 import { useSubmitStudentTermRemarks } from "@/hooks/teacher";
 import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCreateNotification } from "@/hooks/school-admin";
 
 interface StudentResultProps {
   calendars: Calendar[];
@@ -24,7 +23,6 @@ const StudentResults: React.FC<StudentResultProps> = ({
   calendars,
   studentResults,
   studentId,
-  schoolId,
   onCalendarChange,
   onTermChange,
 }) => {
@@ -105,30 +103,11 @@ const StudentResults: React.FC<StudentResultProps> = ({
   };
 
   const { mutate: updateRemarks } = useSubmitStudentTermRemarks(studentId, selectedTermId);
-  const {mutate: createNotification} = useCreateNotification();
-
-  const createNotificationForAdmission = () => {
-      createNotification({
-        title: "Student Results Updated",
-        message: `Results for student with ID:${studentId} have been updated.`,
-        type: NotificationType.Results,
-        schoolId: schoolId as string,
-      }, {
-        onError: (error: unknown) => {
-          console.error("Failed to create notification:", error);
-        },
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        }
-      });
-    }
-
 
   const onSaveChanges = () => {
     updateRemarks(termRemarks, {
       onSuccess: () => {
         toast.success('Remark submitted successfully');
-        createNotificationForAdmission();
         queryClient.invalidateQueries({ queryKey: ['studentTermResults'] });
       },
       onError: (error: unknown) => {
