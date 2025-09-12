@@ -1,4 +1,4 @@
-import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload } from "@/@types";
 
@@ -910,8 +910,6 @@ export const useGetReminders = (
     refetchOnWindowFocus: true,
   });
 
-  console.log(data, "data here")
-
   const allReminders = data?.data || [];
 //   const paginationValues = data?.data?.meta;
 
@@ -955,8 +953,15 @@ export const useUpdateCalendlyUrl = () => {
 };
 
 export const useAdminApproveClassResults = () => {
+    const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: (payload: ApproveClassResultsPayload) =>
-      customAPI.post(`/subject/school-admin/toggle-class-results-approval`, payload),
+    mutationFn: (payload: ApproveClassResultsPayload) => {
+       return customAPI.post(`/subject/school-admin/toggle-class-results-approval`, payload);
+    },
+    onSuccess: () => {
+        // Invalidate and refetch
+        queryClient.invalidateQueries({ queryKey: ['teacherClasses'] });
+    }
   });
 };
