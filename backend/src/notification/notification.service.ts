@@ -13,7 +13,6 @@ export class NotificationService {
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
     @InjectRepository(SchoolAdmin)
-    private schoolAdminRepository: Repository<SchoolAdmin>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
   ) {}
