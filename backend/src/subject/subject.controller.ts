@@ -139,8 +139,13 @@ export class SubjectController {
   async getStudentResults(
     @Param('studentId') studentId: string,
     @Param('academicCalendarId') academicCalendarId: string,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
   ) {
-    return this.subjectService.getStudentResults(studentId, academicCalendarId);
+    return this.subjectService.getStudentResults(
+      studentId,
+      academicCalendarId,
+      schoolAdmin,
+    );
   }
 
   @Get('students/term-results/:studentId')
@@ -149,6 +154,7 @@ export class SubjectController {
     @Param('studentId') studentId: string,
     @Query('academicCalendarId') academicCalendarId: string,
     @Query('academicTermId') academicTermId: string,
+    @CurrentUser() teacher: Teacher,
   ) {
     if (!academicCalendarId || !academicTermId) {
       throw new BadRequestException('calendarId and termId are required');
@@ -158,6 +164,7 @@ export class SubjectController {
       studentId,
       academicCalendarId,
       academicTermId,
+      teacher,
     );
   }
   @Post('students/:studentId/terms/:termId/remarks')
@@ -191,6 +198,7 @@ export class SubjectController {
     return this.subjectService.getStudentResults(
       student.id,
       academicCalendarId,
+      student,
     );
   }
 
