@@ -19,17 +19,17 @@ export class NotificationService {
   ) {}
 
   async create(dto: CreateNotificationDto): Promise<Notification> {
-    const school = await this.schoolRepository.findOneBy({
+    const schoolAdmin = await this.schoolRepository.findOneBy({
       id: dto.schoolId,
     });
 
-    if (!school) throw new NotFoundException('School not found');
+    if (!schoolAdmin) throw new NotFoundException('School admin not found');
 
     const notification = this.notificationRepository.create({
       message: dto.message,
       title: dto.title,
       type: dto.type,
-      school: school,
+      school: schoolAdmin,
     });
     return this.notificationRepository.save(notification);
   }
