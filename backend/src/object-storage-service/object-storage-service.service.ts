@@ -200,9 +200,10 @@ export class ObjectStorageServiceService {
     userId: string,
     originalName: string,
   ): string {
-    const extension = path.extname(originalName);
+    const extension = path.extname(originalName).toLowerCase();
     const uniqueId = uuidv4();
-    return `profiles/${userId}/avatar-${uniqueId}${extension}`;
+    const safeUserId = decodeURIComponent(userId);
+    return `profiles/${safeUserId}/avatar-${uniqueId}${extension}`;
   }
 
   // Upload profile image with validation
