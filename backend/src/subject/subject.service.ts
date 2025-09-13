@@ -23,6 +23,8 @@ import { StudentTermRemark } from './student-term-remark.entity';
 import { QueryString } from 'src/common/api-features/api-features';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 import { isSchoolAdminOrClassTeacher } from '../common/utils/authUtil';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationType } from 'src/notification/notification.entity';
 
 @Injectable()
 export class SubjectService {
@@ -51,6 +53,7 @@ export class SubjectService {
     private remarkRepository: Repository<StudentTermRemark>,
     @InjectRepository(ClassLevelResultApproval)
     private classLevelResultApprovalRepository: Repository<ClassLevelResultApproval>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(createSubjectDto: CreateSubjectDto, admin: SchoolAdmin) {
@@ -342,6 +345,16 @@ export class SubjectService {
       approval.approvedAt = action === 'approve' ? new Date() : undefined;
     }
     await this.classLevelResultApprovalRepository.save(approval);
+
+    if (action === 'approve') {
+      // Notify school admin
+      await this.notificationService.create({
+        title: 'Class Results Approved',
+        message: `Teacher ${teacher.firstName} ${teacher.lastName} has approved results for ${classLevel.name} for academic term ${latestTerm.termName}.`,
+        schoolId: teacher.school.id,
+        type: NotificationType.ClassTeacherResultSubmission,
+      });
+    }
 
     return {
       message:
