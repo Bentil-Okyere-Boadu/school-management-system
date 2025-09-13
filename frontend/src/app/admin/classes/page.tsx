@@ -29,6 +29,7 @@ const ClassesPage = () => {
 
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
+  const [busyCardId, setBusyCardId] = useState<string | null>(null);
 
   const { mutate: approveResults, isPending: approveResultPending } = useAdminApproveClassResults();
 
@@ -36,7 +37,7 @@ const ClassesPage = () => {
   const { mutate: editMutation, isPending: pendingEdit } = useEditClassLevel(classLevelId);
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteClassLevel();
   const { mutate: createMutation, isPending: pendingCreate } = useCreateClassLevel();
-const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
+  const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     currentPage,
     "",
     "",
@@ -159,6 +160,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
   const onApproveClassResult = (classData: ClassLevel) => {
     if(approveResultPending) return;
 
+    setBusyCardId(classData.id);
     setSelectedClass(classData);
 
     if(classData.isApproved){
@@ -170,20 +172,27 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
 
       approveResults(payload, {
         onSuccess: () => {
-          refetch();
+        refetch().finally(() => {
+          setBusyCardId(null);
+          toast.success('Class results locked successfully');
+        });
           toast.success('Class results locked successfully');
         },
         onError: (error: unknown) => {
+          setBusyCardId(null);
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
         },
       });
     } else {
-      // onConfirmClassResultApproval(classData);
       setIsMissingGradesDialogOpen(true);
+      setBusyCardId(null);
     }
   }
 
   const onConfirmClassResultApproval = (classData?: ClassLevel) => {
+    const activeId = classData?.id || (selectedClass?.id as string);
+    setBusyCardId(activeId); 
+
     const payload = {
       classLevelId: classData?.id || selectedClass?.id as string,
       action: "approve",
@@ -192,11 +201,14 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
 
     approveResults(payload, {
       onSuccess: () => {
-        refetch();
-        setIsMissingGradesDialogOpen(false);
+      setIsMissingGradesDialogOpen(false);
+      refetch().finally(() => {
+        setBusyCardId(null);
         toast.success('Class results locked successfully');
+      });
       },
       onError: (error: unknown) => {
+        setBusyCardId(null);
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       },
     });
@@ -206,6 +218,8 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     if(approveResultPending) return;
     
     setSelectedClass(classData as ClassLevel);
+    setBusyCardId(classData?.id as string);
+
     const payload = {
       classLevelId: classData?.id as string,
       action: "unapprove",
@@ -214,10 +228,13 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
 
     approveResults(payload, {
       onSuccess: () => {
-        refetch();
+      refetch().finally(() => {
+        setBusyCardId(null);
         toast.success('Class results unlocked successfully');
+      });
       },
       onError: (error: unknown) => {
+        setBusyCardId(null);
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       },
     });
@@ -248,6 +265,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
               onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
+              busy={busyCardId === data.id}
             />
           ))}
         </section>
@@ -324,7 +342,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
       {/* Class Results Approval Dialog */}
       <Dialog 
         isOpen={isMissingGradesDialogOpen}
-        busy={false}
+        busy={approveResultPending}
         dialogTitle="Class Results Locking"
         subheader=""
         saveButtonText="Confirm"
