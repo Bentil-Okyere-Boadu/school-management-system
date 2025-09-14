@@ -345,7 +345,7 @@ export class SubjectService {
       approval.approvedAt = action === 'approve' ? new Date() : undefined;
     }
     await this.classLevelResultApprovalRepository.save(approval);
-    console.log('>>>>T', teacher);
+
     if (action === 'approve') {
       // Notify school admin
       await this.notificationService.create({
