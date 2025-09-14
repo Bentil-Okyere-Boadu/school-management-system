@@ -11,6 +11,9 @@ import { CreateSchoolDto } from './dto/create-school.dto';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { StudentGrade } from 'src/subject/student-grade.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { AttendanceService } from 'src/attendance/attendance.service';
 
 @Injectable()
 export class SchoolService {
@@ -22,6 +25,11 @@ export class SchoolService {
     private adminRepository: Repository<SchoolAdmin>,
     private objectStorageService: ObjectStorageServiceService,
     private invitationService: InvitationService,
+    @InjectRepository(StudentGrade)
+    private studentGradeRepository: Repository<StudentGrade>,
+    @InjectRepository(AcademicTerm)
+    private academicTermRepository: Repository<AcademicTerm>,
+    private attendanceService: AttendanceService,
   ) {}
 
   async create(
@@ -265,13 +273,145 @@ export class SchoolService {
     return school;
   }
 
-  async updateCalendlyUrl(schoolId: string, calendlyUrl: string): Promise<School> {
-    const school = await this.schoolRepository.findOne({ where: { id: schoolId } });
+  async updateCalendlyUrl(
+    schoolId: string,
+    calendlyUrl: string,
+  ): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
     if (!school) {
       throw new NotFoundException(`School with ID ${schoolId} not found`);
     }
 
     school.calendlyUrl = calendlyUrl;
     return this.schoolRepository.save(school);
+  }
+
+  async getSuperAdminDashboardStats() {
+    const schools = await this.schoolRepository.find({
+      relations: ['academicCalendars.terms', 'classLevels.students'],
+    });
+
+    const performanceData: Array<{
+      schoolName: string;
+      averageGrade: number;
+      averageAttendanceRate: number;
+      totalStudents: number;
+      totalTeachers: number;
+    }> = [];
+
+    let totalOverallAttendance = 0;
+    let schoolsWithAttendanceData = 0;
+    let totalOverallTeachers = 0;
+    let totalOverallStudents = 0;
+
+    for (const school of schools) {
+      let schoolTotalGrades = 0;
+      let numGrades = 0;
+      let schoolAttendanceRate = 0;
+      let numClassesWithAttendance = 0;
+
+      const latestTerm = school.academicCalendars
+        .flatMap((calendar) => calendar.terms)
+        .sort(
+          (a, b) =>
+            new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+        )[0];
+
+      if (latestTerm) {
+        // Calculate average grade
+        const grades = await this.studentGradeRepository.find({
+          where: { academicTerm: { id: latestTerm.id } },
+          relations: ['student.classLevels'],
+        });
+
+        grades.forEach((grade) => {
+          schoolTotalGrades += grade.totalScore;
+          numGrades++;
+        });
+
+        // Calculate attendance rate per school
+        const classLevelsInSchool = await this.schoolRepository.manager
+          .getRepository('ClassLevel')
+          .find({
+            where: { school: { id: school.id } },
+            relations: ['students'],
+          });
+
+        for (const classLevel of classLevelsInSchool) {
+          if (classLevel.students.length > 0) {
+            const attendanceSummary =
+              await this.attendanceService.getClassAttendance({
+                classLevelId: classLevel.id,
+                filterType: 'month',
+              });
+            if (
+              attendanceSummary?.summary?.averageAttendanceRate !== undefined
+            ) {
+              schoolAttendanceRate +=
+                attendanceSummary.summary.averageAttendanceRate;
+              numClassesWithAttendance++;
+            }
+          }
+        }
+      }
+
+      const averageGrade = numGrades > 0 ? schoolTotalGrades / numGrades : 0;
+      const finalSchoolAttendanceRate =
+        numClassesWithAttendance > 0
+          ? schoolAttendanceRate / numClassesWithAttendance
+          : 0;
+
+      const totalStudentsInSchool = await this.schoolRepository.manager
+        .getRepository('Student')
+        .count({ where: { school: { id: school.id } } });
+      const totalTeachersInSchool = await this.schoolRepository.manager
+        .getRepository('Teacher')
+        .count({ where: { school: { id: school.id } } });
+
+      totalOverallStudents += totalStudentsInSchool;
+      totalOverallTeachers += totalTeachersInSchool;
+
+      performanceData.push({
+        schoolName: school.name,
+        averageGrade,
+        averageAttendanceRate: finalSchoolAttendanceRate,
+        totalStudents: totalStudentsInSchool,
+        totalTeachers: totalTeachersInSchool,
+      });
+
+      if (finalSchoolAttendanceRate > 0) {
+        totalOverallAttendance += finalSchoolAttendanceRate;
+        schoolsWithAttendanceData++;
+      }
+    }
+
+    performanceData.sort((a, b) => b.averageGrade - a.averageGrade);
+
+    const bestPerformingSchools = performanceData.slice(0, 3);
+    const worstPerformingSchools = performanceData.slice(-3).reverse();
+
+    const overallAverageAttendanceRate =
+      schoolsWithAttendanceData > 0
+        ? totalOverallAttendance / schoolsWithAttendanceData
+        : 0;
+
+    return {
+      totalSchools: schools.length,
+      totalTeachers: totalOverallTeachers,
+      totalStudents: totalOverallStudents,
+      averageAttendanceRate: overallAverageAttendanceRate,
+      bestPerformingSchools: bestPerformingSchools.map((s) => ({
+        schoolName: s.schoolName,
+        averageGrade: s.averageGrade,
+        averageAttendanceRate: s.averageAttendanceRate,
+      })),
+      worstPerformingSchools: worstPerformingSchools.map((s) => ({
+        schoolName: s.schoolName,
+        averageGrade: s.averageGrade,
+        averageAttendanceRate: s.averageAttendanceRate,
+      })),
+    };
   }
 }
