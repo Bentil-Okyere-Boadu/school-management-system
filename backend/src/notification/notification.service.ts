@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
-import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { School } from 'src/school/school.entity';
@@ -12,23 +11,23 @@ export class NotificationService {
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
-    @InjectRepository(SchoolAdmin)
+
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
   ) {}
 
   async create(dto: CreateNotificationDto): Promise<Notification> {
-    const schoolAdmin = await this.schoolRepository.findOneBy({
-      id: dto.schoolId,
+    const school = await this.schoolRepository.findOne({
+      where: { id: dto.schoolId },
     });
 
-    if (!schoolAdmin) throw new NotFoundException('School admin not found');
+    if (!school) throw new NotFoundException('School not found');
 
     const notification = this.notificationRepository.create({
       message: dto.message,
       title: dto.title,
       type: dto.type,
-      school: schoolAdmin,
+      school,
     });
     return this.notificationRepository.save(notification);
   }

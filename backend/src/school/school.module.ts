@@ -11,6 +11,13 @@ import { ProfileService } from 'src/profile/profile.service';
 import { Profile } from 'src/profile/profile.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { Notification } from 'src/notification/notification.entity';
+import { StudentGrade } from 'src/subject/student-grade.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { AttendanceService } from 'src/attendance/attendance.service';
+import { Attendance } from 'src/attendance/attendance.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
 
 @Module({
   imports: [
@@ -21,10 +28,22 @@ import { Notification } from 'src/notification/notification.entity';
       Student,
       Profile,
       Notification,
+      StudentGrade,
+      AcademicTerm,
+      Attendance,
+      AcademicCalendar,
+      AcademicTerm,
+      Holiday,
+      ClassLevel,
     ]),
     InvitationModule,
   ],
-  providers: [SchoolService, ProfileService, ObjectStorageServiceService],
+  providers: [
+    SchoolService,
+    ProfileService,
+    ObjectStorageServiceService,
+    AttendanceService,
+  ],
   controllers: [SchoolController],
   exports: [SchoolService],
 })
