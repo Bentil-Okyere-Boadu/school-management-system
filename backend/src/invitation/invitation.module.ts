@@ -20,6 +20,12 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { TeacherService } from 'src/teacher/teacher.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { AttendanceService } from 'src/attendance/attendance.service';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+import { Attendance } from 'src/attendance/attendance.entity';
+import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 
 @Module({
   imports: [
@@ -30,6 +36,11 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       Student,
       Profile,
       Teacher,
+      ClassLevel,
+      Attendance,
+      Holiday,
+      AcademicCalendar,
+      AcademicTerm,
     ]),
     PassportModule,
     JwtModule.registerAsync({
@@ -51,6 +62,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
     ObjectStorageServiceService,
     ProfileService,
     SchoolAdminAuthService,
+    AttendanceService,
     AuthService,
   ],
   controllers: [InvitationController],

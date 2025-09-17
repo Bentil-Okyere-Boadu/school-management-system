@@ -56,10 +56,14 @@ export class School {
   @Column({ nullable: true, unique: true })
   schoolCode: string;
 
-  @OneToMany(() => SchoolAdmin, (admin) => admin.school, { onDelete: 'CASCADE' })
+  @OneToMany(() => SchoolAdmin, (admin) => admin.school, {
+    onDelete: 'CASCADE',
+  })
   admins: SchoolAdmin[];
 
-  @OneToMany(() => Student, (student) => student.school, { onDelete: 'CASCADE' })
+  @OneToMany(() => Student, (student) => student.school, {
+    onDelete: 'CASCADE',
+  })
   students: Student[];
 
   @OneToMany(() => ClassLevel, (classLevel) => classLevel.school, {
@@ -98,7 +102,9 @@ export class School {
   )
   academicCalendars: AcademicCalendar[];
 
-  @OneToMany(() => Teacher, (teacher) => teacher.school, { onDelete: 'CASCADE' })
+  @OneToMany(() => Teacher, (teacher) => teacher.school, {
+    onDelete: 'CASCADE',
+  })
   teachers: Teacher[];
 
   @CreateDateColumn()

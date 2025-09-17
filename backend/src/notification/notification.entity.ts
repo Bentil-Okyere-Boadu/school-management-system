@@ -13,6 +13,7 @@ export enum NotificationType {
   Results = 'results',
   Fee = 'fee',
   General = 'general',
+  ClassTeacherResultSubmission = 'classTeacherResultSubmission',
 }
 
 @Entity()
