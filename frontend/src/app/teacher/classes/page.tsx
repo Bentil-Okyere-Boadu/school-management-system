@@ -4,16 +4,19 @@ import React, { useState } from 'react'
 import { ClassCard } from '@/components/admin/classes/ClassCard';
 import { SearchBar } from '@/components/common/SearchBar';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
-import { ClassLevel, MissingGrade, ErrorResponse } from "@/@types";
+import { ClassLevel, MissingGrade, ErrorResponse, NotificationType } from "@/@types";
 import { useGetTeacherClasses, useApproveClassResults } from "@/hooks/teacher";
 import { useDebouncer } from '@/hooks/generalHooks';
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
 import { toast } from "react-toastify";
+import { useCreateNotification } from '@/hooks/school-admin';
+import { useQueryClient } from '@tanstack/react-query';
 
 
 const ClassesPage = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -22,6 +25,7 @@ const ClassesPage = () => {
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
   const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
+  const [busyCardId, setBusyCardId] = useState<string | null>(null);
 
   const { mutate: approveResults, isPending: approveResultPending } = useApproveClassResults();
 
@@ -45,6 +49,8 @@ const ClassesPage = () => {
     if(approveResultPending) return;
     
     setSelectedClass(classData);
+    setBusyCardId(classData.id);
+
     const payload = {
       classLevelId: classData?.id,
       action: "approve",
@@ -56,18 +62,41 @@ const ClassesPage = () => {
         if(data?.data?.missingGrades?.length > 0) {
           setMissingGrades(data?.data?.missingGrades);
           setIsMissingGradesDialogOpen(true);
+          setBusyCardId(null);
         } else {
           // no missing subject scores
           onConfirmClassResultApproval(classData);
         }
       },
       onError: (error: unknown) => {
+        setBusyCardId(null);
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       },
     });
   }
 
+    const {mutate: createNotification} = useCreateNotification();
+  
+    const createNotificationForAdmission = (data: ClassLevel) => {
+        createNotification({
+          title: "Class Results submitted",
+          message: `Results for ${data.name} have been submitted.`,
+          type: NotificationType.Results,
+          schoolId: data.id as string,
+        }, {
+          onError: (error: unknown) => {
+            console.error("Failed to create notification:", error);
+          },
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          }
+        });
+      }
+
   const onConfirmClassResultApproval = (classData?: ClassLevel) => {
+    const activeId = classData?.id || (selectedClass?.id as string);
+    setBusyCardId(activeId);
+
     const payload = {
       classLevelId: classData?.id || selectedClass?.id as string,
       action: "approve",
@@ -76,11 +105,15 @@ const ClassesPage = () => {
 
     approveResults(payload, {
       onSuccess: () => {
-        refetchTeacherClasses();
         setIsMissingGradesDialogOpen(false);
-        toast.success('Class results submitted successfully');
+        refetchTeacherClasses().finally(() => {
+          setBusyCardId(null);
+          toast.success("Class results submitted successfully");
+          createNotificationForAdmission(classData as ClassLevel);
+        });
       },
       onError: (error: unknown) => {
+        setBusyCardId(null);
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       },
     });
@@ -90,6 +123,8 @@ const ClassesPage = () => {
       if(approveResultPending) return;
       
       setSelectedClass(classData as ClassLevel);
+      setBusyCardId(classData?.id as string);
+
       const payload = {
         classLevelId: classData?.id as string,
         action: "unapprove",
@@ -98,10 +133,13 @@ const ClassesPage = () => {
   
       approveResults(payload, {
         onSuccess: () => {
-          refetchTeacherClasses();
-          toast.success('Class results unsubmitted successfully');
+          refetchTeacherClasses().finally(() => {
+            setBusyCardId(null);
+            toast.success("Class results unsubmitted successfully");
+          });
         },
         onError: (error: unknown) => {
+          setBusyCardId(null);
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
         },
       });
@@ -124,6 +162,7 @@ const ClassesPage = () => {
             approvalText={data?.isApproved ? 'Unsubmit Results' : 'Submit Results'}
             onNavigateToAttendanceClick={onNavigateToAttendance}
             onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
+            busy={busyCardId === data.id}
           />
         ))}
       </section>
@@ -137,7 +176,7 @@ const ClassesPage = () => {
       {/* Missing Grades Dialog */}
       <Dialog 
         isOpen={isMissingGradesDialogOpen}
-        busy={false}
+        busy={approveResultPending}
         dialogTitle="Missing Grades"
         subheader="Some students have missing grades. Submission not completed."
         saveButtonText="Confirm Submission"

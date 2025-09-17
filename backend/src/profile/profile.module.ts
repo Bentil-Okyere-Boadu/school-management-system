@@ -15,6 +15,12 @@ import { TeacherService } from 'src/teacher/teacher.service';
 import { School } from 'src/school/school.entity';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { Role } from 'src/role/role.entity';
+import { AttendanceService } from 'src/attendance/attendance.service';
+import { Attendance } from 'src/attendance/attendance.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
 
 @Module({
   imports: [
@@ -26,11 +32,17 @@ import { Role } from 'src/role/role.entity';
       Student,
       Teacher,
       Role,
+      Attendance,
+      ClassLevel,
+      Holiday,
+      AcademicTerm,
+      AcademicCalendar,
     ]),
   ],
   controllers: [ProfileController],
   providers: [
     ProfileService,
+    AttendanceService,
     ObjectStorageServiceService,
     SchoolAdminService,
     SuperAdminService,

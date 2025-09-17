@@ -15,6 +15,8 @@ import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { AttendanceService } from 'src/attendance/attendance.service';
+import { ClassLevel } from 'src/class-level/class-level.entity';
 @Injectable()
 export class SchoolAdminService {
   private readonly logger = new Logger(SchoolAdminService.name);
@@ -30,6 +32,9 @@ export class SchoolAdminService {
     private schoolRepository: Repository<School>,
     private readonly objectStorageService: ObjectStorageServiceService,
     private readonly profileService: ProfileService,
+    private readonly attendanceService: AttendanceService,
+    @InjectRepository(ClassLevel)
+    private classLevelRepository: Repository<ClassLevel>,
   ) {}
 
   async findAll(): Promise<SchoolAdmin[]> {
@@ -519,7 +524,6 @@ export class SchoolAdminService {
     }
   }
 
-  //Todo: attendace section info
   async getDashboardStats(schoolId: string) {
     const totalTeachers = await this.teacherRepository.count({
       where: { school: { id: schoolId }, isArchived: false },
@@ -535,13 +539,50 @@ export class SchoolAdminService {
       where: { school: { id: schoolId }, isArchived: false },
     });
 
-    const averageAttendanceRate = 0;
+    const classLevels = await this.classLevelRepository.find({
+      where: { school: { id: schoolId } },
+      relations: ['students'],
+    });
+
+    let totalAttendancePercentage = 0;
+    let classesWithAttendance = 0;
+
+    const attendanceByClass: { name: string; 'Attendence-Level': number }[] =
+      [];
+
+    for (const classLevel of classLevels) {
+      if (classLevel.students.length > 0) {
+        const attendanceSummary =
+          await this.attendanceService.getClassAttendance({
+            classLevelId: classLevel.id,
+            filterType: 'month',
+          });
+
+        if (attendanceSummary?.summary?.averageAttendanceRate !== undefined) {
+          const rate = attendanceSummary.summary.averageAttendanceRate;
+
+          totalAttendancePercentage += rate;
+          classesWithAttendance++;
+
+          attendanceByClass.push({
+            name: classLevel.name,
+            'Attendence-Level': rate,
+          });
+        }
+      }
+    }
+
+    const averageAttendanceRate =
+      classesWithAttendance > 0
+        ? totalAttendancePercentage / classesWithAttendance
+        : 0;
 
     return {
       totalTeachers,
       totalStudents,
       totalApplications,
       averageAttendanceRate,
+      attendanceByClass,
     };
   }
 }

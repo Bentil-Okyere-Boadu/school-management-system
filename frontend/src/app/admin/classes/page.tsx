@@ -28,8 +28,8 @@ const ClassesPage = () => {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
-  // const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
+  const [busyCardId, setBusyCardId] = useState<string | null>(null);
 
   const { mutate: approveResults, isPending: approveResultPending } = useAdminApproveClassResults();
 
@@ -37,7 +37,7 @@ const ClassesPage = () => {
   const { mutate: editMutation, isPending: pendingEdit } = useEditClassLevel(classLevelId);
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteClassLevel();
   const { mutate: createMutation, isPending: pendingCreate } = useCreateClassLevel();
-const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
+  const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     currentPage,
     "",
     "",
@@ -160,6 +160,7 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
   const onApproveClassResult = (classData: ClassLevel) => {
     if(approveResultPending) return;
 
+    setBusyCardId(classData.id);
     setSelectedClass(classData);
 
     if(classData.isApproved){
@@ -171,20 +172,27 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
 
       approveResults(payload, {
         onSuccess: () => {
-          refetch();
-          toast.success('Class results approved successfully');
+        refetch().finally(() => {
+          setBusyCardId(null);
+          toast.success('Class results locked successfully');
+        });
+          toast.success('Class results locked successfully');
         },
         onError: (error: unknown) => {
+          setBusyCardId(null);
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
         },
       });
     } else {
-      // onConfirmClassResultApproval(classData);
       setIsMissingGradesDialogOpen(true);
+      setBusyCardId(null);
     }
   }
 
   const onConfirmClassResultApproval = (classData?: ClassLevel) => {
+    const activeId = classData?.id || (selectedClass?.id as string);
+    setBusyCardId(activeId); 
+
     const payload = {
       classLevelId: classData?.id || selectedClass?.id as string,
       action: "approve",
@@ -193,11 +201,14 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
 
     approveResults(payload, {
       onSuccess: () => {
-        refetch();
-        setIsMissingGradesDialogOpen(false);
-        toast.success('Class results approved successfully');
+      setIsMissingGradesDialogOpen(false);
+      refetch().finally(() => {
+        setBusyCardId(null);
+        toast.success('Class results locked successfully');
+      });
       },
       onError: (error: unknown) => {
+        setBusyCardId(null);
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       },
     });
@@ -207,6 +218,8 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     if(approveResultPending) return;
     
     setSelectedClass(classData as ClassLevel);
+    setBusyCardId(classData?.id as string);
+
     const payload = {
       classLevelId: classData?.id as string,
       action: "unapprove",
@@ -215,10 +228,13 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
 
     approveResults(payload, {
       onSuccess: () => {
-        refetch();
-        toast.success('Class results disapproved successfully');
+      refetch().finally(() => {
+        setBusyCardId(null);
+        toast.success('Class results unlocked successfully');
+      });
       },
       onError: (error: unknown) => {
+        setBusyCardId(null);
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       },
     });
@@ -239,11 +255,17 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
               classData={data}
               showApproval={true}
               isApproved={data?.schoolAdminApproved}
-              approvalText={data?.schoolAdminApproved ? 'Disapprove Results' : 'Approve Results'}
+              approvalText={data?.schoolAdminApproved ? 'UnLock Results' : 'Lock Results'}
               studentCount={data?.students?.length}
+              tooltipText={
+              data?.schoolAdminApproved
+                ? "Unlock the results to allow edits and resubmission by the class teacher."
+                : "Lock the results to prevent further changes and make them official."
+              }
               onEditClick={() => onEditClassLevelClick(data)}
               onDeleteClick={() =>  onDeleteButtonClick(data.id)}
               onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
+              busy={busyCardId === data.id}
             />
           ))}
         </section>
@@ -320,15 +342,15 @@ const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
       {/* Class Results Approval Dialog */}
       <Dialog 
         isOpen={isMissingGradesDialogOpen}
-        busy={false}
-        dialogTitle="Class Results Approval"
+        busy={approveResultPending}
+        dialogTitle="Class Results Locking"
         subheader=""
-        saveButtonText="Confirm Approval"
+        saveButtonText="Confirm"
         onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
         onClose={() => setIsMissingGradesDialogOpen(false)}
       >
         <div className="my-3">
-            <p>Class teacher has not submitted results yet, would you still like to proceed to approve results ?</p>
+            <p>Class teacher has not submitted results yet, would you still like to proceed to lock results ?</p>
         </div>
       </Dialog>
     </>
