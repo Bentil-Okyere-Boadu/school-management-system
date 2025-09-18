@@ -2,6 +2,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import React, { useRef, useEffect, useState } from "react";
+import landingPic from "@/images/landingPic.png";
+import landingPic2 from "@/images/landingPic2.png";
+import aboutus1 from "@/images/aboutus1.png";
+import aboutus2 from "@/images/aboutus2.png";
+import backgroundImage from "@/images/background.png";
 
 const HomePage = () => {
   // Section refs
@@ -38,53 +43,60 @@ const HomePage = () => {
 
   return (
     <main className="w-full min-h-screen flex flex-col bg-white">
-      {/* Navigation */}
-      <nav className="w-full bg-white shadow sticky top-0 z-20">
+      {/* Navigation bg gradient: bg-gradient-to-br from-[#B860F5] to-[#7B11F9] */}
+      <nav className="w-full bg-gradient-to-br from-[#B860F5] to-[#7B11F9] shadow sticky top-0 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <Image src="/logo.svg" alt="Logo" width={40} height={40} />
-            <span className="font-bold text-lg text-[#6C63FF]">SchoolSys</span>
+            <span className="font-bold text-lg text-white">Go Edutech</span>
           </div>
-          <ul className="flex items-center gap-8 font-medium text-gray-700">
-            <li>
+          <ul className="flex items-center gap-8 font-medium text-white">
+            <li className="cursor-pointer">
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                className="hover:text-[#6C63FF] transition"
+                className="hover:text-purple-800 transition"
               >
                 Home
               </button>
             </li>
-            <li>
+            <li className="cursor-pointer">
               <button
-                onClick={() => scrollToSection(featuresRef)}
-                className="hover:text-[#6C63FF] transition"
+                onClick={() =>
+                  scrollToSection(
+                    featuresRef as React.RefObject<HTMLDivElement>
+                  )
+                }
+                className="hover:text-purple-800 transition"
               >
                 Features
               </button>
             </li>
-            <li>
+            <li className="cursor-pointer">
               <button
-                onClick={() => scrollToSection(aboutRef)}
-                className="hover:text-[#6C63FF] transition"
+                onClick={() =>
+                  scrollToSection(aboutRef as React.RefObject<HTMLDivElement>)
+                }
+                className="hover:text-purple-800 transition"
               >
                 About
               </button>
             </li>
-            <li>
+            <li className="cursor-pointer">
               <button
-                onClick={() => scrollToSection(contactRef)}
-                className="hover:text-[#6C63FF] transition"
+                onClick={() =>
+                  scrollToSection(contactRef as React.RefObject<HTMLDivElement>)
+                }
+                className="hover:text-purple-800 transition"
               >
                 Contact
               </button>
             </li>
-            <li>
-              {/* <Link href="/auth/login" className="bg-[#6C63FF] text-white px-4 py-2 rounded hover:bg-[#5548c8] transition">Get Started</Link> */}
+          </ul>  
               <div className="flex flex-col justify-center items-center">
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen((open) => !open)}
-                    className="bg-[#6C63FF] text-white px-6 py-3 rounded shadow font-medium hover:bg-[#5548c8] transition"
+                    className="bg-white text-purple-500 px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
                   >
                     Login
                   </button>
@@ -130,15 +142,20 @@ const HomePage = () => {
                   )}
                 </div>
               </div>
-            </li>
-          </ul>
+          
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-[#6C63FF] to-[#4F46E5] text-white py-16 px-4 flex flex-col items-center">
-        <div className="max-w-5xl w-full flex flex-col md:flex-row items-center gap-10">
-          <div className="flex-1">
+      <section
+        className="relative h-[30%] text-white pt-8 pb-0 px-4 flex flex-col items-center"
+        style={{
+          backgroundImage: `url(${backgroundImage.src})`,
+          backgroundSize: "cover"
+        }}
+      >
+        <div className="relative max-w-5xl w-full flex flex-col md:flex-row items-center gap-10 z-10">
+          <div className="w-[50%]">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Transform Your School with Automated Management
             </h1>
@@ -152,13 +169,13 @@ const HomePage = () => {
               Get Started
             </Link>
           </div>
-          <div className="flex-1 flex justify-center">
+          <div className="h-[35rem] right-8 relative flex justify-center">
             <Image
-              src="/images/hero-students.png"
+              src={landingPic}
               alt="Students"
-              width={320}
-              height={320}
-              className="rounded-xl shadow-lg object-cover"
+              width={900}
+              height={900}
+              className="rounded-xl object-cover"
               priority
             />
           </div>
@@ -167,27 +184,30 @@ const HomePage = () => {
 
       {/* Features Section */}
       <section ref={featuresRef} className="py-16 px-4 bg-white scroll-mt-24">
+        <div className="flex flex-col items-center mb-12 text-center">
+            <h1 className="text-3xl font-bold mb-4">
+              Everything You Need to Manage Your School
+            </h1>
+            <p>From student enrollment to graduation, our comprehensive platform handles every aspect <br/> of school administration with ease and precision.</p>
+        </div>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1 flex justify-center">
             <Image
-              src="/images/feature-admin.png"
+              src={landingPic2}
               alt="Admin Dashboard"
-              width={288}
-              height={288}
+              width={600}
+              height={600}
               className="rounded-xl shadow-lg object-cover"
             />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-4">
-              Everything You Need to Manage Your School
-            </h2>
-            <ul className="space-y-3 text-gray-700">
+            <ol className="space-y-3 text-gray-700">
               <li>Student Enrollment &amp; Records</li>
               <li>Attendance Tracking</li>
               <li>Result Compilation</li>
               <li>Automated Fee Management</li>
               <li>Insightful Reports</li>
-            </ul>
+            </ol>
           </div>
         </div>
       </section>
@@ -195,33 +215,33 @@ const HomePage = () => {
       {/* About Us Section */}
       <section ref={aboutRef} className="py-16 px-4 bg-[#F3F0FF] scroll-mt-24">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold mb-8">About Us</h2>
-          <div className="flex flex-col md:flex-row gap-10">
+          <div className="flex flex-col md:flex-row gap-5">
             <div className="flex-1 flex flex-col items-center">
+              <div className="w-full text-start mb-8">
+                <h2 className="text-3xl font-bold mb-6">About Us</h2>
+                <p>We help automate all tasks about your school. <br/> We make it way easy to run a school.</p>
+              </div>
               <Image
-                src="/images/about-dashboard.png"
+                src={aboutus1}
                 alt="About Dashboard"
-                width={256}
-                height={256}
+                width={300}
+                height={300}
                 className="rounded-xl shadow-lg object-cover mb-4"
               />
-              <p className="text-gray-700 text-center">
-                Our platform empowers schools to automate and streamline all
-                administrative processes, from admissions to graduation.
-              </p>
+              
             </div>
             <div className="flex-1 flex flex-col items-center">
               <Image
-                src="/images/about-admin.png"
+                src={aboutus2}
                 alt="About Admin"
-                width={256}
-                height={256}
+                width={300}
+                height={300}
                 className="rounded-xl shadow-lg object-cover mb-4"
               />
-              <p className="text-gray-700 text-center">
+              {/* <p className="text-gray-700 text-center">
                 Built for school administrators, teachers, and students, our
                 solution is intuitive, secure, and scalable.
-              </p>
+              </p> */}
             </div>
           </div>
         </div>
