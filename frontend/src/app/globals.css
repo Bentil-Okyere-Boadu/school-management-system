@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+ol li::marker {
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+  background-color: blue;
+  padding: 1rem;
+  border-radius: 50%;
+  /* font-weight: bold; */
+  border: 2px solid blue;
+}

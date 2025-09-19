@@ -6,7 +6,12 @@ import landingPic from "@/images/landingPic.png";
 import landingPic2 from "@/images/landingPic2.png";
 import aboutus1 from "@/images/aboutus1.png";
 import aboutus2 from "@/images/aboutus2.png";
+import AcaPlanIcon from "@/images/AcaPlan.svg";
+import StudentManIcon from "@/images/SdntMngmt.svg";
+import SecComIcon from "@/images/SecComp.svg";
+import AnalytIcon from "@/images/AnaRep.svg";
 import backgroundImage from "@/images/background.png";
+import { StaticImport } from "next/dist/shared/lib/get-img-props";
 
 const HomePage = () => {
   // Section refs
@@ -23,6 +28,44 @@ const HomePage = () => {
       ref.current.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+  const features = [
+    {
+      title: "Student Management",
+      description: "Comprehensive student profiles, enrollment tracking, and academic progress monitoring all in one place.",
+      icon: StudentManIcon
+    },
+    {
+      title: "Academic Planning",
+      description: "Plan and organize academic years, terms, subjects, and classes with ease,  ensuring smooth operations.",
+      icon: AcaPlanIcon
+    },
+    {
+      title: "Secure and Compliant",
+      description: "Enterprise-grade security with FERPA compliance and role-based access controls.",
+      icon: SecComIcon
+    },
+    {
+      title: "Analytics & Reporting",
+      description: "Automated attendance management with real-time notifications to parents and administrators.",
+      icon: AnalytIcon
+    }
+  ]
+  
+
+  const featuresContainer = ({icon, title, description}: {icon: StaticImport, title: string, description: string}) => {
+    return <div>
+            <div className="flex flex-row gap-4">
+              <div>
+                <Image src={icon} alt="Feature Icon" width={70} height={70} />
+              </div>
+              <div>
+                <h5 className="font-bold mb-1">{title}</h5>
+                <p className="text-sm text-gray-500 leading-6">{description}</p>
+              </div>
+            </div>
+          </div>
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -62,25 +105,26 @@ const HomePage = () => {
             <li className="cursor-pointer">
               <button
                 onClick={() =>
+                  scrollToSection(aboutRef as React.RefObject<HTMLDivElement>)
+                }
+                className="hover:text-purple-800 transition"
+              >
+                About Us
+              </button>
+            </li>
+            <li className="cursor-pointer">
+              <button
+                onClick={() =>
                   scrollToSection(
                     featuresRef as React.RefObject<HTMLDivElement>
                   )
                 }
                 className="hover:text-purple-800 transition"
               >
-                Features
+                Why Choose Us
               </button>
             </li>
-            <li className="cursor-pointer">
-              <button
-                onClick={() =>
-                  scrollToSection(aboutRef as React.RefObject<HTMLDivElement>)
-                }
-                className="hover:text-purple-800 transition"
-              >
-                About
-              </button>
-            </li>
+            
             <li className="cursor-pointer">
               <button
                 onClick={() =>
@@ -155,15 +199,15 @@ const HomePage = () => {
         }}
       >
         <div className="relative max-w-5xl w-full flex flex-col md:flex-row items-center gap-10 z-10">
-          <div className="w-[50%]">
+          <div className="md:w-[50%]">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Transform Your School with Automated Management
             </h1>
-            <p className="mb-8 text-lg">
-              Everything You Need to Manage Your School
+            <p className="mb-8 text-lg text-gray-300">
+              Streamline operations, boost academic performance, and create exceptional educational experiences with our comprehensive school management platform
             </p>
             <Link
-              href="/auth/login"
+              href=""
               className="inline-block bg-white text-[#6C63FF] font-semibold px-6 py-3 rounded shadow hover:bg-gray-100 transition"
             >
               Get Started
@@ -182,10 +226,10 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section ref={featuresRef} className="py-16 px-4 bg-white scroll-mt-24">
+      {/* Home 2 Section */}
+      <section  className="py-16 px-4 bg-white scroll-mt-24">
         <div className="flex flex-col items-center mb-12 text-center">
-            <h1 className="text-3xl font-bold mb-4">
+            <h1 className="text-4xl font-bold mb-4">
               Everything You Need to Manage Your School
             </h1>
             <p>From student enrollment to graduation, our comprehensive platform handles every aspect <br/> of school administration with ease and precision.</p>
@@ -201,12 +245,32 @@ const HomePage = () => {
             />
           </div>
           <div className="flex-1">
-            <ol className="space-y-3 text-gray-700">
-              <li>Student Enrollment &amp; Records</li>
-              <li>Attendance Tracking</li>
-              <li>Result Compilation</li>
-              <li>Automated Fee Management</li>
-              <li>Insightful Reports</li>
+            <ol className="space-y-15 text-gray-700 list-decimal">
+              <li>
+                <div className="flex flex-col">
+                  <h5 className="font-bold">Smart Dashboard</h5>
+                  <p className="text-sm text-gray-500">
+                    Get a comprehensive overview of your school&apos;s performance with real-time analytics and insights.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div className="flex flex-col">
+                  <h5 className="font-bold">Proven results</h5>
+                  <p className="text-sm text-gray-500">
+                    Schools see 70% improvement in administrative efficiency.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div className="flex flex-col">
+                  <h5 className="font-bold">Global Scale, Local Support</h5>
+                  <p className="text-sm text-gray-500">
+                    Trusted by schools worldwide with 24/7 support and compliance features.
+                  </p>
+                </div>
+              </li>
+              
             </ol>
           </div>
         </div>
@@ -217,7 +281,7 @@ const HomePage = () => {
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row gap-5">
             <div className="flex-1 flex flex-col items-center">
-              <div className="w-full text-start mb-8">
+              <div className="w-full  mb-8 text-center">
                 <h2 className="text-3xl font-bold mb-6">About Us</h2>
                 <p>We help automate all tasks about your school. <br/> We make it way easy to run a school.</p>
               </div>
@@ -238,12 +302,22 @@ const HomePage = () => {
                 height={300}
                 className="rounded-xl shadow-lg object-cover mb-4"
               />
-              {/* <p className="text-gray-700 text-center">
-                Built for school administrators, teachers, and students, our
-                solution is intuitive, secure, and scalable.
-              </p> */}
             </div>
           </div>
+        </div>
+      </section>
+      {/* Why Choose Us Section */}
+      <section ref={featuresRef} className="py-20 px-4 bg-white">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="text-purple-500 mb-6">Why Choose Us?</p>
+          <h2 className="font-bold text-2xl">Everything You Need to Manage Your School</h2>
+        </div>
+        <div className="max-w-5xl mx-auto mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+          {features.map((feature, index) => (
+            <div key={index} className="p-6 rounded-lg hover:shadow-md transition">
+              {featuresContainer(feature)}
+            </div>
+          ))}
         </div>
       </section>
 
@@ -286,6 +360,8 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      
 
       {/* Footer */}
       <footer className="bg-[#E5E7EB] py-6 text-center text-gray-600 text-sm">
