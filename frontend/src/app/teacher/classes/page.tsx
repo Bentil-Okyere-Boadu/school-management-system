@@ -159,7 +159,7 @@ const ClassesPage = () => {
             showGoToAttendance={true}
             showApproval={true}
             isApproved={data?.isApproved}
-            approvalText={data?.isApproved ? 'Unsubmit Result' : 'Submit Result'}
+            approvalText={data?.isApproved ? 'Unsubmit Results' : 'Submit Results'}
             onNavigateToAttendanceClick={onNavigateToAttendance}
             onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
             busy={busyCardId === data.id}
@@ -178,8 +178,8 @@ const ClassesPage = () => {
         isOpen={isMissingGradesDialogOpen}
         busy={approveResultPending}
         dialogTitle="Missing Grades"
-        subheader="Some students have missing grades. Approval not completed."
-        saveButtonText="Confirm"
+        subheader="Some students have missing grades. Submission not completed."
+        saveButtonText="Confirm Submission"
         onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
         onClose={() => setIsMissingGradesDialogOpen(false)}
       >
