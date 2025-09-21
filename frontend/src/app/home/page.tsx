@@ -13,7 +13,8 @@ import AnalytIcon from "@/images/AnaRep.svg";
 import Logo from "@/images/logo.svg";
 import backgroundImage from "@/images/background.png";
 import { StaticImport } from "next/dist/shared/lib/get-img-props";
-import { Group, Avatar, Text, Accordion } from '@mantine/core';
+import { Group, Text, Accordion, List, ThemeIcon } from '@mantine/core';
+import { IconCheck } from "@tabler/icons-react";
 
 interface AccordionLabelProps {
   label: string;
@@ -48,10 +49,10 @@ const FAQs = [
 
 const HomePage = () => {
   // Section refs
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const aboutRef = useRef<HTMLDivElement>(null);
-  const contactRef = useRef<HTMLDivElement>(null);
-  const homeRef = useRef<HTMLDivElement>(null);
+  const featuresRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
+  const aboutRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
+  const contactRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
+  const homeRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -161,13 +162,13 @@ const items = FAQs.map((item, i) => (
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <Image src={Logo} alt="Logo" width={40} height={40} />
-            <span className="font-bold text-lg text-white">Go Edutech</span>
+            <span className="font-bold text-lg text-white">Go-Edutech</span>
           </div>
           <ul className="hidden md:flex items-center gap-8 font-medium text-white">
-            <li className="cursor-pointer">
+            <li className="">
               <button
                 onClick={() => scrollToSection(homeRef)}
-                className="hover:text-purple-800 transition"
+                className="hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 Home
               </button>
@@ -175,7 +176,7 @@ const items = FAQs.map((item, i) => (
             <li className="cursor-pointer">
               <button
                 onClick={() => scrollToSection(aboutRef)}
-                className="hover:text-purple-800 transition"
+                className="hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 About Us
               </button>
@@ -183,7 +184,7 @@ const items = FAQs.map((item, i) => (
             <li className="cursor-pointer">
               <button
                 onClick={() => scrollToSection(featuresRef)}
-                className="hover:text-purple-800 transition"
+                className="hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 Why Choose Us
               </button>
@@ -191,7 +192,7 @@ const items = FAQs.map((item, i) => (
             <li className="cursor-pointer">
               <button
                 onClick={() => scrollToSection(contactRef)}
-                className="hover:text-purple-800 transition"
+                className="hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 Contact
               </button>
@@ -271,7 +272,7 @@ const items = FAQs.map((item, i) => (
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
                 <Image src={Logo} alt="Logo" width={36} height={36} />
-                <span className="font-bold text-lg">Go Edutech</span>
+                <span className="font-bold text-lg">Go-Edutech</span>
               </div>
               <button
                 className="text-white"
@@ -404,32 +405,42 @@ const items = FAQs.map((item, i) => (
             />
           </div>
           <div className="flex items-center justify-center w-full md:w-[50%]">
-            <ol className="space-y-15 w-xl text-gray-700 list-                                                                                                                                                                                                                                                                                                                                                                                                                                                               ">
-              <li>
-                <div className="flex flex-col">
+            <List
+              spacing="xl"
+              size="xl"
+              center
+              type="ordered"
+              listStyleType="decimal"
+              icon={
+                <ThemeIcon color="teal" size={10} radius="lg">
+                </ThemeIcon>
+            }
+            >
+              <List.Item>
+                <div className="flex flex-col gap-2">
                   <h5 className="font-bold">Smart Dashboard</h5>
                   <p className="text-sm text-gray-500">
                     Get a comprehensive overview of your school&apos;s performance with real-time analytics and insights.
                   </p>
                 </div>
-              </li>
-              <li>
-                <div className="flex flex-col">
+              </List.Item>
+              <List.Item>
+                <div className="flex flex-col gap-2">
                   <h5 className="font-bold">Proven results</h5>
                   <p className="text-sm text-gray-500">
                     Schools see 70% improvement in administrative efficiency.
                   </p>
                 </div>
-              </li>
-              <li>
-                <div className="flex flex-col">
-                  <h5 className="font-bold">Global Scale, Local Support</h5>
+              </List.Item>
+              <List.Item>
+                <div className="flex flex-col gap-2">
+                  <h5 className="font-bold">Proven results</h5>
                   <p className="text-sm text-gray-500">
-                    Trusted by schools worldwide with 24/7 support and compliance features.
+                    Schools see 70% improvement in administrative efficiency.
                   </p>
                 </div>
-              </li>
-            </ol>
+              </List.Item>
+            </List>
           </div>
         </div>
       </section>
@@ -490,25 +501,32 @@ const items = FAQs.map((item, i) => (
             <p className="mb-4">
               Feel free to reach out if you have any issues.
             </p>
-            <ul>
-              <li>
-                Email:{" "}
-                <a
-                  href="mailto:support@yourschoolapp.com"
-                  className="underline"
-                >
-                  support@yourschoolapp.com
-                </a>
-              </li>
-              <li>
-                Phone:{" "}
-                <a href="tel:+1234567890" className="underline">
-                  +1 234 567 890
-                </a>
-              </li>
-            </ul>
+            <List
+              style={{ marginTop: '3.5rem' }}
+              spacing="xl"
+              size="md"
+              center
+              icon={
+                <ThemeIcon color="teal" size={18} radius="lg">
+                  <IconCheck size={14} />
+                </ThemeIcon>
+            }
+            >
+              <List.Item>
+                <div className="flex flex-col gap-2">
+                  <h5 className="font-bold">Tight Security</h5>
+                  <span className="text-sm text-gray-300">We put all security measures in place to secure your school data.</span>
+                </div>
+              </List.Item>
+              <List.Item>
+                <div className="flex flex-col gap-2">
+                  <h5 className="font-bold">24/7 Hour Support</h5>
+                  <span className="text-sm text-gray-300">We provide 24/7 hr support for your school.</span>
+                </div>
+              </List.Item>
+            </List>
           </div>
-          <div className="bg-white w-1/2 rounded-lg border-t-green-400 border-t-3">
+          <div className="bg-white w-full md:w-1/2 rounded-lg border-t-green-400 border-t-3">
             <Accordion chevronPosition="right" variant="contained" radius="md">
               {items}
             </Accordion>
@@ -520,7 +538,7 @@ const items = FAQs.map((item, i) => (
       <footer className="bg-[#E5E7EB] py-6 text-center text-gray-600 text-sm">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div>
-            &copy; {new Date().getFullYear()} School Management System. All
+            &copy; {new Date().getFullYear()} Go-Edutech. All
             rights reserved.
           </div>
           <div className="flex gap-4 mt-2 md:mt-0">
