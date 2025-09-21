@@ -10,23 +10,84 @@ import AcaPlanIcon from "@/images/AcaPlan.svg";
 import StudentManIcon from "@/images/SdntMngmt.svg";
 import SecComIcon from "@/images/SecComp.svg";
 import AnalytIcon from "@/images/AnaRep.svg";
+import Logo from "@/images/logo.svg";
 import backgroundImage from "@/images/background.png";
 import { StaticImport } from "next/dist/shared/lib/get-img-props";
+import { Group, Avatar, Text, Accordion } from '@mantine/core';
+
+interface AccordionLabelProps {
+  label: string;
+  content: string;
+}
+
+const navLinks = [
+  { label: "Home", refKey: "home" },
+  { label: "About Us", refKey: "about" },
+  { label: "Why Choose Us", refKey: "features" },
+  { label: "Contact", refKey: "contact" },
+];
+
+const FAQs = [
+  {
+    label: "Is my school data secure on your platform?",
+    content: "Absolutely. We use enterprise-grade security SSL encryption. Your data is stored in secure, redundant data centers with 99.9% uptime guarantee and daily backups."
+  },
+  {
+    label: "What kind of support do you provide?",
+    content: "We offer 24/7 customer support via chat, email, and phone. Our dedicated support team is here to help you with any questions or issues you may have."
+  },
+  {
+    label: "How often do you release update?",
+    content: "We offer 24/7 customer support via chat, email, and phone. Our dedicated support team is here to help you with any questions or issues you may have."
+  },
+  {
+    label: "Is there any manual to guide me?",
+    content: "We offer 24/7 customer support via chat, email, and phone. Our dedicated support team is here to help you with any questions or issues you may have."
+  }
+]
 
 const HomePage = () => {
   // Section refs
   const featuresRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
+  const homeRef = useRef<HTMLDivElement>(null);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Scroll handler
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth" });
+      setSidebarOpen(false); // close sidebar on mobile after click
     }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownOpen]);
+
+  // Map navLinks to refs
+  const sectionRefs: Record<string, React.RefObject<HTMLDivElement>> = {
+    home: homeRef,
+    about: aboutRef,
+    features: featuresRef,
+    contact: contactRef,
   };
 
   const features = [
@@ -54,49 +115,58 @@ const HomePage = () => {
   
 
   const featuresContainer = ({icon, title, description}: {icon: StaticImport, title: string, description: string}) => {
-    return <div>
-            <div className="flex flex-row gap-4">
-              <div>
-                <Image src={icon} alt="Feature Icon" width={70} height={70} />
-              </div>
-              <div>
-                <h5 className="font-bold mb-1">{title}</h5>
-                <p className="text-sm text-gray-500 leading-6">{description}</p>
-              </div>
-            </div>
+    return (
+      <div>
+        <div className="flex flex-row gap-4">
+          <div>
+            <Image src={icon} alt="Feature Icon" width={70} height={70} />
           </div>
+          <div>
+            <h5 className="font-bold mb-1">{title}</h5>
+            <p className="text-sm text-gray-500 leading-6">{description}</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    }
-    if (dropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [dropdownOpen]);
+  const AccordionLabel = ({ label }: AccordionLabelProps) => {
+  return (
+    <Group wrap="nowrap">
+      <div>
+        <Text fw={500}>{label}</Text>
+        {/* <Text size="sm" c="dimmed" fw={400}>
+          {content}
+        </Text> */}
+      </div>
+    </Group>
+  );
+}
+
+const items = FAQs.map((item, i) => (
+    <Accordion.Item value={item.label} key={i}>
+      <Accordion.Control aria-label={item.label}>
+        <AccordionLabel {...item} />
+      </Accordion.Control>
+      <Accordion.Panel>
+        <Text size="sm" c='gray'>{item.content}</Text>
+      </Accordion.Panel>
+    </Accordion.Item>
+  ))
 
   return (
     <main className="w-full min-h-screen flex flex-col bg-white">
-      {/* Navigation bg gradient: bg-gradient-to-br from-[#B860F5] to-[#7B11F9] */}
+      {/* Navigation */}
       <nav className="w-full bg-gradient-to-br from-[#B860F5] to-[#7B11F9] shadow sticky top-0 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="Logo" width={40} height={40} />
+            <Image src={Logo} alt="Logo" width={40} height={40} />
             <span className="font-bold text-lg text-white">Go Edutech</span>
           </div>
-          <ul className="flex items-center gap-8 font-medium text-white">
+          <ul className="hidden md:flex items-center gap-8 font-medium text-white">
             <li className="cursor-pointer">
               <button
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                onClick={() => scrollToSection(homeRef)}
                 className="hover:text-purple-800 transition"
               >
                 Home
@@ -104,9 +174,7 @@ const HomePage = () => {
             </li>
             <li className="cursor-pointer">
               <button
-                onClick={() =>
-                  scrollToSection(aboutRef as React.RefObject<HTMLDivElement>)
-                }
+                onClick={() => scrollToSection(aboutRef)}
                 className="hover:text-purple-800 transition"
               >
                 About Us
@@ -114,84 +182,175 @@ const HomePage = () => {
             </li>
             <li className="cursor-pointer">
               <button
-                onClick={() =>
-                  scrollToSection(
-                    featuresRef as React.RefObject<HTMLDivElement>
-                  )
-                }
+                onClick={() => scrollToSection(featuresRef)}
                 className="hover:text-purple-800 transition"
               >
                 Why Choose Us
               </button>
             </li>
-            
             <li className="cursor-pointer">
               <button
-                onClick={() =>
-                  scrollToSection(contactRef as React.RefObject<HTMLDivElement>)
-                }
+                onClick={() => scrollToSection(contactRef)}
                 className="hover:text-purple-800 transition"
               >
                 Contact
               </button>
             </li>
-          </ul>  
-              <div className="flex flex-col justify-center items-center">
-                <div className="relative" ref={dropdownRef}>
-                  <button
-                    onClick={() => setDropdownOpen((open) => !open)}
-                    className="bg-white text-purple-500 px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
-                  >
-                    Login
-                  </button>
-                  {dropdownOpen && (
-                    <ul className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10">
-                      <li>
-                        <Link
-                          href="/auth/login"
-                          className="block px-4 py-2 hover:bg-gray-100"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          Super Admin
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/auth/admin/login"
-                          className="block px-4 py-2 hover:bg-gray-100"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          School Admin
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/auth/teacher/login"
-                          className="block px-4 py-2 hover:bg-gray-100"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          Teacher
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/auth/student/login"
-                          className="block px-4 py-2 hover:bg-gray-100"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          Student
-                        </Link>
-                      </li>
-                    </ul>
-                  )}
-                </div>
-              </div>
-          
+          </ul>
+          {/* Hamburger for mobile/tablet */}
+          <button
+            className="md:hidden text-white focus:outline-none"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open sidebar"
+          >
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+              <path stroke="currentColor" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+          <div className="hidden md:flex flex-col justify-center items-center">
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen((open) => !open)}
+                className="bg-white text-purple-500 px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
+              >
+                Login
+              </button>
+              {dropdownOpen && (
+                <ul className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10">
+                  <li>
+                    <Link
+                      href="/auth/login"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Super Admin
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/auth/admin/login"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      School Admin
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/auth/teacher/login"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Teacher
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/auth/student/login"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Student
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       </nav>
 
+      {/* Sidebar for mobile/tablet */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div
+            className="absolute inset-0 bg-black opacity-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <aside className="fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-[#B860F5] to-[#7B11F9] text-white flex flex-col py-8 px-6 z-50">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <Image src={Logo} alt="Logo" width={36} height={36} />
+                <span className="font-bold text-lg">Go Edutech</span>
+              </div>
+              <button
+                className="text-white"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close sidebar"
+              >
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" strokeWidth="2" d="M6 6l12 12M6 18L18 6"/>
+                </svg>
+              </button>
+            </div>
+            <nav className="flex flex-col gap-6">
+              {navLinks.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => scrollToSection(sectionRefs[item.refKey])}
+                  className="text-left px-2 py-2 rounded hover:bg-white/20 transition"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+            <div className="mt-10 flex flex-col justify-center items-center">
+              <div className="relative w-full" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen((open) => !open)}
+                  className="w-full bg-white text-purple-500 px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
+                >
+                  Login
+                </button>
+                {dropdownOpen && (
+                  <ul className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10 text-gray-700">
+                    <li>
+                      <Link
+                        href="/auth/login"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Super Admin
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/auth/admin/login"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        School Admin
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/auth/teacher/login"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Teacher
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/auth/student/login"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Student
+                      </Link>
+                    </li>
+                  </ul>
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section
+        ref={homeRef}
         className="relative h-[30%] text-white pt-8 pb-0 px-4 flex flex-col items-center"
         style={{
           backgroundImage: `url(${backgroundImage.src})`,
@@ -227,12 +386,12 @@ const HomePage = () => {
       </section>
 
       {/* Home 2 Section */}
-      <section  className="py-16 px-4 bg-white scroll-mt-24">
+      <section className="py-16 px-4 bg-white scroll-mt-24">
         <div className="flex flex-col items-center mb-12 text-center">
-            <h1 className="text-4xl font-bold mb-4">
-              Everything You Need to Manage Your School
-            </h1>
-            <p>From student enrollment to graduation, our comprehensive platform handles every aspect <br/> of school administration with ease and precision.</p>
+          <h1 className="text-4xl font-bold mb-4">
+            Everything You Need to Manage Your School
+          </h1>
+          <p>From student enrollment to graduation, our comprehensive platform handles every aspect <br/> of school administration with ease and precision.</p>
         </div>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1 flex justify-center">
@@ -244,8 +403,8 @@ const HomePage = () => {
               className="rounded-xl shadow-lg object-cover"
             />
           </div>
-          <div className="flex-1">
-            <ol className="space-y-15 text-gray-700 list-decimal">
+          <div className="flex items-center justify-center w-full md:w-[50%]">
+            <ol className="space-y-15 w-xl text-gray-700 list-                                                                                                                                                                                                                                                                                                                                                                                                                                                               ">
               <li>
                 <div className="flex flex-col">
                   <h5 className="font-bold">Smart Dashboard</h5>
@@ -270,7 +429,6 @@ const HomePage = () => {
                   </p>
                 </div>
               </li>
-              
             </ol>
           </div>
         </div>
@@ -328,9 +486,9 @@ const HomePage = () => {
       >
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div>
-            <h2 className="text-xl font-bold mb-2">We are always here.</h2>
+            <h2 className="text-3xl font-bold mb-2">We are always here.</h2>
             <p className="mb-4">
-              Contact our support team for help or inquiries.
+              Feel free to reach out if you have any issues.
             </p>
             <ul>
               <li>
@@ -350,18 +508,13 @@ const HomePage = () => {
               </li>
             </ul>
           </div>
-          <div>
-            <h3 className="font-semibold mb-2">Frequently Asked Questions</h3>
-            <ul className="space-y-2 text-gray-200">
-              <li>How do I reset my password?</li>
-              <li>How do I enroll a new student?</li>
-              <li>How do I generate reports?</li>
-            </ul>
+          <div className="bg-white w-1/2 rounded-lg border-t-green-400 border-t-3">
+            <Accordion chevronPosition="right" variant="contained" radius="md">
+              {items}
+            </Accordion>
           </div>
         </div>
       </section>
-
-      
 
       {/* Footer */}
       <footer className="bg-[#E5E7EB] py-6 text-center text-gray-600 text-sm">
