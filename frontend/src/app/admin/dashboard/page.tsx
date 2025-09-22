@@ -150,7 +150,7 @@ const AdminDashboard = () => {
         ))}
       </section>
 
-      <CustomBarChart />
+      <CustomBarChart dataList={dashboardStats?.attendanceByClass || []} />
 
       <div className="mt-10 p-6 bg-white rounded-lg">
         <DashboardTable schoolUsers={schoolUsers} refetch={refetch}  />

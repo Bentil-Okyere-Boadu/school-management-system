@@ -170,7 +170,7 @@ const StudentResults: React.FC<StudentResultProps> = ({
         Academic Report 
         {studentResults?.studentInfo?.class &&<span className="font-normal">({studentResults?.studentInfo?.class})</span>}
       </h1>
-      {showExportButton && (
+      {showExportButton && studentResults?.terms?.length > 0 && (
         <div className="flex justify-end">
           <CustomButton
             text="Export Report"
