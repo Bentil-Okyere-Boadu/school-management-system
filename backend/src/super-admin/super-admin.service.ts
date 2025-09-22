@@ -15,6 +15,8 @@ import { School } from 'src/school/school.entity';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { ProfileService } from 'src/profile/profile.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { StudentGrade } from 'src/subject/student-grade.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 
 @Injectable()
 export class SuperAdminService {
@@ -26,6 +28,10 @@ export class SuperAdminService {
     private adminRepository: Repository<SchoolAdmin>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
+    @InjectRepository(StudentGrade)
+    private studentGradeRepository: Repository<StudentGrade>,
+    @InjectRepository(AcademicTerm)
+    private academicTermRepository: Repository<AcademicTerm>,
     private readonly profileService: ProfileService,
     private readonly objectStorageService: ObjectStorageServiceService,
   ) {}
@@ -118,6 +124,80 @@ export class SuperAdminService {
     );
 
     return schools;
+  }
+  async getSchoolsPerformance(options?: {
+    topThreshold?: number;
+    lowThreshold?: number;
+    scope?: 'range' | 'overall';
+    from?: string; // ISO date
+    to?: string; // ISO date
+  }) {
+    const topThreshold = options?.topThreshold ?? 70;
+    const lowThreshold = options?.lowThreshold ?? 40;
+    const scope =
+      options?.scope ?? (options?.from || options?.to ? 'range' : 'overall');
+
+    const schools = await this.schoolRepository.find();
+
+    const results: Array<{
+      schoolId: string;
+      schoolName: string;
+      topPerforming: number;
+      lowPerforming: number;
+    }> = [];
+
+    for (const school of schools) {
+      let grades: StudentGrade[] = [];
+
+      if (scope === 'overall') {
+        grades = await this.studentGradeRepository.find({
+          where: {},
+          relations: ['student', 'student.school'],
+        });
+      } else if (scope === 'range') {
+        const fromDate = options?.from ? new Date(options.from) : undefined;
+        const toDate = options?.to ? new Date(options.to) : undefined;
+
+        const qb = this.studentGradeRepository
+          .createQueryBuilder('grade')
+          .leftJoinAndSelect('grade.student', 'student')
+          .leftJoinAndSelect('student.school', 'school');
+        if (fromDate) qb.andWhere('grade.createdAt >= :fromDate', { fromDate });
+        if (toDate) qb.andWhere('grade.createdAt <= :toDate', { toDate });
+        grades = await qb.getMany();
+      }
+
+      const perStudentTotals = new Map<
+        string,
+        { sum: number; count: number }
+      >();
+      for (const g of grades) {
+        if (g.student?.school?.id !== school.id) continue;
+        const key = g.student.id;
+        const current = perStudentTotals.get(key) || { sum: 0, count: 0 };
+        current.sum += g.totalScore;
+        current.count += 1;
+        perStudentTotals.set(key, current);
+      }
+
+      let topPerforming = 0;
+      let lowPerforming = 0;
+      for (const [, agg] of perStudentTotals) {
+        if (agg.count === 0) continue;
+        const avg = agg.sum / agg.count;
+        if (avg >= topThreshold) topPerforming += 1;
+        if (avg <= lowThreshold) lowPerforming += 1;
+      }
+
+      results.push({
+        schoolId: school.id,
+        schoolName: school.name,
+        topPerforming,
+        lowPerforming,
+      });
+    }
+
+    return results;
   }
   async getMe(user: SuperAdmin): Promise<SuperAdmin> {
     const superAdmin = await this.superAdminRepository.findOne({

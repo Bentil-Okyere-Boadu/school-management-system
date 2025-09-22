@@ -17,11 +17,25 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { School } from 'src/school/school.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ProfileService } from 'src/profile/profile.service';
+import { StudentGrade } from 'src/subject/student-grade.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { Student } from 'src/student/student.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SuperAdmin, Role, SchoolAdmin, School, Profile]),
+    TypeOrmModule.forFeature([
+      SuperAdmin,
+      Role,
+      SchoolAdmin,
+      School,
+      Profile,
+      StudentGrade,
+      AcademicTerm,
+      AcademicCalendar,
+      Student,
+    ]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

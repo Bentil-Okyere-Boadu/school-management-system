@@ -9,14 +9,17 @@ export function initializeRoles(roles: Array<{ id: string; name: string }>) {
 
 export function getRolesEnum() {
   if (Object.keys(rolesEnum).length === 0) {
-    throw new Error('Roles enum not initialized');
+    throw new Error("Roles enum not initialized");
     //console.log('Roles enum not initialized')
   }
   return rolesEnum;
 }
 
-export function getRoleId(roles: Array<{ id: string; name: string }>, roleName: string): string {
-  const foundRole = roles.find((role) => role.name === roleName);
+export function getRoleId(
+  roles: Array<{ id: string; name: string }>,
+  roleName: string
+): string {
+  const foundRole = roles.find((role) => role?.name === roleName);
   return foundRole?.id || "";
 }
 
