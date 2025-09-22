@@ -36,7 +36,7 @@ const DashboardPage: React.FC = () => {
       valueColor: "#BD7CEB",
     },
     {
-      value: `${dashboardStats?.totalStudents}`,
+      value: `${dashboardStats?.averageAttendanceRate}`,
       label: "Average Attendance Rate",
       iconUrl: "https://cdn.builder.io/api/v1/image/assets/TEMP/ba656832819e22052f838d66aeb1b30662f1df92?placeholderIfAbsent=true",
       iconAlt: "Attendance Icon",
@@ -69,7 +69,7 @@ const DashboardPage: React.FC = () => {
         ))}
       </section>
 
-      <CustomBarChart barChartData={dashboardStats?.performance} />
+      <CustomBarChart />
 
       <div className="mt-10 p-6 bg-white rounded-lg">
         <DashboardTable adminUsers={adminUsers} refetch={refetch}  />
