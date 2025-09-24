@@ -69,4 +69,25 @@ export class SuperAdminController {
   async getMe(@CurrentUser() user: SuperAdmin) {
     return this.superAdminService.getMe(user);
   }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('/dashboard/schools-performance')
+  @Roles('super_admin')
+  getSchoolsPerformance(
+    @Query('topThreshold') topThreshold?: string,
+    @Query('lowThreshold') lowThreshold?: string,
+    @Query('scope') scope?: 'range' | 'overall',
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const tt = topThreshold ? parseFloat(topThreshold) : undefined;
+    const lt = lowThreshold ? parseFloat(lowThreshold) : undefined;
+    return this.superAdminService.getSchoolsPerformance({
+      topThreshold: tt,
+      lowThreshold: lt,
+      scope,
+      from,
+      to,
+    });
+  }
 }

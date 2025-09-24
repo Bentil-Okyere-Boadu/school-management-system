@@ -21,6 +21,7 @@ import { ClassLevel } from 'src/class-level/class-level.entity';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { StudentGrade } from 'src/subject/student-grade.entity';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calen
       Holiday,
       AcademicTerm,
       AcademicCalendar,
+      StudentGrade,
     ]),
   ],
   controllers: [ProfileController],

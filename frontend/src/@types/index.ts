@@ -404,6 +404,10 @@ export interface AdminDashboardStats {
   totalApplications: number;
   totalStudents: number;
   totalTeachers: number;
+  attendanceByClass: {
+    name: string;
+    'Attendence-Level': number;
+  }[]
 }
 
 export interface AttendanceParams {

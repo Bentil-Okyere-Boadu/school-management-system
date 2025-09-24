@@ -178,3 +178,29 @@ export const useGetDashboardInfo = () => {
 
     return { dashboardStats, isPending }
 }
+
+/**
+ * SCHOOLS PERFORMANCE
+ */
+export const useGetSchoolsPerformance = (
+  scope: 'range' | 'overall' = "overall",
+  from?: string,
+  to?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["schoolsPerformance", { scope, from, to }],
+    queryFn: () => {
+        let query = `scope=${scope}`;
+
+        if (from) query += `&from=${from}`;
+        if (to) query += `&to=${to}`;
+
+        return customAPI.get(`/super-admin/dashboard/schools-performance?${query}`);
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  const schoolsPerformance = data?.data || [];
+
+  return { schoolsPerformance, isLoading, refetch };
+};

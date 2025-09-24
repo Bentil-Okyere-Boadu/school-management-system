@@ -3,15 +3,15 @@
 import React from "react";
 import { BarChart } from '@mantine/charts';
 import { SchoolPerformance } from "@/@types";
+import { useGetSchoolsPerformance } from "@/hooks/super-admin";
 
-interface CustomBarChartProp {
-  barChartData: SchoolPerformance[]
-}
 
-const CustomBarChart: React.FC<CustomBarChartProp> = ({barChartData = []}) => {
+const CustomBarChart: React.FC = () => {
+
+  const { schoolsPerformance: barChartData } = useGetSchoolsPerformance();
 
   // restructure backend data to for barchart consumption
-  const data = barChartData?.map((school) => ({
+  const data = barChartData?.map((school: SchoolPerformance) => ({
     name: school?.schoolName,
     'Top-performing': school?.topPerforming,
     'Low-performing': school?.lowPerforming,
