@@ -32,6 +32,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
+      ignoreEnvFile: true,
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
