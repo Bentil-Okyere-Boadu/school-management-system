@@ -94,7 +94,7 @@ const Admissions = () => {
     setCurrentPage(1);
   };
 
-  const { admissionsList, paginationValues, refetch: refetchAdmissionList } = useGetSchoolAdmissions(currentPage, useDebouncer(searchQuery), selectedFilterStatus, "", "", 10);
+  const { admissionsList, paginationValues, refetch: refetchAdmissionList, isLoading } = useGetSchoolAdmissions(currentPage, useDebouncer(searchQuery), selectedFilterStatus, "", "", 10);
 
   return (
     <div>
@@ -136,6 +136,7 @@ const Admissions = () => {
             selectedFilterStatus={selectedFilterStatus}
             admissionsList={admissionsList} 
             refetchAdmissionList={refetchAdmissionList}
+            busy={isLoading}
           />
           <Pagination
             currentPage={currentPage}
