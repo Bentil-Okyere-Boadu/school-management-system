@@ -7,10 +7,12 @@ import {
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { HashLoader } from "react-spinners";
 interface StudentsTableProps {
   students: Student[];
+  busy?: boolean;
 }
-const StudentsTable = ({ students }: StudentsTableProps) => {
+const StudentsTable = ({ students, busy }: StudentsTableProps) => {
     const router = useRouter()
   return (
     <section className="bg-white">
@@ -40,28 +42,64 @@ const StudentsTable = ({ students }: StudentsTableProps) => {
             </tr>
           </thead>
           <tbody>
-            {students?.length > 0 ? (
-              students.map((student: Student) => (
+            {(() => {
+              if (busy) {
+                return (
+                  <tr>
+                    <td colSpan={8}>
+                      <div className="relative py-16">
+                        <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10">
+                          <HashLoader color="#AB58E7" size={40} />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              if (!students?.length) {
+                return (
+                  <tr>
+                    <td colSpan={8}>
+                      <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                        <p className="text-lg font-medium">No students found</p>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Once students are added, they will appear in this table.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              // Default: render rows
+              return students.map((student: Student) => (
                 <tr key={student.id}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     {student.studentId}
                   </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] text-zinc-800 max-md:px-5">
                     {student.firstName}
                   </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] text-zinc-800 max-md:px-5">
                     {student.lastName}
                   </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] text-zinc-800 max-md:px-5">
                     {student?.profile?.otherName}
                   </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] text-zinc-800 max-md:px-5">
                     {student?.classLevels?.[0]?.name}
                   </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] text-zinc-800 max-md:px-5">
                     {student?.profile?.DateOfBirth}
                   </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+
+                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] text-zinc-800 max-md:px-5">
                     <div className="flex items-center justify-end pr-6">
                       <Menu shadow="md" width={200}>
                         <Menu.Target>
@@ -69,9 +107,7 @@ const StudentsTable = ({ students }: StudentsTableProps) => {
                         </Menu.Target>
                         <Menu.Dropdown className="!-ml-12 !-mt-2">
                           <Menu.Item
-                            leftSection={
-                              <IconEyeFilled size={18} color="#AB58E7" />
-                            }
+                            leftSection={<IconEyeFilled size={18} color="#AB58E7" />}
                             onClick={() => router.push(`/teacher/students/${student.id}`)}
                           >
                             Full View
@@ -81,19 +117,8 @@ const StudentsTable = ({ students }: StudentsTableProps) => {
                     </div>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8}>
-                  <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                    <p className="text-lg font-medium">No users found</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Once users are added, they will appear in this table.
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            )}
+              ));
+            })()}
           </tbody>
         </table>
       </div>

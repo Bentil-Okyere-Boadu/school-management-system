@@ -7,6 +7,7 @@ import { useCreateSubject, useDeleteSubject, useGetAllSubjects, useUpdateSubject
 import { Menu } from '@mantine/core'
 import { IconDots, IconTrashFilled, IconEdit } from '@tabler/icons-react'
 import React, { useState } from 'react'
+import { HashLoader } from 'react-spinners'
 import { toast } from 'react-toastify'
 
 const Subjects = () => {
@@ -16,7 +17,7 @@ const Subjects = () => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedId, setSelectedId] = useState('')
 
-  const { subjects, refetch } = useGetAllSubjects();
+  const { subjects, refetch, isLoading } = useGetAllSubjects();
   const { mutate: createSubject} = useCreateSubject();
   const { mutate: editSubject } = useUpdateSubject();
   const { mutate: deleteSubject} = useDeleteSubject();
@@ -106,9 +107,40 @@ const Subjects = () => {
                 </tr>
               </thead>
               <tbody>
-                {
-                  subjects?.length > 0 ? (
-                   subjects.map((subject, index) => (
+                {(() => {
+                  // Loader state
+                  if (isLoading) {
+                    return (
+                      <tr>
+                        <td colSpan={8}>
+                          <div className="relative py-20 bg-white">
+                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
+                              <HashLoader color="#AB58E7" size={40} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Empty state
+                  if (!subjects?.length) {
+                    return (
+                      <tr>
+                        <td colSpan={8}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">No subjects added</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Added subjects will appear here.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Data loaded state
+                  return subjects.map((subject, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div>{subject.name}</div>
@@ -118,53 +150,37 @@ const Subjects = () => {
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex items-center justify-end pr-6">
-                        <Menu shadow="md" width={200}>
-                          <Menu.Target>
-                            <IconDots className="cursor-pointer" />
-                          </Menu.Target>
-                          <Menu.Dropdown className="!-ml-12 !-mt-2">
-                            <Menu.Item
-                              onClick={() => {
-                                setSubject(subject);
-                                setIsCreate(false);
-                                setisDialogOpen(true);
-                              }}
-                              leftSection={
-                                <IconEdit size={18} color="#AB58E7" />
-                              }
-                            >
-                              Edit
-                            </Menu.Item>
-                            <Menu.Item
-                              onClick={() => {
-                                setConfirmDelete(true);
-                                setSelectedId(subject.id as string);
-                              }}
-                              leftSection={
-                                <IconTrashFilled size={18} color="red" />
-                              }
-                            >
-                              Delete
-                            </Menu.Item>
-                          </Menu.Dropdown>
-                        </Menu>
-                      </div>
+                          <Menu shadow="md" width={200}>
+                            <Menu.Target>
+                              <IconDots className="cursor-pointer" />
+                            </Menu.Target>
+                            <Menu.Dropdown className="!-ml-12 !-mt-2">
+                              <Menu.Item
+                                onClick={() => {
+                                  setSubject(subject);
+                                  setIsCreate(false);
+                                  setisDialogOpen(true);
+                                }}
+                                leftSection={<IconEdit size={18} color="#AB58E7" />}
+                              >
+                                Edit
+                              </Menu.Item>
+                              <Menu.Item
+                                onClick={() => {
+                                  setConfirmDelete(true);
+                                  setSelectedId(subject.id as string);
+                                }}
+                                leftSection={<IconTrashFilled size={18} color="red" />}
+                              >
+                                Delete
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                        </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8}>
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                      <p className="text-lg font-medium">No subjects added</p>
-                      <p className="text-sm text-gray-400 mt-1">
-                        Added subjects will appear here.
-                      </p>
-                    </div>
-                  </td>
-                  </tr>
-                )
-                }
+                  ));
+                })()}
               </tbody>
             </table>
           </div>

@@ -28,7 +28,7 @@ const UsersPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  const { schoolUsers, paginationValues, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "","",  10);
+  const { schoolUsers, paginationValues, refetch, isLoading } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "","",  10);
 
   const statusOptions = [
     { value: "", label: "Status" },
@@ -101,7 +101,7 @@ const UsersPage: React.FC = () => {
         )}
       </div>
 
-      <UserTable users={schoolUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus('')} />
+      <UserTable users={schoolUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus('')} busy={isLoading} />
 
       <Pagination
         currentPage={currentPage}

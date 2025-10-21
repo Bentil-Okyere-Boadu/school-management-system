@@ -34,7 +34,7 @@ const Students = () => {
     setCurrentPage(page);
   };
 
-  const { paginationValues, schoolUsers } = useGetSchoolUsers(
+  const { paginationValues, schoolUsers, isLoading } = useGetSchoolUsers(
     currentPage,
     useDebouncer(searchQuery),
     selectedStatus,
@@ -64,7 +64,7 @@ const Students = () => {
           </div>
         )}
       </div>
-      <StudentsTable students={schoolUsers} />
+      <StudentsTable students={schoolUsers} busy={isLoading} />
       <Pagination
         currentPage={currentPage}
         totalPages={paginationValues?.totalPages || 1}
