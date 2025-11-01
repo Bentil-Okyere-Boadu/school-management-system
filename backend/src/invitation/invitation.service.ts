@@ -9,7 +9,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, EntityManager } from 'typeorm';
 import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
 import * as bcrypt from 'bcryptjs';
@@ -26,6 +26,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { TransactionUtil } from '../common/utils/transaction.util';
 
 @Injectable()
 export class InvitationService {
@@ -43,6 +44,7 @@ export class InvitationService {
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
     private emailService: EmailService,
+    private transactionUtil: TransactionUtil,
   ) {}
 
   /**
@@ -228,45 +230,66 @@ export class InvitationService {
       throw new UnauthorizedException('Only super admins can invite users');
     }
 
-    const existingAdmin = await this.adminRepository.findOne({
-      where: { email: inviteUserDto.email },
-    });
+    return this.transactionUtil.executeInTransaction(
+      async (manager: EntityManager) => {
+        const existingAdmin = await manager.findOne(SchoolAdmin, {
+          where: { email: inviteUserDto.email },
+        });
 
-    if (existingAdmin) {
-      throw new ConflictException('User with this email already exists');
-    }
+        if (existingAdmin) {
+          throw new ConflictException('User with this email already exists');
+        }
 
-    const role = await this.roleRepository.findOneBy({
-      id: inviteUserDto.roleId,
-    });
-    if (!role) {
-      throw new NotFoundException('Role not found');
-    }
+        const role = await manager.findOne(Role, {
+          where: { id: inviteUserDto.roleId },
+        });
+        if (!role) {
+          throw new NotFoundException('Role not found');
+        }
 
-    if (role.name !== 'school_admin') {
-      throw new BadRequestException('Super admins can only invite admin users');
-    }
+        if (role.name !== 'school_admin') {
+          throw new BadRequestException(
+            'Super admins can only invite admin users',
+          );
+        }
 
-    // Create the invitation token and set expiration
-    const invitationToken = this.generateInvitationToken();
-    const invitationExpires = this.calculateTokenExpiration();
+        // Create the invitation token and set expiration
+        const invitationToken = this.generateInvitationToken();
+        const invitationExpires = this.calculateTokenExpiration();
 
-    // Create the user in pending state
-    const newAdmin = this.adminRepository.create({
-      firstName: inviteUserDto.firstName,
-      lastName: inviteUserDto.lastName,
-      email: inviteUserDto.email,
-      role,
-      status: 'pending',
-      invitationToken,
-      invitationExpires,
-    });
+        // Create the user in pending state
+        const newAdmin = manager.create(SchoolAdmin, {
+          firstName: inviteUserDto.firstName,
+          lastName: inviteUserDto.lastName,
+          email: inviteUserDto.email,
+          role,
+          status: 'pending',
+          invitationToken,
+          invitationExpires,
+        });
 
-    const savedAdmin = await this.adminRepository.save(newAdmin);
+        const savedAdmin = await manager.save(SchoolAdmin, newAdmin);
 
-    await this.emailService.sendInvitationEmail(savedAdmin);
+        try {
+          await this.emailService.sendInvitationEmail(savedAdmin);
+          this.logger.log(
+            `Invitation email sent successfully to ${inviteUserDto.email}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to send invitation email to ${inviteUserDto.email}`,
+            error,
+          );
+          // The transaction will be rolled back automatically due to the error
+          throw new InvitationException(
+            `Failed to send invitation email: ${BaseException.getErrorMessage(error)}`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
 
-    return savedAdmin;
+        return savedAdmin;
+      },
+    );
   }
 
   /**
@@ -284,55 +307,70 @@ export class InvitationService {
       throw new ForbiddenException('Admin not associated with any school');
     }
 
-    const existingUser = await this.studentRepository.findOne({
-      where: { email: inviteStudentDto.email },
-    });
+    return this.transactionUtil.executeInTransaction(
+      async (manager: EntityManager) => {
+        const existingUser = await manager.findOne(Student, {
+          where: { email: inviteStudentDto.email },
+        });
 
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
-    }
+        if (existingUser) {
+          throw new ConflictException('User with this email already exists');
+        }
 
-    // Get student role
-    const studentRole = await this.roleRepository.findOne({
-      where: { name: 'student' },
-    });
+        // Get student role
+        const studentRole = await manager.findOne(Role, {
+          where: { name: 'student' },
+        });
 
-    if (!studentRole) {
-      throw new NotFoundException('Student role not found');
-    }
+        if (!studentRole) {
+          throw new NotFoundException('Student role not found');
+        }
 
-    const pin = this.generatePin();
-    const studentId = await this.generateStudentId(adminUser.school);
+        const pin = this.generatePin();
+        const studentId = await this.generateStudentId(adminUser.school);
 
-    const invitationExpires = new Date();
-    invitationExpires.setHours(invitationExpires.getHours() + 24);
+        const invitationExpires = new Date();
+        invitationExpires.setHours(invitationExpires.getHours() + 24);
 
-    const studentUser = this.studentRepository.create({
-      firstName: inviteStudentDto.firstName,
-      lastName: inviteStudentDto.lastName,
-      email: inviteStudentDto.email,
-      password: await bcrypt.hash(pin, 10), // PIN is used as initial password
-      role: studentRole,
-      school: adminUser.school,
-      invitationToken: uuidv4(),
-      invitationExpires,
-      isInvitationAccepted: false,
-      studentId: studentId,
-    });
+        const studentUser = manager.create(Student, {
+          firstName: inviteStudentDto.firstName,
+          lastName: inviteStudentDto.lastName,
+          email: inviteStudentDto.email,
+          password: await bcrypt.hash(pin, 10), // PIN is used as initial password
+          role: studentRole,
+          school: adminUser.school,
+          invitationToken: uuidv4(),
+          invitationExpires,
+          isInvitationAccepted: false,
+          studentId: studentId,
+        });
 
-    const savedUser = await this.studentRepository.save(studentUser);
+        const savedUser = await manager.save(Student, studentUser);
 
-    try {
-      await this.emailService.sendStudentInvitation(savedUser, studentId, pin);
-      this.logger.log(`Invitation sent to student ${inviteStudentDto.email}`);
-    } catch (error) {
-      this.logger.error(
-        `Failed to send invitation to ${inviteStudentDto.email}`,
-        error,
-      );
-    }
+        try {
+          await this.emailService.sendStudentInvitation(
+            savedUser,
+            studentId,
+            pin,
+          );
+          this.logger.log(
+            `Invitation sent to student ${inviteStudentDto.email}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to send invitation to ${inviteStudentDto.email}`,
+            error,
+          );
+          // The transaction will be rolled back automatically due to the error
+          throw new InvitationException(
+            `Failed to send student invitation email: ${BaseException.getErrorMessage(error)}`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
 
-    return savedUser;
+        return savedUser;
+      },
+    );
   }
 
   /**
@@ -350,55 +388,70 @@ export class InvitationService {
       throw new UnauthorizedException('Admin not associated with any school');
     }
 
-    const existingUser = await this.teacherRepository.findOne({
-      where: { email: inviteTeacherDto.email },
-    });
+    return this.transactionUtil.executeInTransaction(
+      async (manager: EntityManager) => {
+        const existingUser = await manager.findOne(Teacher, {
+          where: { email: inviteTeacherDto.email },
+        });
 
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
-    }
+        if (existingUser) {
+          throw new ConflictException('User with this email already exists');
+        }
 
-    const teacherRole = await this.roleRepository.findOne({
-      where: { name: 'teacher' },
-    });
+        const teacherRole = await manager.findOne(Role, {
+          where: { name: 'teacher' },
+        });
 
-    if (!teacherRole) {
-      throw new NotFoundException('Teacher role not found');
-    }
+        if (!teacherRole) {
+          throw new NotFoundException('Teacher role not found');
+        }
 
-    const pin = this.generatePin();
-    const teacherId = await this.generateTeacherId(adminUser.school);
+        const pin = this.generatePin();
+        const teacherId = await this.generateTeacherId(adminUser.school);
 
-    const invitationExpires = new Date();
-    invitationExpires.setHours(invitationExpires.getHours() + 24);
+        const invitationExpires = new Date();
+        invitationExpires.setHours(invitationExpires.getHours() + 24);
 
-    const teacherUser = this.teacherRepository.create({
-      firstName: inviteTeacherDto.firstName,
-      lastName: inviteTeacherDto.lastName,
-      email: inviteTeacherDto.email,
-      password: await bcrypt.hash(pin, 10),
-      role: teacherRole,
-      school: adminUser.school,
-      status: 'pending',
-      invitationToken: uuidv4(),
-      invitationExpires,
-      isInvitationAccepted: false,
-      teacherId: teacherId,
-    });
+        const teacherUser = manager.create(Teacher, {
+          firstName: inviteTeacherDto.firstName,
+          lastName: inviteTeacherDto.lastName,
+          email: inviteTeacherDto.email,
+          password: await bcrypt.hash(pin, 10),
+          role: teacherRole,
+          school: adminUser.school,
+          status: 'pending',
+          invitationToken: uuidv4(),
+          invitationExpires,
+          isInvitationAccepted: false,
+          teacherId: teacherId,
+        });
 
-    const savedUser = await this.teacherRepository.save(teacherUser);
+        const savedUser = await manager.save(Teacher, teacherUser);
 
-    try {
-      await this.emailService.sendTeacherInvitation(savedUser, teacherId, pin);
-      this.logger.log(`Invitation sent to teacher ${inviteTeacherDto.email}`);
-    } catch (error) {
-      this.logger.error(
-        `Failed to send invitation to ${inviteTeacherDto.email}`,
-        error,
-      );
-    }
+        try {
+          await this.emailService.sendTeacherInvitation(
+            savedUser,
+            teacherId,
+            pin,
+          );
+          this.logger.log(
+            `Invitation sent to teacher ${inviteTeacherDto.email}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to send invitation to ${inviteTeacherDto.email}`,
+            error,
+          );
+          // The transaction will be rolled back automatically due to the error
+          throw new InvitationException(
+            `Failed to send teacher invitation email: ${BaseException.getErrorMessage(error)}`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
 
-    return savedUser;
+        return savedUser;
+      },
+    );
   }
 
   async verifyInvitationToken(token: string) {
@@ -452,23 +505,42 @@ export class InvitationService {
       );
     }
 
-    const admin = await this.adminRepository.findOne({
-      where: { id: userId, status: 'pending' },
-      relations: ['role', 'school'],
-    });
+    return this.transactionUtil.executeInTransaction(
+      async (manager: EntityManager) => {
+        const admin = await manager.findOne(SchoolAdmin, {
+          where: { id: userId, status: 'pending' },
+          relations: ['role', 'school'],
+        });
 
-    if (!admin) {
-      throw new NotFoundException('Pending user not found');
-    }
+        if (!admin) {
+          throw new NotFoundException('Pending user not found');
+        }
 
-    admin.invitationToken = this.generateInvitationToken();
-    admin.invitationExpires = this.calculateTokenExpiration();
+        admin.invitationToken = this.generateInvitationToken();
+        admin.invitationExpires = this.calculateTokenExpiration();
 
-    const updatedAdmin = await this.adminRepository.save(admin);
+        const updatedAdmin = await manager.save(SchoolAdmin, admin);
 
-    await this.emailService.sendInvitationEmail(updatedAdmin);
+        try {
+          await this.emailService.sendInvitationEmail(updatedAdmin);
+          this.logger.log(
+            `Resend invitation email sent successfully to ${admin.email}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to resend invitation email to ${admin.email}`,
+            error,
+          );
+          // The transaction will be rolled back automatically due to the error
+          throw new InvitationException(
+            `Failed to resend invitation email: ${BaseException.getErrorMessage(error)}`,
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
 
-    return updatedAdmin;
+        return updatedAdmin;
+      },
+    );
   }
 
   /**
