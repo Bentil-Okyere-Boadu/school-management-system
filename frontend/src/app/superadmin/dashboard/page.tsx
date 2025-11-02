@@ -50,7 +50,7 @@ const DashboardPage: React.FC = () => {
   };
 
 
-  const { adminUsers, refetch } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), "", "", 6);
+  const { adminUsers, refetch, isLoading } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), "", "", 6);
 
   return (
     <div className="px-0.5">
@@ -72,7 +72,7 @@ const DashboardPage: React.FC = () => {
       <CustomBarChart />
 
       <div className="mt-10 p-6 bg-white rounded-lg">
-        <DashboardTable adminUsers={adminUsers} refetch={refetch}  />
+        <DashboardTable adminUsers={adminUsers} refetch={refetch} busy={isLoading}  />
       </div>
     </div>
     

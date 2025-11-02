@@ -10,6 +10,7 @@ import { Pagination } from "@/components/common/Pagination";
 import { Dialog } from "@/components/common/Dialog";
 import StatCard from "./StatsCard";
 import InputField from "@/components/InputField";
+import { HashLoader } from "react-spinners";
 interface AttendanceSummaryTabSectionProps {
   classId: string;
 }
@@ -42,6 +43,7 @@ interface AttendanceData {
 interface GetAttendanceSummary {
   attendanceData: AttendanceData;
   refetch: () => void;
+  isLoading?: boolean;
 }
 
 export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionProps> = ({ classId }) => {
@@ -52,7 +54,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
   const [startDate, setStartDate] = useState(firstDay.toISOString().split('T')[0])
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
 
-  const { attendanceData } = useGetClassAttendance(classId, "month", '', '', "", true, startDate, endDate) as GetAttendanceSummary;
+  const { attendanceData, isLoading } = useGetClassAttendance(classId, "month", '', '', "", true, startDate, endDate) as GetAttendanceSummary;
 
   const [currentPage, setCurrentPage] = useState(attendanceData?.pagination.page || 1);
   // const [searchQuery, setSearchQuery] = useState("");
@@ -162,64 +164,82 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
                 <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"></th>
               </tr>
             </thead>
-            <tbody>
-              {attendanceData?.students?.length > 0 ? (attendanceData.students.map((student) => (
-                <tr key={student.id}>
-                  <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    {student.firstName} {student.lastName}
-                  </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {attendanceData.classLevel.name}
-                  </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {student.statistics.totalMarkedDays}
-                  </td>
-                  <td
-                    className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
-                  >
-                    {student.statistics.presentCount}
-                  </td>
-                  <td
-                    className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
-                  >
-                    {student.statistics.absentCount}
-                  </td>
-                  <td
-                    className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
-                  >
-                    {student.statistics.totalDaysInRange}
-                  </td>
-                  <td
-                    className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]"
-                  >
-                    <div className="flex items-center justify-end pr-6">
-                      <Menu shadow="md" width={200}>
-                        <Menu.Target>
-                          <IconDots className="cursor-pointer" />
-                        </Menu.Target>
-                        <Menu.Dropdown className="!-ml-12 !-mt-2">
-                          <Menu.Item 
-                            onClick={() => setIsSendReminderDialogOpen(false)} 
-                            leftSection={<IconMessageFilled size={18} color="#AB58E7" />}>
-                            Send Reminder
-                          </Menu.Item>
-                        </Menu.Dropdown>
-                      </Menu>
-                    </div>
-                  </td>
-                </tr>
-              ))
-              ) : (
-                <tr>
-                  <td colSpan={8}>
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                      <p className="text-lg font-medium">No users found</p>
-                      <p className="text-sm text-gray-400 mt-1">Once users are added, they will appear in this table.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
+<tbody>
+  {(() => {
+    // Loader state
+    if (isLoading) {
+      return (
+        <tr>
+          <td colSpan={8}>
+            <div className="relative py-20 bg-white">
+              <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
+                <HashLoader color="#AB58E7" size={40} />
+              </div>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    // Empty state
+    if (!attendanceData?.students?.length) {
+      return (
+        <tr>
+          <td colSpan={8}>
+            <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+              <p className="text-lg font-medium">No users found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Once users are added, they will appear in this table.
+              </p>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    // Data state
+    return attendanceData.students.map((student) => (
+      <tr key={student.id}>
+        <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+          {student.firstName} {student.lastName}
+        </td>
+        <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+          {attendanceData.classLevel.name}
+        </td>
+        <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+          {student.statistics.totalMarkedDays}
+        </td>
+        <td className="px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+          {student.statistics.presentCount}
+        </td>
+        <td className="px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+          {student.statistics.absentCount}
+        </td>
+        <td className="px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+          {student.statistics.totalDaysInRange}
+        </td>
+        <td className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]">
+          <div className="flex items-center justify-end pr-6">
+            <Menu shadow="md" width={200}>
+              <Menu.Target>
+                <IconDots className="cursor-pointer" />
+              </Menu.Target>
+              <Menu.Dropdown className="!-ml-12 !-mt-2">
+                <Menu.Item
+                  onClick={() => setIsSendReminderDialogOpen(false)}
+                  leftSection={<IconMessageFilled size={18} color="#AB58E7" />}
+                >
+                  Send Reminder
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </div>
+        </td>
+      </tr>
+    ));
+  })()}
+</tbody>
+
           </table>
         </div>
       </section>

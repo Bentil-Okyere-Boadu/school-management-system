@@ -10,6 +10,7 @@ import TableInputField from '@/components/common/TableInputField';
 import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses, usePostStudentGrades,  } from '@/hooks/teacher';
 import { ErrorResponse, PostGradesPayload } from '@/@types';
 import { toast } from 'react-toastify';
+import { HashLoader } from 'react-spinners';
 
 type StudentGrading = {
   id: string;
@@ -205,7 +206,7 @@ const ClassGrading = () => {
   };
 
 
-  const { studentsForGrading } = useGetStudentsForGrading(
+  const { studentsForGrading, isLoading } = useGetStudentsForGrading(
     classId as string,
     currentSubject,
     currentAcademicYear,
@@ -279,8 +280,40 @@ const ClassGrading = () => {
               </thead>
     
               <tbody>
-                {studentScores?.length > 0 ? (
-                  studentScores.map((student, index) => (
+                {(() => {
+                  // Loading state
+                  if (isLoading) {
+                    return (
+                      <tr>
+                        <td colSpan={6}>
+                          <div className="relative py-20 bg-white">
+                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
+                              <HashLoader color="#AB58E7" size={40} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Empty state
+                  if (!studentScores?.length) {
+                    return (
+                      <tr>
+                        <td colSpan={6}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">No students found</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Once students are made, they will appear in this table.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Data state
+                  return studentScores.map((student, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         {student.firstName}
@@ -308,25 +341,13 @@ const ClassGrading = () => {
                             handleScoreChange(student.id, 'examScore', e.target.value)
                           }
                         />
-
                       </td>
                       <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                         {student.totalScore}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6}>
-                      <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                        <p className="text-lg font-medium">No students found</p>
-                        <p className="text-sm text-gray-400 mt-1">
-                          Once students are made, they will appear in this table.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>

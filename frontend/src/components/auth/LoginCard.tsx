@@ -46,7 +46,7 @@ const LoginCard: React.FC = () => {
         toast.error((error as AxiosError).response.data.message);
       },
       onSuccess: (data) => {
-        toast.success("Login successfully.");
+        toast.success("Login successful");
         setLoggedInUser(data.data);
         handleLoginRedirectAndToken(data, router);
       },
