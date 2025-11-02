@@ -130,7 +130,7 @@ const AdminDashboard = () => {
     setCurrentPage(1);
   };
 
-  const { schoolUsers, refetch } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), "", "", "", 6);
+  const { schoolUsers, refetch, isLoading: isSchoolUsersLoading } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), "", "", "", 6);
 
   return (
     <div>
@@ -153,7 +153,7 @@ const AdminDashboard = () => {
       <CustomBarChart dataList={dashboardStats?.attendanceByClass || []} />
 
       <div className="mt-10 p-6 bg-white rounded-lg">
-        <DashboardTable schoolUsers={schoolUsers} refetch={refetch}  />
+        <DashboardTable schoolUsers={schoolUsers} refetch={refetch} busy={isSchoolUsersLoading} />
       </div>
 
       {/* Create School Dialog */}

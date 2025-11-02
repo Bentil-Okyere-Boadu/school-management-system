@@ -6,9 +6,9 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import Image from "next/image";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import { useGetClassAttendance } from "@/hooks/school-admin";
-import { useGetClassLevels } from "@/hooks/school-admin";
+import { useGetClassAttendance, useGetClassLevels } from "@/hooks/school-admin";
 import { Pagination } from "@/components/common/Pagination";
+import { HashLoader } from "react-spinners";
 
 interface Student {
   id: string;
@@ -32,9 +32,10 @@ interface AttendanceData {
 }
 
 interface GetClassAttendance {
-  attendanceData: AttendanceData; 
+  attendanceData: AttendanceData;
   refetch: () => void;
-} 
+  isLoading?: boolean;
+}
 
 export const AttendanceSheetTabSection = () => {
   const [currentYear, setCurrentYear] = useState("");
@@ -52,7 +53,7 @@ export const AttendanceSheetTabSection = () => {
   })
   
   
-  const { attendanceData } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, currentWeek) as GetClassAttendance;
+  const { attendanceData, isLoading } = useGetClassAttendance(selectedClass, "month", currentMonth, currentYear, currentWeek) as GetClassAttendance;
   
   useEffect(() => {
     if (getClasses.length > 0 && !selectedClass) {
@@ -135,52 +136,84 @@ export const AttendanceSheetTabSection = () => {
             ))}
 
             {/* Body */}
-            {attendanceData?.students?.length > 0 ? 
-              (
-                attendanceData?.students?.map((student: Student) => (
-                  <React.Fragment key={student.id}>
-                    <div className="sticky left-0 z-10 bg-white px-4 py-5 border-b border-gray-200 whitespace-nowrap">
-                      {student.fullName}
+            {(() => {
+              // Loader first
+              if (isLoading || !selectedClass) {
+                return (
+                  <div className="col-span-full relative py-20 bg-white">
+                    <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
+                      <HashLoader color="#AB58E7" size={40} />
                     </div>
-                    <div className="sticky left-[200px] z-10 bg-white px-4 py-5 border-b border-gray-200">
-                      {attendanceData?.classLevel?.name}
-                    </div>
-                    {attendanceData?.dateRange?.dates?.map((date) => {
-                      const status = student.attendanceByDate[date];
-                      const present = status === "present";
-                      const isWeekend = status === "weekend";
-                      const isHoliday = status === "holiday";
-                      const icon = status == null || isWeekend ? null : present ? Mark : Cancel;
-
-                      return (
-                        <div
-                          key={date}
-                          className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center ${
-                            new Date(date).getDay() === 0 || new Date(date).getDay() === 6
-                              ? "bg-white none pointer-events-none"
-                              : "bg-[#F9F5FF]"
-                          } ${isHoliday && 'bg-[#FCEBCF]'}`}
-                        >
-                          {isHoliday ? (
-                            <span className="text-[11px] font-bold text-black-500 rotate-[-45deg] whitespace-nowrap">Holiday</span>
-                          ) :  icon ? (
-                            <Image src={icon} alt={present ? "Present" : "Absent"} className="w-5 h-5 object-contain" width={20} height={20} />
-                          ) : (
-                            <span className="text-xs text-gray-300">–</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))
-              ) : (
-                <div className="col-span-full py-16 text-center font-semibold text-gray-600 bg-white">
-                  <div className="w-[90vw]">
-                    <p className="text-lg font-medium">No students found</p>
-                    <p className="text-sm text-gray-400 mt-1">Once students are added to the class, they will appear in this table.</p>
                   </div>
-                </div>
-              )}
+                );
+              }
+
+              // Empty state after data load
+              if (!attendanceData?.students?.length) {
+                return (
+                  <div className="col-span-full py-16 text-center font-semibold text-gray-600 bg-white">
+                    <div className="w-[90vw]">
+                      <p className="text-lg font-medium">No students found</p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Once students are added to the class, they will appear in
+                        this table.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Data table when loaded
+              return attendanceData?.students.map((student: Student) => (
+                <React.Fragment key={student.id}>
+                  {/* Student name column */}
+                  <div className="sticky left-0 z-10 bg-white px-4 py-5 border-b border-gray-200 whitespace-nowrap">
+                    {student.fullName}
+                  </div>
+
+                  {/* Class level column */}
+                  <div className="sticky left-[200px] z-10 bg-white px-4 py-5 border-b border-gray-200">
+                    {attendanceData?.classLevel?.name}
+                  </div>
+
+                  {/* Attendance cells */}
+                  {attendanceData?.dateRange?.dates?.map((date) => {
+                    const status = student.attendanceByDate[date];
+                    const present = status === "present";
+                    const isWeekend = status === "weekend";
+                    const isHoliday = status === "holiday";
+                    const icon = status == null || isWeekend ? null : present ? Mark : Cancel;
+
+                    return (
+                      <div
+                        key={date}
+                        className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center ${
+                          new Date(date).getDay() === 0 || new Date(date).getDay() === 6
+                            ? "bg-white pointer-events-none"
+                            : "bg-[#F9F5FF]"
+                        } ${isHoliday && "bg-[#FCEBCF]"}`}
+                      >
+                        {isHoliday ? (
+                          <span className="text-[11px] font-bold text-black-500 rotate-[-45deg] whitespace-nowrap">
+                            Holiday
+                          </span>
+                        ) : icon ? (
+                          <Image
+                            src={icon}
+                            alt={present ? "Present" : "Absent"}
+                            className="w-5 h-5 object-contain"
+                            width={20}
+                            height={20}
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-300">–</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              ));
+            })()}
           </div>
         </div>
       </div>
