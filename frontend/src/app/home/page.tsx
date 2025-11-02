@@ -162,7 +162,7 @@ const items = FAQs.map((item, i) => (
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <Image src={Logo} alt="Logo" width={40} height={40} />
-            <span className="font-bold text-lg text-white">Go-Edutech</span>
+            <span className="font-bold text-lg text-white">GoEdtech</span>
           </div>
           <ul className="hidden md:flex items-center gap-8 font-medium text-white">
             <li className="">
@@ -272,7 +272,7 @@ const items = FAQs.map((item, i) => (
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
                 <Image src={Logo} alt="Logo" width={36} height={36} />
-                <span className="font-bold text-lg">Go-Edutech</span>
+                <span className="font-bold text-lg">GoEdtech</span>
               </div>
               <button
                 className="text-white"
@@ -538,7 +538,7 @@ const items = FAQs.map((item, i) => (
       <footer className="bg-[#E5E7EB] py-6 text-center text-gray-600 text-sm">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div>
-            &copy; {new Date().getFullYear()} Go-Edutech. All
+            &copy; {new Date().getFullYear()} GoEdtech. All
             rights reserved.
           </div>
           <div className="flex gap-4 mt-2 md:mt-0">
