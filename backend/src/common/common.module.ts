@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailService } from './services/email.service';
+import { EmailRetryService } from './services/email-retry.service';
 import { SmsModule } from './modules/sms.module';
 import { TransactionUtil } from './utils/transaction.util';
 import { CleanupService } from './services/cleanup.service';
@@ -19,12 +20,14 @@ import { Student } from 'src/student/student.entity';
   controllers: [CleanupController],
   providers: [
     EmailService,
+    EmailRetryService,
     TransactionUtil,
     CleanupService,
     ScheduledCleanupService,
   ],
   exports: [
     EmailService,
+    EmailRetryService,
     SmsModule,
     TransactionUtil,
     CleanupService,

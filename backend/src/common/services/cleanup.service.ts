@@ -34,45 +34,34 @@ export class CleanupService {
 
     this.logger.log('Starting cleanup of orphaned users...');
 
-    // Clean up orphaned admins
-    const orphanedAdmins = await this.adminRepository.find({
-      where: {
-        status: 'pending',
-        createdAt: LessThan(sevenDaysAgo),
-      },
+    // Clean up orphaned admins using delete (faster, avoids loading entities)
+    const deletedAdminsResult = await this.adminRepository.delete({
+      status: 'pending',
+      createdAt: LessThan(sevenDaysAgo),
     });
+    const deletedAdmins = deletedAdminsResult.affected || 0;
+    this.logger.log(`Deleted ${deletedAdmins} orphaned admin users`);
 
-    const deletedAdmins = await this.adminRepository.remove(orphanedAdmins);
-    this.logger.log(`Deleted ${deletedAdmins.length} orphaned admin users`);
-
-    // Clean up orphaned teachers
-    const orphanedTeachers = await this.teacherRepository.find({
-      where: {
-        status: 'pending',
-        createdAt: LessThan(sevenDaysAgo),
-      },
+    // Clean up orphaned teachers using delete (faster, avoids loading entities)
+    const deletedTeachersResult = await this.teacherRepository.delete({
+      status: 'pending',
+      createdAt: LessThan(sevenDaysAgo),
     });
+    const deletedTeachers = deletedTeachersResult.affected || 0;
+    this.logger.log(`Deleted ${deletedTeachers} orphaned teacher users`);
 
-    const deletedTeachers =
-      await this.teacherRepository.remove(orphanedTeachers);
-    this.logger.log(`Deleted ${deletedTeachers.length} orphaned teacher users`);
-
-    // Clean up orphaned students
-    const orphanedStudents = await this.studentRepository.find({
-      where: {
-        status: 'pending',
-        createdAt: LessThan(sevenDaysAgo),
-      },
+    // Clean up orphaned students using delete (faster, avoids loading entities)
+    const deletedStudentsResult = await this.studentRepository.delete({
+      status: 'pending',
+      createdAt: LessThan(sevenDaysAgo),
     });
-
-    const deletedStudents =
-      await this.studentRepository.remove(orphanedStudents);
-    this.logger.log(`Deleted ${deletedStudents.length} orphaned student users`);
+    const deletedStudents = deletedStudentsResult.affected || 0;
+    this.logger.log(`Deleted ${deletedStudents} orphaned student users`);
 
     return {
-      deletedAdmins: deletedAdmins.length,
-      deletedTeachers: deletedTeachers.length,
-      deletedStudents: deletedStudents.length,
+      deletedAdmins,
+      deletedTeachers,
+      deletedStudents,
     };
   }
 
@@ -88,52 +77,34 @@ export class CleanupService {
 
     this.logger.log('Starting cleanup of expired invitation tokens...');
 
-    // Clean up expired admin tokens
-    const expiredAdmins = await this.adminRepository.find({
-      where: {
-        status: 'pending',
-        invitationExpires: LessThan(now),
-      },
+    // Clean up expired admin tokens using delete (faster, avoids loading entities)
+    const deletedExpiredAdminsResult = await this.adminRepository.delete({
+      status: 'pending',
+      invitationExpires: LessThan(now),
     });
+    const expiredAdmins = deletedExpiredAdminsResult.affected || 0;
+    this.logger.log(`Deleted ${expiredAdmins} admins with expired tokens`);
 
-    const deletedExpiredAdmins =
-      await this.adminRepository.remove(expiredAdmins);
-    this.logger.log(
-      `Deleted ${deletedExpiredAdmins.length} admins with expired tokens`,
-    );
-
-    // Clean up expired teacher tokens
-    const expiredTeachers = await this.teacherRepository.find({
-      where: {
-        status: 'pending',
-        invitationExpires: LessThan(now),
-      },
+    // Clean up expired teacher tokens using delete (faster, avoids loading entities)
+    const deletedExpiredTeachersResult = await this.teacherRepository.delete({
+      status: 'pending',
+      invitationExpires: LessThan(now),
     });
+    const expiredTeachers = deletedExpiredTeachersResult.affected || 0;
+    this.logger.log(`Deleted ${expiredTeachers} teachers with expired tokens`);
 
-    const deletedExpiredTeachers =
-      await this.teacherRepository.remove(expiredTeachers);
-    this.logger.log(
-      `Deleted ${deletedExpiredTeachers.length} teachers with expired tokens`,
-    );
-
-    // Clean up expired student tokens
-    const expiredStudents = await this.studentRepository.find({
-      where: {
-        status: 'pending',
-        invitationExpires: LessThan(now),
-      },
+    // Clean up expired student tokens using delete (faster, avoids loading entities)
+    const deletedExpiredStudentsResult = await this.studentRepository.delete({
+      status: 'pending',
+      invitationExpires: LessThan(now),
     });
-
-    const deletedExpiredStudents =
-      await this.studentRepository.remove(expiredStudents);
-    this.logger.log(
-      `Deleted ${deletedExpiredStudents.length} students with expired tokens`,
-    );
+    const expiredStudents = deletedExpiredStudentsResult.affected || 0;
+    this.logger.log(`Deleted ${expiredStudents} students with expired tokens`);
 
     return {
-      expiredAdmins: deletedExpiredAdmins.length,
-      expiredTeachers: deletedExpiredTeachers.length,
-      expiredStudents: deletedExpiredStudents.length,
+      expiredAdmins,
+      expiredTeachers,
+      expiredStudents,
     };
   }
 

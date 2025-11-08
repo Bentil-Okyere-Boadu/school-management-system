@@ -16,6 +16,7 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from '../common/services/email.service';
+import { EmailRetryService } from '../common/services/email-retry.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { InviteStudentDto } from './dto/invite-student.dto';
 import { InviteTeacherDto } from './dto/invite-teacher.dto';
@@ -44,6 +45,7 @@ export class InvitationService {
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
     private emailService: EmailService,
+    private emailRetryService: EmailRetryService,
     private transactionUtil: TransactionUtil,
   ) {}
 
@@ -271,13 +273,17 @@ export class InvitationService {
         const savedAdmin = await manager.save(SchoolAdmin, newAdmin);
 
         try {
-          await this.emailService.sendInvitationEmail(savedAdmin);
+          // Use EmailRetryService to retry transient email failures
+          // Note: Retries happen inside transaction to maintain atomicity.
+          // If all retries fail, transaction rolls back (no orphaned user).
+          // Tradeoff: Retries hold DB connection longer, but ensure data consistency.
+          await this.emailRetryService.retrySendInvitationEmail(savedAdmin);
           this.logger.log(
             `Invitation email sent successfully to ${inviteUserDto.email}`,
           );
         } catch (error) {
           this.logger.error(
-            `Failed to send invitation email to ${inviteUserDto.email}`,
+            `Failed to send invitation email to ${inviteUserDto.email} after retries`,
             error,
           );
           // The transaction will be rolled back automatically due to the error
@@ -348,7 +354,9 @@ export class InvitationService {
         const savedUser = await manager.save(Student, studentUser);
 
         try {
-          await this.emailService.sendStudentInvitation(
+          // Use EmailRetryService to retry transient email failures
+          // Note: Retries happen inside transaction to maintain atomicity.
+          await this.emailRetryService.retrySendStudentInvitation(
             savedUser,
             studentId,
             pin,
@@ -358,7 +366,7 @@ export class InvitationService {
           );
         } catch (error) {
           this.logger.error(
-            `Failed to send invitation to ${inviteStudentDto.email}`,
+            `Failed to send invitation to ${inviteStudentDto.email} after retries`,
             error,
           );
           // The transaction will be rolled back automatically due to the error
@@ -429,7 +437,9 @@ export class InvitationService {
         const savedUser = await manager.save(Teacher, teacherUser);
 
         try {
-          await this.emailService.sendTeacherInvitation(
+          // Use EmailRetryService to retry transient email failures
+          // Note: Retries happen inside transaction to maintain atomicity.
+          await this.emailRetryService.retrySendTeacherInvitation(
             savedUser,
             teacherId,
             pin,
@@ -439,7 +449,7 @@ export class InvitationService {
           );
         } catch (error) {
           this.logger.error(
-            `Failed to send invitation to ${inviteTeacherDto.email}`,
+            `Failed to send invitation to ${inviteTeacherDto.email} after retries`,
             error,
           );
           // The transaction will be rolled back automatically due to the error
@@ -522,13 +532,14 @@ export class InvitationService {
         const updatedAdmin = await manager.save(SchoolAdmin, admin);
 
         try {
-          await this.emailService.sendInvitationEmail(updatedAdmin);
+          // Use EmailRetryService to retry transient email failures
+          await this.emailRetryService.retrySendInvitationEmail(updatedAdmin);
           this.logger.log(
             `Resend invitation email sent successfully to ${admin.email}`,
           );
         } catch (error) {
           this.logger.error(
-            `Failed to resend invitation email to ${admin.email}`,
+            `Failed to resend invitation email to ${admin.email} after retries`,
             error,
           );
           // The transaction will be rolled back automatically due to the error

@@ -12,7 +12,7 @@ export class ScheduledCleanupService {
   constructor(private cleanupService: CleanupService) {}
 
   /**
-   * Run cleanup of orphaned users every day at 2 AM
+   * Run cleanup of orphaned users every week
    */
   @Cron(CronExpression.EVERY_WEEK)
   async cleanupOrphanedUsers() {

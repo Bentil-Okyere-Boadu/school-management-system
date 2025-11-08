@@ -37,6 +37,32 @@ The solution implements a comprehensive approach to handle email failures during
 - **Transaction Rollback**: Automatic rollback when email sending fails
 - **Detailed Logging**: Comprehensive logging for debugging and monitoring
 
+## Design Decisions
+
+### Email Retries Inside Transactions
+
+**Decision**: Email retries are performed inside database transactions.
+
+**Rationale**:
+
+- **Atomicity**: Ensures that user creation and email sending are atomic - either both succeed or both fail
+- **Data Consistency**: Prevents orphaned users from being created if email sending fails
+- **Tradeoff**: Retries hold database connections longer, but this is acceptable for:
+  - Limited retry attempts (3 max)
+  - Short retry delays (5s base with exponential backoff)
+  - Low-frequency operation (user invitations are not high-volume)
+
+**Alternative Considered**:
+
+- Create user, commit transaction, then retry email outside transaction
+- **Rejected because**: This would allow orphaned users if email fails after commit, defeating the purpose of the solution
+
+**Performance Impact**:
+
+- Maximum transaction duration: ~35 seconds (3 retries with exponential backoff: 5s + 10s + 20s)
+- Acceptable for invitation operations which are infrequent
+- Database connection pool should be sized to handle concurrent invitations
+
 ## Implementation Details
 
 ### Files Created/Modified
@@ -78,9 +104,15 @@ async inviteAdmin(inviteUserDto: InviteUserDto, currentUser: SuperAdmin): Promis
 
 #### 2. Automatic Cleanup
 
-- **Daily at 2 AM**: Cleanup of orphaned users (pending for more than 7 days)
+- **Weekly**: Cleanup of orphaned users (pending for more than 7 days)
 - **Hourly**: Cleanup of expired invitation tokens
 - **Daily at 6 AM**: Logging of pending user statistics
+
+**Performance Optimization**: Cleanup uses `repository.delete()` instead of `repository.remove()` to:
+
+- Avoid loading entities into memory
+- Execute faster bulk deletes
+- Reduce memory usage for large cleanup operations
 
 #### 3. Manual Cleanup Endpoints
 
@@ -138,7 +170,7 @@ async retrySendInvitationEmail(admin: SchoolAdmin, retryCount: number = 0): Prom
 The system automatically handles:
 
 - Transaction rollback on email failures
-- Daily cleanup of orphaned users
+- Weekly cleanup of orphaned users
 - Hourly cleanup of expired tokens
 - Statistics logging
 
@@ -176,7 +208,7 @@ No additional environment variables are required. The solution uses existing dat
 
 The cleanup schedule can be modified in `ScheduledCleanupService`:
 
-- Orphaned users: Daily at 2 AM
+- Orphaned users: Weekly
 - Expired tokens: Hourly
 - Statistics: Daily at 6 AM
 
@@ -215,4 +247,3 @@ This solution comprehensively addresses the orphaned user problem by:
 - Offering manual control and monitoring capabilities
 
 The system now ensures data integrity while maintaining reliability and providing administrators with the tools needed to monitor and maintain the system effectively.
-
