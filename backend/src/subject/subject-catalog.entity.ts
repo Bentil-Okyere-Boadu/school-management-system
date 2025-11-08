@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Subject } from './subject.entity';
+import { Curriculum } from '../curriculum/entities/curriculum.entity';
 
 @Entity()
 export class SubjectCatalog {
@@ -22,7 +23,11 @@ export class SubjectCatalog {
   @Column({ nullable: true })
   description: string;
 
-  @ManyToOne(() => School, { eager: true, nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => School, {
+    eager: true,
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'school_id' })
   school: School;
 
@@ -31,6 +36,11 @@ export class SubjectCatalog {
     onDelete: 'CASCADE',
   })
   subjects: Subject[];
+
+  @OneToMany(() => Curriculum, (curriculum) => curriculum.subjectCatalog, {
+    cascade: false,
+  })
+  curricula: Curriculum[];
 
   @CreateDateColumn()
   createdAt: Date;
