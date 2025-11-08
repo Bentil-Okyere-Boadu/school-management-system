@@ -1,5 +1,6 @@
 "use client";
-import React, { forwardRef, ReactNode } from "react";
+import React, { forwardRef, ReactNode, useState } from "react";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -23,6 +24,10 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
     },
     ref
   ) => {
+    const [showPassword, setShowPassword] = useState(false);
+    const isPassword = isPasswordField || type === "password";
+    const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
     return (
       <div className="mb-4">
         <label className="mb-1.5 text-xs text-zinc-600 block">
@@ -32,20 +37,30 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
         <div className="relative">
           <input
             ref={ref}
-            type={type}
+            type={inputType}
             disabled={isTransulent}
             {...props}
             className={`px-3 py-2.5 h-10 rounded border-solid border-[0.5px] border-zinc-500 text-zinc-800 w-full
-              ${isPasswordField ? "text-2xl font-bold" : "text-base"}
+              ${isPassword ? "text-2xl font-bold" : "text-base"}
               ${isTransulent ? "bg-[#8787871A] bg-opacity-10 !border-none outline-none" : ""}
               ${rightButton ? "pr-26" : ""}
+              ${isPassword ? "pr-8" : ""}
             `}
           />
-          {rightButton && (
-            <div className="absolute inset-y-0 right-2 flex items-center">
-              {rightButton}
-            </div>
-          )}
+          <div className="absolute inset-y-0 right-2 flex items-center gap-2">
+            {rightButton && <div>{rightButton}</div>}
+            {isPassword && (
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="text-zinc-600 hover:text-zinc-800 cursor-pointer"
+                disabled={isTransulent}
+              >
+                {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

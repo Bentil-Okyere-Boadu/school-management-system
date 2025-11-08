@@ -291,12 +291,13 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
                       onClick={() => onEditFeeStructureClick(feeStructure) }
                       showIcon={false}
                     />
-                    <CustomUnderlinedButton
+                    {/* TODO: out of scope */}
+                    {/* <CustomUnderlinedButton
                       text="Send Reminder"
                       textColor="text-gray-500"
                       onClick={() => setIsSendReminderDialogOpen(false)}
                       showIcon={false}
-                    />
+                    /> */}
                     <CustomUnderlinedButton
                       text="Delete"
                       textColor="text-gray-500"
