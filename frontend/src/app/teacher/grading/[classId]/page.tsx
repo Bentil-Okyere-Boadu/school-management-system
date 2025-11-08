@@ -247,7 +247,8 @@ const ClassGrading = () => {
           <div className="flex gap-3 flex-wrap">
             <CustomSelectTag selectClassName="py-2.5" value={currentAcademicYear} options={academicYearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "academicYear")} />
             <CustomSelectTag selectClassName="py-2.5" value={currentTerm} options={termOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "term")} />
-            <SearchBar onSearch={handleSearch} placeholder='Search by name' className="w-[366px] py-[-3px] max-md:w-full mx-0.5" />
+              {/* TODO: Out of scope */}
+            {false && <SearchBar onSearch={handleSearch} placeholder='Search by name' className="w-[366px] py-[-3px] max-md:w-full mx-0.5" />}
           </div>
 
           <CustomButton text="Save Changes" onClick={() => handleSubmitGrades()} />

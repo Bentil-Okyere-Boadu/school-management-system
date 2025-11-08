@@ -145,22 +145,26 @@ const StudentsTable = ({ students, refetch, busy }: StudentsTableProps) => {
                 >
                   Full View
                 </Menu.Item>
-                {/* <Menu.Item
+                {false && (
+                <Menu.Item
                   leftSection={<IconSend size={18} color="#AB58E7" />}
                 >
                   Transfer Records
-                </Menu.Item> */}
+                </Menu.Item>
+                )}
                 <Menu.Item
                   onClick={() => onArchiveStudentMenuItemClick(student)}
                   leftSection={<IconArchiveFilled size={18} color="#AB58E7" />}
                 >
                   {student.isArchived ? 'Unarchive Student' : 'Archive Student'}
                 </Menu.Item>
-                {/* <Menu.Item
-                  leftSection={<IconTrashFilled size={18} color="#AB58E7" />}
-                >
-                  Delete Records
-                </Menu.Item> */}
+                {false && (
+                <Menu.Item
+                    leftSection={<IconTrashFilled size={18} color="#AB58E7" />}
+                  >
+                    Delete Records
+                  </Menu.Item>
+                )}
               </Menu.Dropdown>
             </Menu>
           </div>
