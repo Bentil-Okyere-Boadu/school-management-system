@@ -13,6 +13,7 @@ import {
   useEditCurriculum,
   useGetCurricula,
 } from "@/hooks/school-admin";
+import { useEditCurriculumById } from "@/hooks/school-admin";
 import { useGetAllSubjects, useGetCalendars, useGetTerms } from "@/hooks/school-admin";
 import { Calendar, CurriculumPayload, ErrorResponse, Subject, Term } from "@/@types";
 import { useRouter } from "next/navigation";
@@ -49,6 +50,7 @@ export const CurriculumTabSection: React.FC = () => {
   const { mutate: createMutation, isPending: creating } = useCreateCurriculum();
   const { mutate: editMutation, isPending: editing } = useEditCurriculum(activeId);
   const { mutate: deleteMutation, isPending: deleting } = useDeleteCurriculum();
+  const { mutate: patchCurriculum } = useEditCurriculumById();
 
   // Subjects
   const { subjects: allSubjects } = useGetAllSubjects(true);
@@ -131,30 +133,22 @@ export const CurriculumTabSection: React.FC = () => {
   }, [editMode, selectedTermId, selectedCalendarId, calendars]);
 
   const onToggleActive = (item: CurriculumRecord) => {
-        const payload = {
-      name,
-      description,
-      subjectCatalogIds: selectedSubjectIds,
-      academicTermId: selectedTermId,
-    };
     if (!item?.id) return;
     setBusyToggleId(item.id);
-    editMutation(
-      { ...payload, isActive: !item.isActive },
+
+    // Use ID-at-call-time mutation to avoid stale/empty id and unnecessary empty fields
+    patchCurriculum(
+      { id: item.id, isActive: !item.isActive },
       {
         onSuccess: () => {
           refetch().finally(() => {
             setBusyToggleId(null);
-            toast.success(
-              item.isActive ? "Curriculum deactivated" : "Curriculum activated"
-            );
+            toast.success(item.isActive ? "Curriculum deactivated" : "Curriculum activated");
           });
         },
         onError: (error: unknown) => {
           setBusyToggleId(null);
-          toast.error(
-            JSON.stringify((error as ErrorResponse).response.data.message ?? "Failed to update")
-          );
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message ?? "Failed to update"));
         },
       }
     );

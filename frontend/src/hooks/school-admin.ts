@@ -454,6 +454,16 @@ export const useGetCurriculumById = (id: string, options?: UseQueryOptions) => {
     return { curriculum, isLoading, refetch };
 }
 
+// Patch curriculum by passing id at call time - useful for quick toggles
+export const useEditCurriculumById = () => {
+    return useMutation({
+        mutationFn: (payload: Partial<CurriculumPayload> & { id: string }) => {
+            const { id, ...rest } = payload;
+            return customAPI.patch(`/curriculum/${id}`, rest);
+        }
+    });
+}
+
 /**
  * TOPICS CRUD
  */
