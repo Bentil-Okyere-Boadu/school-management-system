@@ -4,6 +4,8 @@ import {
   IsUUID,
   IsOptional,
   IsBoolean,
+  IsArray,
+  ArrayMinSize,
 } from 'class-validator';
 
 export class CreateCurriculumDto {
@@ -20,8 +22,10 @@ export class CreateCurriculumDto {
   isActive?: boolean;
 
   @IsNotEmpty()
-  @IsUUID()
-  subjectCatalogId: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
+  subjectCatalogIds: string[];
 
   @IsNotEmpty()
   @IsUUID()

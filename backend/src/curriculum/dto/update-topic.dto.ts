@@ -18,5 +18,9 @@ export class UpdateTopicDto extends PartialType(CreateTopicDto) {
 
   @IsOptional()
   @IsUUID()
-  curriculumId?: string;
+  subjectCatalogId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  curriculumId?: string; // For validation - ensures subject catalog belongs to curriculum
 }

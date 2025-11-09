@@ -23,5 +23,9 @@ export class CreateTopicDto {
 
   @IsNotEmpty()
   @IsUUID()
-  curriculumId: string;
+  subjectCatalogId: string;
+
+  @IsNotEmpty()
+  @IsUUID()
+  curriculumId: string; // For validation - ensures subject catalog belongs to curriculum
 }

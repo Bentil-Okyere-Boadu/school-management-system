@@ -6,7 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Curriculum } from './curriculum.entity';
+import { SubjectCatalog } from '../../subject/subject-catalog.entity';
 
 @Entity()
 export class Topic {
@@ -20,13 +20,13 @@ export class Topic {
   description: string;
 
   @Column({ type: 'int', default: 0 })
-  order: number; // For ordering topics within a curriculum
+  order: number; // For ordering topics within a subject catalog
 
-  @ManyToOne(() => Curriculum, (curriculum) => curriculum.topics, {
+  @ManyToOne(() => SubjectCatalog, (subjectCatalog) => subjectCatalog.topics, {
     nullable: false,
     onDelete: 'CASCADE',
   })
-  curriculum: Curriculum;
+  subjectCatalog: SubjectCatalog;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -47,32 +47,7 @@ export class CurriculumController {
     return this.curriculumService.findAll(admin.school.id, query);
   }
 
-  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Get(':id')
-  @Roles('school_admin')
-  findOne(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
-    return this.curriculumService.findOne(id, admin.school.id);
-  }
-
-  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Patch(':id')
-  @Roles('school_admin')
-  update(
-    @Param('id') id: string,
-    @Body() updateCurriculumDto: UpdateCurriculumDto,
-    @CurrentUser() admin: SchoolAdmin,
-  ) {
-    return this.curriculumService.update(id, updateCurriculumDto, admin);
-  }
-
-  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Delete(':id')
-  @Roles('school_admin')
-  remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
-    return this.curriculumService.remove(id, admin);
-  }
-
-  // Topic CRUD endpoints
+  // Topic CRUD endpoints - Must come before :id routes to avoid route conflicts
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('topics')
   @Roles('school_admin')
@@ -84,13 +59,13 @@ export class CurriculumController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Get('curricula/:curriculumId/topics')
+  @Get('topics')
   @Roles('school_admin')
   findAllTopics(
-    @Param('curriculumId') curriculumId: string,
     @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
   ) {
-    return this.curriculumService.findAllTopics(curriculumId, admin.school.id);
+    return this.curriculumService.findAllTopics(admin.school.id, query);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -116,5 +91,57 @@ export class CurriculumController {
   @Roles('school_admin')
   removeTopic(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.curriculumService.removeTopic(id, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('curricula/:curriculumId/topics')
+  @Roles('school_admin')
+  findAllTopicsByCurriculum(
+    @Param('curriculumId') curriculumId: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.findAllTopicsByCurriculum(
+      curriculumId,
+      admin.school.id,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('subject-catalogs/:subjectCatalogId/topics')
+  @Roles('school_admin')
+  findAllTopicsBySubjectCatalog(
+    @Param('subjectCatalogId') subjectCatalogId: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.findAllTopicsBySubjectCatalog(
+      subjectCatalogId,
+      admin.school.id,
+    );
+  }
+
+  // Curriculum specific routes - Must come after specific routes
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get(':id')
+  @Roles('school_admin')
+  findOne(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    return this.curriculumService.findOne(id, admin.school.id);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch(':id')
+  @Roles('school_admin')
+  update(
+    @Param('id') id: string,
+    @Body() updateCurriculumDto: UpdateCurriculumDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.update(id, updateCurriculumDto, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete(':id')
+  @Roles('school_admin')
+  remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    return this.curriculumService.remove(id, admin);
   }
 }

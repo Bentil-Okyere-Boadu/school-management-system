@@ -1,6 +1,13 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateCurriculumDto } from './create-curriculum.dto';
-import { IsOptional, IsString, IsBoolean, IsUUID } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsUUID,
+  IsArray,
+  ArrayMinSize,
+} from 'class-validator';
 
 export class UpdateCurriculumDto extends PartialType(CreateCurriculumDto) {
   @IsOptional()
@@ -16,8 +23,10 @@ export class UpdateCurriculumDto extends PartialType(CreateCurriculumDto) {
   isActive?: boolean;
 
   @IsOptional()
-  @IsUUID()
-  subjectCatalogId?: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
+  subjectCatalogIds?: string[];
 
   @IsOptional()
   @IsUUID()

@@ -7,10 +7,12 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  ManyToMany,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { Subject } from './subject.entity';
 import { Curriculum } from '../curriculum/entities/curriculum.entity';
+import { Topic } from '../curriculum/entities/topic.entity';
 
 @Entity()
 export class SubjectCatalog {
@@ -37,10 +39,16 @@ export class SubjectCatalog {
   })
   subjects: Subject[];
 
-  @OneToMany(() => Curriculum, (curriculum) => curriculum.subjectCatalog, {
+  @ManyToMany(() => Curriculum, (curriculum) => curriculum.subjectCatalogs, {
     cascade: false,
   })
   curricula: Curriculum[];
+
+  @OneToMany(() => Topic, (topic) => topic.subjectCatalog, {
+    cascade: true,
+    eager: false,
+  })
+  topics: Topic[];
 
   @CreateDateColumn()
   createdAt: Date;

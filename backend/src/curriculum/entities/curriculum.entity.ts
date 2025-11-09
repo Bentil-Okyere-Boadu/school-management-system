@@ -3,14 +3,15 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  ManyToMany,
   OneToMany,
+  JoinTable,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { SubjectCatalog } from '../../subject/subject-catalog.entity';
 import { School } from '../../school/school.entity';
 import { AcademicTerm } from '../../academic-calendar/entitites/academic-term.entity';
-import { Topic } from './topic.entity';
 
 @Entity()
 export class Curriculum {
@@ -26,7 +27,7 @@ export class Curriculum {
   @Column({ default: true })
   isActive: boolean;
 
-  @ManyToOne(
+  @ManyToMany(
     () => SubjectCatalog,
     (subjectCatalog) => subjectCatalog.curricula,
     {
@@ -34,7 +35,15 @@ export class Curriculum {
       onDelete: 'CASCADE',
     },
   )
-  subjectCatalog: SubjectCatalog;
+  @JoinTable({
+    name: 'curriculum_subject_catalogs',
+    joinColumn: { name: 'curriculum_id', referencedColumnName: 'id' },
+    inverseJoinColumn: {
+      name: 'subject_catalog_id',
+      referencedColumnName: 'id',
+    },
+  })
+  subjectCatalogs: SubjectCatalog[];
 
   @ManyToOne(() => School, {
     nullable: false,
@@ -47,12 +56,6 @@ export class Curriculum {
     onDelete: 'CASCADE',
   })
   academicTerm: AcademicTerm;
-
-  @OneToMany(() => Topic, (topic) => topic.curriculum, {
-    cascade: true,
-    eager: false,
-  })
-  topics: Topic[];
 
   @CreateDateColumn()
   createdAt: Date;
