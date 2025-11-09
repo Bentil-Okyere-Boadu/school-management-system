@@ -335,6 +335,8 @@ export class CurriculumService {
     const queryBuilder = this.topicRepository
       .createQueryBuilder('topic')
       .leftJoinAndSelect('topic.subjectCatalog', 'subjectCatalog')
+      .leftJoinAndSelect('subjectCatalog.curricula', 'curricula')
+      .leftJoinAndSelect('curricula.academicTerm', 'academicTerm')
       .leftJoin('subjectCatalog.school', 'school')
       .where('school.id = :schoolId', { schoolId });
 
@@ -384,7 +386,11 @@ export class CurriculumService {
 
     const topics = await this.topicRepository.find({
       where: { subjectCatalog: { id: In(subjectCatalogIds) } },
-      relations: ['subjectCatalog'],
+      relations: [
+        'subjectCatalog',
+        'subjectCatalog.curricula',
+        'subjectCatalog.curricula.academicTerm',
+      ],
       order: { order: 'ASC', createdAt: 'ASC' },
     });
 
@@ -413,7 +419,11 @@ export class CurriculumService {
 
     const topics = await this.topicRepository.find({
       where: { subjectCatalog: { id: subjectCatalogId } },
-      relations: ['subjectCatalog'],
+      relations: [
+        'subjectCatalog',
+        'subjectCatalog.curricula',
+        'subjectCatalog.curricula.academicTerm',
+      ],
       order: { order: 'ASC', createdAt: 'ASC' },
     });
 
@@ -423,7 +433,13 @@ export class CurriculumService {
   async findOneTopic(topicId: string, schoolId: string) {
     const topic = await this.topicRepository.findOne({
       where: { id: topicId },
-      relations: ['subjectCatalog', 'subjectCatalog.school'],
+      relations: [
+        'subjectCatalog',
+        'subjectCatalog.school',
+        'subjectCatalog.curricula',
+        'subjectCatalog.curricula.academicTerm',
+        'subjectCatalog.curricula.academicTerm.academicCalendar',
+      ],
     });
 
     if (!topic) {
