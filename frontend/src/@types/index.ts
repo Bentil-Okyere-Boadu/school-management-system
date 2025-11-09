@@ -576,3 +576,40 @@ export interface MissingSubject {
   subjectName: string;
   teacher: Teacher;
 }
+
+export interface CurriculumPayload {
+  name: string;
+  description?: string;
+  isActive?: boolean;
+  subjectCatalogIds: string[];
+  academicTermId: string;
+}
+
+export interface CurriculumItem {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  subjectCatalogIds?: string[];
+  subjectCatalogs: SubjectCatalog[];
+}
+
+export interface SubjectCatalog {
+  id: string;
+  name: string;
+  description?: string;
+  topics?: Topic[];
+}
+
+export interface Topic {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface TopicPayload {
+    name: string;
+    description?: string;
+    subjectCatalogId: string;
+    curriculumId: string;
+}

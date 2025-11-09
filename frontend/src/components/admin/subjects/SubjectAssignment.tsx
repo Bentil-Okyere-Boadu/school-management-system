@@ -55,7 +55,7 @@ const SubjectAssignment = () => {
   );
 
   const subjectOptions =
-    subjects.length > 0
+    subjects?.length > 0
       ? subjects.map((subject) => {
           return { label: subject.name, value: subject.id as string };
         })
@@ -174,7 +174,7 @@ const SubjectAssignment = () => {
   return (
     <div>
       <div className="w-full flex justify-between">
-        {subjects.length > 0 ? (
+        {subjects?.length > 0 ? (
           <div className="flex gap-3 mt-3">
             <CustomSelectTag
               options={subjectOptions}
@@ -197,7 +197,7 @@ const SubjectAssignment = () => {
         {assignments?.length > 0 ? (
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           assignments.map((assignment: any, index: React.Key | null | undefined) =>
-            assignment?.subjects.length > 0 ? (
+            assignment?.subjects?.length > 0 ? (
               assignment?.subjects.map((subj: { teacher: { id: string; }; classLevels: {id: string}[]; id: string; }, index: React.Key | null | undefined) => (
                 <div key={index} className="flex mt-3 w-fit gap-4 bg-white p-4">
                   <Select
