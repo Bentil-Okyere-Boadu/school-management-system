@@ -139,20 +139,79 @@ const AdmissionFormsPage = () => {
     return true;
   };
 
+  // Helpers to list missing required fields for better error toasts
+  const getMissingStudentFields = (): string[] => {
+    const missing: string[] = [];
+    if (!studentData.headshotFile) missing.push('Headshot photo');
+    if (!studentData.firstName.trim()) missing.push('First name');
+    if (!studentData.lastName.trim()) missing.push('Last name');
+    if (!studentData.email.trim()) missing.push('Email');
+    if (!studentData.dateOfBirth) missing.push('Date of birth');
+    if (!studentData.placeOfBirth.trim()) missing.push('Place of birth');
+    if (!studentData.gender) missing.push('Gender');
+    if (!studentData.nationality.trim()) missing.push('Nationality');
+    if (!studentData.birthCertificateFile) missing.push('Birth certificate');
+    if (studentData.languagesSpoken.length === 0) missing.push('Languages spoken');
+    if (!studentData.streetAddress.trim()) missing.push('Street address');
+    if (!studentData.boxAddress.trim()) missing.push('Box address');
+    if (!studentData.phone.trim()) missing.push('Phone');
+    if (!studentData.classFor) missing.push('Class');
+    return missing;
+  };
+
+  const getMissingGuardianFields = (): string[] => {
+    const missing: string[] = [];
+    for (let idx = 0; idx < guardians.length; idx++) {
+      const g = guardians[idx];
+      const label = `Guardian ${idx + 1}`;
+      if (!g.firstName.trim()) missing.push(`${label}: First name`);
+      if (!g.lastName.trim()) missing.push(`${label}: Last name`);
+      if (!g.relationship.trim()) missing.push(`${label}: Relationship`);
+      if (!g.email.trim()) missing.push(`${label}: Email`);
+      if (!g.nationality.trim()) missing.push(`${label}: Nationality`);
+      if (!g.occupation.trim()) missing.push(`${label}: Occupation`);
+      if (!g.streetAddress.trim()) missing.push(`${label}: Street address`);
+      if (!g.boxAddress.trim()) missing.push(`${label}: Box address`);
+      if (!g.phone.trim()) missing.push(`${label}: Phone`);
+      if (!g.headshotFile) missing.push(`${label}: Headshot photo`);
+    }
+    return missing;
+  };
+
+  const getMissingAdditionalInfoFields = (): string[] => {
+    const missing: string[] = [];
+    if (!additionalInfo.primaryHomeLanguage.trim()) missing.push('Primary home language');
+    if (!additionalInfo.studentPrimaryLanguage.trim()) missing.push('Student primary language');
+    if (additionalInfo.hasAcademicHistory === 'yes') {
+      const ps = additionalInfo.previousSchool;
+      if (!ps?.name.trim()) missing.push('Previous school name');
+      if (!ps?.street.trim()) missing.push('Previous school street');
+      if (!ps?.city.trim()) missing.push('Previous school city');
+      if (!ps?.state.trim()) missing.push('Previous school state');
+      if (!ps?.country.trim()) missing.push('Previous school country');
+      if (!ps?.grade.trim()) missing.push('Previous school grade/class');
+      if (!ps?.reportCards || ps.reportCards.length < 1) missing.push('Previous school report cards (min 1)');
+    }
+    return missing;
+  };
+
 
   const handleStepMove = (direction: string) => {
     if(currentStep == 1 && direction == 'forward' && !validateStudentData() ){
-      toast.error('Please ensure all required fields are filled.');
+      const missing = getMissingStudentFields();
+      toast.error(`Please fill: ${missing.join(', ')}`);
       return;
     }
 
     if(currentStep == 2 && direction == 'forward' && !validateGuardians() ){
-      toast.error('Please ensure all required fields are filled.');
+      const missing = getMissingGuardianFields();
+      toast.error(`Please fill: ${missing.join(', ')}`);
       return;
     }
 
     if(currentStep == 3 && direction == 'forward' && !validateAdditionalInfo()){
-      toast.error('Please ensure all required fields are filled.');
+      const missing = getMissingAdditionalInfoFields();
+      toast.error(`Please fill: ${missing.join(', ')}`);
       return;
     }
 
@@ -190,6 +249,17 @@ const AdmissionFormsPage = () => {
   }
 
   const handleAdmissionFormSubmit = () => {
+    const missingAll = [
+      ...getMissingStudentFields(),
+      ...getMissingGuardianFields(),
+      ...getMissingAdditionalInfoFields(),
+    ];
+
+    if (missingAll.length > 0) {
+      toast.error(`Please fill: ${missingAll.join(', ')}`);
+      return;
+    }
+
     if (validateStudentData() && validateGuardians() && validateAdditionalInfo()) {
       submitMutation(
         {

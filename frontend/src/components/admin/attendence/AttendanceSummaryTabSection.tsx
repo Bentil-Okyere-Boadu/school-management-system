@@ -170,7 +170,7 @@ export const AttendanceSummaryTabSection: React.FC = () => {
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
                   <div>Total days of Term</div>
                 </th>
-                <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"></th>
+                {/* <th className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"></th> */}
               </tr>
             </thead>
             <tbody>
@@ -225,7 +225,8 @@ export const AttendanceSummaryTabSection: React.FC = () => {
                     <td className="px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                       {student.statistics.totalDaysInRange}
                     </td>
-                    <td className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]">
+                    {/* TODO: out of scope */}
+                    {/* <td className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]">
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
@@ -243,7 +244,7 @@ export const AttendanceSummaryTabSection: React.FC = () => {
                           </Menu.Dropdown>
                         </Menu>
                       </div>
-                    </td>
+                    </td> */}
                   </tr>
                 ));
               })()}
