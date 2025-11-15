@@ -325,6 +325,7 @@ export class CurriculumService {
       description,
       order: order ?? 0,
       subjectCatalog,
+      curriculum,
     });
 
     return await this.topicRepository.save(topic);
@@ -335,8 +336,9 @@ export class CurriculumService {
     const queryBuilder = this.topicRepository
       .createQueryBuilder('topic')
       .leftJoinAndSelect('topic.subjectCatalog', 'subjectCatalog')
-      .leftJoinAndSelect('subjectCatalog.curricula', 'curricula')
-      .leftJoinAndSelect('curricula.academicTerm', 'academicTerm')
+      .leftJoinAndSelect('topic.curriculum', 'curriculum')
+      .leftJoinAndSelect('curriculum.academicTerm', 'academicTerm')
+      .leftJoinAndSelect('academicTerm.academicCalendar', 'academicCalendar')
       .leftJoin('subjectCatalog.school', 'school')
       .where('school.id = :schoolId', { schoolId });
 
@@ -388,8 +390,9 @@ export class CurriculumService {
       where: { subjectCatalog: { id: In(subjectCatalogIds) } },
       relations: [
         'subjectCatalog',
-        'subjectCatalog.curricula',
-        'subjectCatalog.curricula.academicTerm',
+        'curriculum',
+        'curriculum.academicTerm',
+        'curriculum.academicTerm.academicCalendar',
       ],
       order: { order: 'ASC', createdAt: 'ASC' },
     });
@@ -421,8 +424,9 @@ export class CurriculumService {
       where: { subjectCatalog: { id: subjectCatalogId } },
       relations: [
         'subjectCatalog',
-        'subjectCatalog.curricula',
-        'subjectCatalog.curricula.academicTerm',
+        'curriculum',
+        'curriculum.academicTerm',
+        'curriculum.academicTerm.academicCalendar',
       ],
       order: { order: 'ASC', createdAt: 'ASC' },
     });
@@ -436,9 +440,9 @@ export class CurriculumService {
       relations: [
         'subjectCatalog',
         'subjectCatalog.school',
-        'subjectCatalog.curricula',
-        'subjectCatalog.curricula.academicTerm',
-        'subjectCatalog.curricula.academicTerm.academicCalendar',
+        'curriculum',
+        'curriculum.academicTerm',
+        'curriculum.academicTerm.academicCalendar',
       ],
     });
 
@@ -460,7 +464,7 @@ export class CurriculumService {
   ) {
     const topic = await this.topicRepository.findOne({
       where: { id: topicId },
-      relations: ['subjectCatalog', 'subjectCatalog.school'],
+      relations: ['subjectCatalog', 'subjectCatalog.school', 'curriculum'],
     });
 
     if (!topic) {
@@ -488,29 +492,42 @@ export class CurriculumService {
         );
       }
 
-      // If curriculumId is provided, validate subject catalog belongs to it
-      if (updateTopicDto.curriculumId) {
-        const curriculum = await this.curriculumRepository.findOne({
-          where: { id: updateTopicDto.curriculumId },
-          relations: ['subjectCatalogs'],
-        });
+      topic.subjectCatalog = subjectCatalog;
+    }
 
-        if (!curriculum) {
-          throw new NotFoundException('Curriculum not found');
-        }
+    // If curriculum is being updated, validate it
+    if (updateTopicDto.curriculumId) {
+      const curriculum = await this.curriculumRepository.findOne({
+        where: { id: updateTopicDto.curriculumId },
+        relations: ['school', 'subjectCatalogs'],
+      });
 
-        const isInCurriculum = curriculum.subjectCatalogs.some(
-          (sc) => sc.id === updateTopicDto.subjectCatalogId,
-        );
-
-        if (!isInCurriculum) {
-          throw new BadRequestException(
-            'Subject catalog does not belong to the specified curriculum',
-          );
-        }
+      if (!curriculum) {
+        throw new NotFoundException('Curriculum not found');
       }
 
-      topic.subjectCatalog = subjectCatalog;
+      if (curriculum.school.id !== admin.school.id) {
+        throw new ForbiddenException(
+          'Curriculum does not belong to your school',
+        );
+      }
+
+      // If subject catalog is also being updated, validate it belongs to curriculum
+      // Otherwise, validate current subject catalog belongs to new curriculum
+      const subjectCatalogIdToCheck =
+        updateTopicDto.subjectCatalogId || topic.subjectCatalog.id;
+
+      const isInCurriculum = curriculum.subjectCatalogs.some(
+        (sc) => sc.id === subjectCatalogIdToCheck,
+      );
+
+      if (!isInCurriculum) {
+        throw new BadRequestException(
+          'Subject catalog does not belong to the specified curriculum',
+        );
+      }
+
+      topic.curriculum = curriculum;
     }
 
     // Update other fields
