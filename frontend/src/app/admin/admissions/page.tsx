@@ -64,19 +64,15 @@ const Admissions = () => {
 
   const copyText = async (schoolId: string) => {
     const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
-    const textToCopy = baseUrl + '/admission-forms/' + schoolId;
+    const textToCopy = `${baseUrl}/admission-forms/${schoolId}`;
+
     try {
       await navigator.clipboard.writeText(textToCopy);
+      toast.success('Admission link copied to clipboard.');
       setIsCopied(true);
-      if(isCopied) {
-        toast.success('Admission link copied to clipboard.')
-      }
-
-      setIsCopied(false)
-      
     } catch (err) {
       console.error('Failed to copy text: ', err);
-      toast.error('copy failed');
+      toast.error('Copy failed');
     }
   };
 

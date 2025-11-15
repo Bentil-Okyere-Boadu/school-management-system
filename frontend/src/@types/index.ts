@@ -605,6 +605,8 @@ export interface Topic {
   id: string;
   name: string;
   description?: string;
+  subjectCatalog?: SubjectCatalog;
+  curriculum?: CurriculumItem;
 }
 
 export interface TopicPayload {

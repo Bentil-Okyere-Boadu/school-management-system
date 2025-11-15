@@ -46,7 +46,7 @@ export const CurriculumTabSection: React.FC = () => {
   const [busyToggleId, setBusyToggleId] = useState<string | null>(null);
 
   const { curricula, refetch } = useGetCurricula();
-  console.log(curricula, "here");
+
   const { mutate: createMutation, isPending: creating } = useCreateCurriculum();
   const { mutate: editMutation, isPending: editing } = useEditCurriculum(activeId);
   const { mutate: deleteMutation, isPending: deleting } = useDeleteCurriculum();
