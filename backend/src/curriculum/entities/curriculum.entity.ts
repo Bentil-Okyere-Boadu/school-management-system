@@ -12,6 +12,7 @@ import {
 import { SubjectCatalog } from '../../subject/subject-catalog.entity';
 import { School } from '../../school/school.entity';
 import { AcademicTerm } from '../../academic-calendar/entitites/academic-term.entity';
+import { Topic } from './topic.entity';
 
 @Entity()
 export class Curriculum {
@@ -56,6 +57,12 @@ export class Curriculum {
     onDelete: 'CASCADE',
   })
   academicTerm: AcademicTerm;
+
+  @OneToMany(() => Topic, (topic) => topic.curriculum, {
+    cascade: true,
+    eager: false,
+  })
+  topics: Topic[];
 
   @CreateDateColumn()
   createdAt: Date;

@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { SubjectCatalog } from '../../subject/subject-catalog.entity';
+import { Curriculum } from './curriculum.entity';
 
 @Entity()
 export class Topic {
@@ -27,6 +28,12 @@ export class Topic {
     onDelete: 'CASCADE',
   })
   subjectCatalog: SubjectCatalog;
+
+  @ManyToOne(() => Curriculum, (curriculum) => curriculum.topics, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  curriculum: Curriculum;
 
   @CreateDateColumn()
   createdAt: Date;
