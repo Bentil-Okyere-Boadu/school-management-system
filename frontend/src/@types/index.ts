@@ -5,18 +5,20 @@ export enum ButtonType {
 }
 
 export interface Profile {
-    avatarUrl?: string;
-    firstName?: string;
-    lastName?: string;
-    otherName?: string;
-    DateOfBirth?: string,
-    optionalPhoneContact: string;
-    email: string;
-    PlaceOfBirth: string;
-    streetAddress: string;
-    phoneContact: string;
-    BoxAddress: string;
-  }
+  avatarUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  otherName?: string;
+  DateOfBirth?: string,
+  optionalPhoneContact: string;
+  email: string;
+  PlaceOfBirth: string;
+  streetAddress: string;
+  phoneContact: string;
+  BoxAddress: string;
+  gender?: string;
+}
+
 export interface User {
   id: string;
   email: string;
