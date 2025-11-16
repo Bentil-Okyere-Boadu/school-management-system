@@ -15,17 +15,17 @@ const SubjectTopicsPage: React.FC = () => {
 
   return (
     <div className="px-0.5">
+      <button
+        className="text-sm text-purple-700 hover:text-purple-800 cursor-pointer underline mb-2"
+        onClick={() => router.back()}
+      >
+        <IconArrowLeft size={16} className="inline-block" /> 
+        Back
+      </button>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-semibold text-neutral-800">
           Topics for {topics[0]?.subjectCatalog?.name || "Subject"}
         </h1>
-        <button
-          className="text-sm text-purple-700 hover:text-purple-800 cursor-pointer underline"
-          onClick={() => router.back()}
-        >
-          <IconArrowLeft size={16} className="inline-block" /> 
-          Back
-        </button>
       </div>
 
       <section className="bg-white mt-2">

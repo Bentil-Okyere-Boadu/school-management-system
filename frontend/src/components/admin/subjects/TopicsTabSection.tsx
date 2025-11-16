@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
@@ -48,10 +48,21 @@ export const TopicsTabSection: React.FC = () => {
       label: String(s.name),
     })) ?? [];
 
-  // List all topics (filters moved to dialog only)
   const { topics, isLoading, refetch } = useGetTopics();
 
-  console.log(topics, "here");
+  useEffect(() => {
+    if (!dialogCurriculumId || !subjectOptions.length) {
+      setDialogSubjectId("");
+      return;
+    }
+
+    const exists = subjectOptions.some(s => s.value === dialogSubjectId);
+    if (!exists) {
+      // Auto-select the first subject OR leave blank (choose the behavior you prefer)
+      setDialogSubjectId(subjectOptions[0]?.value || "");
+    }
+  }, [dialogCurriculumId, subjectOptions]);
+
 
   const onOpenCreate = () => {
     setIsCreate(true);
@@ -73,12 +84,15 @@ export const TopicsTabSection: React.FC = () => {
       id: row.id,
       name: row.name,
       description: row.description,
-      subjectCatalogId: "",
-      curriculumId: "",
+      subjectCatalogId: row.subjectCatalog?.id,
+      curriculumId: row.curriculum?.id,
     });
-    // We don't have the subject/curriculum on the row; user will pick them
-    setDialogCurriculumId("");
-    setDialogSubjectId("");
+
+    // Preselect curriculum and subject
+    const curriculumId = row.curriculum?.id;
+    const subjectId = row.subjectCatalog?.id;
+    setDialogCurriculumId(curriculumId || "");
+    setDialogSubjectId(subjectId || "");
     setIsDialogOpen(true);
   };
 
@@ -100,7 +114,7 @@ export const TopicsTabSection: React.FC = () => {
       return;
     }
     const payload = {
-      name: topic.name as string,
+      name: topic.name,
       description: topic.description as string,
       subjectCatalogId: dialogSubjectId,
       curriculumId: dialogCurriculumId,

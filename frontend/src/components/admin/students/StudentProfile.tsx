@@ -14,6 +14,7 @@ import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
 import ProfileCard from "@/components/common/ProfileCard";
 import FileUploadArea from "@/components/common/FileUploadArea";
+import { Select } from "@mantine/core";
 
 interface StudentProfileProps {
   studentData: Student;
@@ -23,6 +24,12 @@ interface StudentProfileProps {
 
 const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) => {
   const { id } = useParams();
+
+  const genderOptions = [
+    { value: "male", label: "Male" },
+    { value: "female", label: "Female" },
+  ];
+
   const guardianObj: Parent = { 
     firstName: '',
     lastName: '',
@@ -50,7 +57,8 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
     lastName: studentData?.lastName || "",
     otherName: studentData?.profile?.otherName || "",
     PlaceOfBirth: studentData?.profile?.PlaceOfBirth || "",
-    DateOfBirth: studentData?.profile?.DateOfBirth || ""
+    DateOfBirth: studentData?.profile?.DateOfBirth || "",
+    gender: studentData?.gender || "",
   })
   }, [studentData]);
 
@@ -188,7 +196,21 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
             value={profile?.otherName}
             isTransulent={viewMode}
           />
-          <InputField className="!py-0" label="Gender" value={student?.gender} isTransulent={true} />
+          {/* <InputField className="!py-0" label="Gender" value={student?.gender} isTransulent={true} /> */}
+          <Select
+            className=""
+            label="Gender"
+            placeholder="Select gender"
+            data={genderOptions}
+            value={profile?.gender || student?.gender || ""}
+            disabled={viewMode}
+            classNames={{
+              input: `${viewMode ? "!bg-[#8787871A] !border-none !outline-none" : "!bg-transparent"}`
+            }}
+            onChange={(value) =>
+              setProfile({ ...profile, gender: value ?? "" })
+            }
+          />
           <InputField
             className="!py-0"
             label="Date of Birth"
