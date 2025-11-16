@@ -18,6 +18,7 @@ import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jw
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 
 @Controller('admission-policies')
 @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -27,7 +28,7 @@ export class AdmissionPolicyController {
   ) {}
 
   @Post()
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @UseInterceptors(FileInterceptor('file'))
   create(
     @Body() createAdmissionPolicyDto: CreateAdmissionPolicyDto,
@@ -47,13 +48,13 @@ export class AdmissionPolicyController {
   }
 
   @Get(':id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   findOne(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.admissionPolicyService.getPolicyWithDocumentUrl(id, admin);
   }
 
   @Delete(':id/document')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   removeDocument(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.admissionPolicyService.removeDocument(id, admin);
   }

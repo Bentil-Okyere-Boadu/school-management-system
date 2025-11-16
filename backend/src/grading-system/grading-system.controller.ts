@@ -16,6 +16,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 
 @Controller('grading-system')
 export class GradingSystemController {
@@ -23,7 +24,7 @@ export class GradingSystemController {
 
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Get('my-school')
-  @Roles('school_admin', 'super_admin')
+  @Roles(Role.SchoolAdmin, Role.SuperAdmin)
   async findAllForMySchool(@CurrentUser() user: SchoolAdmin) {
     if (!user.school) {
       throw new BadRequestException('No school found for this admin');
@@ -33,7 +34,7 @@ export class GradingSystemController {
 
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Post()
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async create(
     @Body() createGradingSystemDto: CreateGradingSystemDto,
     @CurrentUser() user: SchoolAdmin,
@@ -54,7 +55,7 @@ export class GradingSystemController {
 
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Put(':id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async update(
     @Param('id') id: string,
     @Body() updateGradingSystemDto: UpdateGradingSystemDto,
@@ -77,7 +78,7 @@ export class GradingSystemController {
 
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Delete(':id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async remove(@Param('id') id: string, @CurrentUser() user: SchoolAdmin) {
     if (!user.school) {
       throw new BadRequestException('No school found for this admin');

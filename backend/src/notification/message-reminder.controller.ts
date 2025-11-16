@@ -17,6 +17,7 @@ import { SchoolAdminJwtAuthGuard } from '../school-admin/guards/school-admin-jwt
 import { SchoolAdminSchoolGuard } from '../school-admin/guards/school-admin-school.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
@@ -28,7 +29,7 @@ import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
   RolesGuard,
   SchoolAdminSchoolGuard,
 )
-@Roles('school_admin')
+@Roles(Role.SchoolAdmin)
 export class MessageReminderController {
   constructor(
     private readonly messageReminderService: MessageReminderService,

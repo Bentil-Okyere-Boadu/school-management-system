@@ -14,18 +14,19 @@ import { CreateClassLevelDto } from './dto/create-class-level.dto';
 import { UpdateClassLevelDto } from './dto/update-class-level.dto';
 import { SchoolAdminSchoolGuard } from 'src/school-admin/guards/school-admin-school.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { QueryString } from 'src/common/api-features/api-features';
 
 @Controller('class-level')
-@Roles('school_admin')
+@Roles(Role.SchoolAdmin)
 export class ClassLevelController {
   constructor(private readonly classLevelService: ClassLevelService) {}
 
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Post()
   async create(
     @Body() createClassLevelDto: CreateClassLevelDto,
@@ -35,7 +36,7 @@ export class ClassLevelController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Patch(':id')
   async update(
     @Param('id') id: string,
@@ -47,13 +48,13 @@ export class ClassLevelController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
   @Get(':id')
-  @Roles('super_admin', 'school_admin')
+  @Roles(Role.SuperAdmin, Role.SchoolAdmin)
   async findOne(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.classLevelService.findOne(id, admin);
   }
   @UseGuards(SchoolAdminJwtAuthGuard, SchoolAdminSchoolGuard)
   @Get()
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async findAll(
     @CurrentUser() admin: SchoolAdmin,
     @Query() query: QueryString,

@@ -16,11 +16,12 @@ import { SchoolAdminJwtAuthGuard } from '../school-admin/guards/school-admin-jwt
 import { ActiveUserGuard } from '../auth/guards/active-user.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 @Controller('subject-catalog')
 @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-@Roles('school_admin')
+@Roles(Role.SchoolAdmin)
 export class SubjectCatalogController {
   constructor(
     @InjectRepository(SubjectCatalog)

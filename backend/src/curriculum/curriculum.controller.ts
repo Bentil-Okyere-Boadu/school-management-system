@@ -18,6 +18,7 @@ import { SchoolAdminJwtAuthGuard } from '../school-admin/guards/school-admin-jwt
 import { ActiveUserGuard } from '../auth/guards/active-user.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { QueryString } from '../common/api-features/api-features';
@@ -32,7 +33,7 @@ export class CurriculumController {
   // Curriculum CRUD endpoints
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post()
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   create(
     @Body() createCurriculumDto: CreateCurriculumDto,
     @CurrentUser() admin: SchoolAdmin,
@@ -42,7 +43,7 @@ export class CurriculumController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get()
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   findAll(@CurrentUser() admin: SchoolAdmin, @Query() query: QueryString) {
     return this.curriculumService.findAll(admin.school.id, query);
   }
@@ -50,7 +51,7 @@ export class CurriculumController {
   // Topic CRUD endpoints - Must come before :id routes to avoid route conflicts
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('topics')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   createTopic(
     @Body() createTopicDto: CreateTopicDto,
     @CurrentUser() admin: SchoolAdmin,
@@ -60,7 +61,7 @@ export class CurriculumController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('topics')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   findAllTopics(
     @CurrentUser() admin: SchoolAdmin,
     @Query() query: QueryString,
@@ -70,14 +71,14 @@ export class CurriculumController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('topics/:id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   findOneTopic(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.curriculumService.findOneTopic(id, admin.school.id);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Patch('topics/:id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   updateTopic(
     @Param('id') id: string,
     @Body() updateTopicDto: UpdateTopicDto,
@@ -88,14 +89,14 @@ export class CurriculumController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete('topics/:id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   removeTopic(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.curriculumService.removeTopic(id, admin);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('curricula/:curriculumId/topics')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   findAllTopicsByCurriculum(
     @Param('curriculumId') curriculumId: string,
     @CurrentUser() admin: SchoolAdmin,
@@ -108,7 +109,7 @@ export class CurriculumController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('subject-catalogs/:subjectCatalogId/topics')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   findAllTopicsBySubjectCatalog(
     @Param('subjectCatalogId') subjectCatalogId: string,
     @CurrentUser() admin: SchoolAdmin,
@@ -122,14 +123,14 @@ export class CurriculumController {
   // Curriculum specific routes - Must come after specific routes
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   findOne(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.curriculumService.findOne(id, admin.school.id);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Patch(':id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   update(
     @Param('id') id: string,
     @Body() updateCurriculumDto: UpdateCurriculumDto,
@@ -140,7 +141,7 @@ export class CurriculumController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete(':id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   remove(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.curriculumService.remove(id, admin);
   }

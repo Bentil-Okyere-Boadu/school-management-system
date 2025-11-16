@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 import { InvitationService } from './invitation.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { InviteStudentDto } from './dto/invite-student.dto';
@@ -40,7 +41,7 @@ export class InvitationController {
   // Superadmin endpoints
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('admin')
-  @Roles('super_admin')
+  @Roles(Role.SuperAdmin)
   async inviteAdmin(
     @Body() inviteUserDto: InviteUserDto,
     @CurrentUser() user: SuperAdmin,
@@ -49,7 +50,7 @@ export class InvitationController {
   }
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('super_admin')
+  @Roles(Role.SuperAdmin)
   @Post('admin/resend/:userId')
   async resendAdminInvitation(
     @Param('userId') userId: string,
@@ -60,7 +61,7 @@ export class InvitationController {
 
   // School admin endpoints
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Post('student')
   inviteStudent(
     @Body() inviteStudentDto: InviteStudentDto,
@@ -70,7 +71,7 @@ export class InvitationController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Post('teacher')
   inviteTeacher(
     @Body() inviteTeacherDto: InviteTeacherDto,
@@ -81,7 +82,7 @@ export class InvitationController {
 
   //tod remove
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Post('student/resend/:userId')
   resendStudentInvitation(
     @Param('userId') userId: string,
@@ -91,7 +92,7 @@ export class InvitationController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Post('teacher/resend/:userId')
   resendTeacherInvitation(
     @Param('userId') userId: string,

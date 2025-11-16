@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   Controller,
   Get,
@@ -24,6 +25,7 @@ import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-a
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Teacher } from 'src/teacher/teacher.entity';
@@ -50,7 +52,7 @@ export class SchoolController {
    */
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('/create')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   create(
     @Body() createSchoolDto: CreateSchoolDto,
     @CurrentUser() user: SchoolAdmin,
@@ -63,7 +65,7 @@ export class SchoolController {
    */
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get()
-  @Roles('super_admin')
+  @Roles(Role.SuperAdmin)
   findAll(): Promise<School[]> {
     return this.schoolService.findAll();
   }
@@ -76,7 +78,7 @@ export class SchoolController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete('logo')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async deleteLogo(@CurrentUser() user: SchoolAdmin) {
     const school = await this.schoolService.deleteLogo(user.school.id);
 
@@ -88,7 +90,7 @@ export class SchoolController {
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id')
-  @Roles('super_admin')
+  @Roles(Role.SuperAdmin)
   @UseInterceptors(DeepSanitizeResponseInterceptor)
   findOne(@Param('id') id: string): Promise<School> {
     return this.schoolService.findOneWithDetails(id);
@@ -98,14 +100,14 @@ export class SchoolController {
    * Delete a school (super admin only)
    */
   @Delete(':id')
-  @Roles('super_admin')
+  @Roles(Role.SuperAdmin)
   remove(@Param('id') id: string): Promise<void> {
     return this.schoolService.remove(id);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('logo')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @UseInterceptors(FileInterceptor('file'))
   async uploadLogo(
     @CurrentUser() user: SchoolAdmin,
@@ -143,21 +145,19 @@ export class SchoolController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('update-calendly-url')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async updateCalendlyUrl(
     @CurrentUser() user: SchoolAdmin,
     @Body() body: UpdateCalendlyUrlDto,
   ) {
-
     if (user.school.id !== body.schoolId) {
       throw new BadRequestException('You can only update your own school URL');
     }
 
     const updatedSchool = await this.schoolService.updateCalendlyUrl(
       body.schoolId,
-      body.calendlyUrl
+      body.calendlyUrl,
     );
-
 
     return {
       message: 'Calendly URL updated successfully',

@@ -28,6 +28,7 @@ import { StudentJwtAuthGuard } from 'src/student/guards/student-jwt-auth.guard';
 import { QueryString } from 'src/common/api-features/api-features';
 import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
 import { ClassLevelResultNotApprovedGuard } from 'src/auth/guards/classLevelResultNotApproved.guard';
+import { Role } from 'src/auth/enums/role.enum';
 
 @Controller('subject')
 export class SubjectController {
@@ -189,7 +190,7 @@ export class SubjectController {
   }
 
   @Get('students/results/:academicCalendarId')
-  @Roles('student')
+  @Roles(Role.Student)
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   async getMyResult(
     @CurrentUser() student: Student,
