@@ -43,10 +43,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity.{ts,js}'],
       synchronize: true,
-      ssl: {
-        rejectUnauthorized : false,
-      },
-      //logging: true,
+      logging: false,
     }),
     CommonModule,
     RoleModule,
