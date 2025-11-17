@@ -105,8 +105,11 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(false);
     } else if (pathname.startsWith("/admin/notifications/")) {
       setActiveMenuItem("Notifications");
+      setIsOverviewPage(false);
+    } else if (pathname.startsWith("/admin/subjects/curriculum")) {
+      setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
-    }
+    } 
     
     // Default
     else {

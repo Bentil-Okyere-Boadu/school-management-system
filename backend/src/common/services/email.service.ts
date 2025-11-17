@@ -185,7 +185,7 @@ export class EmailService {
         subject: 'Registration Confirmed - School Management System',
         html: this.getEmailTemplate(EmailTemplate.REGISTRATION_CONFIRMATION, {
           name: user.firstName + ' ' + user.lastName,
-          loginLink: `${this.frontendUrl}/auth/school-admin/login`,
+          loginLink: `${this.frontendUrl}/auth/admin/login`,
         }),
       });
       this.logger.log(`Registration confirmation email sent to ${user.email}`);

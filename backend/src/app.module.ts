@@ -26,6 +26,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { SubjectModule } from './subject/subject.module';
 import { NotificationModule } from './notification/notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CurriculumModule } from './curriculum/curriculum.module';
 
 @Module({
   imports: [
@@ -44,9 +45,9 @@ import { ScheduleModule } from '@nestjs/schedule';
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity.{ts,js}'],
       synchronize: true,
-      ssl: {
-        rejectUnauthorized : false,
-      },
+      // ssl: {
+      //   rejectUnauthorized : false,
+      // },
       //logging: true,
     }),
     CommonModule,
@@ -71,6 +72,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AttendanceModule,
     SubjectModule,
     NotificationModule,
+    CurriculumModule,
   ],
   controllers: [AppController],
   providers: [AppService],

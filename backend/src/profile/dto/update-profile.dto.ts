@@ -24,7 +24,11 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   PlaceOfBirth?: string;
-  
+
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
   @IsOptional()
   @IsString()
   DateOfBirth?: string;

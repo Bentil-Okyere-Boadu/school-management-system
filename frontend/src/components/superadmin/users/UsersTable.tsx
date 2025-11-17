@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { ErrorResponse } from "@/@types";
 import Image from "next/image";
+import { HashLoader } from "react-spinners";
 
 interface User {
   id: string;
@@ -35,9 +36,10 @@ interface UserTableProps {
   users: User[];
   refetch: () => void;
   onClearFilterClick?: () => void;
+  busy?: boolean;
 }
 
-export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) => {
+export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableProps) => {
 
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
@@ -99,45 +101,77 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
               </tr>
             </thead>
             <tbody>
-              {users?.length > 0 ? (users.map((user: User) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    <div className="flex flex-1 items-center">
-                      {user?.profile?.avatarUrl ? (
-                        <Image
-                          width={40}
-                          height={40}
-                          alt="User Avatar"
-                          src={user?.profile?.avatarUrl}
-                          className="mr-2.5 w-10 h-10 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
-                          {getInitials(user.firstName, user.lastName)}
+              {(() => {
+                if (busy) {
+                  return (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className="relative py-16">
+                          <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10">
+                            <HashLoader color="#AB58E7" size={40} />
+                          </div>
                         </div>
-                      )}
-                      <div className="flex flex-col">
-                        <span className="text-base text-zinc-800">{user.firstName} {user.lastName}</span>
-                        <span className="text-sm text-neutral-500">{user.email}</span>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                if (users?.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                          <p className="text-lg font-medium">No users found</p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            Once users are added, they will appear in this table.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return users?.map((user: User) => (
+                  <tr key={user.id}>
+                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <div className="flex flex-1 items-center">
+                        {user?.profile?.avatarUrl ? (
+                          <Image
+                            width={40}
+                            height={40}
+                            alt="User Avatar"
+                            src={user?.profile?.avatarUrl}
+                            className="mr-2.5 w-10 h-10 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
+                            {getInitials(user.firstName, user.lastName)}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-base text-zinc-800">
+                            {user.firstName} {user.lastName}
+                          </span>
+                          <span className="text-sm text-neutral-500">{user.email}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {user.role.label}
-                  </td>
-                  <td
-                    className={`px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5`}
-                  >
-                    <div className="flex items-center justity-start">
-                      <Badge 
-                        text={capitalizeFirstLetter(user.status)}
-                        showDot={true} 
-                        variant={user.status} />
-                    </div>
-                  </td>
-                    <td
-                      className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]"
-                    >
+                    </td>
+
+                    <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                      {user.role.label}
+                    </td>
+
+                    <td className="px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <div className="flex items-center justity-start">
+                        <Badge
+                          text={capitalizeFirstLetter(user.status)}
+                          showDot={true}
+                          variant={user.status}
+                        />
+                      </div>
+                    </td>
+
+                    <td className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]">
                       <div className="flex items-center justify-end pr-6">
                         <Menu shadow="md" width={200}>
                           <Menu.Target>
@@ -159,18 +193,9 @@ export const UserTable = ({users, refetch, onClearFilterClick}: UserTableProps) 
                         </Menu>
                       </div>
                     </td>
-                </tr>
-              ))
-              ) : (
-                <tr>
-                  <td colSpan={8}>
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                      <p className="text-lg font-medium">No users found</p>
-                      <p className="text-sm text-gray-400 mt-1">Once users are added, they will appear in this table.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
+                  </tr>
+                ));
+              })()}
             </tbody>
           </table>
         </div>

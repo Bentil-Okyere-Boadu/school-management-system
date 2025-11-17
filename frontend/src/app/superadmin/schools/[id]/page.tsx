@@ -21,7 +21,7 @@ const SingleSchoolPage: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const { school } = useGetSchoolById(schoolId as string);
+  const { school, isPending } = useGetSchoolById(schoolId as string);
 
   const tabFromUrl = searchParams.get("tab");
   const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'school-settings');
@@ -73,7 +73,7 @@ const SingleSchoolPage: React.FC = () => {
         
         {activeTabKey === "people" && (
           <div>
-            <SchoolPeople users={school?.users}/>
+            <SchoolPeople users={school?.users} busy={isPending} />
           </div>
         )}
 
