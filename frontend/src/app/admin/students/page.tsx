@@ -18,6 +18,7 @@ const Students = () => {
     { value: "", label: "Status" },
     { value: "active", label: "Active" },
     { value: "pending", label: "Pending" },
+     { value: "archived", label: "Archived" }
   ];
 
   const handleSearch = (query: string) => {
@@ -34,7 +35,7 @@ const Students = () => {
     setCurrentPage(page);
   };
 
-  const { paginationValues, schoolUsers, isLoading } = useGetSchoolUsers(
+  const { paginationValues, schoolUsers, isLoading, refetch } = useGetSchoolUsers(
     currentPage,
     useDebouncer(searchQuery),
     selectedStatus,
@@ -64,7 +65,7 @@ const Students = () => {
           </div>
         )}
       </div>
-      <StudentsTable students={schoolUsers} busy={isLoading} />
+      <StudentsTable students={schoolUsers} refetch={refetch} busy={isLoading} />
       <Pagination
         currentPage={currentPage}
         totalPages={paginationValues?.totalPages || 1}

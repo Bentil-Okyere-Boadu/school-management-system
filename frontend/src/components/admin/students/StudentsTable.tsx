@@ -1,5 +1,5 @@
 "use client";
-import { Student } from "@/@types";
+import { ErrorResponse, Student } from "@/@types";
 import { Menu } from "@mantine/core";
 import {
   IconArchiveFilled,
@@ -9,14 +9,44 @@ import {
   IconTrashFilled,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 import { HashLoader } from "react-spinners";
+import { Dialog } from "@/components/common/Dialog";
+import { useArchiveUser } from "@/hooks/school-admin";
+import { toast } from "react-toastify";
+
 interface StudentsTableProps {
   students: Student[];
+  refetch?: () => void;
   busy?: boolean;
 }
-const StudentsTable = ({ students, busy }: StudentsTableProps) => {
-    const router = useRouter()
+const StudentsTable = ({ students, refetch, busy }: StudentsTableProps) => {
+  const router = useRouter()
+  const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student>({} as Student);
+
+  const { mutate: archiveMutate, isPending } = useArchiveUser({
+    id: selectedStudent?.id,
+    archiveState: !selectedStudent?.isArchived,
+  });
+
+  const onArchiveStudentMenuItemClick = (student: Student) => {
+    setSelectedStudent(student);
+    setIsConfirmArchiveDialogOpen(true);
+  };
+
+  const handleArchiveStudent = () => {
+    archiveMutate(null as unknown as void, {
+      onSuccess: () => {
+        toast.success(selectedStudent.isArchived ? "Unarchived successfully." : "Archived successfully.");
+        setIsConfirmArchiveDialogOpen(false);
+        refetch?.();
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      },
+    });
+  };
   return (
     <section className="bg-white">
       <div className="overflow-x-auto">
@@ -115,21 +145,26 @@ const StudentsTable = ({ students, busy }: StudentsTableProps) => {
                 >
                   Full View
                 </Menu.Item>
+                {false && (
                 <Menu.Item
                   leftSection={<IconSend size={18} color="#AB58E7" />}
                 >
                   Transfer Records
                 </Menu.Item>
+                )}
                 <Menu.Item
+                  onClick={() => onArchiveStudentMenuItemClick(student)}
                   leftSection={<IconArchiveFilled size={18} color="#AB58E7" />}
                 >
-                  Archive Records
+                  {student.isArchived ? 'Unarchive Student' : 'Archive Student'}
                 </Menu.Item>
+                {false && (
                 <Menu.Item
-                  leftSection={<IconTrashFilled size={18} color="#AB58E7" />}
-                >
-                  Delete Records
-                </Menu.Item>
+                    leftSection={<IconTrashFilled size={18} color="#AB58E7" />}
+                  >
+                    Delete Records
+                  </Menu.Item>
+                )}
               </Menu.Dropdown>
             </Menu>
           </div>
@@ -141,6 +176,24 @@ const StudentsTable = ({ students, busy }: StudentsTableProps) => {
 
         </table>
       </div>
+      <Dialog 
+        isOpen={isConfirmArchiveDialogOpen}
+        busy={isPending}
+        dialogTitle={selectedStudent?.isArchived ? "Confirm Unarchive" : "Confirm Archive"}
+        saveButtonText={selectedStudent?.isArchived ? "Unarchive Student" : "Archive Student"}
+        onClose={() => setIsConfirmArchiveDialogOpen(false)} 
+        onSave={() => handleArchiveStudent()}
+      >
+        <div className="my-3 flex flex-col gap-4">
+          <p>
+            {selectedStudent?.isArchived ? 
+              'Are you sure you want to unarchive this student? Their account will be activated, and their data will be restored.'
+              :
+              'Are you sure you want to archive this student? Their account will be deactivated, but their data will be kept.'
+            }
+          </p>
+        </div>
+      </Dialog>
     </section>
   );
 };

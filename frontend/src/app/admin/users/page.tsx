@@ -123,6 +123,7 @@ const UsersPage: React.FC = () => {
           <InputField
             className="!py-0"
             label="First Name"
+            required
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             isTransulent={isPending}
@@ -131,6 +132,7 @@ const UsersPage: React.FC = () => {
           <InputField
             className="!py-0"
             label="Last Name"
+            required
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             isTransulent={isPending}
@@ -138,6 +140,7 @@ const UsersPage: React.FC = () => {
 
           <InputField
             label="Email"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             isTransulent={isPending}
@@ -145,6 +148,7 @@ const UsersPage: React.FC = () => {
             
           <Select
             label="Role"
+            required
             placeholder="Pick role"
             data={roles}
             value={selectedDataRole}

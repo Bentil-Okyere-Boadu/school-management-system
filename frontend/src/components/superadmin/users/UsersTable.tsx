@@ -131,7 +131,7 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                   );
                 }
 
-                return users.map((user: User) => (
+                return users?.map((user: User) => (
                   <tr key={user.id}>
                     <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                       <div className="flex flex-1 items-center">

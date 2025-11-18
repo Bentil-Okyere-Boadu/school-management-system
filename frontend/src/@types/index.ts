@@ -5,18 +5,20 @@ export enum ButtonType {
 }
 
 export interface Profile {
-    avatarUrl?: string;
-    firstName?: string;
-    lastName?: string;
-    otherName?: string;
-    DateOfBirth?: string,
-    optionalPhoneContact: string;
-    email: string;
-    PlaceOfBirth: string;
-    streetAddress: string;
-    phoneContact: string;
-    BoxAddress: string;
-  }
+  avatarUrl?: string;
+  firstName?: string;
+  lastName?: string;
+  otherName?: string;
+  DateOfBirth?: string,
+  optionalPhoneContact: string;
+  email: string;
+  PlaceOfBirth: string;
+  streetAddress: string;
+  phoneContact: string;
+  BoxAddress: string;
+  gender?: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -575,4 +577,43 @@ export interface MissingSubject {
   subjectId: string;
   subjectName: string;
   teacher: Teacher;
+}
+
+export interface CurriculumPayload {
+  name: string;
+  description?: string;
+  isActive?: boolean;
+  subjectCatalogIds: string[];
+  academicTermId: string;
+}
+
+export interface CurriculumItem {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  subjectCatalogIds?: string[];
+  subjectCatalogs: SubjectCatalog[];
+}
+
+export interface SubjectCatalog {
+  id: string;
+  name: string;
+  description?: string;
+  topics?: Topic[];
+}
+
+export interface Topic {
+  id: string;
+  name: string;
+  description?: string;
+  subjectCatalog?: SubjectCatalog;
+  curriculum?: CurriculumItem;
+}
+
+export interface TopicPayload {
+    name: string;
+    description?: string;
+    subjectCatalogId: string;
+    curriculumId: string;
 }

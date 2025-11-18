@@ -18,8 +18,8 @@ export const mantineOverrides: MantineThemeOverride = {
     },
     Select: {
       classNames: {
-        label: '!text-xs !text-zinc-600 !font-normal mb-2',
-        input: '!py-5 !border-solid !border-[0.5px] !border-zinc-500 text-zinc-800',
+        label: '!text-xs !text-zinc-600 !font-normal mb-0',
+        input: '!py-4 !border-solid !border-[0.5px] !border-zinc-500 text-zinc-800',
         dropdown: '!outline !outline-1 !outline-purple-500',
       },
     },

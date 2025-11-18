@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -305,12 +305,13 @@ export const useEditCalendar = (id: string) => {
  * CALENDAR TERMS CRUD
  * @returns 
  */
-export const useGetTerms = (id: string) => {
+export const useGetTerms = (id: string, enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['academicTerm'],
+        queryKey: ['academicTerm', id],
         queryFn: () => {
             return customAPI.get(`/academic-calendar/${id}/terms`);
         },
+        enabled: Boolean(id) && enabled,
         refetchOnWindowFocus: true
     })
 
@@ -388,6 +389,136 @@ export const useEditClassLevel = (id: string) => {
             return customAPI.patch(`/class-level/${id}`, classLevel);
         }
     })
+}
+
+/**
+ * CURRICULUM CRUD
+ */
+export const useGetCurricula = (search: string = "") => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['curricula', { search }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/curriculum?${params}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const curricula = (data?.data?.data as CurriculumItem[]) || [];
+
+    return { curricula, isLoading, refetch }
+}
+
+export const useCreateCurriculum = () => {
+    return useMutation({
+        mutationFn: (payload: CurriculumPayload) => {
+            return customAPI.post('/curriculum', payload);
+        }
+    })
+}
+
+export const useEditCurriculum = (id: string) => {
+    return useMutation({
+        mutationFn: (payload: Partial<CurriculumPayload>) => {
+            return customAPI.patch(`/curriculum/${id}`, payload);
+        }
+    })
+}
+
+export const useDeleteCurriculum = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/curriculum/${id}`);
+        }
+    })
+}
+
+export const useGetCurriculumById = (id: string, options?: UseQueryOptions) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['curriculum', id],
+        queryFn: () => {
+            return customAPI.get(`/curriculum/${id}`);
+        },
+        enabled: options?.enabled ?? Boolean(id),
+        refetchOnWindowFocus: true,
+        ...options,
+    });
+
+    const curriculum = (data as { data: CurriculumItem })?.data || {};
+
+    return { curriculum, isLoading, refetch };
+}
+
+// Patch curriculum by passing id at call time - useful for quick toggles
+export const useEditCurriculumById = () => {
+    return useMutation({
+        mutationFn: (payload: Partial<CurriculumPayload> & { id: string }) => {
+            const { id, ...rest } = payload;
+            return customAPI.patch(`/curriculum/${id}`, rest);
+        }
+    });
+}
+
+/**
+ * TOPICS CRUD
+ */
+export const useGetTopics = () => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['curriculumTopics'],
+        queryFn: () => {
+            return customAPI.get(`/curriculum/topics`);
+        },
+        enabled: true,
+        refetchOnWindowFocus: true,
+    });
+
+    const topics = (data?.data?.data as Topic[]) || [];
+
+    return { topics, isLoading, refetch };
+}
+
+export const useCreateTopic = () => {
+    return useMutation({
+        mutationFn: (payload: TopicPayload) => {
+            return customAPI.post('/curriculum/topics', payload);
+        },
+    });
+}
+
+export const useEditTopic = (id: string) => {
+    return useMutation({
+        mutationFn: (payload: Partial<TopicPayload>) => {
+            return customAPI.patch(`/curriculum/topics/${id}`, payload);
+        },
+    });
+}
+
+export const useDeleteTopic = () => {
+    return useMutation({
+        mutationFn: (id: string) => {
+            return customAPI.delete(`/curriculum/topics/${id}`);
+        },
+    });
+}
+
+export const useGetSubjectTopics = (subjectCatalogId?: string) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['subjectCatalogTopics', subjectCatalogId],
+        queryFn: () => {
+            return customAPI.get(`/curriculum/subject-catalogs/${subjectCatalogId}/topics`);
+        },
+        enabled: Boolean(subjectCatalogId),
+        refetchOnWindowFocus: true,
+    });
+
+    const topics = (data?.data as Topics[]) || (data?.data?.data as Topics[]) || [];
+
+    return { topics, isLoading, refetch };
 }
 
 /**
