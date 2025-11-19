@@ -55,7 +55,7 @@ export const ConfigurationTabSection: React.FC<SchoolConfigProps> = ({calendars}
                         <div key={index}>
                             <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2 mt-4">
                                 <InputField
-                                    label="Team Name"
+                                    label="Term Name"
                                     isTransulent={true}
                                     value={term.termName}
                                     onChange={() => {}}
