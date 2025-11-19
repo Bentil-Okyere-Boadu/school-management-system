@@ -43,7 +43,7 @@ export const GradingSystemTable: React.FC<GradingSystemTableProps> = ({gradingSy
       </table>
 
       {gradingSystems?.length === 0 && (
-        <NoAvailableEmptyState message="No fee structure available." />
+        <NoAvailableEmptyState message="No grading system available." />
       )}
     </>
   );
