@@ -32,8 +32,17 @@ const formSchema = z.object({
     message: 'Address must be at least 5 characters.',
   }),
   calendlyUrl: z.string().url({
-    message: 'Please enter a valid URL.', 
-  })
+    message: 'Please enter a valid URL.',
+  }).refine((val) => {
+    try {
+      const hostname = new URL(val).hostname.toLowerCase();
+      return hostname === 'calendly.com' || hostname.endsWith('.calendly.com');
+    } catch {
+      return false;
+    }
+  }, {
+    message: 'URL must be a Calendly link (calendly.com).',
+  }),
 });
 
 const AdminDashboard = () => {
