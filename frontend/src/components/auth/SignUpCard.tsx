@@ -107,6 +107,7 @@ const SignUpCard: React.FC = () => {
         <InputField
           label="Email"
           type="email"
+          required
           {...register("email")}
         />
         {errors.email && (
@@ -116,6 +117,7 @@ const SignUpCard: React.FC = () => {
         <InputField
           label="Password"
           type="password"
+          required
           isPasswordField={true}
           {...register("password")}
         />
@@ -150,6 +152,7 @@ const SignUpCard: React.FC = () => {
         <InputField
           label="Confirm Password"
           type="password"
+          required
           isPasswordField={true}
           {...register("confirmPassword")}
         />
