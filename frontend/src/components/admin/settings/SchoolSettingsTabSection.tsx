@@ -1,5 +1,4 @@
 "use client";
-// import CustomButton from "@/components/Button";
 import { IconUpload } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
@@ -13,9 +12,7 @@ import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGet
 import { toast } from "react-toastify";
 import { ClassLevel, ErrorResponse, FeeStructure, School } from "@/@types";
 import { EmailItem } from "./EmailItem";
-// import { ClassLevelsTable } from "./ClassLevelsTable";
 import FileUploadArea from "@/components/common/FileUploadArea";
-// import { FeeStructureTable } from "./FeeStructureTable";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdmissionPoliciesSection } from "./AdmissionPoliesSection";
 import Link from "next/link";
@@ -32,7 +29,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const [selectedDuration, setSelectedDuration] = useState<string>("daily");
   const [feesAppliesTo, setFeesAppliesTo] = useState<string>("new");
   const [feesTitle, setFeesTitle] = useState("");
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState<number>(0);
   const [dueDate, setDueDate] = useState('')
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [
@@ -70,7 +67,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   }, [classes])
   
   const currencies = [
-    { value: "ghc", label: "GHC" },
+    { value: "ghc", label: " GHC" },
     { value: "eur", label: "🇪🇺 EUR" },
     { value: "usd", label: "🇺🇸 USD" },
     { value: "cad", label: "🇨🇦 CAD" },
@@ -88,7 +85,8 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           borderTopRightRadius: 0,
           borderBottomRightRadius: 0,
           width: 80,
-        },
+          textAlign: 'center',
+        }
       }}
     />
   );
@@ -263,9 +261,6 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
 
   return (
     <div className="pb-16">
-      {/* <div className="flex justify-end">
-        <CustomButton text="Save Changes" onClick={() => {}} />
-      </div> */}
 
       <div className="mt-8">
         <div className="flex items-center gap-2">
@@ -291,13 +286,6 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
                       onClick={() => onEditFeeStructureClick(feeStructure) }
                       showIcon={false}
                     />
-                    {/* TODO: out of scope */}
-                    {/* <CustomUnderlinedButton
-                      text="Send Reminder"
-                      textColor="text-gray-500"
-                      onClick={() => setIsSendReminderDialogOpen(false)}
-                      showIcon={false}
-                    /> */}
                     <CustomUnderlinedButton
                       text="Delete"
                       textColor="text-gray-500"
@@ -333,10 +321,6 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       <div className="mt-8">
         <GradingSystemTable />
       </div>
-
-      {/* <div className="mt-8">
-        <ClassLevelsTable />
-      </div> */}
 
       <div className="mt-8">
         <AdmissionPoliciesSection />
@@ -472,23 +456,18 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           />
 
           <TextInput
-            type="number"
+            type=""
             label="Amount"
             leftSection={select}
             leftSectionWidth={90}
             value={amount}
             onChange={(e) => { setAmount(Number(e.target.value)) }}
+            styles={{
+              section: {
+                justifyContent: 'flex-start',
+              }
+            }}
           />
-
-          {/* <InputField
-            className="!py-0"
-            placeholder=""
-            label="Amount"
-            value={''}
-            type="number"
-            onChange={() => {}}
-            isTransulent={false}
-          /> */}
 
           <InputField
             className="!py-0"
