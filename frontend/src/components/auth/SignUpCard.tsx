@@ -85,7 +85,7 @@ const SignUpCard: React.FC = () => {
   const handleSignUp = (data: FormData) => {
     // Handle sign up logic here
     if(validationResult.success) {
-      mutate({firstName: "Koo", lastName: "Admin", email: data.email, password: data.password}, {
+      mutate({firstName: "Super", lastName: "Admin", email: data.email, password: data.password}, {
         onSuccess: (succesData) => {
           toast.success("Sign up successful");
           handleLoginRedirectAndToken(succesData, router);
@@ -107,6 +107,7 @@ const SignUpCard: React.FC = () => {
         <InputField
           label="Email"
           type="email"
+          required
           {...register("email")}
         />
         {errors.email && (
@@ -116,6 +117,7 @@ const SignUpCard: React.FC = () => {
         <InputField
           label="Password"
           type="password"
+          required
           isPasswordField={true}
           {...register("password")}
         />
@@ -150,6 +152,7 @@ const SignUpCard: React.FC = () => {
         <InputField
           label="Confirm Password"
           type="password"
+          required
           isPasswordField={true}
           {...register("confirmPassword")}
         />

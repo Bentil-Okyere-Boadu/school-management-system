@@ -5,7 +5,7 @@ import { ClassCard } from '@/components/admin/classes/ClassCard';
 import { SearchBar } from '@/components/common/SearchBar';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
 import { ClassLevel, MissingGrade, ErrorResponse, NotificationType } from "@/@types";
-import { useGetTeacherClasses, useApproveClassResults } from "@/hooks/teacher";
+import { useGetTeacherClasses, useApproveClassResults, useTeacherGetMe } from "@/hooks/teacher";
 import { useDebouncer } from '@/hooks/generalHooks';
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
@@ -19,6 +19,7 @@ const ClassesPage = () => {
   const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const { me } = useTeacherGetMe();
 
   const { classLevels, refetch: refetchTeacherClasses } = useGetTeacherClasses(useDebouncer(searchQuery));
 
@@ -82,13 +83,13 @@ const ClassesPage = () => {
           title: "Class Results submitted",
           message: `Results for ${data.name} have been submitted.`,
           type: NotificationType.Results,
-          schoolId: data.id as string,
+          schoolId: me.school.id as string,
         }, {
           onError: (error: unknown) => {
             console.error("Failed to create notification:", error);
           },
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+            queryClient.invalidateQueries({ queryKey: ['notifications', 'myClassLevels'] });
           }
         });
       }

@@ -4,13 +4,11 @@ services:
   database:
     image: postgres:15
     container_name: school_db
-    restart: always
+    restart: on-failure:2
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: school_management_4os8
-      POSTGRES_USER: school_management_4os8_user
-      POSTGRES_PASSWORD: HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL
+      
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -23,22 +21,11 @@ services:
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://school_management_4os8_user:HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL@dpg-d09im6be5dus73blj570-a/school_management_4os8
-      DB_PORT: 5432
-      DB_PASSWORD: HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL
-      DB_USERNAME: school_management_4os8_user
-      DB_NAME: school_management_4os8
-      DB_HOST: dpg-d09im6be5dus73blj570-a
-      JWT_SECRET: 'your secret'
-      MAIL_HOST: smtp.gmail.com
-      MAIL_PORT: 465
-      MAIL_SECURE: true
-      MAIL_USER: judeedemnyahe@gmail.com
-      MAIL_PASSWORD: hglo fqgf tzip bizo
-      MAIL_FROM: noreply@schoolmanagementsystem.com
-      FRONTEND_URL: https://school-management-system-sgnc.onrender.com
+    
+
     depends_on:
       - database
+    restart: on-failure:2
 
 volumes:
   postgres_data:
