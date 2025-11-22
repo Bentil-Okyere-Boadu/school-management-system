@@ -9,7 +9,7 @@ export interface Profile {
   firstName?: string;
   lastName?: string;
   otherName?: string;
-  DateOfBirth?: string,
+  DateOfBirth?: string;
   optionalPhoneContact: string;
   email: string;
   PlaceOfBirth: string;
@@ -38,9 +38,9 @@ export interface User {
 export interface ClassLevel {
   id: string;
   name: string;
-  description: string
-  isApproved: boolean,
-  schoolAdminApproved: boolean
+  description: string;
+  isApproved: boolean;
+  schoolAdminApproved: boolean;
 }
 
 export interface Student extends User {
@@ -79,7 +79,7 @@ export enum Roles {
   STUDENT = "student",
   TEACHER = "teacher",
   SUPER_ADMIN = "super_admin",
-  PARENT = "parent"
+  PARENT = "parent",
 }
 
 export type Role = {
@@ -95,15 +95,16 @@ export type FeeStructure = {
   amount: number;
   appliesTo: string;
   dueDate: string;
+  classLevels: { name: string }[];
   classLevelIds: string[];
-}
+};
 
 export type Grade = {
   grade: string;
   minRange: number | null;
   maxRange: number | null;
   id: string;
-  }
+};
 
 export type SchoolAdminInfo = {
   email: string;
@@ -114,11 +115,10 @@ export type SchoolAdminInfo = {
   name: string;
   role: {
     label: string;
-  }
+  };
   streetAddress?: string;
   optionalPhoneContact?: string;
-}
-
+};
 
 export interface GradingSystem {
   id: string;
@@ -134,27 +134,27 @@ export interface School {
   phone: string;
   email: string;
   schoolCode: string;
-  classLevels: ClassLevel[]; 
-  admissionPolicies: AdmissionPolicy[]; 
+  classLevels: ClassLevel[];
+  admissionPolicies: AdmissionPolicy[];
   gradingSystems: GradingSystem[];
   feeStructures: FeeStructure[];
   profile: object | null;
   academicCalendars: object[];
-  users: User[]; 
-  createdAt: string; 
-  updatedAt: string; 
+  users: User[];
+  createdAt: string;
+  updatedAt: string;
   logoUrl: string;
   calendlyUrl: string;
 }
 
 export enum AdmissionStatus {
-  SUBMITTED = 'Application Submitted',
-  INTERVIEW_COMPLETED = 'Interview Completed',
-  INTERVIEW_PENDING = 'Interview Pending',
-  ACCEPTED = 'Accepted',
-  REJECTED = 'Rejected',
-  WAITLISTED = 'Waitlisted',
-  ARCHIVED = 'Archived'
+  SUBMITTED = "Application Submitted",
+  INTERVIEW_COMPLETED = "Interview Completed",
+  INTERVIEW_PENDING = "Interview Pending",
+  ACCEPTED = "Accepted",
+  REJECTED = "Rejected",
+  WAITLISTED = "Waitlisted",
+  ARCHIVED = "Archived",
 }
 
 export type BadgeVariant =
@@ -164,7 +164,10 @@ export type BadgeVariant =
   | "blue"
   | "green"
   | "yellow"
-  | "gray" | "active" | "inactive" | "pending"
+  | "gray"
+  | "active"
+  | "inactive"
+  | "pending"
   | AdmissionStatus;
 
 export interface Calendar {
@@ -354,7 +357,7 @@ export interface AdmissionData {
   previousSchoolResults: {
     id: string;
     fileUrl: string;
-  }[]
+  }[];
 }
 
 export interface GuardianData {
@@ -384,7 +387,7 @@ export interface AdmissionDashboardInfo {
     acceptedApplications: number;
     rejectedApplications: number;
     pendingApplications: number;
-  }
+  };
   monthlyTrends: {
     month: string;
     value: number;
@@ -408,8 +411,8 @@ export interface AdminDashboardStats {
   totalTeachers: number;
   attendanceByClass: {
     name: string;
-    'Attendence-Level': number;
-  }[]
+    "Attendence-Level": number;
+  }[];
 }
 
 export interface AttendanceParams {
@@ -421,20 +424,20 @@ export interface AttendanceParams {
 }
 
 export interface Month {
-  month: number,
-  year: number,
+  month: number;
+  year: number;
   attendance: {
-    classLevel: ClassLevel,
+    classLevel: ClassLevel;
     dateRange: {
       startDate: string;
       endDate: string;
-      dates: string[]
-    },
+      dates: string[];
+    };
     student: {
       id: string;
       attendanceByDate: Record<string, string>;
-    }
-  }
+    };
+  };
 }
 
 export interface StudentAttendanceData {
@@ -442,11 +445,11 @@ export interface StudentAttendanceData {
   student: Student;
   terms: Term[];
   summary: {
-    totalAttendanceCount: number,
-    totalPresentCount: number,
-    totalAbsentCount: number,
-    averageAttendanceRate: number
-  }
+    totalAttendanceCount: number;
+    totalPresentCount: number;
+    totalAbsentCount: number;
+    averageAttendanceRate: number;
+  };
 }
 
 export interface Payment {
@@ -466,9 +469,9 @@ export interface Subject {
 }
 
 export interface AssignSubjectTeacherPayload {
-    subjectCatalogId: string;
-    classLevelIds: string[];
-    teacherId: string;
+  subjectCatalogId: string;
+  classLevelIds: string[];
+  teacherId: string;
 }
 
 export interface ClassSubjectInfo {
@@ -477,7 +480,7 @@ export interface ClassSubjectInfo {
     id: string;
     name: string;
   }[];
-};
+}
 
 export type PostGradesPayload = {
   classLevelId: string;
@@ -520,10 +523,10 @@ export interface StudentResultsResponse {
 }
 
 export enum NotificationType {
-  Admission = 'admission',
-  Attendance = 'attendance',
-  Results = 'results',
-  General = 'general',
+  Admission = "admission",
+  Attendance = "attendance",
+  Results = "results",
+  General = "general",
 }
 
 export interface Notification {
@@ -538,21 +541,21 @@ export interface Notification {
 
 export interface Reminder {
   id: string;
-  title: string;              
-  message: string;          
+  title: string;
+  message: string;
   status: string;
-  type: string; 
-  dateFrom?: string;          
-  to?: string;                
-  createdAt: string;           
-  updatedAt: string;           
-  recipientId?: string;  
+  type: string;
+  dateFrom?: string;
+  to?: string;
+  createdAt: string;
+  updatedAt: string;
+  recipientId?: string;
   sendToStudents: boolean;
   sendToParents: boolean;
-  targetClassLevels: ClassLevel[]
-  targetStudents: Student[]
-  targetClassLevelIds: string[]
-  targetStudentIds: string[]
+  targetClassLevels: ClassLevel[];
+  targetStudents: Student[];
+  targetClassLevelIds: string[];
+  targetStudentIds: string[];
   scheduledAt?: string | null;
   recurringAt?: string | null;
 }
@@ -560,7 +563,7 @@ export interface Reminder {
 export interface ApproveClassResultsPayload {
   classLevelId: string;
   forceApprove: boolean;
-};
+}
 
 export interface MissingGradesResponse {
   message: string;
@@ -612,8 +615,8 @@ export interface Topic {
 }
 
 export interface TopicPayload {
-    name: string;
-    description?: string;
-    subjectCatalogId: string;
-    curriculumId: string;
+  name: string;
+  description?: string;
+  subjectCatalogId: string;
+  curriculumId: string;
 }

@@ -96,17 +96,25 @@ export class SuperAdminService {
     };
   }
   async findAllSchools(queryString: QueryString) {
-    const query = this.schoolRepository.createQueryBuilder('school');
+    const baseQuery = this.schoolRepository.createQueryBuilder('school');
 
-    const features = new APIFeatures(query, queryString)
+    // Build features without pagination to compute total count
+    const featuresWithoutPagination = new APIFeatures(
+      baseQuery.clone(),
+      queryString,
+    )
       .filter()
       .sort()
-      .search(['firstName', 'lastName', 'email'])
-      .limitFields()
-      .paginate();
+      .search(['name', 'address', 'email'])
+      .limitFields();
 
-    const schools = await features.getQuery().getMany();
+    const total = await featuresWithoutPagination.getQuery().getCount();
 
+    // Apply pagination and fetch data
+    const featuresWithPagination = featuresWithoutPagination.paginate();
+    const schools = await featuresWithPagination.getQuery().getMany();
+
+    // Enrich logo urls
     await Promise.all(
       schools.map(async (school) => {
         if (school.logoPath) {
@@ -123,7 +131,19 @@ export class SuperAdminService {
       }),
     );
 
-    return schools;
+    const page = parseInt(queryString.page ?? '1', 10);
+    const limit = parseInt(queryString.limit ?? '20', 10);
+    const totalPages = Math.ceil(total / limit || 1);
+
+    return {
+      data: schools,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
   }
   async getSchoolsPerformance(options?: {
     topThreshold?: number;
