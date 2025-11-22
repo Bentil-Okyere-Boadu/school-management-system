@@ -14,6 +14,7 @@ import { AdmissionService } from './admission.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 
 @Controller('admissions')
@@ -34,7 +35,7 @@ export class AdmissionController {
     return this.admissionService.findAllNamesBySchool(schoolId);
   }
   @UseGuards(SchoolAdminJwtAuthGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Get('url/me')
   getAdmissionUrlForAdmin(@CurrentUser() admin: SchoolAdmin) {
     return this.admissionService.getAdmissionUrlForAdmin(admin);
