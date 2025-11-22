@@ -40,4 +40,7 @@ export class Topic {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({ default: 'admin' })
+  createdBy: string;
 }
