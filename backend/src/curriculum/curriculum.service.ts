@@ -131,11 +131,39 @@ export class CurriculumService {
 
     const [curricula, total] = await apiFeatures.getQuery().getManyAndCount();
 
+    const data = curricula.map((c) => {
+      const {
+        id,
+        name,
+        description,
+        isActive,
+        subjectCatalogs,
+        academicTerm,
+        createdAt,
+        updated,
+      } = c as any;
+
+      const academicCalendar =
+        (academicTerm && academicTerm.academicCalendar) || null;
+
+      return {
+        id,
+        name,
+        description,
+        isActive,
+        subjectCatalogs,
+        academicTerm,
+        academicCalendar,
+        createdAt,
+        updatedAt: (c as any).updatedAt ?? updated,
+      };
+    });
+
     return {
-      data: curricula,
+      data,
       total,
-      page: parseInt(query.page ?? '1', 10),
-      limit: parseInt(query.limit ?? '20', 10),
+      page: parseInt (query.page ?? '1', 10),
+      limit: parseInt (query.limit ?? '20', 10),
     };
   }
 

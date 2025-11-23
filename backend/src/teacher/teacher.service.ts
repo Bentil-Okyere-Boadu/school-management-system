@@ -350,7 +350,9 @@ export class TeacherService {
     return assignments.map((a) => ({
       id: a.id,
       title: a.title,
+      instructions: a.instructions ?? null,
       topic: a.topic?.name ?? null,
+      topicId: a.topic?.id ?? null,
       dueDate: a.dueDate,
       status: a.state,
       submissions: 0, // TODO: replace with real submissions count when implemented
