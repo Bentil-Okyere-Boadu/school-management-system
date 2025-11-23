@@ -41,7 +41,9 @@ export const FeeStructureTable: React.FC<FeeStructureTableProps> = ({feeStructur
               {fee.dueDate}
               </td>
               <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-              {fee.classes ? fee.classes : '-'}
+              {fee.classLevels && fee.classLevels.length > 0
+                ? fee.classLevels.map((cl) => cl.name).join(', ')
+                : '-'}
               </td>
             </tr>
           ))}

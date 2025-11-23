@@ -1,7 +1,7 @@
 import { Subject } from '@/@types'
 import CustomButton from '@/components/Button'
 import { Dialog } from '@/components/common/Dialog'
-import { SearchBar } from '@/components/common/SearchBar'
+// import { SearchBar } from '@/components/common/SearchBar'
 import InputField from '@/components/InputField'
 import { useCreateSubject, useDeleteSubject, useGetAllSubjects, useUpdateSubject } from '@/hooks/school-admin'
 import { Menu } from '@mantine/core'
@@ -87,8 +87,8 @@ const Subjects = () => {
 
   return (
     <div>
-        <div className='w-full flex justify-between'>
-            <SearchBar/>
+        <div className='w-full flex justify-end'>
+            {/* <SearchBar/> */}
             <CustomButton text='Create Subject' onClick={onCreateSubjectClick}/>
         </div>
 

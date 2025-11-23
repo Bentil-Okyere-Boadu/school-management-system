@@ -77,6 +77,7 @@ export class SchoolService {
         'admissionPolicies',
         'gradingSystems',
         'feeStructures',
+        'feeStructures.classLevels',
         'profile',
         'academicCalendars',
         'academicCalendars.terms.holidays',

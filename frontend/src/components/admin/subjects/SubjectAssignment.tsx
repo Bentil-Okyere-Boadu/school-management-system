@@ -207,6 +207,11 @@ const SubjectAssignment = () => {
                     value={subj.teacher.id}
                     searchable
                     disabled
+                    styles={{
+                      label: {
+                        marginBottom: "10px"
+                      }
+                    }}
                   />
                   <MultiSelect
                     label="Classes"
@@ -279,6 +284,11 @@ const SubjectAssignment = () => {
             value={selectedTeacher}
             onChange={handleTeacherSelect}
             searchable
+            styles={{
+                      label: {
+                        marginBottom: "10px"
+                      }
+                    }}
           />
           <MultiSelect
             label="Classes"
