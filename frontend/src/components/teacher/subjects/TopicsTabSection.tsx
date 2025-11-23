@@ -117,7 +117,6 @@ export const TopicsTabSection: React.FC = () => {
 
   return (
     <div className="pb-8">
-      <h1 className="text-md font-semibold text-neutral-800 mb-2">My Topics</h1>
 
       <div className="w-full flex justify-between mb-4">
         {false  ? (        
