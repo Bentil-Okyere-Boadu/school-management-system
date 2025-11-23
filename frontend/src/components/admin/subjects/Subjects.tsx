@@ -87,8 +87,8 @@ const Subjects = () => {
 
   return (
     <div>
-        <div className='w-full flex justify-between'>
-            <SearchBar/>
+        <div className='w-full flex justify-end'>
+            {/* <SearchBar/> */}
             <CustomButton text='Create Subject' onClick={onCreateSubjectClick}/>
         </div>
 
