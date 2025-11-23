@@ -160,7 +160,6 @@ export const TopicsTabSection: React.FC = () => {
   return (
     <>
       <div className="pb-8">
-        <h1 className="text-md font-semibold text-neutral-800 mb-2">Topics</h1>
 
         <div className="flex justify-end mb-4"><CustomButton text="Create Topic" onClick={onOpenCreate} /></div>
 

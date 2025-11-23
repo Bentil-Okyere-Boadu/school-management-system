@@ -15,7 +15,7 @@ const TeacherSubjectsPage = () => {
   const defaultNavItems: TabListItem[] = [
     { tabLabel: "My Subjects", tabKey: "my-subjects" },
     { tabLabel: "Topics", tabKey: "topics" },
-    { tabLabel: "Topic Assignment", tabKey: "topic-assignment" },
+    { tabLabel: "Assignments", tabKey: "topic-assignment" },
   ];
 
   const setTabInUrl = (tab: string) => {

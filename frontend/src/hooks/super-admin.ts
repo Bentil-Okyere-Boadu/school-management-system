@@ -123,7 +123,7 @@ export const useGetAllSchools = (page=1,search: string = "", status: string = ""
         refetchOnWindowFocus: true
     });
 
-    const schools = data?.data as School[];
+    const schools = (data?.data?.data as School[]) || [];
     const paginationValues = data?.data.meta;
     return { schools , isLoading, paginationValues, refetch }
 }

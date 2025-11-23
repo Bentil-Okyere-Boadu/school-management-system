@@ -377,7 +377,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to,
-        subject: `Interview Invitation for Application ID ${applicationId}`,
+        subject: `Interview Invitation`,
         html: this.getEmailTemplate(EmailTemplate.INTERVIEW_INVITATION, {
           name,
           schoolName,
@@ -570,8 +570,7 @@ export class EmailService {
       <p>Thank you for applying to <strong>${data.schoolName}</strong>!</p>
       <p>Your application has been received successfully. Our admissions team will review your submission and contact you soon with the next steps.</p>
       <p>If you have any questions, feel free to reply to this email or contact the school directly.</p>
-      <p style="margin: 25px 0;">
-        <span style="background-color: #AB58E7; color: white; padding: 10px 20px; border-radius: 4px; display: inline-block;">Application ID: ${data.applicationId}</span>
+      <p style="margin: 40px 0;">
       </p>
       <p>We appreciate your interest and look forward to welcoming you!</p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
