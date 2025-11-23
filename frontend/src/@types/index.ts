@@ -465,6 +465,25 @@ export interface Subject {
   description: string;
 }
 
+export interface TeacherSubject {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface Assignment {
+  id: string;
+  title: string;
+  topicId: string;
+  topic?: string;
+  instructions?: string;
+  dueDate: string;
+  maxScore: number;
+  status: "published" | "draft";
+  submissions:  number;
+  isPublished: boolean;
+}
+
 export interface AssignSubjectTeacherPayload {
     subjectCatalogId: string;
     classLevelIds: string[];
