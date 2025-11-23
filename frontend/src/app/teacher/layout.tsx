@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon } from "@/utils/icons";
+import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon, ClipboardIcon } from "@/utils/icons";
 
 import { useTeacherGetMe } from "@/hooks/teacher";
 
@@ -32,6 +32,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Grading",
     },
     {
+      icon: ClipboardIcon,      
+      label: "Subjects",
+    },
+    {
       icon: ProfileIcon,      
       label: "Profile",
     },
@@ -52,6 +56,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/teacher/grading") {
       setActiveMenuItem("Grading");
       setIsOverviewPage(true);
+    } else if (pathname === "/teacher/subjects") {
+      setActiveMenuItem("Subjects");
+      setIsOverviewPage(true);
     }
 
     // Detail Pages
@@ -63,6 +70,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(false);
     } else if (pathname.startsWith("/teacher/grading/")) {
       setActiveMenuItem("Grading");
+      setIsOverviewPage(false);
+    } else if (pathname.startsWith("/teacher/subjects")) {
+      setActiveMenuItem("Subjects");
       setIsOverviewPage(false);
     }
     
@@ -85,6 +95,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Grading":
         router.push("/teacher/grading");
+        break;
+      case "Subjects":
+        router.push("/teacher/subjects");
         break;
     }
     setIsSidebarOpen(false);

@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -34,6 +34,26 @@ export const useGetTeacherClasses = (search: string = "") => {
     const classLevels = data?.data as ClassLevel[] || [] ;
 
     return { classLevels, isLoading, refetch }
+}
+
+export const useGetTeacherSubjectClasses = (search: string = "") => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherSubjectClasses', { search }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/subject/my-classes?${params}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const classSubjects = data?.data as ClassSubjectInfo[] || [] ;
+
+    return { classSubjects, isLoading, refetch }
 }
 
 
@@ -289,6 +309,122 @@ export const useGetSubjectClasses = (search: string = "") => {
 
     return { classSubjects, isLoading, refetch }
 }
+
+export const useGetTeacherSubjects = (search: string = "") => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherSubjects', { search }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/teacher/my-subject?${params}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const teacherSubjects = data?.data as TeacherSubject[] || [] ;
+
+    return { teacherSubjects, isLoading, refetch }
+}
+
+export const useGetTeacherTopics = (search: string = "") => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherTopics', { search }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/teacher/my-topics?${params}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const teacherTopics = data?.data || [] ;
+
+    return { teacherTopics, isLoading, refetch }
+}
+
+export const useCreateTeacherTopic = () => {
+    return useMutation({
+        mutationFn: (payload: { name: string; description: string; subjectCatalogId: string }) =>
+            customAPI.post('/teacher/topics', payload),
+    });
+};
+
+export const useUpdateTeacherTopic = (topicId: string) => {
+    return useMutation({
+        mutationFn: (payload: { name: string; description: string; subjectCatalogId: string }) =>
+            customAPI.patch(`/teacher/topics/${topicId}`, payload),
+    });
+};
+
+export const useDeleteTeacherTopic = () => {
+    return useMutation({
+        mutationFn: (topicId: string) =>
+            customAPI.delete(`/teacher/topics/${topicId}`),
+    });
+};
+
+export const useGetTeacherAssignments = (search: string = "") => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherAssignments', { search }],
+        queryFn: () => {
+            const queryBuilder = [];
+            if(search) {
+                queryBuilder.push(`search=${search}`);
+            }
+            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+
+            return customAPI.get(`/teacher/assignments?${params}`);
+        },
+        refetchOnWindowFocus: true
+    })
+
+    const teacherAssignments = data?.data || [] ;
+
+    return { teacherAssignments, isLoading, refetch }
+}
+
+export const useCreateTeacherAssignment = () => {
+    return useMutation({
+        mutationFn: (payload: { 
+            topicId: string; 
+            classLevelId: string;
+            title: string; 
+            instructions: string; 
+            dueDate: string; 
+            maxScore: number;
+            state: string;
+        }) =>
+            customAPI.post('/teacher/assignments', payload),
+    });
+};
+
+export const useUpdateTeacherAssignment = (assignmentId: string) => {
+    return useMutation({
+        mutationFn: (payload: { 
+            title: string; 
+            instructions: string; 
+            dueDate?: string; 
+            maxScore?: number;
+            state?: string;
+        }) =>
+            customAPI.patch(`/teacher/assignments/${assignmentId}`, payload),
+    });
+};
+
+export const useDeleteTeacherAssignment = () => {
+    return useMutation({
+        mutationFn: (assignmentId: string) =>
+            customAPI.delete(`/teacher/assignments/${assignmentId}`),
+    });
+};
 
 export const useGetStudentsForGrading = (
   classLevelId?: string,

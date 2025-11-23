@@ -358,6 +358,7 @@ export class TeacherService {
       submissions: 0, // TODO: replace with real submissions count when implemented
       maxScore: a.maxScore,
       class: a.classLevel?.name ?? null,
+      classLevelId: a.classLevel?.id ?? null,
     }));
   }
 
