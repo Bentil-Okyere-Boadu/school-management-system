@@ -22,6 +22,7 @@ import { SchoolAdminJwtAuthGuard } from './guards/school-admin-jwt-auth.guard';
 import { ActiveUserGuard } from '../auth/guards/active-user.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 import { QueryString } from '../common/api-features/api-features';
 import { SanitizeResponseInterceptor } from 'src/common/interceptors/sanitize-response.interceptor';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
@@ -71,7 +72,7 @@ export class SchoolAdminController {
     SchoolAdminSchoolGuard,
   )
   @Get('users')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @UseInterceptors(DeepSanitizeResponseInterceptor)
   findAllUsers(@CurrentUser() admin: SchoolAdmin, @Query() query: QueryString) {
     return this.schoolAdminService.findAllUsers(admin.school.id, query);
@@ -79,7 +80,7 @@ export class SchoolAdminController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('students')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async findAllStudents(
     @CurrentUser() admin: SchoolAdmin,
     @Query() query: QueryString,
@@ -89,13 +90,13 @@ export class SchoolAdminController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('me')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   getProfile(@CurrentUser() admin: SchoolAdmin) {
     return this.schoolAdminService.getMyProfile(admin);
   }
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('profile/me')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async updateProfile(
     @CurrentUser() admin: SchoolAdmin,
     @Body() updateDto: UpdateProfileDto,
@@ -103,27 +104,27 @@ export class SchoolAdminController {
     return this.schoolAdminService.updateProfile(admin.id, updateDto);
   }
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Get('admissions/analytics')
   async getAdmissionAnalytics(@CurrentUser() admin: SchoolAdmin) {
     return this.admissionService.getAdmissionAnalytics(admin.school.id);
   }
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Get('my-school/details')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   getMySchoolWithDetails(@CurrentUser() user: SchoolAdmin) {
     return this.schoolAdminService.getMySchoolWithRelations(user);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Get('my-school')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   getMySchool(@CurrentUser() user: SchoolAdmin) {
     return this.schoolAdminService.getMySchool(user);
   }
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('users/:id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @UseInterceptors(DeepSanitizeResponseInterceptor)
   async getUserById(
     @Param('id') id: string,
@@ -138,13 +139,13 @@ export class SchoolAdminController {
     SchoolAdminSchoolGuard,
   )
   @Get('admissions/:applicationId')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   getAdmissionById(@Param('applicationId') applicationId: string) {
     return this.admissionService.getAdmissionById(applicationId);
   }
   @Get('admissions')
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   getAdmissionsBySchool(
     @CurrentUser() admin: SchoolAdmin,
     @Query() query: QueryString,
@@ -152,7 +153,7 @@ export class SchoolAdminController {
     return this.admissionService.findAllBySchool(admin.school.id, query);
   }
   @Patch('admissions/:applicationId/status')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   updateAdmissionStatus(
     @Param('applicationId') applicationId: string,
     @Body() dto: UpdateAdmissionStatusDto,
@@ -163,7 +164,7 @@ export class SchoolAdminController {
     );
   }
   @Put('users/:id/archive')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async archiveUser(
     @Param('id') id: string,
     @Body() body: { archive: boolean },
@@ -178,7 +179,7 @@ export class SchoolAdminController {
     SchoolAdminSchoolGuard,
   )
   @Post('admissions/:applicationId/interview')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async sendInterviewInvitation(
     @Param('applicationId') applicationId: string,
     @Body() interviewData: { interviewDate: string; interviewTime: string },
@@ -191,14 +192,14 @@ export class SchoolAdminController {
   }
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete('users/:id')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async deleteUser(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.schoolAdminService.deleteUser(id, admin.school.id);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('dashboard/stats')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async getDashboardStats(@CurrentUser() admin: SchoolAdmin) {
     return this.schoolAdminService.getDashboardStats(admin.school.id);
   }
@@ -222,7 +223,7 @@ export class SchoolAdminController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/attendance')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async getClassAttendance(
     @Param('classLevelId') classLevelId: string,
     @Query()
@@ -264,7 +265,7 @@ export class SchoolAdminController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/terms/:termId/attendance')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async getClassAttendanceByTerm(
     @Param('classLevelId') classLevelId: string,
     @Param('termId') termId: string,
@@ -282,7 +283,7 @@ export class SchoolAdminController {
     SchoolAdminSchoolGuard,
   )
   @Put('admissions/:applicationId/archive')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async archiveAdmission(
     @Param('applicationId') applicationId: string,
     @CurrentUser() admin: SchoolAdmin,
@@ -297,7 +298,7 @@ export class SchoolAdminController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/calendars/:calendarId/attendance')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async getClassAttendanceByAcademicYear(
     @Param('classLevelId') classLevelId: string,
     @Param('calendarId') calendarId: string,
@@ -310,7 +311,7 @@ export class SchoolAdminController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/calendars/:calendarId/attendance/grouped')
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async getClassAttendanceGroupedByTermAndMonth(
     @Param('classLevelId') classLevelId: string,
     @Param('calendarId') calendarId: string,
@@ -325,7 +326,7 @@ export class SchoolAdminController {
   @Get(
     'classes/:classLevelId/students/:studentId/calendars/:calendarId/attendance/grouped',
   )
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   async getStudentAttendanceGroupedByTermAndMonth(
     @Param('classLevelId') classLevelId: string,
     @Param('studentId') studentId: string,

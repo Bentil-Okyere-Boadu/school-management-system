@@ -4,6 +4,7 @@ import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-a
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 
 /**
  * Controller for manual cleanup operations
@@ -11,7 +12,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
  */
 @Controller('cleanup')
 @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-@Roles('super_admin')
+@Roles(Role.SuperAdmin)
 export class CleanupController {
   constructor(private cleanupService: CleanupService) {}
 

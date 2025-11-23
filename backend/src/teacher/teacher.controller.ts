@@ -9,6 +9,8 @@ import {
   UseInterceptors,
   Query,
   Put,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { TeacherAuthService } from './teacher.auth.service';
 import { TeacherService } from './teacher.service';
@@ -25,12 +27,17 @@ import {
   AttendanceService,
 } from 'src/attendance/attendance.service';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { QueryString } from 'src/common/api-features/api-features';
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
+import { CreateTeacherTopicDto } from './dto/create-teacher-topic.dto';
+import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import { UpdateTeacherTopicDto } from './dto/update-teacher-topic.dto';
+import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 
 @Controller('teacher')
 export class TeacherController {
@@ -45,13 +52,13 @@ export class TeacherController {
 
   @UseGuards(TeacherLocalAuthGuard)
   @Post('login')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   login(@Request() req: { user: Teacher }) {
     return this.teacherAuthService.login(req.user);
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('students')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async findAllStudents(
     @CurrentUser() user: Teacher,
     @Query() query: QueryString,
@@ -60,14 +67,14 @@ export class TeacherController {
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('users/:id')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   @UseInterceptors(DeepSanitizeResponseInterceptor)
   async getUserById(@Param('id') id: string, @CurrentUser() teacher: Teacher) {
     return this.schoolAdminService.getUserById(id, teacher.school.id);
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async getMyClasses(
     @CurrentUser() user: Teacher,
     @Query() query: QueryString,
@@ -76,7 +83,7 @@ export class TeacherController {
   }
   @Get('classes/:id/name')
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async getClassLevelName(@Param('id') id: string) {
     return this.classLevelService.getClassLevelNameById(id);
   }
@@ -95,7 +102,7 @@ export class TeacherController {
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/attendance')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async getClassAttendance(
     @Param('classLevelId') classLevelId: string,
     @Query()
@@ -142,7 +149,7 @@ export class TeacherController {
     IsClassTeacherGuard,
   )
   @Post('classes/:classLevelId/attendance')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async markAttendance(
     @Param('classLevelId') classLevelId: string,
     @Body()
@@ -150,7 +157,7 @@ export class TeacherController {
       date: string;
       records: { studentId: string; status: 'present' | 'absent' }[];
     },
-    @CurrentUser() user: Teacher,
+    @CurrentUser() _user: Teacher,
   ) {
     // Optionally, check if user is assigned to this class
     return this.attendanceService.markAttendance(
@@ -180,7 +187,7 @@ export class TeacherController {
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('calendars')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async getAllAcademicCalendars(@CurrentUser() teacher: Teacher) {
     return this.academicCalendarService.findAllCalendars(teacher.school.id);
   }
@@ -189,7 +196,7 @@ export class TeacherController {
   @Get(
     'classes/:classLevelId/students/:studentId/calendars/:calendarId/attendance/grouped',
   )
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async getStudentAttendanceGroupedByTermAndMonth(
     @Param('classLevelId') classLevelId: string,
     @Param('studentId') studentId: string,
@@ -208,7 +215,7 @@ export class TeacherController {
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('profile/me')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   async updateProfile(
     @CurrentUser() user: Teacher,
     @Body() updateDto: UpdateProfileDto,
@@ -217,8 +224,88 @@ export class TeacherController {
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('me')
-  @Roles('teacher')
+  @Roles(Role.Teacher)
   getProfile(@CurrentUser() teacher: Teacher) {
     return this.TeacherService.getMyProfile(teacher);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('my-subject')
+  @Roles(Role.Teacher)
+  getMySubject(@CurrentUser() teacher: Teacher) {
+    return this.TeacherService.getMySubjectCatalogs(teacher.id);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('my-topics')
+  @Roles(Role.Teacher)
+  getMyTopics(@CurrentUser() teacher: Teacher) {
+    return this.TeacherService.getMyTopics(teacher.id);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('topics')
+  @Roles(Role.Teacher)
+  createTopic(
+    @CurrentUser() teacher: Teacher,
+    @Body() dto: CreateTeacherTopicDto,
+  ) {
+    return this.TeacherService.createTopic(teacher, dto);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('topics/:id')
+  @Roles(Role.Teacher)
+  updateTopic(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') topicId: string,
+    @Body() dto: UpdateTeacherTopicDto,
+  ) {
+    return this.TeacherService.updateTeacherTopic(teacher, topicId, dto);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('topics/:id')
+  @Roles(Role.Teacher)
+  deleteTopic(@CurrentUser() teacher: Teacher, @Param('id') topicId: string) {
+    return this.TeacherService.deleteTeacherTopic(teacher, topicId);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('assignments')
+  @Roles(Role.Teacher)
+  createAssignment(
+    @CurrentUser() teacher: Teacher,
+    @Body() dto: CreateAssignmentDto,
+  ) {
+    return this.TeacherService.createAssignment(teacher, dto);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments')
+  @Roles(Role.Teacher)
+  getMyAssignments(@CurrentUser() teacher: Teacher) {
+    return this.TeacherService.getMyAssignments(teacher.id);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('assignments/:id')
+  @Roles(Role.Teacher)
+  updateAssignment(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+    @Body() dto: UpdateAssignmentDto,
+  ) {
+    return this.TeacherService.updateAssignment(teacher, assignmentId, dto);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('assignments/:id')
+  @Roles(Role.Teacher)
+  deleteAssignment(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+  ) {
+    return this.TeacherService.deleteAssignment(teacher, assignmentId);
   }
 }

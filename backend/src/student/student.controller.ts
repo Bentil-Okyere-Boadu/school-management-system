@@ -21,6 +21,7 @@ import { StudentJwtAuthGuard } from './guards/student-jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { ParentService } from 'src/parent/parent.service';
 import { CreateParentDto } from 'src/parent/dto/create-parent-dto';
@@ -51,7 +52,7 @@ export class StudentController {
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('profile/me')
-  @Roles('student')
+  @Roles(Role.Student)
   async updateProfile(
     @CurrentUser() admin: Student,
     @Body() updateDto: UpdateProfileDto,
@@ -61,14 +62,14 @@ export class StudentController {
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id/parents')
-  @Roles('student')
+  @Roles(Role.Student)
   findOne(@Param('id') id: string) {
     return this.parentService.findOne(id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post(':studentId/parents')
-  @Roles('student')
+  @Roles(Role.Student)
   createParent(
     @Param('studentId') studentId: string,
     @Body() createParentDto: CreateParentDto,
@@ -78,7 +79,7 @@ export class StudentController {
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Patch(':id/parents')
-  @Roles('student')
+  @Roles(Role.Student)
   updateParent(
     @CurrentUser() student: Student,
     @Param('parentId') parentId: string,
@@ -95,14 +96,14 @@ export class StudentController {
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('me')
-  @Roles('student')
+  @Roles(Role.Student)
   getProfile(@CurrentUser() student: Student) {
     return this.studentService.getMyProfile(student);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('classes/:classLevelId/calendars/:calendarId/attendance/grouped')
-  @Roles('student')
+  @Roles(Role.Student)
   async getMyAttendanceGroupedByTermAndMonth(
     @CurrentUser() student: Student,
     @Param('classLevelId') classLevelId: string,
@@ -117,7 +118,7 @@ export class StudentController {
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('calendars')
-  @Roles('student')
+  @Roles(Role.Student)
   async getAllAcademicCalendars(@CurrentUser() student: Student) {
     return this.academicCalendarService.findAllCalendars(student.school.id);
   }

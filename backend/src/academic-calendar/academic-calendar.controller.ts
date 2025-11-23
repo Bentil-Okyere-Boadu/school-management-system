@@ -19,16 +19,17 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Role } from 'src/auth/enums/role.enum';
 
 @Controller('academic-calendar')
 @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-@Roles('school_admin')
+@Roles(Role.SchoolAdmin)
 export class AcademicCalendarController {
   constructor(
     private readonly academicCalendarService: AcademicCalendarService,
   ) {}
 
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Post()
   createCalendar(
     @Body() createAcademicCalendarDto: CreateAcademicCalendarDto,
@@ -41,13 +42,13 @@ export class AcademicCalendarController {
   }
 
   @Get()
-  @Roles('school_admin', 'super_admin')
+  @Roles(Role.SchoolAdmin, Role.SuperAdmin)
   findAllCalendars(@CurrentUser() admin: SchoolAdmin) {
     return this.academicCalendarService.findAllCalendars(admin.school.id);
   }
 
   @Get(':id')
-  @Roles('school_admin', 'super_admin')
+  @Roles(Role.SchoolAdmin, Role.SuperAdmin)
   findOneCalendar(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.academicCalendarService.findOneCalendar(id, admin.school.id);
   }
@@ -66,13 +67,13 @@ export class AcademicCalendarController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Delete(':id')
   removeCalendar(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
     return this.academicCalendarService.removeCalendar(id, admin);
   }
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Roles('school_admin')
+  @Roles(Role.SchoolAdmin)
   @Post('term')
   createTerm(
     @Body() createAcademicTermDto: CreateAcademicTermDto,

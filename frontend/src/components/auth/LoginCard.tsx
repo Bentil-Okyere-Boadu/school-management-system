@@ -65,6 +65,7 @@ const LoginCard: React.FC = () => {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         type="email"
+        required
       />
 
       <InputField
@@ -73,6 +74,7 @@ const LoginCard: React.FC = () => {
         onChange={(e) => setPassword(e.target.value)}
         type="password"
         isPasswordField={true}
+        required
       />
 
       <Link href={user? `/auth/${user}/forgotPassword` : "/auth/forgotPassword"} className="w-[100px]">

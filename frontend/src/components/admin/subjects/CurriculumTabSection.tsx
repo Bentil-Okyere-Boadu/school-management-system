@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { CurriculumCard } from "@/components/admin/subjects/CurriculumCard";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
@@ -12,22 +12,14 @@ import {
   useDeleteCurriculum,
   useEditCurriculum,
   useGetCurricula,
+  useEditCurriculumById,
+  useGetAllSubjects, 
+  useGetCalendars, 
+  useGetTerms
 } from "@/hooks/school-admin";
-import { useEditCurriculumById } from "@/hooks/school-admin";
-import { useGetAllSubjects, useGetCalendars, useGetTerms } from "@/hooks/school-admin";
-import { Calendar, CurriculumPayload, ErrorResponse, Subject, Term } from "@/@types";
+import { Calendar, CurriculumPayload, ErrorResponse, Subject, Term, CurriculumRecord, SubjectOption } from "@/@types";
 import { useRouter } from "next/navigation";
 
-type SubjectOption = { value: string; label: string };
-type CurriculumRecord = {
-  id: string;
-  name: string;
-  description?: string;
-  isActive: boolean;
-  subjectCatalogIds?: string[];
-  subjectCatalogs?: Array<{ id: string; name: string }>;
-  academicTerm?: { id: string; name?: string };
-};
 
 export const CurriculumTabSection: React.FC = () => {
   const router = useRouter();
@@ -101,17 +93,13 @@ export const CurriculumTabSection: React.FC = () => {
       (item.subjectCatalogIds as string[]) ??
       (item.subjectCatalogs?.map((s) => s.id) ?? []);
     setSelectedSubjectIds(ids);
-    // Preselect term and calendar if present
+    
+    // Extract term and calendar from the new structure
     const termId = item.academicTerm?.id || "";
+    const calendarId = item.academicCalendar?.id || item.academicTerm?.academicCalendar?.id || "";
+    
     setSelectedTermId(termId);
-    if (termId && calendars?.length) {
-      const owningCalendar = calendars.find((cal) =>
-        (cal?.terms || []).some((t) => String(t?.id) === String(termId))
-      );
-      if (owningCalendar?.id) {
-        setSelectedCalendarId(String(owningCalendar.id));
-      }
-    }
+    setSelectedCalendarId(calendarId);
   };
 
   const onDeleteClick = (id?: string) => {
@@ -119,18 +107,6 @@ export const CurriculumTabSection: React.FC = () => {
     setActiveId(id);
     setIsDeleteDialogOpen(true);
   };
-
-  // If calendars arrive after entering edit mode, derive the calendar from the selected term
-  useEffect(() => {
-    if (editMode && selectedTermId && !selectedCalendarId && calendars?.length) {
-      const owningCalendar = calendars.find((cal) =>
-        (cal?.terms || []).some((t) => String(t?.id) === String(selectedTermId))
-      );
-      if (owningCalendar?.id) {
-        setSelectedCalendarId(String(owningCalendar.id));
-      }
-    }
-  }, [editMode, selectedTermId, selectedCalendarId, calendars]);
 
   const onToggleActive = (item: CurriculumRecord) => {
     if (!item?.id) return;
@@ -305,6 +281,17 @@ export const CurriculumTabSection: React.FC = () => {
               onChange={(e) => {
                 setSelectedCalendarId(e as string);
                 setSelectedTermId("");
+                
+                // Auto-select first term when calendar changes during editing
+                if (editMode && e && calendars?.length) {
+                  const selectedCalendar = calendars.find(cal => cal.id === e);
+                  if (selectedCalendar?.terms && selectedCalendar.terms.length > 0) {
+                    const firstTermId = selectedCalendar.terms[0]?.id;
+                    if (firstTermId) {
+                      setSelectedTermId(firstTermId);
+                    }
+                  }
+                }
               }}
               searchable
             />

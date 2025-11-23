@@ -106,8 +106,14 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
   }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData, classData, studentData]);
 
-  const onHandleBreadCrumbPress = () => {
-    window.history.back();
+  const onHandleBreadCrumbPress = (event) => {
+    const oEventTarget = (event.currentTarget ?? event.target) as HTMLElement;
+    const spanText = oEventTarget.textContent?.trim() ?? '';
+    if (spanText === activeMenuItem && getSignedInRole() === Roles.SUPER_ADMIN) {
+      router.push(`/superadmin/schools`)
+    } else {
+      window.history.back();
+    }
   };
 
   const onHandleLogout = () => {

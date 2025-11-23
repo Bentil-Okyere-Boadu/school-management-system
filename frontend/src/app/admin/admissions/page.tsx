@@ -68,8 +68,8 @@ const Admissions = () => {
 
     try {
       await navigator.clipboard.writeText(textToCopy);
-      toast.success('Admission link copied to clipboard.');
       setIsCopied(true);
+      if(isCopied) toast.success('Admission link copied to clipboard.');
     } catch (err) {
       console.error('Failed to copy text: ', err);
       toast.error('Copy failed');

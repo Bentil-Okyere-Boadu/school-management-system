@@ -84,6 +84,7 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
           label={user && user !== 'admin'? "Email or ID" : "Email"}
           {...register("email")}
           type="email"
+          required
         />
         {errors.email && (
           <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>

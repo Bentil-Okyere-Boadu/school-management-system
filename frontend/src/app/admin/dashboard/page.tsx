@@ -32,8 +32,17 @@ const formSchema = z.object({
     message: 'Address must be at least 5 characters.',
   }),
   calendlyUrl: z.string().url({
-    message: 'Please enter a valid URL.', 
-  })
+    message: 'Please enter a valid URL.',
+  }).refine((val) => {
+    try {
+      const hostname = new URL(val).hostname.toLowerCase();
+      return hostname === 'calendly.com' || hostname.endsWith('.calendly.com');
+    } catch {
+      return false;
+    }
+  }, {
+    message: 'URL must be a Calendly link (calendly.com).',
+  }),
 });
 
 const AdminDashboard = () => {
@@ -41,7 +50,7 @@ const AdminDashboard = () => {
    const {
         register,
         handleSubmit,
-        formState: {},
+        formState: { errors },
         watch
       } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -106,20 +115,24 @@ const AdminDashboard = () => {
 
   const {isPending, mutate} = useCreateSchool()
   const createSchool = () => {
-    mutate({ 
-      name: schoolName, 
-      address: address, 
-      phone: phone, 
-      email: email,
-      calendlyUrl: calendlyUrl
-    }, {
-      onSuccess: () => {
-        closeDialog();
-      },
-      onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-      }
-    })
+    if(errors.address || errors.email || errors.phone || errors.schoolName || errors.calendlyUrl) {
+      toast.error("Please fill required fields in the right formats.");
+    } else {
+      mutate({ 
+        name: schoolName, 
+        address: address, 
+        phone: phone, 
+        email: email,
+        calendlyUrl: calendlyUrl
+      }, {
+        onSuccess: () => {
+          closeDialog();
+        },
+        onError: (error: unknown) => {
+          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+        }
+      })
+    }
   }
   const closeDialog = () => {
     setIsCreateSchoolDialogOpen(false);
@@ -168,6 +181,7 @@ const AdminDashboard = () => {
         <form onSubmit={handleSubmit(createSchool)} method='POST' className="my-3 flex flex-col gap-4">
           <InputField
             className="!py-0"
+            required
             label="School Name"
             isTransulent={isPending}
             {...register('schoolName')}
@@ -175,18 +189,21 @@ const AdminDashboard = () => {
           <InputField
             className="!py-0"
             label="Address"
+            required
             isTransulent={isPending}
             {...register('address')}
           />
           <InputField
             className="!py-0"
             label="Email"
+            required
             isTransulent={isPending}
             {...register('email')}
           />
           <InputField
             className="!py-0"
             label="Phone"
+            required
             isTransulent={isPending}
             {...register('phone')}
           />
@@ -195,6 +212,7 @@ const AdminDashboard = () => {
               className="mb-1 !py-0"
               label="Calendly URL"
               isTransulent={isPending}
+              required
               {...register('calendlyUrl')}
             />
             {<p className="text-sm">Click <Link href="https://calendly.com/scheduling" target="_blank" className="text-sm text-purple-600 hover:underline">

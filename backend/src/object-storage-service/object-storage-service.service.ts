@@ -40,12 +40,10 @@ export class ObjectStorageServiceService {
   private readonly maxDocumentSize = 10 * 1024 * 1024; // 10MB
 
   constructor(private configService: ConfigService) {
-    const region = this.configService.get<string>('AWS_REGION');
-    const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey = this.configService.get<string>(
-      'AWS_SECRET_ACCESS_KEY',
-    );
-    const bucket = this.configService.get<string>('AWS_BUCKET_NAME');
+    const region = process.env.AWS_REGION;
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    const bucket = process.env.AWS_BUCKET_NAME
 
     if (!region || !accessKeyId || !secretAccessKey || !bucket) {
       throw new Error('Missing AWS S3 configuration in environment variables');
