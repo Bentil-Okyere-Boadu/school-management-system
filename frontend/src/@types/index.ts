@@ -482,6 +482,7 @@ export interface Assignment {
   status: "published" | "draft";
   submissions:  number;
   isPublished: boolean;
+  classLevelId?: string;  
 }
 
 export interface AssignSubjectTeacherPayload {
@@ -605,6 +606,33 @@ export interface CurriculumPayload {
   subjectCatalogIds: string[];
   academicTermId: string;
 }
+
+export interface SubjectOption  { 
+  value: string; 
+  label: string 
+};
+
+export interface CurriculumRecord {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  subjectCatalogIds?: string[];
+  subjectCatalogs?: Array<{ id: string; name: string }>;
+  academicTerm?: { 
+    id: string; 
+    name?: string; 
+    termName?: string;
+    academicCalendar?: {
+      id: string;
+      name: string;
+    };
+  };
+  academicCalendar?: {
+    id: string;
+    name: string;
+  };
+};
 
 export interface CurriculumItem {
   id: string;

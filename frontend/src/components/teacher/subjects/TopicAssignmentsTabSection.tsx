@@ -76,6 +76,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
       maxScore: row.maxScore,
       status: row.status,
       isPublished: row.status === 'published',
+      classLevelId: row.classLevelId,
     });
     setIsDialogOpen(true);
   };
@@ -329,17 +330,16 @@ export const TopicAssignmentsTabSection: React.FC = () => {
               required
               disabled={!isCreate}
             />
-            {isCreate && (
-              <Select
-                label="Class Level"
-                placeholder="Select a class"
-                data={classOptions}
-                value={assignment.classLevelId}
-                onChange={(v) => setAssignment({ ...assignment, classLevelId: v || "" })}
-                searchable
-                required
-              />
-            )}
+            <Select
+              label="Class Level"
+              placeholder="Select a class"
+              data={classOptions}
+              value={assignment.classLevelId}
+              onChange={(v) => setAssignment({ ...assignment, classLevelId: v || "" })}
+              searchable
+              required
+              disabled={!isCreate}
+            />
           </div>
 
           <InputField
