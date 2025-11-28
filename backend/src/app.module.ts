@@ -47,7 +47,7 @@ import { CurriculumModule } from './curriculum/curriculum.module';
       // ssl: {
       //   rejectUnauthorized : false,
       // },
-      logging: false,
+      logging: true,
     }),
     CommonModule,
     RoleModule,
