@@ -38,6 +38,7 @@ import { CreateTeacherTopicDto } from './dto/create-teacher-topic.dto';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateTeacherTopicDto } from './dto/update-teacher-topic.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+import { GradeSubmissionDto } from './dto/grade-submission.dto';
 
 @Controller('teacher')
 export class TeacherController {
@@ -307,5 +308,47 @@ export class TeacherController {
     @Param('id') assignmentId: string,
   ) {
     return this.TeacherService.deleteAssignment(teacher, assignmentId);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments/:id/students')
+  @Roles(Role.Teacher)
+  getAssignmentStudents(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+  ) {
+    return this.TeacherService.getAssignmentStudents(teacher, assignmentId);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments/:id/submissions/:studentId')
+  @Roles(Role.Teacher)
+  getStudentSubmission(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.TeacherService.getStudentSubmission(
+      teacher,
+      assignmentId,
+      studentId,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('assignments/:id/submissions/:studentId/grade')
+  @Roles(Role.Teacher)
+  gradeSubmission(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+    @Param('studentId') studentId: string,
+    @Body() dto: GradeSubmissionDto,
+  ) {
+    return this.TeacherService.gradeSubmission(
+      teacher,
+      assignmentId,
+      studentId,
+      dto,
+    );
   }
 }

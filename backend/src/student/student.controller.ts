@@ -9,7 +9,11 @@ import {
   Param,
   Patch,
   Delete,
+  UseInterceptors,
+  UploadedFile,
+  Query,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { StudentAuthService } from './student.auth.service';
 import { Student } from './student.entity';
@@ -28,6 +32,7 @@ import { CreateParentDto } from 'src/parent/dto/create-parent-dto';
 import { UpdateParentDto } from 'src/parent/dto/update-parent-dto';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
+import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
 
 @Controller('student')
 export class StudentController {
@@ -121,5 +126,40 @@ export class StudentController {
   @Roles(Role.Student)
   async getAllAcademicCalendars(@CurrentUser() student: Student) {
     return this.academicCalendarService.findAllCalendars(student.school.id);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments')
+  @Roles(Role.Student)
+  getMyAssignments(
+    @CurrentUser() student: Student,
+    @Query('pending') pending?: string,
+    @Query('submitted') submitted?: string,
+    @Query('graded') graded?: string,
+  ) {
+    return this.studentService.getMyAssignments(
+      student,
+      pending,
+      submitted,
+      graded,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('assignments/:id/submit')
+  @Roles(Role.Student)
+  @UseInterceptors(FileInterceptor('file'))
+  async submitAssignment(
+    @CurrentUser() student: Student,
+    @Param('id') assignmentId: string,
+    @Body() dto: SubmitAssignmentDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.studentService.submitAssignment(
+      student,
+      assignmentId,
+      dto,
+      file,
+    );
   }
 }
