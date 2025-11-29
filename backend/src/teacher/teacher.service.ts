@@ -25,6 +25,9 @@ import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { Assignment } from './entities/assignment.entity';
 import { UpdateTeacherTopicDto } from './dto/update-teacher-topic.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
+import { GradeSubmissionDto } from './dto/grade-submission.dto';
+import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
 @Injectable()
 export class TeacherService {
@@ -34,6 +37,7 @@ export class TeacherService {
     private emailService: EmailService,
     private invitationService: InvitationService,
     private readonly profileService: ProfileService,
+    private readonly objectStorageService: ObjectStorageServiceService,
   ) {}
 
   async resendTeacherInvitation(
@@ -340,11 +344,35 @@ export class TeacherService {
   async getMyAssignments(teacherId: string) {
     const manager = this.teacherRepository.manager;
     const assignmentRepository = manager.getRepository(Assignment);
+    const submissionRepository = manager.getRepository(AssignmentSubmission);
 
     const assignments = await assignmentRepository.find({
       where: { teacher: { id: teacherId } },
       relations: ['topic', 'topic.subjectCatalog', 'classLevel'],
       order: { dueDate: 'ASC' },
+    });
+
+    // Get submission counts for all assignments
+    const assignmentIds = assignments.map((a) => a.id);
+
+    // If no assignments, return empty array early to avoid SQL syntax error with IN ()
+    if (assignmentIds.length === 0) {
+      return [];
+    }
+
+    const submissionCounts = await submissionRepository
+      .createQueryBuilder('submission')
+      .select('submission.assignment', 'assignmentId')
+      .addSelect('COUNT(submission.id)', 'count')
+      .where('submission.assignment IN (:...assignmentIds)', {
+        assignmentIds,
+      })
+      .groupBy('submission.assignment')
+      .getRawMany();
+
+    const countMap = new Map<string, number>();
+    submissionCounts.forEach((item) => {
+      countMap.set(item.assignmentId, parseInt(item.count, 10));
     });
 
     return assignments.map((a) => ({
@@ -355,7 +383,7 @@ export class TeacherService {
       topicId: a.topic?.id ?? null,
       dueDate: a.dueDate,
       status: a.state,
-      submissions: 0, // TODO: replace with real submissions count when implemented
+      submissions: countMap.get(a.id) ?? 0,
       maxScore: a.maxScore,
       class: a.classLevel?.name ?? null,
       classLevelId: a.classLevel?.id ?? null,
@@ -509,5 +537,393 @@ export class TeacherService {
 
     await assignmentRepository.delete(assignment.id);
     return { success: true, message: 'Assignment deleted successfully' };
+  }
+
+  async getAssignmentStudents(
+    teacher: Teacher,
+    assignmentId: string,
+    pending?: string,
+    submitted?: string,
+  ): Promise<
+    Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      studentId: string;
+      hasSubmitted: boolean;
+      submissionId: string | null;
+      status: string;
+      score: number | null;
+      feedback: string | null;
+      submittedAt: Date | null;
+    }>
+  > {
+    const manager = this.teacherRepository.manager;
+    const assignmentRepository = manager.getRepository(Assignment);
+    const classLevelRepository = manager.getRepository(ClassLevel);
+
+    // Verify assignment exists and belongs to teacher
+    const assignment = await assignmentRepository.findOne({
+      where: { id: assignmentId, teacher: { id: teacher.id } },
+      relations: ['classLevel'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment not found or you do not have access to it',
+      );
+    }
+
+    // Get all students in the assignment's class level
+    const classLevel = await classLevelRepository.findOne({
+      where: { id: assignment.classLevel.id },
+      relations: ['students', 'students.role'],
+    });
+
+    if (!classLevel) {
+      throw new NotFoundException('Class level not found');
+    }
+
+    // Get submissions for this assignment to show submission status
+    const submissionRepository = manager.getRepository(AssignmentSubmission);
+    const submissions = await submissionRepository.find({
+      where: { assignment: { id: assignmentId } },
+      relations: ['student'],
+    });
+
+    const submissionMap = new Map<string, AssignmentSubmission>();
+    submissions.forEach((sub) => {
+      submissionMap.set(sub.student.id, sub);
+    });
+
+    // Determine filter based on query parameters
+    let filter: 'pending' | 'submitted' | undefined;
+    if (pending !== undefined) {
+      filter = 'pending';
+    } else if (submitted !== undefined) {
+      filter = 'submitted';
+    }
+
+    // Filter students based on query parameter
+    let filteredStudents = classLevel.students;
+    if (filter === 'pending') {
+      // Only students without submissions
+      filteredStudents = classLevel.students.filter(
+        (student) => !submissionMap.has(student.id),
+      );
+    } else if (filter === 'submitted') {
+      // Only students with submissions
+      filteredStudents = classLevel.students.filter((student) =>
+        submissionMap.has(student.id),
+      );
+    }
+
+    // Map students with submission status
+    return filteredStudents.map((student) => {
+      const submission = submissionMap.get(student.id);
+
+      // Map status for teacher view:
+      // - No submission: "not submitted"
+      // - Submission with status "pending" in DB: "submitted" (submitted but not graded)
+      // - Submission with status "graded" or "returned": "graded"
+      let status: string;
+      if (!submission || !submission.status) {
+        status = 'not submitted';
+      } else {
+        const dbStatus = String(submission.status).toLowerCase();
+        if (dbStatus === 'pending') {
+          status = 'submitted'; // Submitted but not graded
+        } else if (dbStatus === 'graded' || dbStatus === 'returned') {
+          status = 'graded'; // Graded or returned
+        } else {
+          status = 'submitted'; // Default to submitted for any other status
+        }
+      }
+
+      return {
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        studentId: student.studentId,
+        hasSubmitted: !!submission,
+        submissionId: submission?.id ?? null,
+        status,
+        score: submission?.score ?? null,
+        feedback: submission?.feedback ?? null,
+        submittedAt: submission?.createdAt ?? null,
+      };
+    });
+  }
+
+  private formatOverdueTime(submittedAt: Date, dueDate: Date): string | null {
+    const submitted = new Date(submittedAt);
+    const due = new Date(dueDate);
+
+    // If submitted before or on due date, not overdue
+    if (submitted <= due) {
+      return null;
+    }
+
+    // Check if submitted on the same day as due date (not overdue if same day)
+    const submittedDate = new Date(
+      submitted.getFullYear(),
+      submitted.getMonth(),
+      submitted.getDate(),
+    );
+    const dueDateOnly = new Date(
+      due.getFullYear(),
+      due.getMonth(),
+      due.getDate(),
+    );
+
+    // If same day, not overdue
+    if (submittedDate.getTime() === dueDateOnly.getTime()) {
+      return null;
+    }
+
+    const diffMs = submitted.getTime() - due.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+
+    if (diffDays > 0) {
+      if (remainingHours > 0) {
+        return `overdue ${diffDays} day${diffDays > 1 ? 's' : ''} ${remainingHours} hr${remainingHours > 1 ? 's' : ''}`;
+      }
+      return `overdue ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    } else {
+      return `overdue ${diffHours} hr${diffHours > 1 ? 's' : ''}`;
+    }
+  }
+
+  async getStudentSubmission(
+    teacher: Teacher,
+    assignmentId: string,
+    studentId: string,
+  ): Promise<{
+    id: string;
+    assignment: {
+      id: string;
+      title: string;
+      instructions: string | null;
+      dueDate: Date;
+      maxScore: number;
+      topic: string | null;
+      subject: string | null;
+    };
+    student: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      studentId: string;
+    };
+    filePath: string | null;
+    fileUrl: string | null;
+    mediaType: string | null;
+    notes: string | null;
+    status: string;
+    score: number | null;
+    feedback: string | null;
+    submittedAt: Date;
+    updatedAt: Date;
+    overDue: string | null;
+  }> {
+    const manager = this.teacherRepository.manager;
+    const assignmentRepository = manager.getRepository(Assignment);
+    const submissionRepository = manager.getRepository(AssignmentSubmission);
+    const studentRepository = manager.getRepository(Student);
+
+    // Verify assignment exists and belongs to teacher
+    const assignment = await assignmentRepository.findOne({
+      where: { id: assignmentId, teacher: { id: teacher.id } },
+      relations: ['classLevel', 'topic', 'topic.subjectCatalog'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment not found or you do not have access to it',
+      );
+    }
+
+    // Verify student is in the assignment's class level
+    const student = await studentRepository.findOne({
+      where: { id: studentId },
+      relations: ['classLevels'],
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    const isInClass = student.classLevels?.some(
+      (cl) => cl.id === assignment.classLevel.id,
+    );
+
+    if (!isInClass) {
+      throw new BadRequestException(
+        'Student is not enrolled in the class for this assignment',
+      );
+    }
+
+    // Get submission
+    const submission = await submissionRepository.findOne({
+      where: {
+        assignment: { id: assignmentId },
+        student: { id: studentId },
+      },
+      relations: ['assignment', 'student'],
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    // Get signed URL for file if exists
+    let fileUrl: string | null = null;
+    if (submission.filePath) {
+      try {
+        fileUrl = await this.objectStorageService.getSignedUrl(
+          submission.filePath,
+        );
+      } catch (error) {
+        // Log error but don't fail the request
+        console.error('Failed to get signed URL for submission file:', error);
+      }
+    }
+
+    // Calculate overdue time
+    const overDue = this.formatOverdueTime(
+      submission.createdAt,
+      assignment.dueDate,
+    );
+
+    return {
+      id: submission.id,
+      assignment: {
+        id: assignment.id,
+        title: assignment.title,
+        instructions: assignment.instructions ?? null,
+        dueDate: assignment.dueDate,
+        maxScore: assignment.maxScore,
+        topic: assignment.topic?.name ?? null,
+        subject: assignment.topic?.subjectCatalog?.name ?? null,
+      },
+      student: {
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        studentId: student.studentId,
+      },
+      filePath: submission.filePath,
+      fileUrl,
+      mediaType: submission.mediaType,
+      notes: submission.notes,
+      status: submission.status,
+      score: submission.score,
+      feedback: submission.feedback,
+      submittedAt: submission.createdAt,
+      updatedAt: submission.updatedAt,
+      overDue,
+    };
+  }
+
+  async gradeSubmission(
+    teacher: Teacher,
+    assignmentId: string,
+    studentId: string,
+    dto: GradeSubmissionDto,
+  ): Promise<{
+    id: string;
+    assignment: string;
+    student: string;
+    score: number;
+    feedback: string | null;
+    status: string;
+    message: string;
+  }> {
+    const manager = this.teacherRepository.manager;
+    const assignmentRepository = manager.getRepository(Assignment);
+    const submissionRepository = manager.getRepository(AssignmentSubmission);
+    const studentRepository = manager.getRepository(Student);
+
+    // Verify assignment exists and belongs to teacher
+    const assignment = await assignmentRepository.findOne({
+      where: { id: assignmentId, teacher: { id: teacher.id } },
+      relations: ['classLevel'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        'Assignment not found or you do not have access to it',
+      );
+    }
+
+    // Verify student is in the assignment's class level
+    const student = await studentRepository.findOne({
+      where: { id: studentId },
+      relations: ['classLevels'],
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    const isInClass = student.classLevels?.some(
+      (cl) => cl.id === assignment.classLevel.id,
+    );
+
+    if (!isInClass) {
+      throw new BadRequestException(
+        'Student is not enrolled in the class for this assignment',
+      );
+    }
+
+    // Verify score doesn't exceed max score
+    if (dto.score > assignment.maxScore) {
+      throw new BadRequestException(
+        `Score cannot exceed maximum score of ${assignment.maxScore}`,
+      );
+    }
+
+    // Get or create submission
+    let submission = await submissionRepository.findOne({
+      where: {
+        assignment: { id: assignmentId },
+        student: { id: studentId },
+      },
+    });
+
+    if (!submission) {
+      throw new NotFoundException(
+        'Submission not found. Student must submit the assignment first.',
+      );
+    }
+
+    // Update submission with grade
+    submission.score = dto.score;
+    if (dto.feedback !== undefined) {
+      submission.feedback = dto.feedback;
+    }
+    if (dto.status) {
+      submission.status = dto.status;
+    } else {
+      submission.status = 'graded';
+    }
+
+    const saved = await submissionRepository.save(submission);
+
+    return {
+      id: saved.id,
+      assignment: assignment.title,
+      student: `${student.firstName} ${student.lastName}`,
+      score: saved.score,
+      feedback: saved.feedback,
+      status: saved.status,
+      message: 'Submission graded successfully',
+    };
   }
 }

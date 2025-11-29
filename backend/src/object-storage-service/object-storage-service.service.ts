@@ -174,6 +174,39 @@ export class ObjectStorageServiceService {
     }
   }
 
+  // Upload assignment submission document
+  async uploadAssignmentSubmission(
+    file: Express.Multer.File,
+    schoolId: string,
+    assignmentId: string,
+    studentId: string,
+  ): Promise<{ path: string; url: string }> {
+    this.validateDocumentFile(file);
+
+    const documentPath = `schools/${schoolId}/assignments/${assignmentId}/submissions/${studentId}-${uuidv4()}${path.extname(file.originalname)}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: documentPath,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      Metadata: {
+        schoolId,
+        assignmentId,
+        studentId,
+        uploadedAt: new Date().toISOString(),
+        originalName: file.originalname,
+        assetType: 'assignment-submission',
+      },
+      CacheControl: 'max-age=86400', // 24 hours
+    });
+
+    await this.s3Client.send(command);
+    const url = await this.getSignedUrl(documentPath);
+
+    return { path: documentPath, url };
+  }
+
   // Validate file for profile image upload
   private validateImageFile(file: Express.Multer.File): void {
     if (!file) {
