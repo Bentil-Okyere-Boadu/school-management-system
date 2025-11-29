@@ -354,6 +354,12 @@ export class TeacherService {
 
     // Get submission counts for all assignments
     const assignmentIds = assignments.map((a) => a.id);
+    
+    // If no assignments, return empty array early to avoid SQL syntax error with IN ()
+    if (assignmentIds.length === 0) {
+      return [];
+    }
+
     const submissionCounts = await submissionRepository
       .createQueryBuilder('submission')
       .select('submission.assignment', 'assignmentId')
