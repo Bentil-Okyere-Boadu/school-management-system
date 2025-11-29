@@ -316,8 +316,15 @@ export class TeacherController {
   getAssignmentStudents(
     @CurrentUser() teacher: Teacher,
     @Param('id') assignmentId: string,
+    @Query('pending') pending?: string,
+    @Query('submitted') submitted?: string,
   ) {
-    return this.TeacherService.getAssignmentStudents(teacher, assignmentId);
+    return this.TeacherService.getAssignmentStudents(
+      teacher,
+      assignmentId,
+      pending,
+      submitted,
+    );
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)

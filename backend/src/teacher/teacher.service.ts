@@ -354,7 +354,7 @@ export class TeacherService {
 
     // Get submission counts for all assignments
     const assignmentIds = assignments.map((a) => a.id);
-    
+
     // If no assignments, return empty array early to avoid SQL syntax error with IN ()
     if (assignmentIds.length === 0) {
       return [];
@@ -542,6 +542,8 @@ export class TeacherService {
   async getAssignmentStudents(
     teacher: Teacher,
     assignmentId: string,
+    pending?: string,
+    submitted?: string,
   ): Promise<
     Array<{
       id: string;
@@ -551,8 +553,9 @@ export class TeacherService {
       studentId: string;
       hasSubmitted: boolean;
       submissionId: string | null;
-      submissionStatus: string | null;
+      status: string;
       score: number | null;
+      feedback: string | null;
       submittedAt: Date | null;
     }>
   > {
@@ -594,9 +597,50 @@ export class TeacherService {
       submissionMap.set(sub.student.id, sub);
     });
 
+    // Determine filter based on query parameters
+    let filter: 'pending' | 'submitted' | undefined;
+    if (pending !== undefined) {
+      filter = 'pending';
+    } else if (submitted !== undefined) {
+      filter = 'submitted';
+    }
+
+    // Filter students based on query parameter
+    let filteredStudents = classLevel.students;
+    if (filter === 'pending') {
+      // Only students without submissions
+      filteredStudents = classLevel.students.filter(
+        (student) => !submissionMap.has(student.id),
+      );
+    } else if (filter === 'submitted') {
+      // Only students with submissions
+      filteredStudents = classLevel.students.filter((student) =>
+        submissionMap.has(student.id),
+      );
+    }
+
     // Map students with submission status
-    return classLevel.students.map((student) => {
+    return filteredStudents.map((student) => {
       const submission = submissionMap.get(student.id);
+
+      // Map status for teacher view:
+      // - No submission: "not submitted"
+      // - Submission with status "pending" in DB: "submitted" (submitted but not graded)
+      // - Submission with status "graded" or "returned": "graded"
+      let status: string;
+      if (!submission || !submission.status) {
+        status = 'not submitted';
+      } else {
+        const dbStatus = String(submission.status).toLowerCase();
+        if (dbStatus === 'pending') {
+          status = 'submitted'; // Submitted but not graded
+        } else if (dbStatus === 'graded' || dbStatus === 'returned') {
+          status = 'graded'; // Graded or returned
+        } else {
+          status = 'submitted'; // Default to submitted for any other status
+        }
+      }
+
       return {
         id: student.id,
         firstName: student.firstName,
@@ -605,8 +649,9 @@ export class TeacherService {
         studentId: student.studentId,
         hasSubmitted: !!submission,
         submissionId: submission?.id ?? null,
-        submissionStatus: submission?.status ?? null,
+        status,
         score: submission?.score ?? null,
+        feedback: submission?.feedback ?? null,
         submittedAt: submission?.createdAt ?? null,
       };
     });
