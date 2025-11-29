@@ -657,6 +657,47 @@ export class TeacherService {
     });
   }
 
+  private formatOverdueTime(submittedAt: Date, dueDate: Date): string | null {
+    const submitted = new Date(submittedAt);
+    const due = new Date(dueDate);
+
+    // If submitted before or on due date, not overdue
+    if (submitted <= due) {
+      return null;
+    }
+
+    // Check if submitted on the same day as due date (not overdue if same day)
+    const submittedDate = new Date(
+      submitted.getFullYear(),
+      submitted.getMonth(),
+      submitted.getDate(),
+    );
+    const dueDateOnly = new Date(
+      due.getFullYear(),
+      due.getMonth(),
+      due.getDate(),
+    );
+
+    // If same day, not overdue
+    if (submittedDate.getTime() === dueDateOnly.getTime()) {
+      return null;
+    }
+
+    const diffMs = submitted.getTime() - due.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+
+    if (diffDays > 0) {
+      if (remainingHours > 0) {
+        return `overdue ${diffDays} day${diffDays > 1 ? 's' : ''} ${remainingHours} hr${remainingHours > 1 ? 's' : ''}`;
+      }
+      return `overdue ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    } else {
+      return `overdue ${diffHours} hr${diffHours > 1 ? 's' : ''}`;
+    }
+  }
+
   async getStudentSubmission(
     teacher: Teacher,
     assignmentId: string,
@@ -688,6 +729,7 @@ export class TeacherService {
     feedback: string | null;
     submittedAt: Date;
     updatedAt: Date;
+    overDue: string | null;
   }> {
     const manager = this.teacherRepository.manager;
     const assignmentRepository = manager.getRepository(Assignment);
@@ -752,6 +794,12 @@ export class TeacherService {
       }
     }
 
+    // Calculate overdue time
+    const overDue = this.formatOverdueTime(
+      submission.createdAt,
+      assignment.dueDate,
+    );
+
     return {
       id: submission.id,
       assignment: {
@@ -779,6 +827,7 @@ export class TeacherService {
       feedback: submission.feedback,
       submittedAt: submission.createdAt,
       updatedAt: submission.updatedAt,
+      overDue,
     };
   }
 
