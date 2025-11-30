@@ -14,6 +14,8 @@ interface DialogProps {
   backdropOpacity?: number;
   busy?: boolean;
   subheader?: string;
+  hideCancelButton?: boolean;
+  dialogWidth?: string;
 }
 
 export const Dialog: React.FC<DialogProps> = ({
@@ -25,7 +27,9 @@ export const Dialog: React.FC<DialogProps> = ({
   children,
   backdropOpacity = 0.7,
   busy = false,
-  subheader= ''
+  subheader= '',
+  hideCancelButton = false,
+  dialogWidth = 'w-[568px] max-w-[569px]',
 }) => {
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export const Dialog: React.FC<DialogProps> = ({
       style={{ backgroundColor: `rgba(217, 217, 217, ${backdropOpacity})` }}
       onClick={handleBackdropClick}
     >
-      <div className="bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg py-5 px-1 z-50 max-h-[90vh] flex flex-col w-[568px] max-w-[569px] mx-2 relative">
+      <div className={`bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg py-5 px-1 z-50 max-h-[90vh] flex flex-col ${dialogWidth} mx-2 relative`}>
         {busy && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10 dialogOpacity">
             <HashLoader color="#AB58E7" size={40} />
@@ -88,6 +92,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
         {/* Dialog Footer */}
         <div className="flex justify-end items-center gap-4 px-4">
+          {!hideCancelButton &&(
           <button
             aria-label="Close"
             onClick={onClose}
@@ -96,6 +101,8 @@ export const Dialog: React.FC<DialogProps> = ({
             {" "}
             Cancel
           </button>
+          )}
+
           <CustomButton text={saveButtonText} onClick={onSave} />
         </div>
       </div>

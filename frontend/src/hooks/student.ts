@@ -120,3 +120,33 @@ export const useGetMyResults = (
 
   return { resultsData, isLoading, refetch };
 };
+
+export const useGetStudentAssignments = (status: 'pending' | 'submitted' | 'graded') => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['studentAssignments', status],
+    queryFn: () => {
+      return customAPI.get(`/student/assignments?${status}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const assignments = data?.data || [];
+
+  return { assignments, isLoading, refetch };
+};
+
+export const useSubmitAssignment = (assignmentId: string) => {
+  return useMutation({
+    mutationFn: (payload: { file: File; notes: string }) => {
+      const formData = new FormData();
+      formData.append('file', payload.file);
+      formData.append('notes', payload.notes);
+
+      return customAPI.post(`/student/assignments/${assignmentId}/submit`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+  });
+};

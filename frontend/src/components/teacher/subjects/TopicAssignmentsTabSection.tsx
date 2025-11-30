@@ -1,11 +1,12 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { SearchBar } from "@/components/common/SearchBar";
 import { Menu, Select, Switch } from "@mantine/core";
-import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
+import { IconDots, IconEdit, IconTrashFilled, IconClipboardCheck } from "@tabler/icons-react";
 import { Topic, Assignment, ErrorResponse } from "@/@types";
 import { useGetTeacherTopics, useGetTeacherAssignments, useCreateTeacherAssignment, useUpdateTeacherAssignment, useDeleteTeacherAssignment, useGetTeacherSubjectClasses } from "@/hooks/teacher";
 import { toast } from "react-toastify";
@@ -13,6 +14,7 @@ import { HashLoader } from "react-spinners";
 
 
 export const TopicAssignmentsTabSection: React.FC = () => {
+  const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
@@ -284,6 +286,12 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                               <IconDots className="cursor-pointer" />
                             </Menu.Target>
                             <Menu.Dropdown className="!-ml-12 !-mt-2">
+                              <Menu.Item
+                                onClick={() => router.push(`/teacher/assignments/${row.id}/grading`)}
+                                leftSection={<IconClipboardCheck size={18} color="#AB58E7" />}
+                              >
+                                Go to grading
+                              </Menu.Item>
                               <Menu.Item
                                 onClick={() => onOpenEdit(row)}
                                 leftSection={<IconEdit size={18} color="#AB58E7" />}

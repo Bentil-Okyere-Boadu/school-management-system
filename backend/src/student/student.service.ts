@@ -291,6 +291,7 @@ export class StudentService {
             : (a.teacher?.email ?? null),
         dueDate: a.dueDate,
         status,
+        instructions: a.instructions,
         submissionId: submission?.id ?? null,
         score: submission?.score ?? null,
         feedback: submission?.feedback ?? null,
