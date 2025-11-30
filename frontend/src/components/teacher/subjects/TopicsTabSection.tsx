@@ -145,7 +145,10 @@ export const TopicsTabSection: React.FC = () => {
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-center max-md:px-5 max-w-[150px]">
                     <div>Subject</div>
                   </th>
-                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[50px]"></th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-center max-md:px-5 max-w-[120px]">
+                    <div>Created By</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 max-w-[80px] pr-10">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,7 +156,7 @@ export const TopicsTabSection: React.FC = () => {
                   if (isLoading) {
                     return (
                       <tr>
-                        <td colSpan={4}>
+                        <td colSpan={5}>
                           <div className="relative py-20 bg-white">
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                               <HashLoader color="#AB58E7" size={40} />
@@ -167,7 +170,7 @@ export const TopicsTabSection: React.FC = () => {
                   if (!topics?.length) {
                     return (
                       <tr>
-                        <td colSpan={4}>
+                        <td colSpan={5}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No topics assigned</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -183,6 +186,7 @@ export const TopicsTabSection: React.FC = () => {
                     subjectCatalog?: { id?: string; name?: string; curriculum?: { name?: string } };
                     curriculum?: { name?: string };
                     subject?: { name?: string };
+                    createdBy?: string;
                   };
                   return topics.map((row: TopicRow) => (
                     <tr key={row.id}>
@@ -198,26 +202,39 @@ export const TopicsTabSection: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div className="flex items-center justify-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            row.createdBy === "admin" 
+                              ? "bg-red-100 text-red-700" 
+                              : "bg-green-100 text-green-700"
+                          }`}>
+                            {row.createdBy === "admin" ? "Admin" : "Teacher"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex items-center justify-end pr-6">
-                          <Menu shadow="md" width={200}>
-                            <Menu.Target>
-                              <IconDots className="cursor-pointer" />
-                            </Menu.Target>
-                            <Menu.Dropdown className="!-ml-12 !-mt-2">
-                              <Menu.Item
-                                onClick={() => onOpenEdit(row)}
-                                leftSection={<IconEdit size={18} color="#AB58E7" />}
-                              >
-                                Edit
-                              </Menu.Item>
-                              <Menu.Item
-                                onClick={() => onAskDelete(row)}
-                                leftSection={<IconTrashFilled size={18} color="red" />}
-                              >
-                                Delete
-                              </Menu.Item>
-                            </Menu.Dropdown>
-                          </Menu>
+                          {row.createdBy !== "admin" && (
+                            <Menu shadow="md" width={200}>
+                              <Menu.Target>
+                                <IconDots className="cursor-pointer" />
+                              </Menu.Target>
+                              <Menu.Dropdown className="!-ml-12 !-mt-2">
+                                <Menu.Item
+                                  onClick={() => onOpenEdit(row)}
+                                  leftSection={<IconEdit size={18} color="#AB58E7" />}
+                                >
+                                  Edit
+                                </Menu.Item>
+                                <Menu.Item
+                                  onClick={() => onAskDelete(row)}
+                                  leftSection={<IconTrashFilled size={18} color="red" />}
+                                >
+                                  Delete
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          )}
                         </div>
                       </td>
                     </tr>
