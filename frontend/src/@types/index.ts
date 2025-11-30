@@ -488,6 +488,21 @@ export interface Assignment {
   classLevelId?: string;  
 }
 
+export interface StudentAssignment {
+  id: string;
+  title: string;
+  assignment: string;
+  subject: string;
+  teacher: string;
+  dueDate: string;
+  submittedDate?: string;
+  submittedAt?:string;
+  score?: number;
+  maxScore?: number;
+  status: "pending" | "submitted" | "graded";
+  daysOverdue?: number;
+}
+
 export interface AssignSubjectTeacherPayload {
   subjectCatalogId: string;
   classLevelIds: string[];
