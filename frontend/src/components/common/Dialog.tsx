@@ -14,6 +14,7 @@ interface DialogProps {
   backdropOpacity?: number;
   busy?: boolean;
   subheader?: string;
+  hideCancelButton?: boolean;
 }
 
 export const Dialog: React.FC<DialogProps> = ({
@@ -25,7 +26,8 @@ export const Dialog: React.FC<DialogProps> = ({
   children,
   backdropOpacity = 0.7,
   busy = false,
-  subheader= ''
+  subheader= '',
+  hideCancelButton = false,
 }) => {
 
   useEffect(() => {
@@ -88,6 +90,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
         {/* Dialog Footer */}
         <div className="flex justify-end items-center gap-4 px-4">
+          {!hideCancelButton &&(
           <button
             aria-label="Close"
             onClick={onClose}
@@ -96,6 +99,8 @@ export const Dialog: React.FC<DialogProps> = ({
             {" "}
             Cancel
           </button>
+          )}
+
           <CustomButton text={saveButtonText} onClick={onSave} />
         </div>
       </div>

@@ -503,6 +503,20 @@ export interface StudentAssignment {
   daysOverdue?: number;
 }
 
+export interface AssignmentSubmission {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  studentId: string;
+  hasSubmitted: boolean;
+  submissionId: string | null;
+  status: string;
+  score: number | null;
+  feedback: string | null;
+  submittedAt: Date | null;
+}
+
 export interface AssignSubjectTeacherPayload {
   subjectCatalogId: string;
   classLevelIds: string[];

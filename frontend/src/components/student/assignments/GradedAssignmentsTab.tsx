@@ -1,16 +1,26 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import CustomButton from "@/components/Button";
 import { StudentAssignment } from "@/@types";
 import { useGetStudentAssignments } from "@/hooks/student";
 import { HashLoader } from "react-spinners";
+import { Dialog } from "@/components/common/Dialog";
+
+// Extended interface for assignment with feedback data
+interface AssignmentWithFeedback extends Omit<StudentAssignment, 'dueDate'> {
+  feedback?: string;
+  dueDate?: string;
+  submittedAt?: string;
+}
 
 export const GradedAssignmentsTab: React.FC = () => {
   const { assignments, isLoading } = useGetStudentAssignments("graded");
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<AssignmentWithFeedback | null>(null);
 
   const handleViewFeedbackClick = (assignment: StudentAssignment) => {
-    // TODO: Implement view feedback functionality
-    console.log("View feedback for assignment:", assignment);
+    setSelectedAssignment(assignment as AssignmentWithFeedback);
+    setIsFeedbackDialogOpen(true);
   };
 
   return (
@@ -83,9 +93,7 @@ export const GradedAssignmentsTab: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div className="text-purple-600 font-medium">
-                      {assignment.score !== undefined && assignment.maxScore !== undefined
-                        ? `${assignment.score}/${assignment.maxScore}`
-                        : "-"}
+                      {assignment.score  ? `${assignment.score}` : "-"}
                     </div>
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
@@ -106,6 +114,45 @@ export const GradedAssignmentsTab: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Assignment Feedback Dialog */}
+      <Dialog 
+        isOpen={isFeedbackDialogOpen}
+        busy={false}
+        dialogTitle="Assignment Feedback"
+        saveButtonText="Close"
+        hideCancelButton={true}
+        onClose={() => setIsFeedbackDialogOpen(false)} 
+        onSave={() => setIsFeedbackDialogOpen(false)}
+      >
+        <div className="my-3 flex flex-col gap-4">
+          {selectedAssignment && (
+            <>
+              <div className="grid grid-cols-1 gap-4 mt-6">
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Assignment</div>
+                  <p className="text-gray-900 mt-1">{selectedAssignment.assignment}</p>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Score</div>
+                  <p className="text-purple-600 font-medium text-[32px]">
+                    {selectedAssignment.score  ? `${selectedAssignment.score}` : "-"}
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm font-medium text-gray-500">{selectedAssignment.teacher}&apos;s Feedback</div>
+                <div className="bg-gray-100 rounded-lg p-4 mt-1 min-h-[100px]">
+                  <p className="text-gray-900 whitespace-pre-wrap">
+                    {selectedAssignment.feedback || "No feedback provided yet."}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </Dialog>
     </section>
   );
 };

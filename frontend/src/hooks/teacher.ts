@@ -536,3 +536,45 @@ export const useIsClassTeacher = (
 
   return { isClassTeacher, isPending, refetch };
 };
+
+export const useGetAssignmentSubmittedStudents = (assignmentId: string) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['assignmentSubmittedStudents', assignmentId],
+    queryFn: () => {
+      return customAPI.get(`/teacher/assignments/${assignmentId}/students?submitted`);
+    },
+    enabled: !!assignmentId,
+    refetchOnWindowFocus: true,
+  });
+
+  const submittedStudents = data?.data || [];
+
+  return { submittedStudents, isLoading, refetch };
+};
+
+export const useGetAssignmentPendingStudents = (assignmentId: string) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['assignmentPendingStudents', assignmentId],
+    queryFn: () => {
+      return customAPI.get(`/teacher/assignments/${assignmentId}/students?pending`);
+    },
+    enabled: !!assignmentId,
+    refetchOnWindowFocus: true,
+  });
+
+  const pendingStudents = data?.data || [];
+
+  return { pendingStudents, isLoading, refetch };
+};
+
+export const useGradeAssignmentSubmission = () => {
+  return useMutation({
+    mutationFn: ({ assignmentId, studentId, ...payload }: { 
+      assignmentId: string;
+      studentId: string;
+      score: number; 
+      feedback?: string;
+    }) =>
+      customAPI.patch(`/teacher/assignments/${assignmentId}/submissions/${studentId}/grade`, payload),
+  });
+};
