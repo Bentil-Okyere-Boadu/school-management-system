@@ -185,7 +185,7 @@ export const SubmittedTab: React.FC<SubmittedTabProps> = ({ assignmentId, maxSco
                           className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1"
                         />
                         <CustomButton 
-                          text={student.status === "graded" || (student.score !== null && student.score !== undefined) ? "View Grade" : "Grade"}
+                          text="Grade"
                           onClick={() => handleGradeClick(student)}
                           className="text-xs px-3 py-1" 
                         />
@@ -348,7 +348,7 @@ export const SubmittedTab: React.FC<SubmittedTabProps> = ({ assignmentId, maxSco
               {/* Submission Content */}
               {submissionDetails.data.notes && (
                 <div className="mb-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Students&apos; additional notes</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">Student&apos; notes</h4>
                   <div className="bg-white border rounded-lg p-3">
                     <p className="text-gray-900 whitespace-pre-wrap">{submissionDetails.data.notes}</p>
                   </div>
