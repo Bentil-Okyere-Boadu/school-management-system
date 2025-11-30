@@ -15,6 +15,7 @@ interface DialogProps {
   busy?: boolean;
   subheader?: string;
   hideCancelButton?: boolean;
+  dialogWidth?: string;
 }
 
 export const Dialog: React.FC<DialogProps> = ({
@@ -28,6 +29,7 @@ export const Dialog: React.FC<DialogProps> = ({
   busy = false,
   subheader= '',
   hideCancelButton = false,
+  dialogWidth = 'w-[568px] max-w-[569px]',
 }) => {
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export const Dialog: React.FC<DialogProps> = ({
       style={{ backgroundColor: `rgba(217, 217, 217, ${backdropOpacity})` }}
       onClick={handleBackdropClick}
     >
-      <div className="bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg py-5 px-1 z-50 max-h-[90vh] flex flex-col w-[568px] max-w-[569px] mx-2 relative">
+      <div className={`bg-white border-1 border-[#AB58E7] rounded-xl shadow-lg py-5 px-1 z-50 max-h-[90vh] flex flex-col ${dialogWidth} mx-2 relative`}>
         {busy && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10 dialogOpacity">
             <HashLoader color="#AB58E7" size={40} />

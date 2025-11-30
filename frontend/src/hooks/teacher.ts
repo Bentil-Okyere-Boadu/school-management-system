@@ -578,3 +578,11 @@ export const useGradeAssignmentSubmission = () => {
       customAPI.patch(`/teacher/assignments/${assignmentId}/submissions/${studentId}/grade`, payload),
   });
 };
+
+export const useGetStudentSubmissionDetails = (assignmentId: string, studentId: string, enabled: boolean = false) => {
+  return useQuery({
+    queryKey: ['studentSubmission', assignmentId, studentId],
+    queryFn: () => customAPI.get(`/teacher/assignments/${assignmentId}/submissions/${studentId}`),
+    enabled: enabled && !!assignmentId && !!studentId,
+  });
+};
