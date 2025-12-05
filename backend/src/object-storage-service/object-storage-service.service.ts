@@ -174,6 +174,37 @@ export class ObjectStorageServiceService {
     }
   }
 
+  // Upload assignment attachment (teacher uploads file for assignment)
+  async uploadAssignmentAttachment(
+    file: Express.Multer.File,
+    schoolId: string,
+    assignmentId: string,
+  ): Promise<{ path: string; url: string }> {
+    this.validateDocumentFile(file);
+
+    const attachmentPath = `schools/${schoolId}/assignments/${assignmentId}/attachments/${uuidv4()}${path.extname(file.originalname)}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: attachmentPath,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      Metadata: {
+        schoolId,
+        assignmentId,
+        uploadedAt: new Date().toISOString(),
+        originalName: file.originalname,
+        assetType: 'assignment-attachment',
+      },
+      CacheControl: 'max-age=86400', // 24 hours
+    });
+
+    await this.s3Client.send(command);
+    const url = await this.getSignedUrl(attachmentPath);
+
+    return { path: attachmentPath, url };
+  }
+
   // Upload assignment submission document
   async uploadAssignmentSubmission(
     file: Express.Multer.File,

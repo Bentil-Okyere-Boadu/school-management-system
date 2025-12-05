@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -31,6 +32,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 
 @Injectable()
 export class TeacherService {
+  private readonly logger = new Logger(TeacherService.name);
   constructor(
     @InjectRepository(Teacher)
     private teacherRepository: Repository<Teacher>,
@@ -282,12 +284,26 @@ export class TeacherService {
     return topicRepository.save(topic);
   }
 
-  async createAssignment(teacher: Teacher, dto: CreateAssignmentDto) {
+  async createAssignment(
+    teacher: Teacher,
+    dto: CreateAssignmentDto,
+    file?: Express.Multer.File,
+  ) {
     const manager = this.teacherRepository.manager;
     const topicRepository = manager.getRepository(Topic);
     const classLevelRepository = manager.getRepository(ClassLevel);
     const subjectRepository = manager.getRepository(Subject);
     const assignmentRepository = manager.getRepository(Assignment);
+
+    // Get teacher with school relation
+    const teacherWithSchool = await this.teacherRepository.findOne({
+      where: { id: teacher.id },
+      relations: ['school'],
+    });
+
+    if (!teacherWithSchool?.school) {
+      throw new NotFoundException('Teacher school not found');
+    }
 
     const [topic, classLevel] = await Promise.all([
       topicRepository.findOne({
@@ -327,18 +343,43 @@ export class TeacherService {
       );
     }
 
+    // Create assignment first to get the ID for file upload path
     const assignment = assignmentRepository.create({
       title: dto.title,
       instructions: dto.instructions,
       dueDate: new Date(dto.dueDate),
-      maxScore: dto.maxScore,
+      maxScore: +dto.maxScore,
       state: dto.state,
       topic,
       classLevel,
       teacher: { id: teacher.id } as Teacher,
     });
 
-    return assignmentRepository.save(assignment);
+    const savedAssignment = await assignmentRepository.save(assignment);
+
+    // Upload file if provided
+    if (file) {
+      try {
+        const uploadResult =
+          await this.objectStorageService.uploadAssignmentAttachment(
+            file,
+            teacherWithSchool.school.id,
+            savedAssignment.id,
+          );
+        savedAssignment.attachmentPath = uploadResult.path;
+        savedAssignment.attachmentMediaType = file.mimetype;
+        await assignmentRepository.save(savedAssignment);
+      } catch (error) {
+        // If file upload fails, delete the created assignment
+        await assignmentRepository.delete(savedAssignment.id);
+        this.logger.error(
+          `Failed to upload assignment attachment for assignment ${savedAssignment.id}: ${error}`,
+        );
+        throw new BadRequestException('Failed to upload assignment attachment');
+      }
+    }
+
+    return savedAssignment;
   }
 
   async getMyAssignments(teacherId: string) {
@@ -371,23 +412,49 @@ export class TeacherService {
       .getRawMany();
 
     const countMap = new Map<string, number>();
-    submissionCounts.forEach((item) => {
-      countMap.set(item.assignmentId, parseInt(item.count, 10));
-    });
+    submissionCounts.forEach(
+      (item: { assignmentId: string; count: string }) => {
+        countMap.set(item.assignmentId, parseInt(item.count, 10));
+      },
+    );
 
-    return assignments.map((a) => ({
-      id: a.id,
-      title: a.title,
-      instructions: a.instructions ?? null,
-      topic: a.topic?.name ?? null,
-      topicId: a.topic?.id ?? null,
-      dueDate: a.dueDate,
-      status: a.state,
-      submissions: countMap.get(a.id) ?? 0,
-      maxScore: a.maxScore,
-      class: a.classLevel?.name ?? null,
-      classLevelId: a.classLevel?.id ?? null,
-    }));
+    // Get signed URLs for attachments
+    const assignmentsWithAttachments = await Promise.all(
+      assignments.map(async (a) => {
+        let attachmentUrl: string | null = null;
+        if (a.attachmentPath) {
+          try {
+            attachmentUrl = await this.objectStorageService.getSignedUrl(
+              a.attachmentPath,
+            );
+          } catch (error) {
+            console.error(
+              `Failed to get signed URL for assignment ${a.id}:`,
+              error,
+            );
+          }
+        }
+
+        return {
+          id: a.id,
+          title: a.title,
+          instructions: a.instructions ?? null,
+          topic: a.topic?.name ?? null,
+          topicId: a.topic?.id ?? null,
+          dueDate: a.dueDate,
+          status: a.state,
+          submissions: countMap.get(a.id) ?? 0,
+          maxScore: a.maxScore,
+          class: a.classLevel?.name ?? null,
+          classLevelId: a.classLevel?.id ?? null,
+          attachmentPath: a.attachmentPath,
+          attachmentUrl,
+          attachmentMediaType: a.attachmentMediaType ?? null,
+        };
+      }),
+    );
+
+    return assignmentsWithAttachments;
   }
 
   private isCreatedByTeacher(teacher: Teacher, topic: Topic): boolean {
@@ -489,9 +556,20 @@ export class TeacherService {
     teacher: Teacher,
     assignmentId: string,
     dto: UpdateAssignmentDto,
+    file?: Express.Multer.File,
   ) {
     const manager = this.teacherRepository.manager;
     const assignmentRepository = manager.getRepository(Assignment);
+
+    // Get teacher with school relation
+    const teacherWithSchool = await this.teacherRepository.findOne({
+      where: { id: teacher.id },
+      relations: ['school'],
+    });
+
+    if (!teacherWithSchool?.school) {
+      throw new NotFoundException('Teacher school not found');
+    }
 
     const assignment = await assignmentRepository.findOne({
       where: { id: assignmentId },
@@ -514,6 +592,34 @@ export class TeacherService {
     if (dto.maxScore !== undefined) assignment.maxScore = dto.maxScore;
     if (dto.state !== undefined) assignment.state = dto.state;
 
+    // Handle file upload/update
+    if (file) {
+      // Delete old file if exists
+      if (assignment.attachmentPath) {
+        try {
+          await this.objectStorageService.deleteFile(assignment.attachmentPath);
+        } catch (error) {
+          // Log error but don't fail the update
+          console.error('Failed to delete old attachment:', error);
+        }
+      }
+
+      // Upload new file
+      try {
+        const uploadResult =
+          await this.objectStorageService.uploadAssignmentAttachment(
+            file,
+            teacherWithSchool.school.id,
+            assignment.id,
+          );
+        assignment.attachmentPath = uploadResult.path;
+        assignment.attachmentMediaType = file.mimetype;
+      } catch (error) {
+        this.logger.error('Failed to upload assignment attachment:', error);
+        throw new BadRequestException('Failed to upload assignment attachment');
+      }
+    }
+
     return assignmentRepository.save(assignment);
   }
 
@@ -533,6 +639,16 @@ export class TeacherService {
       throw new BadRequestException(
         'You can only delete assignments you created',
       );
+    }
+
+    // Delete attachment file if exists
+    if (assignment.attachmentPath) {
+      try {
+        await this.objectStorageService.deleteFile(assignment.attachmentPath);
+      } catch (error) {
+        // Log error but don't fail the deletion
+        console.error('Failed to delete assignment attachment:', error);
+      }
     }
 
     await assignmentRepository.delete(assignment.id);
@@ -702,35 +818,7 @@ export class TeacherService {
     teacher: Teacher,
     assignmentId: string,
     studentId: string,
-  ): Promise<{
-    id: string;
-    assignment: {
-      id: string;
-      title: string;
-      instructions: string | null;
-      dueDate: Date;
-      maxScore: number;
-      topic: string | null;
-      subject: string | null;
-    };
-    student: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      email: string;
-      studentId: string;
-    };
-    filePath: string | null;
-    fileUrl: string | null;
-    mediaType: string | null;
-    notes: string | null;
-    status: string;
-    score: number | null;
-    feedback: string | null;
-    submittedAt: Date;
-    updatedAt: Date;
-    overDue: string | null;
-  }> {
+  ) {
     const manager = this.teacherRepository.manager;
     const assignmentRepository = manager.getRepository(Assignment);
     const submissionRepository = manager.getRepository(AssignmentSubmission);
@@ -794,6 +882,21 @@ export class TeacherService {
       }
     }
 
+    // Get signed URL for assignment attachment if exists
+    let assignmentAttachmentUrl: string | null = null;
+    if (assignment.attachmentPath) {
+      try {
+        assignmentAttachmentUrl = await this.objectStorageService.getSignedUrl(
+          assignment.attachmentPath,
+        );
+      } catch (error) {
+        console.error(
+          'Failed to get signed URL for assignment attachment:',
+          error,
+        );
+      }
+    }
+
     // Calculate overdue time
     const overDue = this.formatOverdueTime(
       submission.createdAt,
@@ -810,6 +913,9 @@ export class TeacherService {
         maxScore: assignment.maxScore,
         topic: assignment.topic?.name ?? null,
         subject: assignment.topic?.subjectCatalog?.name ?? null,
+        attachmentPath: assignment.attachmentPath ?? null,
+        attachmentUrl: assignmentAttachmentUrl,
+        attachmentMediaType: assignment.attachmentMediaType ?? null,
       },
       student: {
         id: student.id,
