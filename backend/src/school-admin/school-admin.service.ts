@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { SchoolAdmin } from './school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
@@ -17,6 +17,9 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { Assignment } from 'src/teacher/entities/assignment.entity';
+import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
+
 @Injectable()
 export class SchoolAdminService {
   private readonly logger = new Logger(SchoolAdminService.name);
@@ -35,6 +38,10 @@ export class SchoolAdminService {
     private readonly attendanceService: AttendanceService,
     @InjectRepository(ClassLevel)
     private classLevelRepository: Repository<ClassLevel>,
+    @InjectRepository(Assignment)
+    private assignmentRepository: Repository<Assignment>,
+    @InjectRepository(AssignmentSubmission)
+    private assignmentSubmissionRepository: Repository<AssignmentSubmission>,
   ) {}
 
   async findAll(): Promise<SchoolAdmin[]> {
@@ -584,5 +591,358 @@ export class SchoolAdminService {
       averageAttendanceRate,
       attendanceByClass,
     };
+  }
+
+  async findAllAssignments(schoolId: string, queryString: QueryString) {
+    const baseQuery = this.assignmentRepository
+      .createQueryBuilder('assignment')
+      .leftJoinAndSelect('assignment.teacher', 'teacher')
+      .leftJoinAndSelect('assignment.topic', 'topic')
+      .leftJoinAndSelect('topic.subjectCatalog', 'subjectCatalog')
+      .leftJoinAndSelect('assignment.classLevel', 'classLevel')
+      .where('teacher.school.id = :schoolId', { schoolId })
+      .andWhere('assignment.state = :state', { state: 'published' });
+
+    // Extract custom filter values before passing to APIFeatures
+    const classLevelId = queryString.classLevelId;
+    const subjectCatalogId = queryString.subjectCatalogId;
+    const teacherId = queryString.teacherId;
+
+    // Create a copy of queryString without custom filters to avoid APIFeatures processing them
+    const filteredQueryString = { ...queryString };
+    delete filteredQueryString.classLevelId;
+    delete filteredQueryString.subjectCatalogId;
+    delete filteredQueryString.teacherId;
+    // Remove search since we're handling it manually with joined tables
+    const searchValue = filteredQueryString.search;
+    delete filteredQueryString.search;
+
+    // Apply custom filters for class, subject, and teacher
+    if (classLevelId) {
+      baseQuery.andWhere('classLevel.id = :classLevelId', {
+        classLevelId,
+      });
+    }
+
+    if (subjectCatalogId) {
+      baseQuery.andWhere('subjectCatalog.id = :subjectCatalogId', {
+        subjectCatalogId,
+      });
+    }
+
+    if (teacherId) {
+      baseQuery.andWhere('teacher.id = :teacherId', {
+        teacherId,
+      });
+    }
+
+    // Handle search across multiple fields (including joined tables)
+    if (searchValue) {
+      const searchTerm = `%${searchValue}%`;
+      baseQuery.andWhere(
+        new Brackets((qb) => {
+          qb.where('assignment.title ILIKE :searchTerm', { searchTerm })
+            .orWhere('topic.name ILIKE :searchTerm', { searchTerm })
+            .orWhere('topic.description ILIKE :searchTerm', { searchTerm })
+            .orWhere('subjectCatalog.name ILIKE :searchTerm', { searchTerm })
+            .orWhere('subjectCatalog.description ILIKE :searchTerm', {
+              searchTerm,
+            })
+            .orWhere('classLevel.name ILIKE :searchTerm', { searchTerm })
+            .orWhere(
+              "CONCAT(teacher.firstName, ' ', teacher.lastName) ILIKE :searchTerm",
+              { searchTerm },
+            )
+            .orWhere('teacher.email ILIKE :searchTerm', { searchTerm });
+        }),
+      );
+    }
+
+    const featuresWithoutPagination = new APIFeatures(
+      baseQuery.clone(),
+      filteredQueryString,
+    )
+      .filter()
+      .sort()
+      .limitFields();
+
+    const total = await featuresWithoutPagination.getQuery().getCount();
+
+    const featuresWithPagination = featuresWithoutPagination.paginate();
+    const assignments = await featuresWithPagination.getQuery().getMany();
+
+    // Get submission counts for all assignments
+    const assignmentIds = assignments.map((a) => a.id);
+    const countMap = new Map<string, number>();
+
+    if (assignmentIds.length > 0) {
+      const submissionCounts = await this.assignmentSubmissionRepository
+        .createQueryBuilder('submission')
+        .select('submission.assignment', 'assignmentId')
+        .addSelect('COUNT(submission.id)', 'count')
+        .where('submission.assignment IN (:...assignmentIds)', {
+          assignmentIds,
+        })
+        .groupBy('submission.assignment')
+        .getRawMany();
+
+      submissionCounts.forEach(
+        (item: { assignmentId: string; count: string }) => {
+          countMap.set(item.assignmentId, parseInt(item.count, 10));
+        },
+      );
+    }
+
+    // Get signed URLs for attachments and include submission counts
+    const assignmentsWithAttachments = await Promise.all(
+      assignments.map(async (a) => {
+        let attachmentUrl: string | null = null;
+        if (a.attachmentPath) {
+          try {
+            attachmentUrl = await this.objectStorageService.getSignedUrl(
+              a.attachmentPath,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to get signed URL for assignment ${a.id}:`,
+              error,
+            );
+          }
+        }
+
+        return {
+          id: a.id,
+          title: a.title,
+          instructions: a.instructions ?? null,
+          dueDate: a.dueDate,
+          maxScore: a.maxScore,
+          state: a.state,
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+          topic: {
+            id: a.topic?.id ?? null,
+            name: a.topic?.name ?? null,
+          },
+          subject: {
+            id: a.topic?.subjectCatalog?.id ?? null,
+            name: a.topic?.subjectCatalog?.name ?? null,
+          },
+          classLevel: {
+            id: a.classLevel?.id ?? null,
+            name: a.classLevel?.name ?? null,
+          },
+          teacher: {
+            id: a.teacher?.id ?? null,
+            firstName: a.teacher?.firstName ?? null,
+            lastName: a.teacher?.lastName ?? null,
+            email: a.teacher?.email ?? null,
+            teacherId: a.teacher?.teacherId ?? null,
+          },
+          attachmentPath: a.attachmentPath ?? null,
+          attachmentUrl,
+          attachmentMediaType: a.attachmentMediaType ?? null,
+          submissions: countMap.get(a.id) ?? 0,
+        };
+      }),
+    );
+
+    const page = parseInt(queryString.page ?? '1', 10);
+    const limit = parseInt(queryString.limit ?? '20', 10);
+    const totalPages = Math.ceil(total / limit || 1);
+
+    return {
+      data: assignmentsWithAttachments,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  }
+
+  private formatOverdueTime(submittedAt: Date, dueDate: Date): string | null {
+    const submitted = new Date(submittedAt);
+    const due = new Date(dueDate);
+
+    if (submitted <= due) {
+      return null;
+    }
+
+    const submittedDate = new Date(
+      submitted.getFullYear(),
+      submitted.getMonth(),
+      submitted.getDate(),
+    );
+    const dueDateOnly = new Date(
+      due.getFullYear(),
+      due.getMonth(),
+      due.getDate(),
+    );
+
+    if (submittedDate.getTime() === dueDateOnly.getTime()) {
+      return null;
+    }
+
+    const diffMs = submitted.getTime() - due.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+
+    if (diffDays > 0) {
+      if (remainingHours > 0) {
+        return `overdue ${diffDays} day${diffDays > 1 ? 's' : ''} ${remainingHours} hr${remainingHours > 1 ? 's' : ''}`;
+      }
+      return `overdue ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    } else {
+      return `overdue ${diffHours} hr${diffHours > 1 ? 's' : ''}`;
+    }
+  }
+
+  async getAssignmentStudents(
+    admin: SchoolAdmin,
+    assignmentId: string,
+    pending?: string,
+    submitted?: string,
+  ): Promise<
+    Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      studentId: string;
+      hasSubmitted: boolean;
+      submissionId: string | null;
+      status: string;
+      score: number | null;
+      feedback: string | null;
+      submittedAt: Date | null;
+      filePath: string | null;
+      fileUrl: string | null;
+      mediaType: string | null;
+      notes: string | null;
+      overDue: string | null;
+    }>
+  > {
+    const manager = this.assignmentRepository.manager;
+    const assignmentRepository = manager.getRepository(Assignment);
+    const classLevelRepository = manager.getRepository(ClassLevel);
+
+    const assignment = await assignmentRepository.findOne({
+      where: { id: assignmentId },
+      relations: ['teacher', 'classLevel', 'topic', 'topic.subjectCatalog'],
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    if (assignment.teacher?.school?.id !== admin.school.id) {
+      throw new NotFoundException(
+        'Assignment not found or you do not have access to it',
+      );
+    }
+
+    const classLevel = await classLevelRepository.findOne({
+      where: { id: assignment.classLevel.id, school: { id: admin.school.id } },
+      relations: ['students', 'students.profile'],
+    });
+
+    if (!classLevel) {
+      throw new NotFoundException('Class level not found');
+    }
+
+    const submissionRepository = manager.getRepository(AssignmentSubmission);
+    const submissions = await submissionRepository.find({
+      where: { assignment: { id: assignmentId } },
+      relations: ['student'],
+    });
+
+    const submissionMap = new Map<string, AssignmentSubmission>();
+    submissions.forEach((sub) => {
+      submissionMap.set(sub.student.id, sub);
+    });
+
+    let filter: 'pending' | 'submitted' | undefined;
+    if (pending !== undefined) {
+      filter = 'pending';
+    } else if (submitted !== undefined) {
+      filter = 'submitted';
+    }
+
+    let filteredStudents = classLevel.students;
+    if (filter === 'pending') {
+      filteredStudents = classLevel.students.filter(
+        (student) => !submissionMap.has(student.id),
+      );
+    } else if (filter === 'submitted') {
+      filteredStudents = classLevel.students.filter((student) =>
+        submissionMap.has(student.id),
+      );
+    }
+
+    return await Promise.all(
+      filteredStudents.map(async (student) => {
+        const submission = submissionMap.get(student.id);
+
+        let status: string;
+        if (!submission || !submission.status) {
+          status = 'not submitted';
+        } else {
+          const dbStatus = String(submission.status).toLowerCase();
+          if (dbStatus === 'pending') {
+            status = 'submitted';
+          } else if (dbStatus === 'graded' || dbStatus === 'returned') {
+            status = 'graded';
+          } else {
+            status = 'submitted';
+          }
+        }
+
+        let fileUrl: string | null = null;
+        let overDue: string | null = null;
+
+        if (submission) {
+          if (submission.filePath) {
+            try {
+              fileUrl = await this.objectStorageService.getSignedUrl(
+                submission.filePath,
+              );
+            } catch (error) {
+              this.logger.error(
+                `Failed to get signed URL for submission ${submission.id}:`,
+                error,
+              );
+            }
+          }
+
+          if (submission.createdAt) {
+            overDue = this.formatOverdueTime(
+              submission.createdAt,
+              assignment.dueDate,
+            );
+          }
+        }
+
+        return {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          studentId: student.studentId,
+          hasSubmitted: !!submission,
+          submissionId: submission?.id ?? null,
+          status,
+          score: submission?.score ?? null,
+          feedback: submission?.feedback ?? null,
+          submittedAt: submission?.createdAt ?? null,
+          filePath: submission?.filePath ?? null,
+          fileUrl,
+          mediaType: submission?.mediaType ?? null,
+          notes: submission?.notes ?? null,
+          overDue,
+        };
+      }),
+    );
   }
 }

@@ -30,6 +30,8 @@ import { Attendance } from 'src/attendance/attendance.entity';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { Assignment } from 'src/teacher/entities/assignment.entity';
+import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 
 @Module({
   imports: [
@@ -49,6 +51,8 @@ import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calen
       Holiday,
       AcademicTerm,
       AcademicCalendar,
+      Assignment,
+      AssignmentSubmission,
     ]),
     PassportModule,
     JwtModule.registerAsync({
