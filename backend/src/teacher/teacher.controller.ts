@@ -11,7 +11,9 @@ import {
   Put,
   Patch,
   Delete,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TeacherAuthService } from './teacher.auth.service';
 import { TeacherService } from './teacher.service';
 import { TeacherLocalAuthGuard } from './guards/teacher-local-auth.guard';
@@ -275,11 +277,13 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('assignments')
   @Roles(Role.Teacher)
+  @UseInterceptors(FileInterceptor('file'))
   createAssignment(
     @CurrentUser() teacher: Teacher,
     @Body() dto: CreateAssignmentDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.TeacherService.createAssignment(teacher, dto);
+    return this.TeacherService.createAssignment(teacher, dto, file);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -292,12 +296,19 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Patch('assignments/:id')
   @Roles(Role.Teacher)
+  @UseInterceptors(FileInterceptor('file'))
   updateAssignment(
     @CurrentUser() teacher: Teacher,
     @Param('id') assignmentId: string,
     @Body() dto: UpdateAssignmentDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.TeacherService.updateAssignment(teacher, assignmentId, dto);
+    return this.TeacherService.updateAssignment(
+      teacher,
+      assignmentId,
+      dto,
+      file,
+    );
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
