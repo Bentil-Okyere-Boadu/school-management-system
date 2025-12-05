@@ -393,7 +393,7 @@ export const useGetTeacherAssignments = (search: string = "") => {
 
 export const useCreateTeacherAssignment = () => {
     return useMutation({
-        mutationFn: (payload: { 
+        mutationFn: (payload: FormData | { 
             topicId: string; 
             classLevelId: string;
             title: string; 
@@ -401,21 +401,33 @@ export const useCreateTeacherAssignment = () => {
             dueDate: string; 
             maxScore: number;
             state: string;
-        }) =>
-            customAPI.post('/teacher/assignments', payload),
+        }) => {
+            const config = payload instanceof FormData ? {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            } : {};
+            return customAPI.post('/teacher/assignments', payload, config);
+        },
     });
 };
 
 export const useUpdateTeacherAssignment = (assignmentId: string) => {
     return useMutation({
-        mutationFn: (payload: { 
+        mutationFn: (payload: FormData | { 
             title: string; 
             instructions: string; 
             dueDate?: string; 
             maxScore?: number;
             state?: string;
-        }) =>
-            customAPI.patch(`/teacher/assignments/${assignmentId}`, payload),
+        }) => {
+            const config = payload instanceof FormData ? {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            } : {};
+            return customAPI.patch(`/teacher/assignments/${assignmentId}`, payload, config);
+        },
     });
 };
 
