@@ -255,23 +255,31 @@ export class StudentService {
     let filteredAssignments = assignmentsWithAttachments;
 
     if (filter === 'pending') {
-      // Only assignments without submissions
+      // Only online assignments without submissions
       filteredAssignments = assignmentsWithAttachments.filter(
-        (a) => !submissionMap.has(a.id),
+        (a) => (a.assignmentType ?? 'online') === 'online' && !submissionMap.has(a.id),
       );
     } else if (filter === 'submitted') {
-      // Only assignments with submissions that are NOT graded yet (status is 'pending' in DB)
+      // Online assignments with pending submissions OR offline assignments (all are considered submitted)
       filteredAssignments = assignmentsWithAttachments.filter((a) => {
-        const submission = submissionMap.get(a.id);
-        // Strictly check that submission exists and status is exactly 'pending' (not graded or returned)
-        return (
-          submission &&
-          submission.status &&
-          String(submission.status).toLowerCase() === 'pending'
-        );
+        const assignmentType = a.assignmentType ?? 'online';
+        if (assignmentType === 'offline') {
+          // Offline assignments are always considered "submitted" until graded
+          const submission = submissionMap.get(a.id);
+          // Include if no submission or if submission is not graded yet
+          return !submission || (submission.status !== 'graded' && submission.status !== 'returned');
+        } else {
+          // Online assignments: only those with pending submissions
+          const submission = submissionMap.get(a.id);
+          return (
+            submission &&
+            submission.status &&
+            String(submission.status).toLowerCase() === 'pending'
+          );
+        }
       });
     } else if (filter === 'graded') {
-      // Only assignments with graded or returned submissions
+      // Only assignments with graded or returned submissions (includes offline if graded)
       filteredAssignments = assignmentsWithAttachments.filter((a) => {
         const submission = submissionMap.get(a.id);
         return (
@@ -284,13 +292,22 @@ export class StudentService {
     // Map to response format
     return filteredAssignments.map((a) => {
       const submission = submissionMap.get(a.id);
+      const assignmentType = a.assignmentType ?? 'online';
 
       // Map status for student view:
+      // - Offline assignments: "submitted" (automatically submitted until graded)
       // - No submission: "pending" (not submitted yet)
       // - Submission with status "pending" in DB: "submitted" (submitted but not graded)
       // - Submission with status "graded" or "returned": "graded"
       let status: string;
-      if (!submission || !submission.status) {
+      if (assignmentType === 'offline') {
+        // For offline assignments, automatically "submitted" until graded
+        if (submission && (submission.status === 'graded' || submission.status === 'returned')) {
+          status = 'graded';
+        } else {
+          status = 'submitted'; // Offline assignments are automatically submitted
+        }
+      } else if (!submission || !submission.status) {
         status = 'pending'; // Not submitted yet
       } else {
         const dbStatus = String(submission.status).toLowerCase();
@@ -321,6 +338,7 @@ export class StudentService {
         score: submission?.score ?? null,
         feedback: submission?.feedback ?? null,
         submittedAt: submission?.createdAt ?? null,
+        assignmentType,
       };
     });
   }

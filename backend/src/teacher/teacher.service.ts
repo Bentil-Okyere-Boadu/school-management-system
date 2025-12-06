@@ -357,6 +357,7 @@ export class TeacherService {
       dueDate: new Date(dto.dueDate),
       maxScore: +dto.maxScore,
       state: dto.state,
+      assignmentType: dto.assignmentType ?? 'online',
       topic,
       classLevel,
       teacher: { id: teacher.id } as Teacher,
@@ -462,7 +463,12 @@ export class TeacherService {
 
     const assignments = await assignmentRepository.find({
       where: { teacher: { id: teacherId } },
-      relations: ['topic', 'topic.subjectCatalog', 'classLevel'],
+      relations: [
+        'topic',
+        'topic.subjectCatalog',
+        'classLevel',
+        'classLevel.students',
+      ],
       order: { dueDate: 'ASC' },
     });
 
@@ -508,6 +514,15 @@ export class TeacherService {
           }
         }
 
+        // For offline assignments, submissions count = number of students in class
+        // For online assignments, submissions count = actual submission count
+        let submissionsCount: number;
+        if (a.assignmentType === 'offline') {
+          submissionsCount = a.classLevel?.students?.length ?? 0;
+        } else {
+          submissionsCount = countMap.get(a.id) ?? 0;
+        }
+
         return {
           id: a.id,
           title: a.title,
@@ -516,13 +531,14 @@ export class TeacherService {
           topicId: a.topic?.id ?? null,
           dueDate: a.dueDate,
           status: a.state,
-          submissions: countMap.get(a.id) ?? 0,
+          submissions: submissionsCount,
           maxScore: a.maxScore,
           class: a.classLevel?.name ?? null,
           classLevelId: a.classLevel?.id ?? null,
           attachmentPath: a.attachmentPath,
           attachmentUrl,
           attachmentMediaType: a.attachmentMediaType ?? null,
+          assignmentType: a.assignmentType ?? 'online',
         };
       }),
     );
@@ -768,6 +784,7 @@ export class TeacherService {
       feedback: string | null;
       submittedAt: Date | null;
       termAggregatedScore?: number;
+      assignmentType: 'online' | 'offline';
     }>
   > {
     const manager = this.teacherRepository.manager;
@@ -817,17 +834,33 @@ export class TeacherService {
     }
 
     // Filter students based on query parameter
+    // For offline assignments, filtering by pending/submitted doesn't apply the same way
     let filteredStudents = classLevel.students;
-    if (filter === 'pending') {
-      // Only students without submissions
-      filteredStudents = classLevel.students.filter(
-        (student) => !submissionMap.has(student.id),
-      );
-    } else if (filter === 'submitted') {
-      // Only students with submissions
-      filteredStudents = classLevel.students.filter((student) =>
-        submissionMap.has(student.id),
-      );
+    if (assignment.assignmentType === 'offline') {
+      // For offline assignments, all students are considered "submitted" (ready to grade)
+      // There is no "pending" state for offline assignments
+      if (filter === 'pending') {
+        // Offline assignments don't have pending state - return empty
+        filteredStudents = [];
+      } else if (filter === 'submitted') {
+        // For offline assignments, all students are considered "submitted"
+        // Show all students (they're all ready to be graded)
+        filteredStudents = classLevel.students;
+      }
+      // If no filter, show all students
+    } else {
+      // For online assignments, use existing logic
+      if (filter === 'pending') {
+        // Only students without submissions
+        filteredStudents = classLevel.students.filter(
+          (student) => !submissionMap.has(student.id),
+        );
+      } else if (filter === 'submitted') {
+        // Only students with submissions
+        filteredStudents = classLevel.students.filter((student) =>
+          submissionMap.has(student.id),
+        );
+      }
     }
 
     // Get current/latest term for term scores
@@ -852,7 +885,7 @@ export class TeacherService {
     }
 
     // Calculate term scores if term is available
-    let termScoresMap = new Map<string, number>();
+    const termScoresMap = new Map<string, number>();
     if (term) {
       const termStartDate = new Date(term.startDate);
       const termEndDate = new Date(term.endDate);
@@ -928,7 +961,12 @@ export class TeacherService {
 
       let status: string;
       if (!submission || !submission.status) {
-        status = 'not submitted';
+        // For offline assignments, treat as "submitted" (ready to grade) even without submission
+        if (assignment.assignmentType === 'offline') {
+          status = 'submitted';
+        } else {
+          status = 'not submitted';
+        }
       } else {
         const dbStatus = String(submission.status).toLowerCase();
         if (dbStatus === 'pending') {
@@ -953,6 +991,7 @@ export class TeacherService {
         feedback: submission?.feedback ?? null,
         submittedAt: submission?.createdAt ?? null,
         termAggregatedScore: termScoresMap.get(student.id) ?? undefined,
+        assignmentType: assignment.assignmentType ?? 'online',
       };
     });
 
@@ -1203,7 +1242,15 @@ export class TeacherService {
       },
     });
 
-    if (!submission) {
+    // For offline assignments, create submission if it doesn't exist
+    if (!submission && assignment.assignmentType === 'offline') {
+      const newSubmission = submissionRepository.create({
+        assignment: assignment,
+        student: student,
+        status: 'pending',
+      });
+      submission = await submissionRepository.save(newSubmission);
+    } else if (!submission) {
       throw new NotFoundException(
         'Submission not found. Student must submit the assignment first.',
       );

@@ -39,4 +39,8 @@ export class UpdateAssignmentDto {
   @IsEnum(['draft', 'published'])
   @IsOptional()
   state?: 'draft' | 'published';
+
+  @IsEnum(['online', 'offline'])
+  @IsOptional()
+  assignmentType?: 'online' | 'offline';
 }
