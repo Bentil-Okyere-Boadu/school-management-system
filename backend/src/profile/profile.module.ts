@@ -22,6 +22,7 @@ import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
 import { StudentGrade } from 'src/subject/student-grade.entity';
+import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { StudentGrade } from 'src/subject/student-grade.entity';
     StudentService,
     TeacherService,
     InvitationService,
+    AcademicCalendarService,
   ],
 })
 export class ProfileModule {}
