@@ -474,6 +474,40 @@ export interface TeacherSubject {
   description: string;
 }
 
+export interface AdminAssignment {
+  id: string;
+  title: string;
+  instructions?: string | null;
+  dueDate: string;
+  maxScore: number;
+  state: "published" | "draft";
+  createdAt: string;
+  updatedAt: string;
+  topic: {
+    id: string;
+    name: string;
+  } | null;
+  subject: {
+    id: string;
+    name: string;
+  } | null;
+  classLevel: {
+    id: string;
+    name: string;
+  } | null;
+  teacher: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    teacherId: string;
+  } | null;
+  attachmentPath?: string | null;
+  attachmentUrl?: string | null;
+  attachmentMediaType?: string | null;
+  submissions: number;
+}
+
 export interface Assignment {
   id: string;
   title: string;
@@ -497,6 +531,7 @@ export interface StudentAssignment {
   title: string;
   assignment: string;
   subject: string;
+  topic?: string;
   teacher: string;
   dueDate: string;
   submittedDate?: string;
@@ -524,7 +559,7 @@ export interface AssignmentSubmission {
   status: string;
   score: number | null;
   feedback: string | null;
-  submittedAt: Date | null;
+  submittedAt: string | null;
 }
 
 export interface AssignSubjectTeacherPayload {

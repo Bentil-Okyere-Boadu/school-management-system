@@ -219,6 +219,9 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                     <div>Topic</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
+                    <div>Class</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                     <div>Due Date</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
@@ -238,7 +241,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   if (isLoading) {
                     return (
                       <tr>
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="relative py-20 bg-white">
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                               <HashLoader color="#AB58E7" size={40} />
@@ -252,7 +255,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   if (!assignments?.length) {
                     return (
                       <tr>
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No assignments created</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -298,6 +301,9 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div>{row.topic || "-"}</div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div>{row.class || "-"}</div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex items-center gap-2">
