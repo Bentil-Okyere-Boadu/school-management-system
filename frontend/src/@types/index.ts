@@ -485,7 +485,11 @@ export interface Assignment {
   status: "published" | "draft";
   submissions:  number;
   isPublished: boolean;
-  classLevelId?: string;  
+  classLevelId?: string;
+  class?: string;
+  attachmentPath?: string | null;
+  attachmentUrl?: string | null;
+  attachmentMediaType?: string | null;
 }
 
 export interface StudentAssignment {
@@ -501,6 +505,12 @@ export interface StudentAssignment {
   maxScore?: number;
   status: "pending" | "submitted" | "graded";
   daysOverdue?: number;
+  instructions?: string;
+  attachmentPath?: string;
+  attachmentUrl?: string;
+  attachmentMediaType?: string;
+  submissionId?: string | null;
+  feedback?: string | null;
 }
 
 export interface AssignmentSubmission {

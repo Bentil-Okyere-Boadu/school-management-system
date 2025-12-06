@@ -7,6 +7,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateAssignmentDto {
   @IsString()
@@ -25,6 +26,14 @@ export class UpdateAssignmentDto {
   @Min(0)
   @Max(1000)
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isNaN(parsed) ? value : parsed;
+    }
+    return value as number;
+  })
+  @Type(() => Number)
   maxScore?: number;
 
   @IsEnum(['draft', 'published'])

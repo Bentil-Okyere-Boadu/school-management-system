@@ -217,6 +217,26 @@ export class StudentService {
       order: { dueDate: 'ASC' },
     });
 
+    // Get signed URLs for assignment attachments
+    const assignmentsWithAttachments = await Promise.all(
+      assignments.map(async (a) => {
+        let attachmentUrl: string | null = null;
+        if (a.attachmentPath) {
+          try {
+            attachmentUrl = await this.objectStorageService.getSignedUrl(
+              a.attachmentPath,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to get signed URL for assignment ${a.id}:`,
+              error,
+            );
+          }
+        }
+        return { ...a, attachmentUrl };
+      }),
+    );
+
     // Get all submissions for this student
     const submissions = await submissionRepo.find({
       where: { student: { id: student.id } },
@@ -232,14 +252,16 @@ export class StudentService {
     });
 
     // Filter assignments based on query parameter
-    let filteredAssignments = assignments;
+    let filteredAssignments = assignmentsWithAttachments;
 
     if (filter === 'pending') {
       // Only assignments without submissions
-      filteredAssignments = assignments.filter((a) => !submissionMap.has(a.id));
+      filteredAssignments = assignmentsWithAttachments.filter(
+        (a) => !submissionMap.has(a.id),
+      );
     } else if (filter === 'submitted') {
       // Only assignments with submissions that are NOT graded yet (status is 'pending' in DB)
-      filteredAssignments = assignments.filter((a) => {
+      filteredAssignments = assignmentsWithAttachments.filter((a) => {
         const submission = submissionMap.get(a.id);
         // Strictly check that submission exists and status is exactly 'pending' (not graded or returned)
         return (
@@ -250,7 +272,7 @@ export class StudentService {
       });
     } else if (filter === 'graded') {
       // Only assignments with graded or returned submissions
-      filteredAssignments = assignments.filter((a) => {
+      filteredAssignments = assignmentsWithAttachments.filter((a) => {
         const submission = submissionMap.get(a.id);
         return (
           submission &&
@@ -285,6 +307,7 @@ export class StudentService {
         id: a.id,
         assignment: a.title,
         subject: a.topic?.subjectCatalog?.name ?? null,
+        topic: a.topic?.name ?? null,
         teacher:
           a.teacher?.firstName || a.teacher?.lastName
             ? `${a.teacher?.firstName ?? ''} ${a.teacher?.lastName ?? ''}`.trim()
@@ -292,6 +315,9 @@ export class StudentService {
         dueDate: a.dueDate,
         status,
         instructions: a.instructions,
+        attachmentPath: a.attachmentPath ?? null,
+        attachmentUrl: a.attachmentUrl ?? null,
+        attachmentMediaType: a.attachmentMediaType ?? null,
         submissionId: submission?.id ?? null,
         score: submission?.score ?? null,
         feedback: submission?.feedback ?? null,
