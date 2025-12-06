@@ -33,6 +33,9 @@ export class Assignment {
   @Column({ type: 'varchar', default: 'draft' })
   state: AssignmentState;
 
+  @Column({ type: 'varchar', default: 'online' })
+  assignmentType: 'online' | 'offline';
+
   @Column({ nullable: true })
   attachmentPath?: string;
 

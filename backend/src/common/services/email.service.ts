@@ -25,6 +25,7 @@ export enum EmailTemplate {
   ADMISSION_REJECTED = 'admission_rejected',
   ADMISSION_WAITLISTED = 'admission_waitlisted',
   INTERVIEW_COMPLETED = 'interview_completed',
+  ASSIGNMENT_PUBLISHED = 'assignment_published',
 }
 
 /**
@@ -645,6 +646,24 @@ export class EmailService {
             <p>Best regards,<br>${data.schoolName} Admissions Team</p>
           </div>
         `;
+      case EmailTemplate.ASSIGNMENT_PUBLISHED:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">New Assignment Published</h2>
+            <p>Dear ${data.parentName},</p>
+            <p>A new assignment has been published for <strong>${data.studentName}</strong> in ${data.className}.</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Assignment:</strong> ${data.assignmentTitle}</p>
+              <p><strong>Subject:</strong> ${data.subject}</p>
+              <p><strong>Due Date:</strong> ${data.dueDate}</p>
+              ${data.instructions ? `<p><strong>Instructions:</strong> ${data.instructions}</p>` : ''}
+            </div>
+            <p>Please remind your child to complete and submit this assignment before the due date.</p>
+            <p>If you have any questions, please contact the teacher or school administration.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">School Management System</p>
+          </div>
+        `;
       default:
         return `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
@@ -802,6 +821,44 @@ export class EmailService {
       );
       throw new EmailException(
         `Failed to send interview completed email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async sendAssignmentPublishedEmail(
+    to: string,
+    parentName: string,
+    studentName: string,
+    className: string,
+    assignmentTitle: string,
+    subject: string,
+    dueDate: string,
+    instructions?: string,
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to,
+        subject: `New Assignment: ${assignmentTitle}`,
+        html: this.getEmailTemplate(EmailTemplate.ASSIGNMENT_PUBLISHED, {
+          parentName,
+          studentName,
+          className,
+          assignmentTitle,
+          subject,
+          dueDate,
+          instructions,
+        }),
+      });
+      this.logger.log(`Assignment published email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send assignment published email to ${to}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send assignment published email: ${BaseException.getErrorMessage(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

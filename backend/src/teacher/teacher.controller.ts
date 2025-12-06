@@ -329,12 +329,14 @@ export class TeacherController {
     @Param('id') assignmentId: string,
     @Query('pending') pending?: string,
     @Query('submitted') submitted?: string,
+    @Query('sort') sort?: string,
   ) {
     return this.TeacherService.getAssignmentStudents(
       teacher,
       assignmentId,
       pending,
       submitted,
+      sort,
     );
   }
 
