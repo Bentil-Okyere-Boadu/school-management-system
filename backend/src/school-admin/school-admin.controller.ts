@@ -338,4 +338,31 @@ export class SchoolAdminController {
       calendarId,
     );
   }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments')
+  @Roles(Role.SchoolAdmin)
+  async getAllAssignments(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
+  ) {
+    return this.schoolAdminService.findAllAssignments(admin.school.id, query);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments/:id/students')
+  @Roles(Role.SchoolAdmin)
+  async getAssignmentStudents(
+    @CurrentUser() admin: SchoolAdmin,
+    @Param('id') assignmentId: string,
+    @Query('pending') pending?: string,
+    @Query('submitted') submitted?: string,
+  ) {
+    return this.schoolAdminService.getAssignmentStudents(
+      admin,
+      assignmentId,
+      pending,
+      submitted,
+    );
+  }
 }

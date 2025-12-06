@@ -324,6 +324,7 @@ export class StudentService {
         id: a.id,
         assignment: a.title,
         subject: a.topic?.subjectCatalog?.name ?? null,
+        topic: a.topic?.name ?? null,
         teacher:
           a.teacher?.firstName || a.teacher?.lastName
             ? `${a.teacher?.firstName ?? ''} ${a.teacher?.lastName ?? ''}`.trim()
