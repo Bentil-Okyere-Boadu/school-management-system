@@ -108,6 +108,9 @@ export const PendingAssignmentsTab: React.FC = () => {
                   <div>Topic</div>
                 </th>
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
+                  <div>Type</div>
+                </th>
+                <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                   <div>Teacher</div>
                 </th>
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
@@ -126,7 +129,7 @@ export const PendingAssignmentsTab: React.FC = () => {
                 if (isLoading) {
                   return (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className="relative py-20 bg-white">
                           <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                             <HashLoader color="#AB58E7" size={40} />
@@ -140,7 +143,7 @@ export const PendingAssignmentsTab: React.FC = () => {
                 if (!assignments?.length) {
                   return (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                           <p className="text-lg font-medium">No pending assignments</p>
                           <p className="text-sm text-gray-400 mt-1">
@@ -181,6 +184,17 @@ export const PendingAssignmentsTab: React.FC = () => {
                         <div>{assignment.topic || "-"}</div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            (assignment.assignmentType || "online") === "online"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {(assignment.assignmentType || "online") === "online" ? "Online" : "Offline"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div>{assignment.teacher}</div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
@@ -199,12 +213,18 @@ export const PendingAssignmentsTab: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-2 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                        <CustomButton
-                          text="Submit"
-                          onClick={() => handleSubmitClick(assignment)}
-                          className="bg-purple-500 hover:bg-purple-600 text-white"
-                          icon={<IconUpload size={16} />}
-                        />
+                        {assignment.assignmentType === "offline" ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            Offline Assignment
+                          </span>
+                        ) : (
+                          <CustomButton
+                            text="Submit"
+                            onClick={() => handleSubmitClick(assignment)}
+                            className="bg-purple-500 hover:bg-purple-600 text-white"
+                            icon={<IconUpload size={16} />}
+                          />
+                        )}
                       </td>
                     </tr>
                   );

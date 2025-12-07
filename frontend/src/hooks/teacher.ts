@@ -383,7 +383,8 @@ export const useGetTeacherAssignments = (search: string = "") => {
 
             return customAPI.get(`/teacher/assignments?${params}`);
         },
-        refetchOnWindowFocus: true
+        refetchOnWindowFocus: true,
+        refetchOnMount: 'always'
     })
 
     const teacherAssignments = data?.data || [] ;
@@ -557,6 +558,7 @@ export const useGetAssignmentSubmittedStudents = (assignmentId: string) => {
     },
     enabled: !!assignmentId,
     refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
 
   const submittedStudents = data?.data || [];
@@ -572,6 +574,7 @@ export const useGetAssignmentPendingStudents = (assignmentId: string) => {
     },
     enabled: !!assignmentId,
     refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
 
   const pendingStudents = data?.data || [];

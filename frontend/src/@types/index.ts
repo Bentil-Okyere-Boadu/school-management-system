@@ -483,6 +483,8 @@ export interface AdminAssignment {
   state: "published" | "draft";
   createdAt: string;
   updatedAt: string;
+  assignmentType?: "online" | "offline";
+  termAggregatedScore?: number;
   topic: {
     id: string;
     name: string;
@@ -519,6 +521,8 @@ export interface Assignment {
   status: "published" | "draft";
   submissions:  number;
   isPublished: boolean;
+  assignmentType?: "online" | "offline";
+  termAggregatedScore?: number;
   classLevelId?: string;
   class?: string;
   attachmentPath?: string | null;
@@ -539,6 +543,7 @@ export interface StudentAssignment {
   score?: number;
   maxScore?: number;
   status: "pending" | "submitted" | "graded";
+  assignmentType?: "online" | "offline";
   daysOverdue?: number;
   instructions?: string;
   attachmentPath?: string;
@@ -560,6 +565,8 @@ export interface AssignmentSubmission {
   score: number | null;
   feedback: string | null;
   submittedAt: string | null;
+  assignmentType?: "online" | "offline";
+  termAggregatedScore?: number;
 }
 
 export interface AssignSubjectTeacherPayload {
