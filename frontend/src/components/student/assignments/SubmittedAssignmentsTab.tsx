@@ -3,6 +3,7 @@ import React from "react";
 import { StudentAssignment } from "@/@types";
 import { useGetStudentAssignments } from "@/hooks/student";
 import { HashLoader } from "react-spinners";
+import { AttachmentIcon } from "@/utils/icons";
 
 export const SubmittedAssignmentsTab: React.FC = () => {
   const { assignments, isLoading } = useGetStudentAssignments("submitted");
@@ -30,6 +31,9 @@ export const SubmittedAssignmentsTab: React.FC = () => {
                 <div>Subject</div>
               </th>
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
+                <div>Topic</div>
+              </th>
+              <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                 <div>Teacher</div>
               </th>
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
@@ -45,7 +49,7 @@ export const SubmittedAssignmentsTab: React.FC = () => {
               if (isLoading) {
                 return (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="relative py-20 bg-white">
                         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                           <HashLoader color="#AB58E7" size={40} />
@@ -59,7 +63,7 @@ export const SubmittedAssignmentsTab: React.FC = () => {
               if (!assignments?.length) {
                 return (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                         <p className="text-lg font-medium">No submitted assignments</p>
                         <p className="text-sm text-gray-400 mt-1">
@@ -74,10 +78,28 @@ export const SubmittedAssignmentsTab: React.FC = () => {
               return assignments.map((assignment: StudentAssignment) => (
                 <tr key={assignment.id}>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    <div>{assignment.assignment}</div>
+                    <div className="flex gap-2">
+                      <div className="flex justify-center">
+                        {assignment.attachmentPath && (
+                          <a 
+                            href={assignment.attachmentUrl || '#'} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 hover:bg-blue-200 rounded-full transition-colors duration-200"
+                            title="View attachment"
+                          >
+                            <AttachmentIcon />
+                          </a>
+                        )}
+                      </div>
+                      {assignment.assignment}
+                    </div>
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div>{assignment.subject}</div>
+                  </td>
+                  <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                    <div>{assignment.topic || "-"}</div>
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div>{assignment.teacher}</div>
