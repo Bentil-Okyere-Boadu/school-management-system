@@ -600,6 +600,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('assignment.topic', 'topic')
       .leftJoinAndSelect('topic.subjectCatalog', 'subjectCatalog')
       .leftJoinAndSelect('assignment.classLevel', 'classLevel')
+      .leftJoinAndSelect('classLevel.students', 'students')
       .where('teacher.school.id = :schoolId', { schoolId })
       .andWhere('assignment.state = :state', { state: 'published' });
 
@@ -710,6 +711,15 @@ export class SchoolAdminService {
           }
         }
 
+        // For offline assignments, submissions count = number of students in class
+        // For online assignments, submissions count = actual submission count
+        let submissionsCount: number;
+        if (a.assignmentType === 'offline') {
+          submissionsCount = a.classLevel?.students?.length ?? 0;
+        } else {
+          submissionsCount = countMap.get(a.id) ?? 0;
+        }
+
         return {
           id: a.id,
           title: a.title,
@@ -741,7 +751,8 @@ export class SchoolAdminService {
           attachmentPath: a.attachmentPath ?? null,
           attachmentUrl,
           attachmentMediaType: a.attachmentMediaType ?? null,
-          submissions: countMap.get(a.id) ?? 0,
+          submissions: submissionsCount,
+          assignmentType: a.assignmentType ?? 'online',
         };
       }),
     );
@@ -822,6 +833,7 @@ export class SchoolAdminService {
       mediaType: string | null;
       notes: string | null;
       overDue: string | null;
+      assignmentType: 'online' | 'offline';
     }>
   > {
     const manager = this.assignmentRepository.manager;
@@ -863,6 +875,30 @@ export class SchoolAdminService {
       submissionMap.set(sub.student.id, sub);
     });
 
+    // Automatically create submission records for offline assignments that don't have one yet
+    if (assignment.assignmentType === 'offline' && classLevel.students) {
+      const studentsWithoutSubmission = classLevel.students.filter(
+        (student) => !submissionMap.has(student.id),
+      );
+
+      if (studentsWithoutSubmission.length > 0) {
+        const newSubmissions = studentsWithoutSubmission.map((student) => {
+          const submission = submissionRepository.create({
+            assignment: assignment,
+            student: student,
+            status: 'pending',
+          });
+          return submission;
+        });
+
+        const savedSubmissions =
+          await submissionRepository.save(newSubmissions);
+        savedSubmissions.forEach((sub) => {
+          submissionMap.set(sub.student.id, sub);
+        });
+      }
+    }
+
     let filter: 'pending' | 'submitted' | undefined;
     if (pending !== undefined) {
       filter = 'pending';
@@ -870,15 +906,32 @@ export class SchoolAdminService {
       filter = 'submitted';
     }
 
+    // Filter students based on query parameter
+    // For offline assignments, filtering by pending/submitted doesn't apply the same way
     let filteredStudents = classLevel.students;
-    if (filter === 'pending') {
-      filteredStudents = classLevel.students.filter(
-        (student) => !submissionMap.has(student.id),
-      );
-    } else if (filter === 'submitted') {
-      filteredStudents = classLevel.students.filter((student) =>
-        submissionMap.has(student.id),
-      );
+    if (assignment.assignmentType === 'offline') {
+      // For offline assignments, all students are considered "submitted" (ready to grade)
+      // There is no "pending" state for offline assignments
+      if (filter === 'pending') {
+        // Offline assignments don't have pending state - return empty
+        filteredStudents = [];
+      } else if (filter === 'submitted') {
+        // For offline assignments, all students are considered "submitted"
+        // Show all students (they're all ready to be graded)
+        filteredStudents = classLevel.students;
+      }
+      // If no filter, show all students
+    } else {
+      // For online assignments, use existing logic
+      if (filter === 'pending') {
+        filteredStudents = classLevel.students.filter(
+          (student) => !submissionMap.has(student.id),
+        );
+      } else if (filter === 'submitted') {
+        filteredStudents = classLevel.students.filter((student) =>
+          submissionMap.has(student.id),
+        );
+      }
     }
 
     return await Promise.all(
@@ -887,7 +940,12 @@ export class SchoolAdminService {
 
         let status: string;
         if (!submission || !submission.status) {
-          status = 'not submitted';
+          // For offline assignments, treat as "submitted" (ready to grade) even without submission
+          if (assignment.assignmentType === 'offline') {
+            status = 'submitted';
+          } else {
+            status = 'not submitted';
+          }
         } else {
           const dbStatus = String(submission.status).toLowerCase();
           if (dbStatus === 'pending') {
@@ -941,6 +999,7 @@ export class SchoolAdminService {
           mediaType: submission?.mediaType ?? null,
           notes: submission?.notes ?? null,
           overDue,
+          assignmentType: assignment.assignmentType ?? 'online',
         };
       }),
     );
