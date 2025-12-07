@@ -2,7 +2,6 @@
 import { User } from "@/@types";
 import AssignmentsTable from "@/components/admin/assignments/AssignmentsTable";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
-// import FilterButton from "@/components/common/FilterButton";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useDebouncer } from "@/hooks/generalHooks";
@@ -12,7 +11,6 @@ import React, { useState, useMemo } from "react";
 const Assignments = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  // const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
 
@@ -97,25 +95,6 @@ const Assignments = () => {
           />
         </div>
       </div>
-      {/* <div className="flex flex-col items-end mb-4 px-1">
-        <FilterButton
-          onClick={() => setShowFilterOptions(!showFilterOptions)}
-        />
-        {showFilterOptions && (
-          <div className="flex gap-3 mt-3">
-            <CustomSelectTag
-              value={selectedTeacher}
-              options={teacherOptions}
-              onOptionItemClick={handleTeacherChange}
-            />
-            <CustomSelectTag
-              value={selectedClass}
-              options={classOptions}
-              onOptionItemClick={handleClassChange}
-            />
-          </div>
-        )}
-      </div> */}
       <AssignmentsTable assignments={assignments} refetch={refetch} busy={isLoading} />
       <Pagination
         currentPage={currentPage}
