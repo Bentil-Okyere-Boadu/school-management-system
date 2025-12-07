@@ -8,6 +8,7 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { Menu, Select, Switch } from "@mantine/core";
 import { IconDots, IconEdit, IconTrashFilled, IconClipboardCheck } from "@tabler/icons-react";
 import { Topic, Assignment, ErrorResponse } from "@/@types";
+import { AttachmentIcon } from "@/utils/icons";
 import FileUploadArea from "@/components/common/FileUploadArea";
 import { useGetTeacherTopics, useGetTeacherAssignments, useCreateTeacherAssignment, useUpdateTeacherAssignment, useDeleteTeacherAssignment, useGetTeacherSubjectClasses } from "@/hooks/teacher";
 import { toast } from "react-toastify";
@@ -280,19 +281,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                                 className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 hover:bg-blue-200 rounded-full transition-colors duration-200"
                                 title="View attachment"
                               >
-                                <svg 
-                                  className="w-4 h-4 text-blue-600" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    strokeWidth={2} 
-                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" 
-                                  />
-                                </svg>
+                                <AttachmentIcon />
                               </a>
                             )}
                           </div>
