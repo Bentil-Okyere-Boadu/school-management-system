@@ -34,6 +34,9 @@ export const SubmittedAssignmentsTab: React.FC = () => {
                 <div>Topic</div>
               </th>
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
+                <div>Type</div>
+              </th>
+              <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                 <div>Teacher</div>
               </th>
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
@@ -100,6 +103,17 @@ export const SubmittedAssignmentsTab: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div>{assignment.topic || "-"}</div>
+                  </td>
+                  <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        (assignment.assignmentType || "online") === "online"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {(assignment.assignmentType || "online") === "online" ? "Online" : "Offline"}
+                    </span>
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <div>{assignment.teacher}</div>
