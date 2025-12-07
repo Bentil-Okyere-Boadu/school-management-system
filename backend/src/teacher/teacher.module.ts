@@ -31,6 +31,9 @@ import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.enti
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
+import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
+import { Parent } from 'src/parent/parent.entity';
+import { Assignment } from './entities/assignment.entity';
 
 @Module({
   imports: [
@@ -47,6 +50,9 @@ import { ClassLevelResultApproval } from 'src/class-level/class-level-result-app
       AcademicCalendar,
       AcademicTerm,
       ClassLevelResultApproval,
+      AssignmentSubmission,
+      Parent,
+      Assignment,
     ]),
     EmailModule,
     JwtModule.registerAsync({

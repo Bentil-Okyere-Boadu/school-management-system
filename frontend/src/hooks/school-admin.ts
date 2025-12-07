@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload, AdminAssignment, AssignmentSubmission } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -516,7 +516,7 @@ export const useGetSubjectTopics = (subjectCatalogId?: string) => {
         refetchOnWindowFocus: true,
     });
 
-    const topics = (data?.data as Topics[]) || (data?.data?.data as Topics[]) || [];
+    const topics = (data?.data as Topic[]) || (data?.data?.data as Topic[]) || [];
 
     return { topics, isLoading, refetch };
 }
@@ -1095,4 +1095,73 @@ export const useAdminApproveClassResults = () => {
         queryClient.invalidateQueries({ queryKey: ['teacherClasses'] });
     }
   });
+};
+
+/**
+ * ASSIGNMENTS CRUD
+ */
+export const useGetAssignments = (
+  page: number = 1,
+  search: string = "",
+  teacherId: string = "",
+  classLevelId: string = "",
+  limit?: number
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['adminAssignments', { page, search, teacherId, classLevelId, limit }],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+
+      if (search) {
+        queryBuilder.push(`search=${search}`);
+      }
+
+      if (teacherId) {
+        queryBuilder.push(`teacherId=${teacherId}`);
+      }
+
+      if (classLevelId) {
+        queryBuilder.push(`classLevelId=${classLevelId}`);
+      }
+
+      if (page) {
+        queryBuilder.push(`page=${page}`);
+      }
+
+      if (limit) {
+        queryBuilder.push(`limit=${limit}`);
+      }
+
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+
+      return customAPI.get(`/school-admin/assignments?${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const assignments = (data?.data?.data as AdminAssignment[]) || [];
+  const paginationValues = data?.data?.meta;
+
+  return { assignments, isLoading, paginationValues, refetch };
+};
+
+export const useGetAssignmentStudents = (
+  assignmentId: string,
+  filter: "pending" | "submitted" | null = null,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['assignmentStudents', assignmentId, filter],
+    queryFn: () => {
+      const queryParam = filter ? `?${filter}=true` : "";
+      return customAPI.get(`/school-admin/assignments/${assignmentId}/students${queryParam}`);
+    },
+    enabled: options?.enabled ?? Boolean(assignmentId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const students = ((data as { data?: AssignmentSubmission[] })?.data) || [];
+
+  return { students, isLoading, refetch };
 };

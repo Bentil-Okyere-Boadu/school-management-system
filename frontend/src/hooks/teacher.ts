@@ -393,7 +393,7 @@ export const useGetTeacherAssignments = (search: string = "") => {
 
 export const useCreateTeacherAssignment = () => {
     return useMutation({
-        mutationFn: (payload: { 
+        mutationFn: (payload: FormData | { 
             topicId: string; 
             classLevelId: string;
             title: string; 
@@ -401,21 +401,33 @@ export const useCreateTeacherAssignment = () => {
             dueDate: string; 
             maxScore: number;
             state: string;
-        }) =>
-            customAPI.post('/teacher/assignments', payload),
+        }) => {
+            const config = payload instanceof FormData ? {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            } : {};
+            return customAPI.post('/teacher/assignments', payload, config);
+        },
     });
 };
 
 export const useUpdateTeacherAssignment = (assignmentId: string) => {
     return useMutation({
-        mutationFn: (payload: { 
+        mutationFn: (payload: FormData | { 
             title: string; 
             instructions: string; 
             dueDate?: string; 
             maxScore?: number;
             state?: string;
-        }) =>
-            customAPI.patch(`/teacher/assignments/${assignmentId}`, payload),
+        }) => {
+            const config = payload instanceof FormData ? {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            } : {};
+            return customAPI.patch(`/teacher/assignments/${assignmentId}`, payload, config);
+        },
     });
 };
 
@@ -535,4 +547,54 @@ export const useIsClassTeacher = (
   const isClassTeacher = (data as { data: isClassTeacherData })?.data.isClassTeacher;
 
   return { isClassTeacher, isPending, refetch };
+};
+
+export const useGetAssignmentSubmittedStudents = (assignmentId: string) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['assignmentSubmittedStudents', assignmentId],
+    queryFn: () => {
+      return customAPI.get(`/teacher/assignments/${assignmentId}/students?submitted`);
+    },
+    enabled: !!assignmentId,
+    refetchOnWindowFocus: true,
+  });
+
+  const submittedStudents = data?.data || [];
+
+  return { submittedStudents, isLoading, refetch };
+};
+
+export const useGetAssignmentPendingStudents = (assignmentId: string) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['assignmentPendingStudents', assignmentId],
+    queryFn: () => {
+      return customAPI.get(`/teacher/assignments/${assignmentId}/students?pending`);
+    },
+    enabled: !!assignmentId,
+    refetchOnWindowFocus: true,
+  });
+
+  const pendingStudents = data?.data || [];
+
+  return { pendingStudents, isLoading, refetch };
+};
+
+export const useGradeAssignmentSubmission = () => {
+  return useMutation({
+    mutationFn: ({ assignmentId, studentId, ...payload }: { 
+      assignmentId: string;
+      studentId: string;
+      score: number; 
+      feedback?: string;
+    }) =>
+      customAPI.patch(`/teacher/assignments/${assignmentId}/submissions/${studentId}/grade`, payload),
+  });
+};
+
+export const useGetStudentSubmissionDetails = (assignmentId: string, studentId: string, enabled: boolean = false) => {
+  return useQuery({
+    queryKey: ['studentSubmission', assignmentId, studentId],
+    queryFn: () => customAPI.get(`/teacher/assignments/${assignmentId}/submissions/${studentId}`),
+    enabled: enabled && !!assignmentId && !!studentId,
+  });
 };

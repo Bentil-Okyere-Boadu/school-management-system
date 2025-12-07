@@ -474,6 +474,40 @@ export interface TeacherSubject {
   description: string;
 }
 
+export interface AdminAssignment {
+  id: string;
+  title: string;
+  instructions?: string | null;
+  dueDate: string;
+  maxScore: number;
+  state: "published" | "draft";
+  createdAt: string;
+  updatedAt: string;
+  topic: {
+    id: string;
+    name: string;
+  } | null;
+  subject: {
+    id: string;
+    name: string;
+  } | null;
+  classLevel: {
+    id: string;
+    name: string;
+  } | null;
+  teacher: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    teacherId: string;
+  } | null;
+  attachmentPath?: string | null;
+  attachmentUrl?: string | null;
+  attachmentMediaType?: string | null;
+  submissions: number;
+}
+
 export interface Assignment {
   id: string;
   title: string;
@@ -485,7 +519,47 @@ export interface Assignment {
   status: "published" | "draft";
   submissions:  number;
   isPublished: boolean;
-  classLevelId?: string;  
+  classLevelId?: string;
+  class?: string;
+  attachmentPath?: string | null;
+  attachmentUrl?: string | null;
+  attachmentMediaType?: string | null;
+}
+
+export interface StudentAssignment {
+  id: string;
+  title: string;
+  assignment: string;
+  subject: string;
+  topic?: string;
+  teacher: string;
+  dueDate: string;
+  submittedDate?: string;
+  submittedAt?:string;
+  score?: number;
+  maxScore?: number;
+  status: "pending" | "submitted" | "graded";
+  daysOverdue?: number;
+  instructions?: string;
+  attachmentPath?: string;
+  attachmentUrl?: string;
+  attachmentMediaType?: string;
+  submissionId?: string | null;
+  feedback?: string | null;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  studentId: string;
+  hasSubmitted: boolean;
+  submissionId: string | null;
+  status: string;
+  score: number | null;
+  feedback: string | null;
+  submittedAt: string | null;
 }
 
 export interface AssignSubjectTeacherPayload {

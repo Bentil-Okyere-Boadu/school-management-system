@@ -11,7 +11,9 @@ import {
   Put,
   Patch,
   Delete,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TeacherAuthService } from './teacher.auth.service';
 import { TeacherService } from './teacher.service';
 import { TeacherLocalAuthGuard } from './guards/teacher-local-auth.guard';
@@ -38,6 +40,7 @@ import { CreateTeacherTopicDto } from './dto/create-teacher-topic.dto';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateTeacherTopicDto } from './dto/update-teacher-topic.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
+import { GradeSubmissionDto } from './dto/grade-submission.dto';
 
 @Controller('teacher')
 export class TeacherController {
@@ -274,11 +277,13 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('assignments')
   @Roles(Role.Teacher)
+  @UseInterceptors(FileInterceptor('file'))
   createAssignment(
     @CurrentUser() teacher: Teacher,
     @Body() dto: CreateAssignmentDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.TeacherService.createAssignment(teacher, dto);
+    return this.TeacherService.createAssignment(teacher, dto, file);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -291,12 +296,19 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Patch('assignments/:id')
   @Roles(Role.Teacher)
+  @UseInterceptors(FileInterceptor('file'))
   updateAssignment(
     @CurrentUser() teacher: Teacher,
     @Param('id') assignmentId: string,
     @Body() dto: UpdateAssignmentDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.TeacherService.updateAssignment(teacher, assignmentId, dto);
+    return this.TeacherService.updateAssignment(
+      teacher,
+      assignmentId,
+      dto,
+      file,
+    );
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -307,5 +319,56 @@ export class TeacherController {
     @Param('id') assignmentId: string,
   ) {
     return this.TeacherService.deleteAssignment(teacher, assignmentId);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments/:id/students')
+  @Roles(Role.Teacher)
+  getAssignmentStudents(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+    @Query('pending') pending?: string,
+    @Query('submitted') submitted?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.TeacherService.getAssignmentStudents(
+      teacher,
+      assignmentId,
+      pending,
+      submitted,
+      sort,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('assignments/:id/submissions/:studentId')
+  @Roles(Role.Teacher)
+  getStudentSubmission(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.TeacherService.getStudentSubmission(
+      teacher,
+      assignmentId,
+      studentId,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('assignments/:id/submissions/:studentId/grade')
+  @Roles(Role.Teacher)
+  gradeSubmission(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') assignmentId: string,
+    @Param('studentId') studentId: string,
+    @Body() dto: GradeSubmissionDto,
+  ) {
+    return this.TeacherService.gradeSubmission(
+      teacher,
+      assignmentId,
+      studentId,
+      dto,
+    );
   }
 }

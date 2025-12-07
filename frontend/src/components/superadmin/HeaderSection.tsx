@@ -153,7 +153,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
                 )
                 }
                 
-                <p className="text-base text-zinc-600">Welcome to your {activeMenuItem} Overview</p>
+                <p className="text-base text-zinc-600">Welcome to {activeMenuItem} Overview</p>
               </div>
             ) : (
               <div className="flex flex-col">

@@ -1,18 +1,22 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { SearchBar } from "@/components/common/SearchBar";
 import { Menu, Select, Switch } from "@mantine/core";
-import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
+import { IconDots, IconEdit, IconTrashFilled, IconClipboardCheck } from "@tabler/icons-react";
 import { Topic, Assignment, ErrorResponse } from "@/@types";
+import { AttachmentIcon } from "@/utils/icons";
+import FileUploadArea from "@/components/common/FileUploadArea";
 import { useGetTeacherTopics, useGetTeacherAssignments, useCreateTeacherAssignment, useUpdateTeacherAssignment, useDeleteTeacherAssignment, useGetTeacherSubjectClasses } from "@/hooks/teacher";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
 
 
 export const TopicAssignmentsTabSection: React.FC = () => {
+  const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
@@ -29,6 +33,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
     status: "draft",
     isPublished: false,
   });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const { teacherTopics: topics } = useGetTeacherTopics("");
   const { classSubjects } = useGetTeacherSubjectClasses("");
@@ -62,6 +67,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
       status: "draft",
       isPublished: false,
     });
+    setSelectedFiles([]);
     setIsDialogOpen(true);
   };
 
@@ -77,7 +83,11 @@ export const TopicAssignmentsTabSection: React.FC = () => {
       status: row.status,
       isPublished: row.status === 'published',
       classLevelId: row.classLevelId,
+      attachmentPath: row.attachmentPath,
+      attachmentUrl: row.attachmentUrl,
+      attachmentMediaType: row.attachmentMediaType,
     });
+    setSelectedFiles([]);
     setIsDialogOpen(true);
   };
 
@@ -91,20 +101,24 @@ export const TopicAssignmentsTabSection: React.FC = () => {
 
   const saveAssignment = () => {
     if (isCreate) {
-      const payload = {
-        topicId: assignment.topicId || "",
-        classLevelId: assignment.classLevelId || "",
-        title: assignment.title || "",
-        instructions: assignment.instructions || "",
-        dueDate: assignment.dueDate || "",
-        maxScore: assignment.maxScore || 100,
-        state: assignment.isPublished ? "published" : "draft",
-      };
+      const formData = new FormData();
+      formData.append('topicId', assignment.topicId || "");
+      formData.append('classLevelId', assignment.classLevelId || "");
+      formData.append('title', assignment.title || "");
+      formData.append('instructions', assignment.instructions || "");
+      formData.append('dueDate', assignment.dueDate || "");
+      formData.append('maxScore', String(assignment.maxScore || 100));
+      formData.append('state', assignment.isPublished ? "published" : "draft");
       
-      createAssignment(payload, {
+      if (selectedFiles.length > 0) {
+        formData.append('file', selectedFiles[0]);
+      }
+      
+      createAssignment(formData, {
         onSuccess: () => {
           toast.success("Assignment created successfully");
           setIsDialogOpen(false);
+          setSelectedFiles([]);
           refetch();
         },
         onError: (error: unknown) => {
@@ -112,18 +126,22 @@ export const TopicAssignmentsTabSection: React.FC = () => {
         },
       });
     } else {
-      const payload = {
-        title: assignment.title || "",
-        instructions: assignment.instructions || "",
-        dueDate: assignment.dueDate,
-        maxScore: assignment.maxScore,
-        state: assignment.isPublished ? "published" : "draft",
-      };
+      const formData = new FormData();
+      formData.append('title', assignment.title || "");
+      formData.append('instructions', assignment.instructions || "");
+      if (assignment.dueDate) formData.append('dueDate', assignment.dueDate);
+      if (assignment.maxScore) formData.append('maxScore', String(assignment.maxScore));
+      formData.append('state', assignment.isPublished ? "published" : "draft");
       
-      updateAssignment(payload, {
+      if (selectedFiles.length > 0) {
+        formData.append('file', selectedFiles[0]);
+      }
+      
+      updateAssignment(formData, {
         onSuccess: () => {
           toast.success("Assignment updated successfully");
           setIsDialogOpen(false);
+          setSelectedFiles([]);
           refetch();
         },
         onError: (error: unknown) => {
@@ -202,6 +220,9 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                     <div>Topic</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
+                    <div>Class</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                     <div>Due Date</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
@@ -221,7 +242,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   if (isLoading) {
                     return (
                       <tr>
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="relative py-20 bg-white">
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                               <HashLoader color="#AB58E7" size={40} />
@@ -235,7 +256,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   if (!assignments?.length) {
                     return (
                       <tr>
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No assignments created</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -250,10 +271,28 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   return assignments.map((row: Assignment) => (
                     <tr key={row.id}>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                        <div>{row.title}</div>
+                        <div className="flex flex-row gap-2">
+                          <div className="flex justify-center">
+                            {row.attachmentPath && (
+                              <a 
+                                href={row.attachmentUrl || '#'} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 hover:bg-blue-200 rounded-full transition-colors duration-200"
+                                title="View attachment"
+                              >
+                                <AttachmentIcon />
+                              </a>
+                            )}
+                          </div>
+                          {row.title}
+                      </div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div>{row.topic || "-"}</div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div>{row.class || "-"}</div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex items-center gap-2">
@@ -284,6 +323,12 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                               <IconDots className="cursor-pointer" />
                             </Menu.Target>
                             <Menu.Dropdown className="!-ml-12 !-mt-2">
+                              <Menu.Item
+                                onClick={() => router.push(`/teacher/assignments/${row.id}/grading`)}
+                                leftSection={<IconClipboardCheck size={18} color="#AB58E7" />}
+                              >
+                                Go to grading
+                              </Menu.Item>
                               <Menu.Item
                                 onClick={() => onOpenEdit(row)}
                                 leftSection={<IconEdit size={18} color="#AB58E7" />}
@@ -364,6 +409,49 @@ export const TopicAssignmentsTabSection: React.FC = () => {
               }
               value={assignment.instructions || ""}
             />
+          </div>
+
+          <div className="mb-4">
+            <div className="mb-1.5 text-xs text-zinc-600">
+              Attachment (Optional)
+            </div>
+            
+            {/* Show existing file indication when editing */}
+            {!isCreate && assignment.attachmentPath && (
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-blue-800 font-medium">
+                      Current file: {assignment.attachmentPath?.split('/').pop()}
+                    </span>
+                  </div>
+                  {assignment.attachmentUrl && (
+                    <a 
+                      href={assignment.attachmentUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                      View file
+                    </a>
+                  )}
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  Upload a new file below to replace the current one
+                </p>
+              </div>
+            )}
+            
+            <FileUploadArea 
+              onFileSelect={setSelectedFiles} 
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" 
+            />
+            {selectedFiles.length > 0 && (
+              <div className="mt-2 text-sm text-gray-700">
+                Selected: <strong>{selectedFiles.map(f => f.name).join(', ')}</strong>
+              </div>
+            )}
           </div>
 
           <div className="mt-2 mb-4 flex items-center justify-between">

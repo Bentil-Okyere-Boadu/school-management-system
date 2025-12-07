@@ -56,7 +56,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/teacher/grading") {
       setActiveMenuItem("Grading");
       setIsOverviewPage(true);
-    } else if (pathname === "/teacher/subjects") {
+    } else if (pathname === "/teacher/subjects" || pathname.startsWith("/teacher/assignments/")) {
       setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
     }
