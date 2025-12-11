@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import TabBar, { TabListItem } from "@/components/common/TabBar";
-// import { SearchBar } from "@/components/common/SearchBar";
 import { SubmittedTab } from "@/components/teacher/assignments/SubmittedTab";
 import { PendingTab } from "@/components/teacher/assignments/PendingTab";
 import { useGetTeacherAssignments, useGetAssignmentSubmittedStudents, useGetAssignmentPendingStudents } from "@/hooks/teacher";
@@ -16,7 +15,6 @@ const AssignmentGradingPage = () => {
   const assignmentId = params.assignmentId as string;
   const tabFromUrl = searchParams.get("tab");
   const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || "submitted");
-  // const [searchQuery, setSearchQuery] = useState("");
 
   const { teacherAssignments, isLoading } = useGetTeacherAssignments("");
   const assignment = teacherAssignments?.find((a: { id: string }) => a.id === assignmentId);
@@ -53,10 +51,6 @@ const AssignmentGradingPage = () => {
     setActiveTabKey(item.tabKey);
     setTabInUrl(item.tabKey);
   };
-
-  // const handleSearch = (query: string) => {
-  //   setSearchQuery(query);
-  // };
   
 
   if (isLoading) {
@@ -92,22 +86,15 @@ const AssignmentGradingPage = () => {
         onItemClick={handleItemClick}
       />
       
-      {/* <div className="w-full flex justify-between mb-4 mt-4">
-        <SearchBar
-          placeholder="Search students..."
-          onSearch={handleSearch}
-          className="w-full max-w-md"
-        />
-      </div> */}
 
       {activeTabKey === "submitted" && (
         <div>
-          <SubmittedTab assignmentId={assignmentId} maxScore={assignment.maxScore} />
+          <SubmittedTab assignmentId={assignmentId} maxScore={assignment.maxScore} assignmentType={assignment.assignmentType} />
         </div>
       )}
       {activeTabKey === "pending" && (
         <div>
-          <PendingTab assignmentId={assignmentId} />
+          <PendingTab assignmentId={assignmentId} assignmentType={assignment.assignmentType} />
         </div>
       )}
     </div>

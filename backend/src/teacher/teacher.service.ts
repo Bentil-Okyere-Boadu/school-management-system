@@ -682,6 +682,8 @@ export class TeacherService {
     if (dto.dueDate !== undefined) assignment.dueDate = new Date(dto.dueDate);
     if (dto.maxScore !== undefined) assignment.maxScore = dto.maxScore;
     if (dto.state !== undefined) assignment.state = dto.state;
+    if (dto.assignmentType !== undefined)
+      assignment.assignmentType = dto.assignmentType;
 
     // Handle file upload/update
     if (file) {
