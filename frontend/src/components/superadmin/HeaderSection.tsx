@@ -11,7 +11,7 @@ import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
 import { useGetSchoolById } from "@/hooks/super-admin";
-import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById } from "@/hooks/school-admin";
+import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById, useGetNotifications } from "@/hooks/school-admin";
 import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
 
 interface HeaderSectionProps {
@@ -72,6 +72,13 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   })
 
   const signedInRole = getSignedInRole();
+
+  // Get notifications for unread count badge
+  const schoolIdForNotifications = signedInRole === Roles.SCHOOL_ADMIN ? user?.school?.id : null;
+  const { notifications } = useGetNotifications(schoolIdForNotifications);
+  const unreadCount = useMemo(() => {
+    return notifications.filter(n => !n.read).length;
+  }, [notifications]);
 
   const displayTitle: string = useMemo(() => {
     if (isOverviewPage) {
@@ -167,7 +174,16 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
         </div>
 
         <div className="flex items-center flex-wrap gap-3">
-          {signedInRole === Roles.SCHOOL_ADMIN && (<IconBell className="cursor-pointer size-6 mr-1" onClick={onNotificationClick} />)}
+          {signedInRole === Roles.SCHOOL_ADMIN && (
+            <div className="relative mr-1">
+              <IconBell className="cursor-pointer size-6" onClick={onNotificationClick} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
+          )}
 
           <Menu shadow="md" width={200}>
             <Menu.Target>

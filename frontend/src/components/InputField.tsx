@@ -20,6 +20,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
       isTransulent = false,
       rightButton,
       required,
+      value,
       ...props
     },
     ref
@@ -27,6 +28,9 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
     const [showPassword, setShowPassword] = useState(false);
     const isPassword = isPasswordField || type === "password";
     const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+    
+    // Ensure value is always a string to prevent uncontrolled/controlled warning
+    const normalizedValue = value ?? "";
 
     return (
       <div className="mb-4">
@@ -39,6 +43,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
             ref={ref}
             type={inputType}
             disabled={isTransulent}
+            value={normalizedValue}
             {...props}
             className={`px-3 py-2.5 h-10 rounded border-solid border-[0.5px] border-zinc-500 text-zinc-800 w-full
               ${isPassword ? "text-2xl font-bold" : "text-base"}

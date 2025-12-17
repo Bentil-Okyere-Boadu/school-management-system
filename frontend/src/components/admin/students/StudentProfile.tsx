@@ -68,8 +68,10 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
         toast.success('Student data updated successfully.');
         refetch();
       },
-      onError: () => {
-         toast.error('Error occured while updating profile.');
+      onError: (error: unknown) => {
+        toast.error(
+          JSON.stringify((error as ErrorResponse)?.response?.data?.message || 'Error occurred while updating profile.')
+        );
       }
     })
   }
@@ -82,8 +84,10 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
         setNewGuardian(guardianObj)
         setDialogOpen(false);
       },
-      onError: () => {
-        toast.error('Error occured while adding guardian.')
+      onError: (error: unknown) => {
+        toast.error(
+          JSON.stringify((error as ErrorResponse)?.response?.data?.message || 'Error occurred while adding guardian.')
+        );
       }
     })
   }

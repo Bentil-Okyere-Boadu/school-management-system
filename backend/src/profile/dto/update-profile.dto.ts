@@ -1,4 +1,6 @@
-import { IsOptional, IsString, IsEmail, Matches } from 'class-validator';
+import { IsOptional, IsString, IsEmail, Matches, IsEnum } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { Gender } from 'src/student/student.entity';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -26,8 +28,17 @@ export class UpdateProfileDto {
   PlaceOfBirth?: string;
 
   @IsOptional()
-  @IsString()
-  gender?: string;
+  @Transform(({ value }) => {
+    // Convert empty string to null/undefined
+    if (value === '' || value === null || value === undefined) {
+      return null;
+    }
+    return value;
+  })
+  @IsEnum(Gender, {
+    message: 'Gender must be either "male" or "female"',
+  })
+  gender?: Gender | null;
 
   @IsOptional()
   @IsString()
