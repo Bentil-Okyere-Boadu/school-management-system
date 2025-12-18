@@ -748,3 +748,59 @@ export interface TopicPayload {
   subjectCatalogId: string;
   curriculumId: string;
 }
+
+export enum EventVisibility {
+  SCHOOL_WIDE = 'school_wide',
+  YEAR_GROUP = 'year_group',
+  CLASS = 'class',
+  SUBJECT = 'subject',
+}
+
+export interface EventCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlannerEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  allDay: boolean;
+  category?: EventCategory;
+  categoryId?: string;
+  visibility: EventVisibility;
+  classLevelIds?: string[];
+  classLevels?: ClassLevel[];
+  attachmentUrls?: string[];
+  hasReminder: boolean;
+  reminderDate?: string;
+  createdBy?: User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePlannerEventPayload {
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  allDay: boolean;
+  categoryId?: string;
+  visibility: EventVisibility;
+  classLevelIds?: string[];
+  attachmentUrls?: string[];
+  hasReminder: boolean;
+  reminderDate?: string;
+}
+
+export interface CreateEventCategoryPayload {
+  name: string;
+  description?: string;
+  color?: string;
+}

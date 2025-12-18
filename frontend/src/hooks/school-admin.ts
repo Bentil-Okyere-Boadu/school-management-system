@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload, AdminAssignment, AssignmentSubmission } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload, AdminAssignment, AssignmentSubmission, PlannerEvent, EventCategory, CreatePlannerEventPayload, CreateEventCategoryPayload, EventVisibility } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -1164,4 +1164,142 @@ export const useGetAssignmentStudents = (
   const students = ((data as { data?: AssignmentSubmission[] })?.data) || [];
 
   return { students, isLoading, refetch };
+};
+
+/**
+ * PLANNER EVENTS CRUD
+ */
+export const useGetPlannerEvents = (
+  startDate?: string,
+  endDate?: string,
+  categoryId?: string,
+  visibility?: EventVisibility
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['plannerEvents', { startDate, endDate, categoryId, visibility }],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+      
+      if (startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+      
+      if (endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
+      }
+      
+      if (categoryId) {
+        queryBuilder.push(`categoryId=${categoryId}`);
+      }
+      
+      if (visibility) {
+        queryBuilder.push(`visibility=${visibility}`);
+      }
+      
+      const params = queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
+      
+      return customAPI.get(`/planner/events${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const events = (data?.data as PlannerEvent[]) || [];
+
+  return { events, isLoading, refetch };
+};
+
+export const useCreatePlannerEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (payload: CreatePlannerEventPayload) => {
+      return customAPI.post('/planner/events', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
+};
+
+export const useUpdatePlannerEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreatePlannerEventPayload> }) => {
+      return customAPI.patch(`/planner/events/${id}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
+};
+
+export const useDeletePlannerEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/planner/events/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
+};
+
+/**
+ * EVENT CATEGORIES CRUD
+ */
+export const useGetEventCategories = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['eventCategories'],
+    queryFn: () => {
+      return customAPI.get('/planner/categories');
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const categories = (data?.data as EventCategory[]) || [];
+
+  return { categories, isLoading, refetch };
+};
+
+export const useCreateEventCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (payload: CreateEventCategoryPayload) => {
+      return customAPI.post('/planner/categories', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eventCategories'] });
+    },
+  });
+};
+
+export const useUpdateEventCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateEventCategoryPayload> }) => {
+      return customAPI.patch(`/planner/categories/${id}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eventCategories'] });
+    },
+  });
+};
+
+export const useDeleteEventCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/planner/categories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eventCategories'] });
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
 };

@@ -24,3 +24,27 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FullCalendar Styles */
+.planner-calendar-container .fc {
+  font-family: inherit;
+}
+
+.planner-calendar-container .fc-header-toolbar {
+  margin-bottom: 1.5em;
+}
+
+.planner-calendar-container .fc-button {
+  background-color: #AB58E7;
+  border-color: #AB58E7;
+}
+
+.planner-calendar-container .fc-button:hover {
+  background-color: #9a47d6;
+  border-color: #9a47d6;
+}
+
+.planner-calendar-container .fc-button-active {
+  background-color: #8b3fc5;
+  border-color: #8b3fc5;
+}

@@ -17,6 +17,8 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from '../teacher/teacher.entity';
 import { VirtualColumn } from 'typeorm/decorator/columns/VirtualColumn';
+import { EventCategory } from '../planner/entities/event-category.entity';
+import { PlannerEvent } from '../planner/entities/planner-event.entity';
 
 @Entity()
 export class School {
@@ -106,6 +108,16 @@ export class School {
     onDelete: 'CASCADE',
   })
   teachers: Teacher[];
+
+  @OneToMany(() => EventCategory, (category) => category.school, {
+    onDelete: 'CASCADE',
+  })
+  eventCategories: EventCategory[];
+
+  @OneToMany(() => PlannerEvent, (event) => event.school, {
+    onDelete: 'CASCADE',
+  })
+  plannerEvents: PlannerEvent[];
 
   @CreateDateColumn()
   createdAt: Date;
