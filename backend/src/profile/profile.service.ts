@@ -33,17 +33,23 @@ export class ProfileService {
       throw new NotFoundException(`Entity with ID ${id} not found`);
     }
 
+    // Clean up updateDto: convert empty strings to null for enum fields
+    const cleanedDto = { ...updateDto, gender: updateDto.gender };
+    if ('gender' in cleanedDto && cleanedDto.gender === '') {
+      cleanedDto.gender = null;
+    }
+
     if (!entity.profile) {
       const newProfile = this.profileRepository.create({
-        ...updateDto,
+        ...cleanedDto,
       });
       entity.profile = await this.profileRepository.save(newProfile);
     } else {
-      Object.assign(entity.profile, updateDto);
+      Object.assign(entity.profile, cleanedDto);
       await this.profileRepository.save(entity.profile);
     }
 
-    Object.assign(entity, updateDto);
+    Object.assign(entity, cleanedDto);
     return repository.save(entity);
   }
 
