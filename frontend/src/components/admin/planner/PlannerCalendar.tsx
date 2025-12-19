@@ -1,56 +1,94 @@
 "use client";
-import React from "react";
+import React, { useState, useCallback } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { EventInput, DateSelectArg, EventClickArg, DatesSetArg, EventContentArg } from "@fullcalendar/core";
+import { EventInput, DateSelectArg, EventClickArg, DatesSetArg, EventContentArg, EventDropArg, EventResizeArg } from "@fullcalendar/core";
 import { PlannerEvent } from "@/@types";
+import { ActionIcon } from "@mantine/core";
+import { IconTrash } from "@tabler/icons-react";
+
+const DEFAULT_CATEGORY_COLOR = "#10b981";
 
 interface PlannerCalendarProps {
   events: EventInput[];
   onDateSelect: (selectInfo: DateSelectArg) => void;
   onEventClick: (clickInfo: EventClickArg) => void;
+  onDeleteClick: (event: PlannerEvent) => void;
+  onEventDrop: (dropInfo: EventDropArg) => void;
+  onEventResize?: (resizeInfo: EventResizeArg) => void;
   onDatesSet: (dateInfo: DatesSetArg) => void;
-  // isLoading?: boolean;
 }
 
-// Custom event content renderer to match timetable style
-const renderEventContent = (eventInfo: EventContentArg) => {
+interface EventContentWrapperProps {
+  eventInfo: EventContentArg;
+  onDeleteClick: (event: PlannerEvent) => void;
+}
+
+const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
+  eventInfo,
+  onDeleteClick,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
   const event = eventInfo.event.extendedProps.event as PlannerEvent;
-  const startTime = eventInfo.timeText;
-  const isAllDay = eventInfo.event.allDay;
-  const categoryColor = eventInfo.event.extendedProps.categoryColor || event?.category?.color || "#10b981";
+  const categoryColor = eventInfo.event.extendedProps.categoryColor || event?.category?.color || DEFAULT_CATEGORY_COLOR;
+
+  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (event) {
+      onDeleteClick(event);
+    }
+  }, [event, onDeleteClick]);
+
+  const handleMouseEnter = useCallback(() => setIsHovered(true), []);
+  const handleMouseLeave = useCallback(() => setIsHovered(false), []);
 
   return (
-    <div 
-      className="fc-event-content-wrapper"
-      style={{
-        borderLeftColor: categoryColor,
-      }}
+    <div
+      className="fc-event-content-wrapper relative group flex items-start gap-1"
+      style={{ borderLeftColor: categoryColor }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {!isAllDay && (
-        <div className="fc-event-time text-xs font-medium text-gray-700 mb-1">
-          {startTime}
+      <div className="flex-1 min-w-0">
+        {!eventInfo.event.allDay && (
+          <div className="fc-event-time text-xs font-medium text-gray-700 mb-1">
+            {eventInfo.timeText}
+          </div>
+        )}
+        <div className="fc-event-title font-semibold text-sm text-gray-900">
+          {eventInfo.event.title}
         </div>
-      )}
-      <div className="fc-event-title font-semibold text-sm text-gray-900">
-        {eventInfo.event.title}
+        {event?.location && (
+          <div className="fc-event-location text-xs text-gray-500 mt-1">
+            {event.location}
+          </div>
+        )}
+        {event?.description && (
+          <div className="fc-event-description text-xs text-gray-600 mt-1 line-clamp-1">
+            {event.description}
+          </div>
+        )}
+        {event?.category && (
+          <div className="fc-event-category text-xs text-gray-500 mt-1">
+            {event.category.name}
+          </div>
+        )}
       </div>
-      {event?.location && (
-        <div className="fc-event-location text-xs text-gray-500 mt-1">
-          {event.location}
-        </div>
-      )}
-      {event?.description && (
-        <div className="fc-event-description text-xs text-gray-600 mt-1 line-clamp-1">
-          {event.description}
-        </div>
-      )}
-      {event?.category && (
-        <div className="fc-event-category text-xs text-gray-500 mt-1">
-          {event.category.name}
-        </div>
+      {event && (
+        <ActionIcon
+          size="sm"
+          variant="filled"
+          color="red"
+          className={`flex-shrink-0 transition-opacity duration-150 z-10 ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          } hover:opacity-100`}
+          onClick={handleDeleteClick}
+          title="Delete event"
+        >
+          <IconTrash size={14} />
+        </ActionIcon>
       )}
     </div>
   );
@@ -60,9 +98,20 @@ export const PlannerCalendar: React.FC<PlannerCalendarProps> = ({
   events,
   onDateSelect,
   onEventClick,
+  onDeleteClick,
+  onEventDrop,
+  onEventResize,
   onDatesSet,
-  // isLoading = false,
 }) => {
+  const renderEventContent = useCallback((eventInfo: EventContentArg) => {
+    return (
+      <EventContentWrapper
+        eventInfo={eventInfo}
+        onDeleteClick={onDeleteClick}
+      />
+    );
+  }, [onDeleteClick]);
+
   return (
     <div className="planner-calendar-container [&_.fc]:font-sans">
       <FullCalendar
@@ -81,6 +130,8 @@ export const PlannerCalendar: React.FC<PlannerCalendarProps> = ({
         weekends={true}
         select={onDateSelect}
         eventClick={onEventClick}
+        eventDrop={onEventDrop}
+        eventResize={onEventResize}
         datesSet={onDatesSet}
         height="auto"
         eventDisplay="block"

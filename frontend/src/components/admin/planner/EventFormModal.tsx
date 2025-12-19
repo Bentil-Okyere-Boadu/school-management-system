@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import InputField  from "@/components/InputField";
 import { Select, MultiSelect, Checkbox, Button } from "@mantine/core";
@@ -58,17 +58,23 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
       const startDate = new Date(event.startDate);
       const endDate = event.endDate ? new Date(event.endDate) : startDate;
       
-      // Extract IDs from arrays if they're objects, otherwise use the IDs directly
       const targetClassLevelIds = event.targetClassLevelIds || 
         (event.targetClassLevels?.map(cl => cl.id) || []);
       const targetSubjectIds = event.targetSubjectIds || 
         (event.targetSubjects?.map(subj => subj.id || '') || []);
       
+      const startDateStr = event.isAllDay
+        ? startDate.toISOString().slice(0, 10)
+        : startDate.toISOString().slice(0, 16);
+      const endDateStr = event.isAllDay
+        ? endDate.toISOString().slice(0, 10)
+        : endDate.toISOString().slice(0, 16);
+
       setFormData({
         title: event.title,
         description: event.description || "",
-        startDate: startDate.toISOString().slice(0, 16),
-        endDate: endDate.toISOString().slice(0, 16),
+        startDate: startDateStr,
+        endDate: endDateStr,
         isAllDay: event.isAllDay,
         location: event.location || "",
         categoryId: event.categoryId || event.category?.id || "",
@@ -77,30 +83,28 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
         targetSubjectIds,
       });
       
-      if (event.reminders && event.reminders.length > 0) {
-        setReminders(event.reminders.map(r => ({
-          reminderTime: new Date(r.reminderTime).toISOString().slice(0, 16),
-          notificationType: r.notificationType,
-        })));
-      } else {
-        setReminders([]);
-      }
+      setReminders(
+        event.reminders?.length > 0
+          ? event.reminders.map(r => ({
+              reminderTime: new Date(r.reminderTime).toISOString().slice(0, 16),
+              notificationType: r.notificationType,
+            }))
+          : []
+      );
       
-      // Store existing attachments
       setExistingAttachments(event.attachments || []);
       setSelectedFiles([]);
     } else if (initialDate) {
       const dateStr = initialDate.toISOString().slice(0, 16);
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         startDate: dateStr,
         endDate: dateStr,
-      });
+      }));
       setReminders([]);
       setSelectedFiles([]);
       setExistingAttachments([]);
     } else {
-      // Reset form
       setFormData({
         title: "",
         description: "",
@@ -146,10 +150,23 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
     }
 
     try {
+      let startDate = new Date(formData.startDate);
+      let endDate = formData.endDate ? new Date(formData.endDate) : null;
+
+      if (formData.isAllDay) {
+        startDate.setHours(0, 0, 0, 0);
+        if (endDate) {
+          endDate.setHours(23, 59, 59, 999);
+        } else {
+          endDate = new Date(startDate);
+          endDate.setHours(23, 59, 59, 999);
+        }
+      }
+
       const payload: CreatePlannerEventPayload = {
         ...formData,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
+        startDate: startDate.toISOString(),
+        endDate: endDate ? endDate.toISOString() : undefined,
         reminders: reminders.length > 0 ? reminders.map(r => ({
           reminderTime: new Date(r.reminderTime).toISOString(),
           notificationType: r.notificationType,
@@ -166,39 +183,46 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
       }
       onSuccess();
     } catch (error: unknown) {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error as ErrorResponse).response?.data?.message
+        : "An error occurred";
+      toast.error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
     }
   };
+
+  const MAX_FILES = 10;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
-      if (selectedFiles.length + fileArray.length > 10) {
-        toast.error("Maximum 10 files allowed");
-        return;
-      }
-      setSelectedFiles([...selectedFiles, ...fileArray]);
+    if (!files) return;
+    
+    const fileArray = Array.from(files);
+    if (selectedFiles.length + fileArray.length > MAX_FILES) {
+      toast.error(`Maximum ${MAX_FILES} files allowed`);
+      return;
     }
+    setSelectedFiles(prev => [...prev, ...fileArray]);
   };
 
-  const handleRemoveFile = (index: number) => {
-    setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
-  };
+  const handleRemoveFile = useCallback((index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-  const addReminder = () => {
-    setReminders([...reminders, { reminderTime: "", notificationType: 'both' }]);
-  };
+  const addReminder = useCallback(() => {
+    setReminders(prev => [...prev, { reminderTime: "", notificationType: 'both' }]);
+  }, []);
 
-  const removeReminder = (index: number) => {
-    setReminders(reminders.filter((_, i) => i !== index));
-  };
+  const removeReminder = useCallback((index: number) => {
+    setReminders(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-  const updateReminder = (index: number, field: keyof ReminderForm, value: string) => {
-    const updated = [...reminders];
-    updated[index] = { ...updated[index], [field]: value };
-    setReminders(updated);
-  };
+  const updateReminder = useCallback((index: number, field: keyof ReminderForm, value: string) => {
+    setReminders(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }, []);
 
   const categoryOptions = categories.map((cat) => ({
     value: cat.id,
@@ -255,10 +279,18 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           <div>
             <InputField
               className="!py-0"
-              label="Start Date & Time"
-              type="datetime-local"
-              value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              label={formData.isAllDay ? "Start Date" : "Start Date & Time"}
+              type={formData.isAllDay ? "date" : "datetime-local"}
+              value={formData.isAllDay && formData.startDate 
+                ? formData.startDate.slice(0, 10) 
+                : formData.startDate}
+              onChange={(e) => {
+                let newStartDate = e.target.value;
+                if (formData.isAllDay) {
+                  newStartDate = `${newStartDate}T00:00`;
+                }
+                setFormData({ ...formData, startDate: newStartDate });
+              }}
               required
               isTransulent={false}
             />
@@ -266,10 +298,18 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           <div>
             <InputField
               className="!py-0"
-              label="End Date & Time"
-              type="datetime-local"
-              value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              label={formData.isAllDay ? "End Date" : "End Date & Time"}
+              type={formData.isAllDay ? "date" : "datetime-local"}
+              value={formData.isAllDay && formData.endDate 
+                ? formData.endDate.slice(0, 10) 
+                : formData.endDate}
+              onChange={(e) => {
+                let newEndDate = e.target.value;
+                if (formData.isAllDay) {
+                  newEndDate = `${newEndDate}T23:59`;
+                }
+                setFormData({ ...formData, endDate: newEndDate });
+              }}
               isTransulent={false}
             />
           </div>
@@ -287,7 +327,53 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
         <Checkbox
           label="All Day Event"
           checked={formData.isAllDay}
-          onChange={(e) => setFormData({ ...formData, isAllDay: e.currentTarget.checked })}
+          onChange={(e) => {
+            const isAllDay = e.currentTarget.checked;
+            let newStartDate = formData.startDate;
+            let newEndDate = formData.endDate;
+
+            if (isAllDay && formData.startDate) {
+              const startDate = new Date(formData.startDate);
+              startDate.setHours(0, 0, 0, 0);
+              newStartDate = startDate.toISOString().slice(0, 16);
+
+              if (formData.endDate) {
+                const endDate = new Date(formData.endDate);
+                endDate.setHours(23, 59, 59, 999);
+                newEndDate = endDate.toISOString().slice(0, 16);
+              } else {
+                const endDate = new Date(startDate);
+                endDate.setHours(23, 59, 59, 999);
+                newEndDate = endDate.toISOString().slice(0, 16);
+              }
+            } else if (!isAllDay && formData.startDate) {
+              const startDate = new Date(formData.startDate);
+              if (startDate.getHours() === 0 && startDate.getMinutes() === 0) {
+                startDate.setHours(9, 0, 0, 0);
+                newStartDate = startDate.toISOString().slice(0, 16);
+              }
+
+              if (formData.endDate) {
+                const endDate = new Date(formData.endDate);
+                if (endDate.getHours() === 23 && endDate.getMinutes() === 59) {
+                  const newEnd = new Date(startDate);
+                  newEnd.setHours(10, 0, 0, 0);
+                  newEndDate = newEnd.toISOString().slice(0, 16);
+                }
+              } else {
+                const endDate = new Date(startDate);
+                endDate.setHours(10, 0, 0, 0);
+                newEndDate = endDate.toISOString().slice(0, 16);
+              }
+            }
+
+            setFormData({
+              ...formData,
+              isAllDay,
+              startDate: newStartDate,
+              endDate: newEndDate,
+            });
+          }}
         />
 
         <Select
