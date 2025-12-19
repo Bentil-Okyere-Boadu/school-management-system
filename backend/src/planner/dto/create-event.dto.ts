@@ -8,6 +8,7 @@ import {
   IsArray,
   IsUUID,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { VisibilityScope } from '../entities/event.entity';
 
 export class CreateEventDto {
@@ -29,6 +30,11 @@ export class CreateEventDto {
 
   @IsBoolean()
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
+  })
   isAllDay?: boolean;
 
   @IsString()

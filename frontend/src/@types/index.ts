@@ -748,3 +748,83 @@ export interface TopicPayload {
   subjectCatalogId: string;
   curriculumId: string;
 }
+
+export enum VisibilityScope {
+  SCHOOL_WIDE = 'school_wide',
+  CLASS_LEVEL = 'class_level',
+  SUBJECT = 'subject',
+}
+
+export interface EventCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventAttachment {
+  id: string;
+  filePath: string;
+  fileName: string;
+  fileSize: number;
+  mediaType: string;
+  uploadedAt: string;
+  fileUrl?: string; // Signed URL from backend
+}
+
+export interface EventReminder {
+  id: string;
+  reminderTime: string;
+  sent: boolean;
+  notificationType: 'email' | 'sms' | 'both';
+  createdAt: string;
+}
+
+export interface PlannerEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  isAllDay: boolean;
+  location?: string;
+  category?: EventCategory;
+  categoryId: string;
+  visibilityScope: VisibilityScope;
+  targetClassLevelIds?: string[];
+  targetSubjectIds?: string[];
+  targetClassLevels?: ClassLevel[];
+  targetSubjects?: Subject[];
+  attachments?: EventAttachment[];
+  reminders?: EventReminder[];
+  createdByTeacherId?: string;
+  createdByAdminId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePlannerEventPayload {
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  isAllDay?: boolean;
+  location?: string;
+  categoryId: string;
+  visibilityScope: VisibilityScope;
+  targetClassLevelIds?: string[];
+  targetSubjectIds?: string[];
+  reminders?: Array<{
+    reminderTime: string;
+    notificationType?: 'email' | 'sms' | 'both';
+  }>;
+  files?: File[];
+}
+
+export interface CreateEventCategoryPayload {
+  name: string;
+  description?: string;
+  color: string;
+}

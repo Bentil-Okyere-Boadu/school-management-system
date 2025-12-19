@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload, AdminAssignment, AssignmentSubmission } from "@/@types";
+import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload, AdminAssignment, AssignmentSubmission, PlannerEvent, EventCategory, CreatePlannerEventPayload, CreateEventCategoryPayload, VisibilityScope } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
     const { data, isLoading, refetch } = useQuery({
@@ -1164,4 +1164,259 @@ export const useGetAssignmentStudents = (
   const students = ((data as { data?: AssignmentSubmission[] })?.data) || [];
 
   return { students, isLoading, refetch };
+};
+
+/**
+ * PLANNER EVENTS CRUD
+ */
+export const useGetPlannerEvents = (
+  startDate?: string,
+  endDate?: string,
+  categoryId?: string,
+  classLevelId?: string,
+  subjectId?: string,
+  visibilityScope?: VisibilityScope
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['plannerEvents', { startDate, endDate, categoryId, classLevelId, subjectId, visibilityScope }],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+      
+      if (startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+      
+      if (endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
+      }
+      
+      if (categoryId) {
+        queryBuilder.push(`categoryId=${categoryId}`);
+      }
+      
+      if (classLevelId) {
+        queryBuilder.push(`classLevelId=${classLevelId}`);
+      }
+      
+      if (subjectId) {
+        queryBuilder.push(`subjectId=${subjectId}`);
+      }
+      
+      if (visibilityScope) {
+        queryBuilder.push(`visibilityScope=${visibilityScope}`);
+      }
+      
+      const params = queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
+      
+      return customAPI.get(`/planner/events${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const events = (data?.data as PlannerEvent[]) || [];
+
+  return { events, isLoading, refetch };
+};
+
+export const useCreatePlannerEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (payload: CreatePlannerEventPayload) => {
+      const formData = new FormData();
+      
+      formData.append('title', payload.title);
+      if (payload.description) {
+        formData.append('description', payload.description);
+      }
+      formData.append('startDate', payload.startDate);
+      if (payload.endDate) {
+        formData.append('endDate', payload.endDate);
+      }
+      // Send isAllDay as string - backend Transform decorator will convert to boolean
+      formData.append('isAllDay', String(payload.isAllDay ?? false));
+      if (payload.location) {
+        formData.append('location', payload.location);
+      }
+      formData.append('categoryId', payload.categoryId);
+      formData.append('visibilityScope', payload.visibilityScope);
+      
+      if (payload.targetClassLevelIds && payload.targetClassLevelIds.length > 0) {
+        payload.targetClassLevelIds.forEach(id => {
+          formData.append('targetClassLevelIds[]', id);
+        });
+      }
+      
+      if (payload.targetSubjectIds && payload.targetSubjectIds.length > 0) {
+        payload.targetSubjectIds.forEach(id => {
+          formData.append('targetSubjectIds[]', id);
+        });
+      }
+      
+      if (payload.reminders && payload.reminders.length > 0) {
+        payload.reminders.forEach((reminder, index) => {
+          formData.append(`reminders[${index}][reminderTime]`, reminder.reminderTime);
+          if (reminder.notificationType) {
+            formData.append(`reminders[${index}][notificationType]`, reminder.notificationType);
+          }
+        });
+      }
+      
+      if (payload.files && payload.files.length > 0) {
+        payload.files.forEach(file => {
+          formData.append('files', file);
+        });
+      }
+      
+      return customAPI.post('/planner/events', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
+};
+
+export const useUpdatePlannerEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreatePlannerEventPayload> }) => {
+      const formData = new FormData();
+      
+      if (payload.title !== undefined) {
+        formData.append('title', payload.title);
+      }
+      if (payload.description !== undefined) {
+        formData.append('description', payload.description || '');
+      }
+      if (payload.startDate !== undefined) {
+        formData.append('startDate', payload.startDate);
+      }
+      if (payload.endDate !== undefined) {
+        formData.append('endDate', payload.endDate || '');
+      }
+      if (payload.isAllDay !== undefined) {
+        formData.append('isAllDay', String(payload.isAllDay));
+      }
+      if (payload.location !== undefined) {
+        formData.append('location', payload.location || '');
+      }
+      if (payload.categoryId !== undefined) {
+        formData.append('categoryId', payload.categoryId);
+      }
+      if (payload.visibilityScope !== undefined) {
+        formData.append('visibilityScope', payload.visibilityScope);
+      }
+      
+      if (payload.targetClassLevelIds !== undefined && payload.targetClassLevelIds.length > 0) {
+        payload.targetClassLevelIds.forEach(id => {
+          formData.append('targetClassLevelIds[]', id);
+        });
+      }
+      
+      if (payload.targetSubjectIds !== undefined && payload.targetSubjectIds.length > 0) {
+        payload.targetSubjectIds.forEach(id => {
+          formData.append('targetSubjectIds[]', id);
+        });
+      }
+      
+      if (payload.reminders !== undefined) {
+        payload.reminders.forEach((reminder, index) => {
+          formData.append(`reminders[${index}][reminderTime]`, reminder.reminderTime);
+          if (reminder.notificationType) {
+            formData.append(`reminders[${index}][notificationType]`, reminder.notificationType);
+          }
+        });
+      }
+      
+      if (payload.files !== undefined && payload.files.length > 0) {
+        payload.files.forEach(file => {
+          formData.append('files', file);
+        });
+      }
+      
+      return customAPI.put(`/planner/events/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
+};
+
+export const useDeletePlannerEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/planner/events/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
+};
+
+/**
+ * EVENT CATEGORIES CRUD
+ */
+export const useGetEventCategories = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['eventCategories'],
+    queryFn: () => {
+      return customAPI.get('/planner/categories');
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const categories = (data?.data as EventCategory[]) || [];
+
+  return { categories, isLoading, refetch };
+};
+
+export const useCreateEventCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (payload: CreateEventCategoryPayload) => {
+      return customAPI.post('/planner/categories', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eventCategories'] });
+    },
+  });
+};
+
+export const useUpdateEventCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateEventCategoryPayload> }) => {
+      return customAPI.put(`/planner/categories/${id}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eventCategories'] });
+    },
+  });
+};
+
+export const useDeleteEventCategory = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/planner/categories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eventCategories'] });
+      queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+    },
+  });
 };
