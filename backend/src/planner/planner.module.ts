@@ -12,6 +12,7 @@ import { ClassLevel } from '../class-level/class-level.entity';
 import { Student } from '../student/student.entity';
 import { Parent } from '../parent/parent.entity';
 import { Subject } from '../subject/subject.entity';
+import { SubjectCatalog } from '../subject/subject-catalog.entity';
 import { PlannerScheduler } from './planner-scheduler';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
@@ -24,6 +25,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       EventReminder,
       ClassLevel,
       Subject,
+      SubjectCatalog,
       Student,
       Parent,
     ]),

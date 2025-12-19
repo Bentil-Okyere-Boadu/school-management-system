@@ -123,12 +123,14 @@ export class PlannerController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('events/:id')
   @Roles(Role.SchoolAdmin)
+  @UseInterceptors(FilesInterceptor('files', 10))
   updateEvent(
     @Param('id') id: string,
     @Body() dto: UpdateEventDto,
     @CurrentUser() admin: SchoolAdmin,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
-    return this.plannerService.updateEvent(id, dto, admin);
+    return this.plannerService.updateEvent(id, dto, admin, files);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -184,12 +186,14 @@ export class PlannerController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('teacher/events/:id')
   @Roles(Role.Teacher)
+  @UseInterceptors(FilesInterceptor('files', 10))
   updateEventAsTeacher(
     @Param('id') id: string,
     @Body() dto: UpdateEventDto,
     @CurrentUser() teacher: Teacher,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
-    return this.plannerService.updateEvent(id, dto, teacher);
+    return this.plannerService.updateEvent(id, dto, teacher, files);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)

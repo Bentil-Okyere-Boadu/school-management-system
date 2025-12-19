@@ -23,6 +23,7 @@ import { Teacher } from '../teacher/teacher.entity';
 import { Student } from '../student/student.entity';
 import { ClassLevel } from '../class-level/class-level.entity';
 import { Subject } from '../subject/subject.entity';
+import { SubjectCatalog } from '../subject/subject-catalog.entity';
 import { ObjectStorageServiceService } from '../object-storage-service/object-storage-service.service';
 import { EmailService } from '../common/services/email.service';
 import { SmsService } from '../common/services/sms.service';
@@ -46,6 +47,8 @@ export class PlannerService {
     private classLevelRepository: Repository<ClassLevel>,
     @InjectRepository(Subject)
     private subjectRepository: Repository<Subject>,
+    @InjectRepository(SubjectCatalog)
+    private subjectCatalogRepository: Repository<SubjectCatalog>,
     @InjectRepository(Student)
     private studentRepository: Repository<Student>,
     @InjectRepository(Parent)
@@ -55,7 +58,6 @@ export class PlannerService {
     private smsService: SmsService,
   ) {}
 
-  // Event Category CRUD
   async createCategory(
     dto: CreateEventCategoryDto,
     admin: SchoolAdmin,
@@ -109,7 +111,6 @@ export class PlannerService {
   ): Promise<EventCategory> {
     const category = await this.findOneCategory(id, admin.school.id);
 
-    // Check if new name conflicts with existing category
     if (dto.name && dto.name !== category.name) {
       const existing = await this.categoryRepository.findOne({
         where: {
@@ -132,7 +133,6 @@ export class PlannerService {
   async removeCategory(id: string, admin: SchoolAdmin): Promise<void> {
     const category = await this.findOneCategory(id, admin.school.id);
 
-    // Check if category is used by any events
     const eventCount = await this.eventRepository.count({
       where: { category: { id } },
     });
@@ -151,27 +151,7 @@ export class PlannerService {
     creator: SchoolAdmin | Teacher,
     files?: Express.Multer.File[],
   ) {
-    let school: School;
-    let schoolId: string;
-
-    if (creator.role?.name === 'school_admin') {
-      school = creator.school;
-      schoolId = school.id;
-    } else {
-      const teacherWithSchool = await this.eventRepository.manager
-        .getRepository(Teacher)
-        .findOne({
-          where: { id: creator.id },
-          relations: ['school'],
-        });
-
-      if (!teacherWithSchool?.school) {
-        throw new NotFoundException('Teacher school not found');
-      }
-
-      school = teacherWithSchool.school;
-      schoolId = school.id;
-    }
+    const { school, schoolId } = await this.getSchoolFromUser(creator);
 
     const category = await this.categoryRepository.findOne({
       where: { id: dto.categoryId, school: { id: schoolId } },
@@ -181,24 +161,8 @@ export class PlannerService {
       throw new NotFoundException('Category not found');
     }
 
-    // Validate visibility scope and targets
-    if (dto.visibilityScope === VisibilityScope.CLASS_LEVEL) {
-      if (!dto.targetClassLevelIds || dto.targetClassLevelIds.length === 0) {
-        throw new BadRequestException(
-          'Class levels are required for class-level visibility',
-        );
-      }
-    }
+    this.validateVisibilityScope(dto);
 
-    if (dto.visibilityScope === VisibilityScope.SUBJECT) {
-      if (!dto.targetSubjectIds || dto.targetSubjectIds.length === 0) {
-        throw new BadRequestException(
-          'Subjects are required for subject visibility',
-        );
-      }
-    }
-
-    // Validate dates
     const startDate = new Date(dto.startDate);
     if (dto.endDate) {
       const endDate = new Date(dto.endDate);
@@ -207,50 +171,13 @@ export class PlannerService {
       }
     }
 
-    // Check permissions for teachers
     if (creator.role?.name === 'teacher') {
-      // Teacher can only create class-level or subject events
-      if (dto.visibilityScope === VisibilityScope.SCHOOL_WIDE) {
-        throw new ForbiddenException(
-          'Teachers cannot create school-wide events',
-        );
-      }
-
-      // Verify teacher has access to target classes/subjects
-      if (dto.targetClassLevelIds) {
-        const teacherClasses = await this.classLevelRepository.find({
-          where: {
-            id: In(dto.targetClassLevelIds),
-            teachers: { id: creator.id },
-          },
-        });
-
-        if (teacherClasses.length !== dto.targetClassLevelIds.length) {
-          throw new ForbiddenException(
-            'You can only create events for classes you are assigned to',
-          );
-        }
-      }
-
-      if (dto.targetSubjectIds) {
-        const teacherSubjects = await this.subjectRepository.find({
-          where: {
-            id: In(dto.targetSubjectIds),
-            teacher: { id: creator.id },
-          },
-        });
-
-        if (teacherSubjects.length !== dto.targetSubjectIds.length) {
-          throw new ForbiddenException(
-            'You can only create events for subjects you teach',
-          );
-        }
-      }
+      await this.validateTeacherPermissions(creator as Teacher, dto);
     }
+
     const isTeacher = creator.role?.name === 'teacher';
     const isSchoolAdmin = creator.role?.name === 'school_admin';
 
-    // Create event
     const event = this.eventRepository.create({
       title: dto.title,
       description: dto.description,
@@ -265,7 +192,130 @@ export class PlannerService {
       createdByAdminId: isSchoolAdmin ? creator.id : null,
     });
 
-    // Set target classes/subjects
+    await this.setEventTargets(event, dto);
+
+    const savedEvent = await this.eventRepository.save(event);
+
+    if (files && files.length > 0) {
+      savedEvent.attachments = await this.uploadEventAttachments(
+        files,
+        savedEvent,
+        schoolId,
+      );
+    }
+
+    if (dto.reminders && dto.reminders.length > 0) {
+      await this.createEventReminders(savedEvent, dto.reminders);
+    }
+
+    const eventForNotifications = await this.loadEventForNotifications(
+      savedEvent.id,
+    );
+
+    if (eventForNotifications) {
+      await this.sendEventNotifications(eventForNotifications, 'created');
+    }
+
+    return this.findOneEvent(savedEvent.id, schoolId);
+  }
+
+  private async getSchoolFromUser(
+    user: SchoolAdmin | Teacher,
+  ): Promise<{ school: School; schoolId: string }> {
+    if (user.role?.name === 'school_admin') {
+      return { school: user.school, schoolId: user.school.id };
+    }
+
+    const teacherWithSchool = await this.eventRepository.manager
+      .getRepository(Teacher)
+      .findOne({
+        where: { id: user.id },
+        relations: ['school'],
+      });
+
+    if (!teacherWithSchool?.school) {
+      throw new NotFoundException('Teacher school not found');
+    }
+
+    return {
+      school: teacherWithSchool.school,
+      schoolId: teacherWithSchool.school.id,
+    };
+  }
+
+  private validateVisibilityScope(dto: CreateEventDto | UpdateEventDto): void {
+    if (dto.visibilityScope === VisibilityScope.CLASS_LEVEL) {
+      if (!dto.targetClassLevelIds || dto.targetClassLevelIds.length === 0) {
+        throw new BadRequestException(
+          'Class levels are required for class-level visibility',
+        );
+      }
+    }
+
+    if (dto.visibilityScope === VisibilityScope.SUBJECT) {
+      if (!dto.targetSubjectIds || dto.targetSubjectIds.length === 0) {
+        throw new BadRequestException(
+          'Subject catalogs are required for subject visibility',
+        );
+      }
+    }
+  }
+
+  private async validateTeacherPermissions(
+    creator: Teacher,
+    dto: CreateEventDto | UpdateEventDto,
+  ): Promise<void> {
+    if (dto.visibilityScope === VisibilityScope.SCHOOL_WIDE) {
+      throw new ForbiddenException('Teachers cannot create school-wide events');
+    }
+
+    if (dto.targetClassLevelIds) {
+      const teacherClasses = await this.classLevelRepository.find({
+        where: {
+          id: In(dto.targetClassLevelIds),
+          teachers: { id: creator.id },
+        },
+      });
+
+      if (teacherClasses.length !== dto.targetClassLevelIds.length) {
+        throw new ForbiddenException(
+          'You can only create events for classes you are assigned to',
+        );
+      }
+    }
+
+    if (dto.targetSubjectIds) {
+      const teacherSubjects = await this.subjectRepository.find({
+        where: {
+          subjectCatalog: { id: In(dto.targetSubjectIds) },
+          teacher: { id: creator.id },
+        },
+        relations: ['subjectCatalog'],
+      });
+
+      const teacherSubjectCatalogIds = new Set(
+        teacherSubjects
+          .map((s) => s.subjectCatalog?.id)
+          .filter((id): id is string => id !== undefined),
+      );
+
+      const requestedCatalogIds = new Set(dto.targetSubjectIds);
+      const allTaught = Array.from(requestedCatalogIds).every((id) =>
+        teacherSubjectCatalogIds.has(id),
+      );
+
+      if (!allTaught) {
+        throw new ForbiddenException(
+          'You can only create events for subject catalogs you teach',
+        );
+      }
+    }
+  }
+
+  private async setEventTargets(
+    event: Event,
+    dto: CreateEventDto | UpdateEventDto,
+  ): Promise<void> {
     if (dto.targetClassLevelIds && dto.targetClassLevelIds.length > 0) {
       event.targetClassLevels = await this.classLevelRepository.findBy({
         id: In(dto.targetClassLevelIds),
@@ -273,70 +323,84 @@ export class PlannerService {
     }
 
     if (dto.targetSubjectIds && dto.targetSubjectIds.length > 0) {
-      event.targetSubjects = await this.subjectRepository.findBy({
+      event.targetSubjects = await this.subjectCatalogRepository.findBy({
         id: In(dto.targetSubjectIds),
       });
     }
+  }
 
-    const savedEvent = await this.eventRepository.save(event);
-
-    // Handle file attachments
-    if (files && files.length > 0) {
-      const attachments = await Promise.all(
-        files.map(async (file) => {
-          try {
-            const uploadResult =
-              await this.objectStorageService.uploadEventAttachment(
-                file,
-                schoolId,
-                savedEvent.id,
-              );
-
-            const attachment = this.attachmentRepository.create({
-              event: savedEvent,
-              filePath: uploadResult.path,
-              fileName: file.originalname,
-              fileSize: file.size,
-              mediaType: file.mimetype,
-            });
-
-            return this.attachmentRepository.save(attachment);
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : 'Unknown error';
-            this.logger.error(
-              `Failed to upload attachment for event ${savedEvent.id}: ${errorMessage}`,
+  private async uploadEventAttachments(
+    files: Express.Multer.File[],
+    event: Event,
+    schoolId: string,
+  ): Promise<EventAttachment[]> {
+    return Promise.all(
+      files.map(async (file) => {
+        try {
+          const uploadResult =
+            await this.objectStorageService.uploadEventAttachment(
+              file,
+              schoolId,
+              event.id,
             );
-            throw new BadRequestException('Failed to upload attachment');
-          }
-        }),
-      );
 
-      savedEvent.attachments = attachments;
-    }
+          const attachment = this.attachmentRepository.create({
+            event,
+            filePath: uploadResult.path,
+            fileName: file.originalname,
+            fileSize: file.size,
+            mediaType: file.mimetype,
+          });
 
-    // Create reminders
-    if (dto.reminders && dto.reminders.length > 0) {
-      const reminders = dto.reminders.map((reminderDto) =>
-        this.reminderRepository.create({
-          event: savedEvent,
-          reminderTime: new Date(reminderDto.reminderTime),
-          notificationType:
-            reminderDto.notificationType === 'email'
-              ? NotificationType.EMAIL
-              : reminderDto.notificationType === 'sms'
-                ? NotificationType.SMS
-                : NotificationType.BOTH,
-        }),
-      );
+          return this.attachmentRepository.save(attachment);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+          this.logger.error(
+            `Failed to upload attachment for event ${event.id}: ${errorMessage}`,
+          );
+          throw new BadRequestException('Failed to upload attachment');
+        }
+      }),
+    );
+  }
 
-      await this.reminderRepository.save(reminders);
-    }
+  private async createEventReminders(
+    event: Event,
+    reminders: Array<{
+      reminderTime: string;
+      notificationType?: 'email' | 'sms' | 'both';
+    }>,
+  ): Promise<void> {
+    const reminderEntities = reminders.map((reminderDto) =>
+      this.reminderRepository.create({
+        event,
+        reminderTime: new Date(reminderDto.reminderTime),
+        notificationType:
+          reminderDto.notificationType === 'email'
+            ? NotificationType.EMAIL
+            : reminderDto.notificationType === 'sms'
+              ? NotificationType.SMS
+              : NotificationType.BOTH,
+      }),
+    );
 
-    // Send notifications
-    await this.sendEventNotifications(savedEvent, 'created');
+    await this.reminderRepository.save(reminderEntities);
+  }
 
-    return this.findOneEvent(savedEvent.id, schoolId);
+  private async loadEventForNotifications(
+    eventId: string,
+  ): Promise<Event | null> {
+    return this.eventRepository.findOne({
+      where: { id: eventId },
+      relations: [
+        'category',
+        'targetSubjects',
+        'targetClassLevels',
+        'targetClassLevels.students',
+        'school',
+      ],
+    });
   }
 
   async findAllEvents(
@@ -408,7 +472,7 @@ export class PlannerService {
   ): Promise<Event[]> {
     const student = await this.studentRepository.findOne({
       where: { id: studentId },
-      relations: ['classLevels', 'school'],
+      relations: ['classLevels', 'school', 'classLevels.subjects'],
     });
 
     if (!student) {
@@ -418,6 +482,9 @@ export class PlannerService {
     const classLevelIds = student.classLevels.map((cl) => cl.id);
     const schoolId = student.school.id;
 
+    const studentSubjectCatalogIds =
+      await this.getStudentSubjectCatalogIds(classLevelIds);
+
     const queryBuilder = this.eventRepository
       .createQueryBuilder('event')
       .leftJoinAndSelect('event.category', 'category')
@@ -425,11 +492,17 @@ export class PlannerService {
       .leftJoinAndSelect('event.targetSubjects', 'targetSubjects')
       .leftJoinAndSelect('event.attachments', 'attachments')
       .where('event.school.id = :schoolId', { schoolId })
+      .leftJoin('targetSubjects.subjectCatalog', 'targetSubjectCatalog')
       .andWhere(
-        '(event.visibilityScope = :schoolWide OR targetClassLevels.id IN (:...classLevelIds))',
+        '(event.visibilityScope = :schoolWide OR targetClassLevels.id IN (:...classLevelIds) OR (event.visibilityScope = :subject AND targetSubjectCatalog.id IN (:...subjectCatalogIds)))',
         {
           schoolWide: VisibilityScope.SCHOOL_WIDE,
+          subject: VisibilityScope.SUBJECT,
           classLevelIds: classLevelIds.length > 0 ? classLevelIds : [''],
+          subjectCatalogIds:
+            Array.from(studentSubjectCatalogIds).length > 0
+              ? Array.from(studentSubjectCatalogIds)
+              : [''],
         },
       );
 
@@ -475,43 +548,42 @@ export class PlannerService {
     return event;
   }
 
+  private async getStudentSubjectCatalogIds(
+    classLevelIds: string[],
+  ): Promise<Set<string>> {
+    const catalogIds = new Set<string>();
+    if (classLevelIds.length === 0) {
+      return catalogIds;
+    }
+
+    const subjects = await this.subjectRepository.find({
+      where: { classLevels: { id: In(classLevelIds) } },
+      relations: ['subjectCatalog'],
+    });
+
+    for (const subject of subjects) {
+      if (subject.subjectCatalog) {
+        catalogIds.add(subject.subjectCatalog.id);
+      }
+    }
+
+    return catalogIds;
+  }
+
   async updateEvent(
     id: string,
     dto: UpdateEventDto,
     updater: SchoolAdmin | Teacher,
+    files?: Express.Multer.File[],
   ): Promise<Event> {
-    // Get school from updater
-    let schoolId: string;
-
-    if (updater.role?.name === 'school_admin') {
-      // SchoolAdmin
-      schoolId = updater.school.id;
-    } else {
-      // Teacher - need to fetch with school relation
-      const teacherWithSchool = await this.eventRepository.manager
-        .getRepository(Teacher)
-        .findOne({
-          where: { id: updater.id },
-          relations: ['school'],
-        });
-
-      if (!teacherWithSchool?.school) {
-        throw new NotFoundException('Teacher school not found');
-      }
-
-      schoolId = teacherWithSchool.school.id;
-    }
-
+    const { schoolId } = await this.getSchoolFromUser(updater);
     const event = await this.findOneEvent(id, schoolId);
 
-    // Check permissions
     if (updater.role?.name === 'teacher') {
-      // Teacher can only update events they created
       if (event.createdByTeacherId !== updater.id) {
         throw new ForbiddenException('You can only update events you created');
       }
 
-      // Teacher cannot change to school-wide
       if (
         dto.visibilityScope === VisibilityScope.SCHOOL_WIDE ||
         event.visibilityScope === VisibilityScope.SCHOOL_WIDE
@@ -522,7 +594,6 @@ export class PlannerService {
       }
     }
 
-    // Update category if provided
     if (dto.categoryId) {
       const category = await this.categoryRepository.findOne({
         where: { id: dto.categoryId, school: { id: schoolId } },
@@ -535,64 +606,78 @@ export class PlannerService {
       event.category = category;
     }
 
-    // Update basic fields
-    if (dto.title !== undefined) event.title = dto.title;
-    if (dto.description !== undefined) event.description = dto.description;
-    if (dto.startDate) event.startDate = new Date(dto.startDate);
+    if (dto.title !== undefined) {
+      event.title = dto.title;
+    }
+    if (dto.description !== undefined) {
+      event.description = dto.description ?? null;
+    }
+    if (dto.startDate !== undefined && dto.startDate) {
+      event.startDate = new Date(dto.startDate);
+    }
     if (dto.endDate !== undefined) {
       event.endDate = dto.endDate ? new Date(dto.endDate) : null;
     }
-    if (dto.isAllDay !== undefined) event.isAllDay = dto.isAllDay;
-    if (dto.location !== undefined) event.location = dto.location;
-    if (dto.visibilityScope) event.visibilityScope = dto.visibilityScope;
-
-    // Update target classes/subjects
-    if (dto.targetClassLevelIds) {
-      event.targetClassLevels = await this.classLevelRepository.findBy({
-        id: In(dto.targetClassLevelIds),
-      });
+    if (dto.isAllDay !== undefined) {
+      event.isAllDay = dto.isAllDay;
+    }
+    if (dto.location !== undefined) {
+      event.location = dto.location ?? null;
+    }
+    if (dto.visibilityScope !== undefined) {
+      event.visibilityScope = dto.visibilityScope;
     }
 
-    if (dto.targetSubjectIds) {
-      event.targetSubjects = await this.subjectRepository.findBy({
-        id: In(dto.targetSubjectIds),
-      });
+    if (dto.targetClassLevelIds !== undefined) {
+      if (dto.targetClassLevelIds.length > 0) {
+        event.targetClassLevels = await this.classLevelRepository.findBy({
+          id: In(dto.targetClassLevelIds),
+        });
+      } else {
+        event.targetClassLevels = [];
+      }
+    }
+
+    if (dto.targetSubjectIds !== undefined) {
+      if (dto.targetSubjectIds.length > 0) {
+        event.targetSubjects = await this.subjectCatalogRepository.findBy({
+          id: In(dto.targetSubjectIds),
+        });
+      } else {
+        event.targetSubjects = [];
+      }
     }
 
     const updatedEvent = await this.eventRepository.save(event);
 
-    // Send update notifications
-    await this.sendEventNotifications(updatedEvent, 'updated');
+    if (files && files.length > 0) {
+      const newAttachments = await this.uploadEventAttachments(
+        files,
+        updatedEvent,
+        schoolId,
+      );
+      updatedEvent.attachments = [
+        ...(updatedEvent.attachments || []),
+        ...newAttachments,
+      ];
+      await this.eventRepository.save(updatedEvent);
+    }
+
+    const eventForNotifications = await this.loadEventForNotifications(
+      updatedEvent.id,
+    );
+
+    if (eventForNotifications) {
+      await this.sendEventNotifications(eventForNotifications, 'updated');
+    }
 
     return this.findOneEvent(updatedEvent.id, schoolId);
   }
 
   async removeEvent(id: string, deleter: SchoolAdmin | Teacher): Promise<void> {
-    // Get school from deleter
-    let schoolId: string;
-
-    if (deleter.role?.name === 'school_admin') {
-      // SchoolAdmin
-      schoolId = deleter.school.id;
-    } else {
-      // Teacher - need to fetch with school relation
-      const teacherWithSchool = await this.eventRepository.manager
-        .getRepository(Teacher)
-        .findOne({
-          where: { id: deleter.id },
-          relations: ['school'],
-        });
-
-      if (!teacherWithSchool?.school) {
-        throw new NotFoundException('Teacher school not found');
-      }
-
-      schoolId = teacherWithSchool.school.id;
-    }
-
+    const { schoolId } = await this.getSchoolFromUser(deleter);
     const event = await this.findOneEvent(id, schoolId);
 
-    // Check permissions
     if (deleter.role?.name === 'teacher') {
       if (event.createdByTeacherId !== deleter.id) {
         throw new ForbiddenException('You can only delete events you created');
@@ -602,7 +687,6 @@ export class PlannerService {
     await this.eventRepository.remove(event);
   }
 
-  // Notification methods
   private async sendEventNotifications(
     event: Event,
     action: 'created' | 'updated',
@@ -666,111 +750,113 @@ export class PlannerService {
     }> = [];
 
     if (event.visibilityScope === VisibilityScope.SCHOOL_WIDE) {
-      // Get all students and parents in the school
       const students = await this.studentRepository.find({
         where: { school: { id: event.school.id } },
         relations: ['parents', 'profile'],
       });
-
-      for (const student of students) {
-        // Add student if they have email/phone
-        if (student.email) {
-          recipients.push({
-            email: student.email,
-            name: `${student.firstName} ${student.lastName}`,
-          });
-        }
-
-        // Add parents
-        if (student.parents) {
-          for (const parent of student.parents) {
-            if (parent.email || parent.phone) {
-              recipients.push({
-                email: parent.email,
-                phone: parent.phone,
-                name: `${parent.firstName} ${parent.lastName}`,
-              });
-            }
-          }
-        }
-      }
+      this.addStudentsToRecipients(students, recipients);
     } else if (event.visibilityScope === VisibilityScope.CLASS_LEVEL) {
-      // Get students in target classes
       const classLevelIds = event.targetClassLevels.map((cl) => cl.id);
       const students = await this.studentRepository.find({
-        where: {
-          classLevels: { id: In(classLevelIds) },
-        },
+        where: { classLevels: { id: In(classLevelIds) } },
         relations: ['parents', 'profile'],
       });
+      this.addStudentsToRecipients(students, recipients);
+    } else if (event.visibilityScope === VisibilityScope.SUBJECT) {
+      const students = await this.getStudentsForSubjectEvent(event);
+      this.addStudentsToRecipients(students, recipients);
+    }
 
-      for (const student of students) {
-        if (student.email) {
-          recipients.push({
-            email: student.email,
-            name: `${student.firstName} ${student.lastName}`,
-          });
-        }
+    return this.deduplicateRecipients(recipients);
+  }
 
-        if (student.parents) {
-          for (const parent of student.parents) {
-            if (parent.email || parent.phone) {
-              recipients.push({
-                email: parent.email,
-                phone: parent.phone,
-                name: `${parent.firstName} ${parent.lastName}`,
-              });
-            }
+  private addStudentsToRecipients(
+    students: Student[],
+    recipients: Array<{ email?: string; phone?: string; name: string }>,
+  ): void {
+    for (const student of students) {
+      if (student.email) {
+        recipients.push({
+          email: student.email,
+          name: `${student.firstName} ${student.lastName}`,
+        });
+      }
+
+      if (student.parents) {
+        for (const parent of student.parents) {
+          if (parent.email || parent.phone) {
+            recipients.push({
+              email: parent.email,
+              phone: parent.phone,
+              name: `${parent.firstName} ${parent.lastName}`,
+            });
           }
         }
       }
-    } else if (event.visibilityScope === VisibilityScope.SUBJECT) {
-      // Get students in classes that have the target subjects
-      const subjectIds = event.targetSubjects.map((s) => s.id);
-      const subjects = await this.subjectRepository.find({
-        where: { id: In(subjectIds) },
-        relations: ['classLevels', 'classLevels.students'],
-      });
+    }
+  }
 
-      const studentIds = new Set<string>();
-      for (const subject of subjects) {
+  private async getStudentsForSubjectEvent(event: Event): Promise<Student[]> {
+    if (!event.targetSubjects || event.targetSubjects.length === 0) {
+      this.logger.warn(
+        `Event ${event.id} has SUBJECT visibility but no target subjects`,
+      );
+      return [];
+    }
+
+    const subjectCatalogIds = event.targetSubjects.map((catalog) => catalog.id);
+
+    const subjectCatalogs = await this.subjectCatalogRepository.find({
+      where: { id: In(subjectCatalogIds) },
+      relations: [
+        'subjects',
+        'subjects.classLevels',
+        'subjects.classLevels.students',
+      ],
+    });
+
+    if (subjectCatalogs.length === 0) {
+      this.logger.warn(
+        `No subject catalogs found for IDs: ${subjectCatalogIds.join(', ')}`,
+      );
+      return [];
+    }
+
+    const studentIds = new Set<string>();
+    for (const catalog of subjectCatalogs) {
+      if (!catalog.subjects || catalog.subjects.length === 0) {
+        continue;
+      }
+
+      for (const subject of catalog.subjects) {
+        if (!subject.classLevels || subject.classLevels.length === 0) {
+          continue;
+        }
+
         for (const classLevel of subject.classLevels) {
-          if (classLevel.students) {
+          if (classLevel.students && classLevel.students.length > 0) {
             for (const student of classLevel.students) {
               studentIds.add(student.id);
             }
           }
         }
       }
-
-      const students = await this.studentRepository.find({
-        where: { id: In(Array.from(studentIds)) },
-        relations: ['parents', 'profile'],
-      });
-
-      for (const student of students) {
-        if (student.email) {
-          recipients.push({
-            email: student.email,
-            name: `${student.firstName} ${student.lastName}`,
-          });
-        }
-
-        if (student.parents) {
-          for (const parent of student.parents) {
-            if (parent.email || parent.phone) {
-              recipients.push({
-                email: parent.email,
-                phone: parent.phone,
-                name: `${parent.firstName} ${parent.lastName}`,
-              });
-            }
-          }
-        }
-      }
     }
 
-    // Remove duplicates based on email/phone
+    if (studentIds.size === 0) {
+      this.logger.warn(`No students found for subject-based event ${event.id}`);
+      return [];
+    }
+
+    return this.studentRepository.find({
+      where: { id: In(Array.from(studentIds)) },
+      relations: ['parents', 'profile'],
+    });
+  }
+
+  private deduplicateRecipients(
+    recipients: Array<{ email?: string; phone?: string; name: string }>,
+  ): Array<{ email?: string; phone?: string; name: string }> {
     const uniqueRecipients = new Map<string, (typeof recipients)[0]>();
     for (const recipient of recipients) {
       const key = recipient.email || recipient.phone || '';
@@ -778,7 +864,6 @@ export class PlannerService {
         uniqueRecipients.set(key, recipient);
       }
     }
-
     return Array.from(uniqueRecipients.values());
   }
 
@@ -803,7 +888,9 @@ export class PlannerService {
     if (event.location) {
       message += `Location: ${event.location}\n`;
     }
-    message += `Category: ${event.category.name}\n`;
+    if (event.category?.name) {
+      message += `Category: ${event.category.name}\n`;
+    }
 
     return message;
   }

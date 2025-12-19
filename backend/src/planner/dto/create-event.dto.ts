@@ -52,11 +52,21 @@ export class CreateEventDto {
   @IsArray()
   @IsUUID('4', { each: true })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    if (Array.isArray(value)) return value;
+    return [value];
+  })
   targetClassLevelIds?: string[];
 
   @IsArray()
   @IsUUID('4', { each: true })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    if (Array.isArray(value)) return value;
+    return [value];
+  })
   targetSubjectIds?: string[];
 
   @IsArray()

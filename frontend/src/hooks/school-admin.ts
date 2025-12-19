@@ -1287,6 +1287,7 @@ export const useUpdatePlannerEvent = () => {
     mutationFn: ({ id, payload }: { id: string; payload: Partial<CreatePlannerEventPayload> }) => {
       const formData = new FormData();
       
+      // Always send title if it exists in payload (even if empty string)
       if (payload.title !== undefined) {
         formData.append('title', payload.title);
       }
@@ -1312,16 +1313,24 @@ export const useUpdatePlannerEvent = () => {
         formData.append('visibilityScope', payload.visibilityScope);
       }
       
-      if (payload.targetClassLevelIds !== undefined && payload.targetClassLevelIds.length > 0) {
-        payload.targetClassLevelIds.forEach(id => {
-          formData.append('targetClassLevelIds[]', id);
-        });
+      // Send arrays even if empty to clear associations
+      if (payload.targetClassLevelIds !== undefined) {
+        if (payload.targetClassLevelIds.length > 0) {
+          payload.targetClassLevelIds.forEach(id => {
+            formData.append('targetClassLevelIds[]', id);
+          });
+        }
+        // If empty array, send empty array to clear associations
+        // Backend will handle empty array
       }
       
-      if (payload.targetSubjectIds !== undefined && payload.targetSubjectIds.length > 0) {
-        payload.targetSubjectIds.forEach(id => {
-          formData.append('targetSubjectIds[]', id);
-        });
+      if (payload.targetSubjectIds !== undefined) {
+        if (payload.targetSubjectIds.length > 0) {
+          payload.targetSubjectIds.forEach(id => {
+            formData.append('targetSubjectIds[]', id);
+          });
+        }
+        // If empty array, send empty array to clear associations
       }
       
       if (payload.reminders !== undefined) {
@@ -1346,7 +1355,9 @@ export const useUpdatePlannerEvent = () => {
       });
     },
     onSuccess: () => {
+      // Invalidate all planner-related queries
       queryClient.invalidateQueries({ queryKey: ['plannerEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['planner'] });
     },
   });
 };

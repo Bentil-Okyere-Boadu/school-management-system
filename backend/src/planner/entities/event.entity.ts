@@ -14,7 +14,7 @@ import { School } from '../../school/school.entity';
 import { SchoolAdmin } from '../../school-admin/school-admin.entity';
 import { Teacher } from '../../teacher/teacher.entity';
 import { ClassLevel } from '../../class-level/class-level.entity';
-import { Subject } from '../../subject/subject.entity';
+import { SubjectCatalog } from '../../subject/subject-catalog.entity';
 import { EventCategory } from './event-category.entity';
 import { EventAttachment } from './event-attachment.entity';
 import { EventReminder } from './event-reminder.entity';
@@ -34,7 +34,7 @@ export class Event {
   title: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description: string | null;
 
   @Column({ type: 'timestamp' })
   startDate: Date;
@@ -45,8 +45,8 @@ export class Event {
   @Column({ default: false })
   isAllDay: boolean;
 
-  @Column({ nullable: true })
-  location: string;
+  @Column({ type: 'varchar', nullable: true })
+  location: string | null;
 
   @ManyToOne(() => EventCategory, (category) => category.events, {
     nullable: false,
@@ -88,13 +88,13 @@ export class Event {
   })
   targetClassLevels: ClassLevel[];
 
-  @ManyToMany(() => Subject, { eager: true })
+  @ManyToMany(() => SubjectCatalog, { eager: true })
   @JoinTable({
-    name: 'event_subjects',
+    name: 'event_subject_catalogs',
     joinColumn: { name: 'event_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'subject_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'subject_catalog_id', referencedColumnName: 'id' },
   })
-  targetSubjects: Subject[];
+  targetSubjects: SubjectCatalog[];
 
   @OneToMany(() => EventAttachment, (attachment) => attachment.event, {
     cascade: true,
