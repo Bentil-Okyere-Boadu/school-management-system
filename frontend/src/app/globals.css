@@ -28,6 +28,9 @@ body {
 /* FullCalendar Styles */
 .planner-calendar-container .fc {
   font-family: inherit;
+  --fc-button-active-bg-color: #AB58E7;
+  --fc-button-active-border-color: #AB58E7;
+  --fc-button-text-color: #AB58E7;
 }
 
 .planner-calendar-container .fc-header-toolbar {
@@ -36,21 +39,58 @@ body {
   border-radius: 0.5rem;
 }
 
+.planner-calendar-container .fc-toolbar-chunk {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.planner-calendar-container .fc-toolbar-title {
+  font-size: 1.25rem !important;
+  margin: 0px;
+  font-weight: 600;
+}
+
 .planner-calendar-container .fc-button {
-  background-color: #AB58E7;
-  border-color: #AB58E7;
-  padding: 0.5rem 1rem;
+  background-color: white !important;
+  border-color: #AB58E7 !important;
+  color: #AB58E7 !important;
+  padding: 0.375rem 0.875rem !important;
   font-weight: 500;
+  border-width: 1px;
+  font-size: 0.875rem;
 }
 
 .planner-calendar-container .fc-button:hover {
-  background-color: #9a47d6;
-  border-color: #9a47d6;
+  background-color: #f3f4f6 !important;
+  border-color: #AB58E7 !important;
+  color: #AB58E7 !important;
 }
 
-.planner-calendar-container .fc-button-active {
-  background-color: #8b3fc5;
-  border-color: #8b3fc5;
+.planner-calendar-container .fc-button-active,
+.planner-calendar-container .fc-button-primary:not(:disabled).fc-button-active,
+.planner-calendar-container .fc-button-primary:not(:disabled):active {
+  background-color: #AB58E7 !important;
+  border-color: #AB58E7 !important;
+  color: white !important;
+}
+
+.planner-calendar-container .fc-button-active:hover,
+.planner-calendar-container .fc-button-primary:not(:disabled).fc-button-active:hover,
+.planner-calendar-container .fc-button-primary:not(:disabled):active:hover {
+  background-color: #9a47d6 !important;
+  border-color: #9a47d6 !important;
+  color: white !important;
+}
+
+/* Day headers styling */
+.planner-calendar-container .fc-col-header-cell {
+  font-weight: 400 !important;
+  color: #6b7280;
+}
+
+.planner-calendar-container .fc-col-header-cell-cushion {
+  font-weight: 400 !important;
 }
 
 /* Timetable grid styling */
@@ -61,8 +101,8 @@ body {
 .planner-calendar-container .fc-timeGridWeek-view .fc-col-header-cell {
   background-color: #f3f4f6;
   padding: 0.75rem;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 400;
+  color: #6b7280;
   border-bottom: 2px solid #e5e7eb;
 }
 

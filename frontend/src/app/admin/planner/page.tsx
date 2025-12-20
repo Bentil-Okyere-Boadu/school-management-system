@@ -264,68 +264,7 @@ const PlannerPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <div className="flex flex-col items-start">
-          <h1 className="text-2xl font-semibold text-neutral-800">Planner</h1>
-          <div className="flex flex-col items-start mt-2">
-            <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
-            {showFilterOptions && (
-              <div className="bg-white rounded-lg shadow-sm p-4 mt-3 w-full border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-700">Filters</h3>
-                  {hasActiveFilters && (
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      color="gray"
-                      leftSection={<IconX size={14} />}
-                      onClick={handleClearFilters}
-                    >
-                      Clear Filters
-                    </Button>
-                  )}
-                </div>
-                <Group gap="md" align="flex-start">
-                  <Select
-                    label="Category"
-                    placeholder="All categories"
-                    data={filterOptions.categories}
-                    value={filters.categoryId || null}
-                    onChange={(value) => handleFilterChange('categoryId', value)}
-                    clearable
-                    style={{ flex: 1, minWidth: 180 }}
-                  />
-                  <Select
-                    label="Class Level"
-                    placeholder="All classes"
-                    data={filterOptions.classLevels}
-                    value={filters.classLevelId || null}
-                    onChange={(value) => handleFilterChange('classLevelId', value)}
-                    clearable
-                    style={{ flex: 1, minWidth: 180 }}
-                  />
-                  <Select
-                    label="Subject"
-                    placeholder="All subjects"
-                    data={filterOptions.subjects}
-                    value={filters.subjectId || null}
-                    onChange={(value) => handleFilterChange('subjectId', value)}
-                    clearable
-                    style={{ flex: 1, minWidth: 180 }}
-                  />
-                  <Select
-                    label="Visibility Scope"
-                    placeholder="All scopes"
-                    data={filterOptions.visibilityScopes}
-                    value={filters.visibilityScope || null}
-                    onChange={(value) => handleFilterChange('visibilityScope', value as VisibilityScope)}
-                    clearable
-                    style={{ flex: 1, minWidth: 180 }}
-                  />
-                </Group>
-              </div>
-            )}
-          </div>
-        </div>
+        <h1 className="text-2xl font-semibold text-neutral-800">Planner</h1>
         <div className="flex gap-2">
           <Button
             leftSection={<IconCategory size={16} />}
@@ -341,6 +280,65 @@ const PlannerPage: React.FC = () => {
             New Event
           </Button>
         </div>
+      </div>
+
+      <div className="flex flex-col items-start">
+        <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
+        {showFilterOptions && (
+          <div className="bg-white rounded-lg shadow-sm p-4 pb-2 mt-3 w-full border border-gray-200">
+            <div className="flex items-center justify-end">
+              {hasActiveFilters && (
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<IconX size={14} />}
+                  onClick={handleClearFilters}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+            <Group gap="md" align="flex-start">
+              <Select
+                label="Category"
+                placeholder="All categories"
+                data={filterOptions.categories}
+                value={filters.categoryId || null}
+                onChange={(value) => handleFilterChange('categoryId', value)}
+                clearable
+                style={{ flex: 1, minWidth: 180 }}
+              />
+              <Select
+                label="Class Level"
+                placeholder="All classes"
+                data={filterOptions.classLevels}
+                value={filters.classLevelId || null}
+                onChange={(value) => handleFilterChange('classLevelId', value)}
+                clearable
+                style={{ flex: 1, minWidth: 180 }}
+              />
+              <Select
+                label="Subject"
+                placeholder="All subjects"
+                data={filterOptions.subjects}
+                value={filters.subjectId || null}
+                onChange={(value) => handleFilterChange('subjectId', value)}
+                clearable
+                style={{ flex: 1, minWidth: 180 }}
+              />
+              <Select
+                label="Visibility Scope"
+                placeholder="All scopes"
+                data={filterOptions.visibilityScopes}
+                value={filters.visibilityScope || null}
+                onChange={(value) => handleFilterChange('visibilityScope', value as VisibilityScope)}
+                clearable
+                style={{ flex: 1, minWidth: 180 }}
+              />
+            </Group>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-4">
