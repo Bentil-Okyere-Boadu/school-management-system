@@ -45,6 +45,9 @@ export class Event {
   @Column({ default: false })
   isAllDay: boolean;
 
+  @Column({ default: true })
+  sendNotifications: boolean;
+
   @Column({ type: 'varchar', nullable: true })
   location: string | null;
 

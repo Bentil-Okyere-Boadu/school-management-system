@@ -1,6 +1,18 @@
 "use client";
 import React, { useState, useMemo, useCallback } from "react";
-import { EventInput, EventClickArg, EventDropArg, EventResizeArg } from "@fullcalendar/core";
+import type { EventInput, EventClickArg, EventDropArg } from "@fullcalendar/core";
+
+type EventResizeArg = {
+  event: {
+    start: Date | null;
+    end: Date | null;
+    allDay: boolean;
+    extendedProps: {
+      event: PlannerEvent;
+    };
+  };
+  revert: () => void;
+};
 import { useGetPlannerEvents, useGetEventCategories, useGetClassLevels, useGetAllSubjects, useDeletePlannerEvent, useUpdatePlannerEvent } from "@/hooks/school-admin";
 import { PlannerEvent, VisibilityScope } from "@/@types";
 import { PlannerCalendar } from "@/components/admin/planner/PlannerCalendar";

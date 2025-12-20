@@ -75,6 +75,15 @@ export class CreateEventDto {
     reminderTime: string; // ISO date string
     notificationType?: 'email' | 'sms' | 'both';
   }[];
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined; // Return undefined if not provided, let default handle it
+  })
+  sendNotifications?: boolean;
 }
 
 

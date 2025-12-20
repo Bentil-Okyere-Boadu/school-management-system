@@ -1425,6 +1425,10 @@ export const useCreatePlannerEvent = () => {
         });
       }
 
+      if (payload.sendNotifications !== undefined) {
+        formData.append("sendNotifications", String(payload.sendNotifications));
+      }
+
       return customAPI.post("/planner/events", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -1515,6 +1519,10 @@ export const useUpdatePlannerEvent = () => {
         payload.files.forEach((file) => {
           formData.append("files", file);
         });
+      }
+
+      if (payload.sendNotifications !== undefined) {
+        formData.append("sendNotifications", String(payload.sendNotifications));
       }
 
       return customAPI.put(`/planner/events/${id}`, formData, {

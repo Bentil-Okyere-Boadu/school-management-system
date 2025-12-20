@@ -184,6 +184,7 @@ export class PlannerService {
       startDate,
       endDate: dto.endDate ? new Date(dto.endDate) : null,
       isAllDay: dto.isAllDay ?? false,
+      sendNotifications: dto.sendNotifications !== false,
       location: dto.location,
       category,
       visibilityScope: dto.visibilityScope,
@@ -208,12 +209,16 @@ export class PlannerService {
       await this.createEventReminders(savedEvent, dto.reminders);
     }
 
-    const eventForNotifications = await this.loadEventForNotifications(
-      savedEvent.id,
-    );
+    const shouldSendNotifications = dto.sendNotifications !== false;
 
-    if (eventForNotifications) {
-      await this.sendEventNotifications(eventForNotifications, 'created');
+    if (shouldSendNotifications) {
+      const eventForNotifications = await this.loadEventForNotifications(
+        savedEvent.id,
+      );
+
+      if (eventForNotifications) {
+        await this.sendEventNotifications(eventForNotifications, 'created');
+      }
     }
 
     return this.findOneEvent(savedEvent.id, schoolId);
@@ -621,6 +626,9 @@ export class PlannerService {
     if (dto.isAllDay !== undefined) {
       event.isAllDay = dto.isAllDay;
     }
+    if (dto.sendNotifications !== undefined) {
+      event.sendNotifications = Boolean(dto.sendNotifications);
+    }
     if (dto.location !== undefined) {
       event.location = dto.location ?? null;
     }
@@ -663,12 +671,16 @@ export class PlannerService {
       await this.eventRepository.save(updatedEvent);
     }
 
-    const eventForNotifications = await this.loadEventForNotifications(
-      updatedEvent.id,
-    );
+    const shouldSendNotifications = dto.sendNotifications !== false;
 
-    if (eventForNotifications) {
-      await this.sendEventNotifications(eventForNotifications, 'updated');
+    if (shouldSendNotifications) {
+      const eventForNotifications = await this.loadEventForNotifications(
+        updatedEvent.id,
+      );
+
+      if (eventForNotifications) {
+        await this.sendEventNotifications(eventForNotifications, 'updated');
+      }
     }
 
     return this.findOneEvent(updatedEvent.id, schoolId);

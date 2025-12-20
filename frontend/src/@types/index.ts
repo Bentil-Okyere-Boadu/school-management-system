@@ -789,6 +789,7 @@ export interface PlannerEvent {
   startDate: string;
   endDate?: string;
   isAllDay: boolean;
+  sendNotifications?: boolean;
   location?: string;
   category?: EventCategory;
   categoryId: string;
@@ -821,6 +822,7 @@ export interface CreatePlannerEventPayload {
     notificationType?: 'email' | 'sms' | 'both';
   }>;
   files?: File[];
+  sendNotifications?: boolean;
 }
 
 export interface CreateEventCategoryPayload {

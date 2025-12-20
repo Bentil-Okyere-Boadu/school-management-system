@@ -44,6 +44,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
     visibilityScope: VisibilityScope.SCHOOL_WIDE,
     targetClassLevelIds: [],
     targetSubjectIds: [],
+    sendNotifications: true,
   });
   const [reminders, setReminders] = useState<ReminderForm[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -81,6 +82,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
         visibilityScope: event.visibilityScope,
         targetClassLevelIds,
         targetSubjectIds,
+        sendNotifications: event.sendNotifications ?? true,
       });
       
       setReminders(
@@ -116,6 +118,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
         visibilityScope: VisibilityScope.SCHOOL_WIDE,
         targetClassLevelIds: [],
         targetSubjectIds: [],
+        sendNotifications: true,
       });
       setReminders([]);
       setSelectedFiles([]);
@@ -275,57 +278,8 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           isTransulent={false}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <InputField
-              className="!py-0"
-              label={formData.isAllDay ? "Start Date" : "Start Date & Time"}
-              type={formData.isAllDay ? "date" : "datetime-local"}
-              value={formData.isAllDay && formData.startDate 
-                ? formData.startDate.slice(0, 10) 
-                : formData.startDate}
-              onChange={(e) => {
-                let newStartDate = e.target.value;
-                if (formData.isAllDay) {
-                  newStartDate = `${newStartDate}T00:00`;
-                }
-                setFormData({ ...formData, startDate: newStartDate });
-              }}
-              required
-              isTransulent={false}
-            />
-          </div>
-          <div>
-            <InputField
-              className="!py-0"
-              label={formData.isAllDay ? "End Date" : "End Date & Time"}
-              type={formData.isAllDay ? "date" : "datetime-local"}
-              value={formData.isAllDay && formData.endDate 
-                ? formData.endDate.slice(0, 10) 
-                : formData.endDate}
-              onChange={(e) => {
-                let newEndDate = e.target.value;
-                if (formData.isAllDay) {
-                  newEndDate = `${newEndDate}T23:59`;
-                }
-                setFormData({ ...formData, endDate: newEndDate });
-              }}
-              isTransulent={false}
-            />
-          </div>
-        </div>
-
-        <InputField
-          className="!py-0"
-          label="Location"
-          placeholder="Enter event location (optional)"
-          value={formData.location}
-          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-          isTransulent={false}
-        />
-
         <Checkbox
-          label="All Day Event"
+          label="All-day event"
           checked={formData.isAllDay}
           onChange={(e) => {
             const isAllDay = e.currentTarget.checked;
@@ -343,6 +297,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                 newEndDate = endDate.toISOString().slice(0, 16);
               } else {
                 const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + 1);
                 endDate.setHours(23, 59, 59, 999);
                 newEndDate = endDate.toISOString().slice(0, 16);
               }
@@ -374,6 +329,82 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               endDate: newEndDate,
             });
           }}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <InputField
+              className="!py-0"
+              label={formData.isAllDay ? "Start date" : "Start date & time"}
+              type={formData.isAllDay ? "date" : "datetime-local"}
+              value={formData.isAllDay && formData.startDate 
+                ? formData.startDate.slice(0, 10) 
+                : formData.startDate}
+              onChange={(e) => {
+                let newStartDate = e.target.value;
+                let newEndDate = formData.endDate;
+
+                if (formData.isAllDay) {
+                  newStartDate = `${newStartDate}T00:00`;
+                  
+                  const startDate = new Date(newStartDate);
+                  const endDate = new Date(startDate);
+                  endDate.setDate(endDate.getDate() + 1);
+                  endDate.setHours(23, 59, 59, 999);
+                  newEndDate = endDate.toISOString().slice(0, 16);
+                } else {
+                  if (!newStartDate.includes('T')) {
+                    newStartDate = `${newStartDate}T00:00`;
+                  }
+                }
+
+                setFormData({ 
+                  ...formData, 
+                  startDate: newStartDate,
+                  endDate: newEndDate,
+                });
+              }}
+              required
+              isTransulent={false}
+            />
+          </div>
+          <div>
+            <InputField
+              className="!py-0"
+              label={formData.isAllDay ? "End date" : "End date & time"}
+              type={formData.isAllDay ? "date" : "datetime-local"}
+              value={formData.isAllDay && formData.endDate 
+                ? formData.endDate.slice(0, 10) 
+                : formData.endDate}
+              onChange={(e) => {
+                let newEndDate = e.target.value;
+                if (formData.isAllDay) {
+                  newEndDate = `${newEndDate}T23:59`;
+                } else {
+                  if (!newEndDate.includes('T')) {
+                    newEndDate = `${newEndDate}T00:00`;
+                  }
+                }
+                setFormData({ ...formData, endDate: newEndDate });
+              }}
+              isTransulent={false}
+            />
+          </div>
+        </div>
+
+        <InputField
+          className="!py-0"
+          label="Location"
+          placeholder="Enter event location (optional)"
+          value={formData.location}
+          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          isTransulent={false}
+        />
+
+        <Checkbox
+          label="Send Notifications"
+          checked={formData.sendNotifications ?? true}
+          onChange={(e) => setFormData({ ...formData, sendNotifications: e.currentTarget.checked })}
         />
 
         <Select
