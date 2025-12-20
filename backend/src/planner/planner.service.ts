@@ -464,7 +464,15 @@ export class PlannerService {
       });
     }
 
-    return queryBuilder.orderBy('event.startDate', 'ASC').getMany();
+    const events = await queryBuilder
+      .orderBy('event.startDate', 'ASC')
+      .getMany();
+
+    await Promise.all(
+      events.map((event) => this.enrichAttachmentsWithSignedUrls(event)),
+    );
+
+    return events;
   }
 
   async findEventsForStudent(
@@ -529,7 +537,15 @@ export class PlannerService {
       });
     }
 
-    return queryBuilder.orderBy('event.startDate', 'ASC').getMany();
+    const events = await queryBuilder
+      .orderBy('event.startDate', 'ASC')
+      .getMany();
+
+    await Promise.all(
+      events.map((event) => this.enrichAttachmentsWithSignedUrls(event)),
+    );
+
+    return events;
   }
 
   async findOneEvent(id: string, schoolId: string): Promise<Event> {
@@ -550,7 +566,30 @@ export class PlannerService {
       throw new NotFoundException(`Event with ID ${id} not found`);
     }
 
+    await this.enrichAttachmentsWithSignedUrls(event);
+
     return event;
+  }
+
+  private async enrichAttachmentsWithSignedUrls(event: Event): Promise<void> {
+    if (event.attachments && event.attachments.length > 0) {
+      await Promise.all(
+        event.attachments.map(async (attachment) => {
+          try {
+            const signedUrl = await this.objectStorageService.getSignedUrl(
+              attachment.filePath,
+              3600,
+            );
+            Object.assign(attachment, { signedUrl });
+          } catch (error) {
+            this.logger.error(
+              `Failed to generate signed URL for attachment ${attachment.id}: ${error}`,
+            );
+            Object.assign(attachment, { signedUrl: null });
+          }
+        }),
+      );
+    }
   }
 
   private async getStudentSubjectCatalogIds(

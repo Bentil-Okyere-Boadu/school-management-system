@@ -771,7 +771,7 @@ export interface EventAttachment {
   fileSize: number;
   mediaType: string;
   uploadedAt: string;
-  fileUrl?: string; // Signed URL from backend
+  signedUrl?: string | null; // Signed URL from backend
 }
 
 export interface EventReminder {

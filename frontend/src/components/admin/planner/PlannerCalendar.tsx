@@ -44,6 +44,11 @@ const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
   const handleMouseLeave = useCallback(() => setIsHovered(false), []);
 
+  const start = eventInfo.event.start ? new Date(eventInfo.event.start) : null;
+  const end = eventInfo.event.end ? new Date(eventInfo.event.end) : null;
+  const durationMinutes = start && end ? (end.getTime() - start.getTime()) / (1000 * 60) : 0;
+  const isShortEvent = durationMinutes > 0 && durationMinutes < 30;
+
   return (
     <div
       className="fc-event-content-wrapper relative group flex items-start gap-1"
@@ -53,27 +58,31 @@ const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
     >
       <div className="flex-1 min-w-0">
         {!eventInfo.event.allDay && (
-          <div className="fc-event-time text-xs font-medium text-gray-700 mb-1">
+          <div className={`font-medium text-gray-700 ${isShortEvent ? 'text-[10px] mb-0.5' : 'text-xs mb-1'}`}>
             {eventInfo.timeText}
           </div>
         )}
-        <div className="fc-event-title font-semibold text-sm text-gray-900">
+        <div className={`font-semibold text-gray-900 truncate ${isShortEvent ? 'text-xs leading-tight' : 'text-sm'}`} title={eventInfo.event.title}>
           {eventInfo.event.title}
         </div>
-        {event?.location && (
-          <div className="fc-event-location text-xs text-gray-500 mt-1">
-            {event.location}
-          </div>
-        )}
-        {event?.description && (
-          <div className="fc-event-description text-xs text-gray-600 mt-1 line-clamp-1">
-            {event.description}
-          </div>
-        )}
-        {event?.category && (
-          <div className="fc-event-category text-xs text-gray-500 mt-1">
-            {event.category.name}
-          </div>
+        {!isShortEvent && (
+          <>
+            {event?.location && (
+              <div className="fc-event-location text-xs text-gray-500 mt-1">
+                {event.location}
+              </div>
+            )}
+            {event?.description && (
+              <div className="fc-event-description text-xs text-gray-600 mt-1 line-clamp-1">
+                {event.description}
+              </div>
+            )}
+            {event?.category && (
+              <div className="fc-event-category text-xs text-gray-500 mt-1">
+                {event.category.name}
+              </div>
+            )}
+          </>
         )}
       </div>
       {event && (

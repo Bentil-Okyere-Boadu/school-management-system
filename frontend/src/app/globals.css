@@ -127,6 +127,13 @@ body {
   border-bottom: none !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
+  min-height: 60px !important;
+}
+
+/* Ensure minimum height for events in week view */
+.planner-calendar-container .fc-timeGridWeek-view .fc-event,
+.planner-calendar-container .fc-timeGridDay-view .fc-event {
+  min-height: 60px !important;
 }
 
 /* Ensure left border is visible and styled correctly */
@@ -153,6 +160,10 @@ body {
   font-weight: 600;
   line-height: 1.4;
   margin-bottom: 0.125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .planner-calendar-container .fc-event .fc-event-description {

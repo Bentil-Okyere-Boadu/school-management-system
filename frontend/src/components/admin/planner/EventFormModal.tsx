@@ -507,12 +507,9 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                 <div className="mb-3 space-y-2">
                   <p className="text-xs text-gray-600 mb-2">Current attachments:</p>
                   {existingAttachments?.map((attachment) => {
-                    // Use fileUrl from backend if available, otherwise fallback to constructed URL
-                    const fileUrl = attachment.fileUrl || 
-                      (attachment.filePath 
-                        ? `${customAPI.defaults.baseURL?.replace('/api/v1', '') || ''}/files/${attachment.filePath}`
-                        : '#');
+                    const signedUrl = attachment.signedUrl;
                     const isImage = attachment.mediaType?.startsWith('image/');
+                    const fileSizeKB = attachment.fileSize ? `${(Number(attachment.fileSize) / 1024).toFixed(1)} KB` : '';
                 
                 return (
                   <div key={attachment.id} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -531,19 +528,21 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                           {attachment.fileName}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {attachment.fileSize ? `${(Number(attachment.fileSize) / 1024).toFixed(1)} KB` : ''}
+                          {fileSizeKB}
                         </p>
                       </div>
                     </div>
-                    <a
-                      href={fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-2 p-2 text-blue-600 hover:text-blue-800"
-                      title="Download file"
-                    >
-                      <IconDownload size={18} />
-                    </a>
+                    {signedUrl && (
+                      <a
+                        href={signedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                        title="Download or open file"
+                      >
+                        <IconDownload size={18} />
+                      </a>
+                    )}
                   </div>
                 );
               })}
