@@ -1,5 +1,5 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject } from "@/@types";
-import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload } from "@/@types";
+import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
 export const useTeacherGetMe = () => {
@@ -600,4 +600,256 @@ export const useGetStudentSubmissionDetails = (assignmentId: string, studentId: 
     queryFn: () => customAPI.get(`/teacher/assignments/${assignmentId}/submissions/${studentId}`),
     enabled: enabled && !!assignmentId && !!studentId,
   });
+};
+
+/**
+ * TEACHER PLANNER EVENTS CRUD
+ */
+export const useGetTeacherPlannerEvents = (
+  startDate?: string,
+  endDate?: string,
+  categoryId?: string,
+  classLevelId?: string,
+  subjectId?: string,
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "teacherPlannerEvents",
+      {
+        startDate,
+        endDate,
+        categoryId,
+        classLevelId,
+        subjectId,
+      },
+    ],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+
+      if (startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+
+      if (endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
+      }
+
+      if (categoryId) {
+        queryBuilder.push(`categoryId=${categoryId}`);
+      }
+
+      if (classLevelId) {
+        queryBuilder.push(`classLevelId=${classLevelId}`);
+      }
+
+      if (subjectId) {
+        queryBuilder.push(`subjectId=${subjectId}`);
+      }
+
+      const params =
+        queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
+
+      return customAPI.get(`/planner/teacher/events${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const events = (data?.data as PlannerEvent[]) || [];
+
+  return { events, isLoading, refetch };
+};
+
+export const useCreateTeacherPlannerEvent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreatePlannerEventPayload) => {
+      const formData = new FormData();
+
+      formData.append("title", payload.title);
+      if (payload.description) {
+        formData.append("description", payload.description);
+      }
+      formData.append("startDate", payload.startDate);
+      if (payload.endDate) {
+        formData.append("endDate", payload.endDate);
+      }
+      formData.append("isAllDay", String(payload.isAllDay ?? false));
+      if (payload.location) {
+        formData.append("location", payload.location);
+      }
+      formData.append("categoryId", payload.categoryId);
+      formData.append("visibilityScope", payload.visibilityScope);
+
+      if (
+        payload.targetClassLevelIds &&
+        payload.targetClassLevelIds.length > 0
+      ) {
+        payload.targetClassLevelIds.forEach((id) => {
+          formData.append("targetClassLevelIds[]", id);
+        });
+      }
+
+      if (payload.targetSubjectIds && payload.targetSubjectIds.length > 0) {
+        payload.targetSubjectIds.forEach((id) => {
+          formData.append("targetSubjectIds[]", id);
+        });
+      }
+
+      if (payload.reminders && payload.reminders.length > 0) {
+        payload.reminders.forEach((reminder, index) => {
+          formData.append(
+            `reminders[${index}][reminderTime]`,
+            reminder.reminderTime
+          );
+          if (reminder.notificationType) {
+            formData.append(
+              `reminders[${index}][notificationType]`,
+              reminder.notificationType
+            );
+          }
+        });
+      }
+
+      if (payload.files && payload.files.length > 0) {
+        payload.files.forEach((file) => {
+          formData.append("files", file);
+        });
+      }
+
+      if (payload.sendNotifications !== undefined) {
+        formData.append("sendNotifications", String(payload.sendNotifications));
+      }
+
+      return customAPI.post("/planner/teacher/events", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherPlannerEvents"] });
+    },
+  });
+};
+
+export const useUpdateTeacherPlannerEvent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<CreatePlannerEventPayload>;
+    }) => {
+      const formData = new FormData();
+
+      if (payload.title !== undefined) {
+        formData.append("title", payload.title);
+      }
+      if (payload.description !== undefined) {
+        formData.append("description", payload.description || "");
+      }
+      if (payload.startDate !== undefined) {
+        formData.append("startDate", payload.startDate);
+      }
+      if (payload.endDate !== undefined) {
+        formData.append("endDate", payload.endDate || "");
+      }
+      if (payload.isAllDay !== undefined) {
+        formData.append("isAllDay", String(payload.isAllDay));
+      }
+      if (payload.location !== undefined) {
+        formData.append("location", payload.location || "");
+      }
+      if (payload.categoryId !== undefined) {
+        formData.append("categoryId", payload.categoryId);
+      }
+      if (payload.visibilityScope !== undefined) {
+        formData.append("visibilityScope", payload.visibilityScope);
+      }
+
+      if (payload.targetClassLevelIds !== undefined) {
+        if (payload.targetClassLevelIds.length > 0) {
+          payload.targetClassLevelIds.forEach((id) => {
+            formData.append("targetClassLevelIds[]", id);
+          });
+        }
+      }
+
+      if (payload.targetSubjectIds !== undefined) {
+        if (payload.targetSubjectIds.length > 0) {
+          payload.targetSubjectIds.forEach((id) => {
+            formData.append("targetSubjectIds[]", id);
+          });
+        }
+      }
+
+      if (payload.reminders !== undefined) {
+        payload.reminders.forEach((reminder, index) => {
+          formData.append(
+            `reminders[${index}][reminderTime]`,
+            reminder.reminderTime
+          );
+          if (reminder.notificationType) {
+            formData.append(
+              `reminders[${index}][notificationType]`,
+              reminder.notificationType
+            );
+          }
+        });
+      }
+
+      if (payload.files !== undefined && payload.files.length > 0) {
+        payload.files.forEach((file) => {
+          formData.append("files", file);
+        });
+      }
+
+      if (payload.sendNotifications !== undefined) {
+        formData.append("sendNotifications", String(payload.sendNotifications));
+      }
+
+      return customAPI.put(`/planner/teacher/events/${id}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherPlannerEvents"] });
+    },
+  });
+};
+
+export const useDeleteTeacherPlannerEvent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/planner/teacher/events/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherPlannerEvents"] });
+    },
+  });
+};
+
+/**
+ * TEACHER EVENT CATEGORIES (Read-only)
+ */
+export const useGetTeacherEventCategories = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["teacherEventCategories"],
+    queryFn: () => {
+      return customAPI.get("/planner/teacher/categories");
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const categories = (data?.data as EventCategory[]) || [];
+
+  return { categories, isLoading, refetch };
 };

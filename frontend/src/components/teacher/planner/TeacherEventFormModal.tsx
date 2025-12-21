@@ -3,18 +3,19 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import InputField  from "@/components/InputField";
 import { Select, MultiSelect, Checkbox, Button } from "@mantine/core";
-import { PlannerEvent, EventCategory, ClassLevel, VisibilityScope, CreatePlannerEventPayload, ErrorResponse } from "@/@types";
-import { useCreatePlannerEvent, useUpdatePlannerEvent, useGetAllSubjects } from "@/hooks/school-admin";
+import { PlannerEvent, EventCategory, ClassLevel, VisibilityScope, CreatePlannerEventPayload, ErrorResponse, TeacherSubject, Subject } from "@/@types";
+import { useCreateTeacherPlannerEvent, useUpdateTeacherPlannerEvent } from "@/hooks/teacher";
 import { toast } from "react-toastify";
 import { IconX, IconPaperclip, IconDownload, IconFile } from "@tabler/icons-react";
 
-interface EventFormModalProps {
+interface TeacherEventFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   event?: PlannerEvent | null;
   initialDate?: Date | null;
   categories: EventCategory[];
   classLevels: ClassLevel[];
+  teacherSubjects: TeacherSubject[];
   onSuccess: () => void;
 }
 
@@ -23,13 +24,14 @@ interface ReminderForm {
   notificationType: 'email' | 'sms' | 'both';
 }
 
-export const EventFormModal: React.FC<EventFormModalProps> = ({
+export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
   isOpen,
   onClose,
   event,
   initialDate,
   categories,
   classLevels,
+  teacherSubjects,
   onSuccess,
 }) => {
   const [formData, setFormData] = useState<Omit<CreatePlannerEventPayload, 'files' | 'reminders'>>({
@@ -40,7 +42,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
     isAllDay: false,
     location: "",
     categoryId: "",
-    visibilityScope: VisibilityScope.SCHOOL_WIDE,
+    visibilityScope: VisibilityScope.CLASS_LEVEL, // Default to CLASS_LEVEL for teachers
     targetClassLevelIds: [],
     targetSubjectIds: [],
     sendNotifications: true,
@@ -49,9 +51,8 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<PlannerEvent['attachments']>([]);
 
-  const createMutation = useCreatePlannerEvent();
-  const updateMutation = useUpdatePlannerEvent();
-  const { subjects } = useGetAllSubjects();
+  const createMutation = useCreateTeacherPlannerEvent();
+  const updateMutation = useUpdateTeacherPlannerEvent();
 
   useEffect(() => {
     if (event) {
@@ -101,6 +102,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
         ...prev,
         startDate: dateStr,
         endDate: dateStr,
+        visibilityScope: VisibilityScope.CLASS_LEVEL, // Default to CLASS_LEVEL for teachers
       }));
       setReminders([]);
       setSelectedFiles([]);
@@ -114,7 +116,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
         isAllDay: false,
         location: "",
         categoryId: "",
-        visibilityScope: VisibilityScope.SCHOOL_WIDE,
+        visibilityScope: VisibilityScope.CLASS_LEVEL, // Default to CLASS_LEVEL for teachers
         targetClassLevelIds: [],
         targetSubjectIds: [],
         sendNotifications: true,
@@ -236,13 +238,17 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
     label: cls.name,
   }));
 
-  const subjectOptions = subjects?.map((subj) => ({
-    value: subj.id || "",
-    label: subj.name,
-  }));
+  // Get unique subject catalogs from teacher subjects
+  // Note: teacherSubjects is actually SubjectCatalog[] from backend
+  const subjectOptions = React.useMemo(() => {
+    return (teacherSubjects)?.map((subj: Subject) => ({
+      value: subj.id || "",
+      label: subj.name || "",
+    })) || [];
+  }, [teacherSubjects]);
 
+  // Teachers can only create class-level or subject events, not school-wide
   const visibilityOptions = [
-    { value: VisibilityScope.SCHOOL_WIDE, label: "School Wide" },
     { value: VisibilityScope.CLASS_LEVEL, label: "Specific Classes" },
     { value: VisibilityScope.SUBJECT, label: "Specific Subjects" },
   ];
@@ -502,14 +508,14 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           <label className="text-sm font-medium mb-2 block">Attachments (Max 10 files)</label>
           
           {/* Existing Attachments */}
-              {existingAttachments && existingAttachments?.length > 0 && (
-                <div className="mb-3 space-y-2">
-                  <p className="text-xs text-gray-600 mb-2">Current attachments:</p>
-                  {existingAttachments?.map((attachment) => {
-                    const signedUrl = attachment.signedUrl;
-                    const isImage = attachment.mediaType?.startsWith('image/');
-                    const fileSizeKB = attachment.fileSize ? `${(Number(attachment.fileSize) / 1024).toFixed(1)} KB` : '';
-                
+          {existingAttachments && existingAttachments?.length > 0 && (
+            <div className="mb-3 space-y-2">
+              <p className="text-xs text-gray-600 mb-2">Current attachments:</p>
+              {existingAttachments?.map((attachment) => {
+                const signedUrl = attachment.signedUrl;
+                const isImage = attachment.mediaType?.startsWith('image/');
+                const fileSizeKB = attachment.fileSize ? `${(Number(attachment.fileSize) / 1024).toFixed(1)} KB` : '';
+              
                 return (
                   <div key={attachment.id} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -579,7 +585,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           />
           <label
             htmlFor="file-upload"
-            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 mt-1"
+            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50  mt-1"
           >
             <IconPaperclip size={16} />
             <span>Select Files</span>
