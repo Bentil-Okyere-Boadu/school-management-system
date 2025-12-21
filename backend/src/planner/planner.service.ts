@@ -485,7 +485,7 @@ export class PlannerService {
   ): Promise<Event[]> {
     const student = await this.studentRepository.findOne({
       where: { id: studentId },
-      relations: ['classLevels', 'school', 'classLevels.subjects'],
+      relations: ['classLevels', 'school'],
     });
 
     if (!student) {
@@ -505,9 +505,8 @@ export class PlannerService {
       .leftJoinAndSelect('event.targetSubjects', 'targetSubjects')
       .leftJoinAndSelect('event.attachments', 'attachments')
       .where('event.school.id = :schoolId', { schoolId })
-      .leftJoin('targetSubjects.subjectCatalog', 'targetSubjectCatalog')
       .andWhere(
-        '(event.visibilityScope = :schoolWide OR targetClassLevels.id IN (:...classLevelIds) OR (event.visibilityScope = :subject AND targetSubjectCatalog.id IN (:...subjectCatalogIds)))',
+        '(event.visibilityScope = :schoolWide OR targetClassLevels.id IN (:...classLevelIds) OR (event.visibilityScope = :subject AND targetSubjects.id IN (:...subjectCatalogIds)))',
         {
           schoolWide: VisibilityScope.SCHOOL_WIDE,
           subject: VisibilityScope.SUBJECT,
