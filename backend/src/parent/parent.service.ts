@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -29,6 +30,16 @@ export class ParentService {
 
     if (!student) {
       throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
+    const existingParent = await this.parentRepository.findOne({
+      where: { email: createParentDto.email },
+    });
+
+    if (existingParent) {
+      throw new ConflictException(
+        `A parent with the email "${createParentDto.email}" already exists`,
+      );
     }
 
     const parent = this.parentRepository.create({
@@ -78,7 +89,9 @@ export class ParentService {
       });
 
       if (existingParent && existingParent.id !== id) {
-        throw new ForbiddenException('A parent with this email already exists');
+        throw new ConflictException(
+          `A parent with the email "${updateParentDto.email}" already exists`,
+        );
       }
     }
 

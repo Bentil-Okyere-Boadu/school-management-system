@@ -27,6 +27,7 @@ import { SubjectModule } from './subject/subject.module';
 import { NotificationModule } from './notification/notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CurriculumModule } from './curriculum/curriculum.module';
+import { PlannerModule } from './planner/planner.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { CurriculumModule } from './curriculum/curriculum.module';
     SubjectModule,
     NotificationModule,
     CurriculumModule,
+    PlannerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
