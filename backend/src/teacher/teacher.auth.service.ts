@@ -21,15 +21,18 @@ export class TeacherAuthService {
     if (!teacher) {
       return null;
     }
+
     const isPasswordValid = await bcrypt.compare(pin, teacher.password);
-    if (!isPasswordValid) {
+    if (!isPasswordValid || teacher.isSuspended) {
       return null;
     }
+
     if (teacher.status === 'pending') {
       teacher.status = 'active';
       teacher.isInvitationAccepted = true;
       await this.teacherRepository.save(teacher);
     }
+
     return teacher;
   }
 

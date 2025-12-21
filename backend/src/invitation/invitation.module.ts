@@ -29,6 +29,7 @@ import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.enti
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
+import { Subject } from 'rxjs';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AssignmentSubmission } from 'src/student/entities/assignment-submission
       AcademicTerm,
       Assignment,
       AssignmentSubmission,
+      Subject,
     ]),
     PassportModule,
     JwtModule.registerAsync({

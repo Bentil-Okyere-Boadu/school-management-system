@@ -54,6 +54,7 @@ export interface Student extends User {
 export interface Teacher extends User {
   teacherId: string;
   isArchived: boolean;
+  isSuspended?: boolean;
   phoneContact: string;
   BoxAddress: string;
   streetAddress: string;
@@ -559,6 +560,8 @@ export interface AssignmentSubmission {
   lastName: string;
   email: string;
   studentId: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
   hasSubmitted: boolean;
   submissionId: string | null;
   status: string;

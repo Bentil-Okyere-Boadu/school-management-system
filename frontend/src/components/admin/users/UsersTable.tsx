@@ -8,10 +8,11 @@ import {
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import { useArchiveUser, useResendAdminInvitation } from "@/hooks/school-admin";
+import { useArchiveUser, useResendAdminInvitation, useSuspendTeacher } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
-import { ErrorResponse } from "@/@types";
+import { ErrorResponse, Teacher } from "@/@types";
 import Image from "next/image";
 import { HashLoader } from "react-spinners";
 
@@ -43,15 +44,34 @@ interface UserTableProps {
 }
 
 export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableProps) => {
-
+  const router = useRouter();
   const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
+  const [isConfirmSuspendDialogOpen, setIsConfirmSuspendDialogOpen] = useState(false);
   const [isConfirmCredentialSubmitDialogOpen, setIsConfirmCredentialSubmitDialogOpen]  = useState(false);
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
 
   const onArchiveUserMenuItemClick = (user: User) => {
-    setIsConfirmArchiveDialogOpen(true)
+    if (user.role?.name === 'teacher') {
+      setIsConfirmSuspendDialogOpen(true);
+    } else {
+      setIsConfirmArchiveDialogOpen(true);
+    }
     setSelectedUser(user);
-  } 
+  }
+
+  const handleSuspendTeacher = () => {
+    suspendMutate(undefined, {
+      onSuccess: () => {
+        toast.success('Teacher suspended successfully.');
+        setIsConfirmSuspendDialogOpen(false);
+        refetch();
+      },
+      onError: (error: unknown) => {
+        const errorMessage = (error as ErrorResponse).response?.data?.message || 'Failed to suspend teacher';
+        toast.error(errorMessage);
+      },
+    });
+  }; 
 
   const onResendInvitationMenuItemClick = (user: User) => {
     setSelectedUser(user);
@@ -67,8 +87,21 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
     });
   } 
 
-  const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
-  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id, role: selectedUser?.role?.name});
+  const isTeacher = selectedUser.role?.name === 'teacher';
+  const isSuspended = (selectedUser as Teacher)?.isSuspended ?? false;
+
+  const { mutate: archiveMutate, isPending: isArchiving } = useArchiveUser({
+    id: selectedUser.id,
+    archiveState: !selectedUser.isArchived,
+  });
+  const { mutate: suspendMutate, isPending: isSuspending } = useSuspendTeacher({
+    id: selectedUser.id,
+    suspendState: !isSuspended,
+  });
+  const { mutate: resendInvitationMutate, isPending: isResendingInvitation } = useResendAdminInvitation({
+    id: selectedUser.id,
+    role: selectedUser?.role?.name,
+  });
 
   const handleArchiveUser = () => {
     archiveMutate(null as unknown as void, {
@@ -205,7 +238,10 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                               onClick={() => onArchiveUserMenuItemClick(user)}
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}
                             >
-                              {user.isArchived ? 'Unarchive User' : 'Archive User'}
+                              {user.role?.name === 'teacher' 
+                                ? ((user as any).isSuspended ? 'Unsuspend Teacher' : 'Suspend Teacher')
+                                : (user.isArchived ? 'Unarchive User' : 'Archive User')
+                              }
                             </Menu.Item>
                           </Menu.Dropdown>
                         </Menu>
@@ -223,7 +259,7 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
       {/* Confirm Archive Dialog */}
       <Dialog 
         isOpen={isConfirmArchiveDialogOpen}
-        busy={isPending}
+        busy={isArchiving}
         dialogTitle={selectedUser.isArchived ? "Confirm Unarchive" : "Confirm Archive"}
         saveButtonText={selectedUser.isArchived ? "Unarchive User" : "Archive User"}
         onClose={() => setIsConfirmArchiveDialogOpen(false)} 
@@ -240,10 +276,80 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
         </div>
       </Dialog>
 
+      {/* Confirm Suspend Teacher Dialog */}
+      <Dialog
+        isOpen={isConfirmSuspendDialogOpen}
+        busy={isSuspending}
+        dialogTitle={isSuspended ? 'Confirm Unsuspend Teacher' : 'Confirm Suspend Teacher'}
+        saveButtonText={isSuspended ? 'Unsuspend Teacher' : 'Suspend Teacher'}
+        onClose={() => setIsConfirmSuspendDialogOpen(false)}
+        onSave={handleSuspendTeacher}
+      >
+        <div className="my-3 flex flex-col gap-4">
+          {isSuspended ? (
+            <p className="text-gray-700">
+              Are you sure you want to unsuspend this teacher? They will be able to login again and access their account.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800 font-semibold mb-3 flex items-center gap-2">
+                  <span className="text-lg">⚠️</span>
+                  <span>This action will restrict the teacher's access and may affect ongoing activities:</span>
+                </p>
+                <ul className="list-disc list-inside text-yellow-700 space-y-1.5 text-sm ml-6">
+                  <li>Subject assignments and grading</li>
+                  <li>Class assignments and attendance records</li>
+                  <li>Student assignments and submissions</li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 font-semibold mb-3">Recommendation:</p>
+                <p className="text-blue-700 text-sm mb-3">
+                  Assign a temporary replacement teacher before suspending to avoid disruptions.
+                </p>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsConfirmSuspendDialogOpen(false);
+                      router.push('/admin/subjects');
+                    }}
+                    className="text-sm text-blue-700 hover:text-blue-800 font-medium underline"
+                  >
+                    Go to Subjects to reassign →
+                  </button>
+                  <br />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsConfirmSuspendDialogOpen(false);
+                      router.push('/admin/classes');
+                    }}
+                    className="text-sm text-blue-700 hover:text-blue-800 font-medium underline"
+                  >
+                    Go to Classes to reassign →
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-gray-700 text-sm">
+                  <span className="font-semibold">Suspended teachers will not be able to log in or perform any actions.</span>
+                </p>
+              </div>
+
+              <p className="text-gray-700 font-medium">Are you sure you want to proceed?</p>
+            </div>
+          )}
+        </div>
+      </Dialog>
+
       {/* Confirm Credential Submission Dialog */}
       <Dialog 
         isOpen={isConfirmCredentialSubmitDialogOpen}
-        busy={isPending}
+        busy={isResendingInvitation}
         dialogTitle="Confirm Credential Submission"
         saveButtonText="Send Credentials"
         onClose={() => setIsConfirmCredentialSubmitDialogOpen(false)} 

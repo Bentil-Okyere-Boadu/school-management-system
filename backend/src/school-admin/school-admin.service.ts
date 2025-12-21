@@ -19,6 +19,7 @@ import { AttendanceService } from 'src/attendance/attendance.service';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
+import { Subject } from 'src/subject/subject.entity';
 
 @Injectable()
 export class SchoolAdminService {
@@ -42,6 +43,8 @@ export class SchoolAdminService {
     private assignmentRepository: Repository<Assignment>,
     @InjectRepository(AssignmentSubmission)
     private assignmentSubmissionRepository: Repository<AssignmentSubmission>,
+    @InjectRepository(Subject)
+    private subjectRepository: Repository<Subject>,
   ) {}
 
   async findAll(): Promise<SchoolAdmin[]> {
@@ -123,6 +126,80 @@ export class SchoolAdminService {
         totalPages,
       },
     };
+  }
+
+  async findStudentsForClassAssignment(
+    schoolId: string,
+    queryString: QueryString,
+  ) {
+    const studentsQuery = this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.role', 'role')
+      .leftJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('student.profile', 'profile')
+      .leftJoinAndSelect('student.classLevels', 'classLevel')
+      .where('student.school.id = :schoolId', { schoolId })
+      .andWhere('role.label = :roleLabel', { roleLabel: 'Student' });
+
+    // Filter students: show only those without classes, or (if excludeClassId provided) those in that specific class
+    if (queryString.withoutClass === 'true') {
+      if (queryString.excludeClassId) {
+        // When editing: show students without any class OR students in the excluded class
+        studentsQuery.andWhere((qb) => {
+          const noClassSubQuery = qb
+            .subQuery()
+            .select('1')
+            .from('class_level_students', 'cls1')
+            .where('cls1.student_id = student.id')
+            .getQuery();
+
+          const inExcludedClassSubQuery = qb
+            .subQuery()
+            .select('1')
+            .from('class_level_students', 'cls2')
+            .where('cls2.student_id = student.id')
+            .andWhere('cls2.class_level_id = :excludeClassId', {
+              excludeClassId: queryString.excludeClassId,
+            })
+            .getQuery();
+
+          return `(NOT EXISTS ${noClassSubQuery} OR EXISTS ${inExcludedClassSubQuery})`;
+        });
+      } else {
+        // When creating: show only students without any class
+        studentsQuery.andWhere((qb) => {
+          const subQuery = qb
+            .subQuery()
+            .select('1')
+            .from('class_level_students', 'cls')
+            .where('cls.student_id = student.id')
+            .getQuery();
+          return `NOT EXISTS ${subQuery}`;
+        });
+      }
+    }
+
+    const studentsFeatures = new APIFeatures(studentsQuery, queryString)
+      .filter()
+      .sort()
+      .search(['firstName', 'lastName', 'email'])
+      .limitFields();
+
+    const students = await studentsFeatures.getQuery().getMany();
+
+    // Sign profile URLs
+    const signedStudents = await Promise.all(
+      students.map(async (student) => {
+        if (student.profile?.id) {
+          student.profile = await this.profileService.getProfileWithImageUrl(
+            student.profile.id,
+          );
+        }
+        return student;
+      }),
+    );
+
+    return signedStudents;
   }
 
   async findAllUsers(schoolId: string, queryString: QueryString) {
@@ -412,6 +489,68 @@ export class SchoolAdminService {
     }
 
     throw new NotFoundException(`User with ID ${id} not found`);
+  }
+
+  async getTeacherAssignments(teacherId: string, schoolId: string) {
+    const teacher = await this.teacherRepository
+      .createQueryBuilder('teacher')
+      .leftJoinAndSelect('teacher.classLevels', 'classLevels')
+      .leftJoinAndSelect('teacher.school', 'school')
+      .where('teacher.id = :teacherId', { teacherId })
+      .andWhere('school.id = :schoolId', { schoolId })
+      .getOne();
+
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found');
+    }
+
+    const [subjects, classLevelsAsClassTeacher] = await Promise.all([
+      this.subjectRepository
+        .createQueryBuilder('subject')
+        .leftJoinAndSelect('subject.classLevels', 'classLevels')
+        .leftJoinAndSelect('subject.subjectCatalog', 'subjectCatalog')
+        .leftJoinAndSelect('subject.teacher', 'teacher')
+        .where('teacher.id = :teacherId', { teacherId })
+        .getMany(),
+      this.classLevelRepository
+        .createQueryBuilder('classLevel')
+        .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
+        .where('classTeacher.id = :teacherId', { teacherId })
+        .getMany(),
+    ]);
+
+    return {
+      subjects: subjects.map((subject) => ({
+        id: subject.id,
+        name: subject.subjectCatalog.name,
+        classLevels: subject.classLevels.map((cl) => ({
+          id: cl.id,
+          name: cl.name,
+        })),
+      })),
+      classLevelsAsTeacher: teacher.classLevels.map((cl) => ({
+        id: cl.id,
+        name: cl.name,
+      })),
+      classLevelsAsClassTeacher: classLevelsAsClassTeacher.map((cl) => ({
+        id: cl.id,
+        name: cl.name,
+      })),
+    };
+  }
+
+  async suspendTeacher(teacherId: string, suspend: boolean, schoolId: string) {
+    const teacher = await this.teacherRepository.findOne({
+      where: { id: teacherId, school: { id: schoolId } },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException('Teacher not found');
+    }
+
+    teacher.isSuspended = suspend;
+    teacher.status = suspend ? 'suspended' : 'active';
+    return this.teacherRepository.save(teacher);
   }
 
   getRepository(): Repository<SchoolAdmin> {
@@ -988,6 +1127,8 @@ export class SchoolAdminService {
           lastName: student.lastName,
           email: student.email,
           studentId: student.studentId,
+          isArchived: student.isArchived,
+          archivedAt: student.isArchived ? student.updatedAt : null,
           hasSubmitted: !!submission,
           submissionId: submission?.id ?? null,
           status,

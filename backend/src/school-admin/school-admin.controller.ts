@@ -89,6 +89,20 @@ export class SchoolAdminController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('students/for-class-assignment')
+  @Roles(Role.SchoolAdmin)
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
+  findStudentsForClassAssignment(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
+  ) {
+    return this.schoolAdminService.findStudentsForClassAssignment(
+      admin.school.id,
+      query,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('me')
   @Roles(Role.SchoolAdmin)
   getProfile(@CurrentUser() admin: SchoolAdmin) {
@@ -170,6 +184,34 @@ export class SchoolAdminController {
     @Body() body: { archive: boolean },
   ) {
     return this.schoolAdminService.archiveUser(id, body.archive);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('teachers/:id/assignments')
+  @Roles(Role.SchoolAdmin)
+  async getTeacherAssignments(
+    @Param('id') teacherId: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.schoolAdminService.getTeacherAssignments(
+      teacherId,
+      admin.school.id,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('teachers/:id/suspend')
+  @Roles(Role.SchoolAdmin)
+  async suspendTeacher(
+    @Param('id') teacherId: string,
+    @CurrentUser() admin: SchoolAdmin,
+    @Body() body: { suspend: boolean },
+  ) {
+    return this.schoolAdminService.suspendTeacher(
+      teacherId,
+      body.suspend,
+      admin.school.id,
+    );
   }
 
   @UseGuards(
