@@ -3,8 +3,8 @@ import React, { useState, useCallback } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import { EventInput, DateSelectArg, EventClickArg, DatesSetArg, EventContentArg, EventDropArg, EventResizeArg } from "@fullcalendar/core";
+import interactionPlugin, { EventResizeDoneArg }  from "@fullcalendar/interaction";
+import { EventInput, DateSelectArg, EventClickArg, DatesSetArg, EventContentArg, EventDropArg } from "@fullcalendar/core";
 import { PlannerEvent } from "@/@types";
 import { ActionIcon } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
@@ -17,7 +17,7 @@ interface PlannerCalendarProps {
   onEventClick: (clickInfo: EventClickArg) => void;
   onDeleteClick: (event: PlannerEvent) => void;
   onEventDrop: (dropInfo: EventDropArg) => void;
-  onEventResize?: (resizeInfo: EventResizeArg) => void;
+  onEventResize?: (resizeInfo: EventResizeDoneArg) => void;
   onDatesSet: (dateInfo: DatesSetArg) => void;
 }
 

@@ -1,18 +1,7 @@
 "use client";
 import React, { useState, useMemo, useCallback } from "react";
 import type { EventInput, EventClickArg, EventDropArg } from "@fullcalendar/core";
-
-type EventResizeArg = {
-  event: {
-    start: Date | null;
-    end: Date | null;
-    allDay: boolean;
-    extendedProps: {
-      event: PlannerEvent;
-    };
-  };
-  revert: () => void;
-};
+import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import { useGetPlannerEvents, useGetEventCategories, useGetClassLevels, useGetAllSubjects, useDeletePlannerEvent, useUpdatePlannerEvent } from "@/hooks/school-admin";
 import { PlannerEvent, VisibilityScope } from "@/@types";
 import { PlannerCalendar } from "@/components/admin/planner/PlannerCalendar";
@@ -189,7 +178,7 @@ const PlannerPage: React.FC = () => {
     }
   }, [updateEventMutation, refetchEvents]);
 
-  const handleEventResize = useCallback(async (resizeInfo: EventResizeArg) => {
+  const handleEventResize = useCallback(async (resizeInfo: EventResizeDoneArg) => {
     const event = resizeInfo.event.extendedProps.event as PlannerEvent;
     if (!event) return;
 

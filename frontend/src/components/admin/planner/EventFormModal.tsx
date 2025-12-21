@@ -7,7 +7,6 @@ import { PlannerEvent, EventCategory, ClassLevel, VisibilityScope, CreatePlanner
 import { useCreatePlannerEvent, useUpdatePlannerEvent, useGetAllSubjects } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { IconX, IconPaperclip, IconDownload, IconFile } from "@tabler/icons-react";
-import { customAPI } from "../../../../config/setup";
 
 interface EventFormModalProps {
   isOpen: boolean;
@@ -86,7 +85,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
       });
       
       setReminders(
-        event.reminders?.length > 0
+        event.reminders && event.reminders?.length > 0
           ? event.reminders.map(r => ({
               reminderTime: new Date(r.reminderTime).toISOString().slice(0, 16),
               notificationType: r.notificationType,
@@ -153,7 +152,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
     }
 
     try {
-      let startDate = new Date(formData.startDate);
+      const startDate = new Date(formData.startDate);
       let endDate = formData.endDate ? new Date(formData.endDate) : null;
 
       if (formData.isAllDay) {
