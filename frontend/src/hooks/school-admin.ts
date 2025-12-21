@@ -1,141 +1,213 @@
-import { useMutation, useQuery, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
-import { customAPI } from "../../config/setup"
-import { User, Calendar, FeeStructure, Grade, SchoolAdminInfo, Term, ClassLevel, AdmissionPolicy, Student, StudentInformation, Guardian, AdditionalInformation, AdmissionData, AdmissionDashboardInfo, AdminDashboardStats, Subject, AssignSubjectTeacherPayload, StudentResultsResponse, Notification, Reminder, School, ApproveClassResultsPayload, CurriculumItem, CurriculumPayload, Topic, TopicPayload, AdminAssignment, AssignmentSubmission } from "@/@types";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+} from "@tanstack/react-query";
+import { customAPI } from "../../config/setup";
+import {
+  User,
+  Calendar,
+  FeeStructure,
+  Grade,
+  SchoolAdminInfo,
+  Term,
+  ClassLevel,
+  AdmissionPolicy,
+  Student,
+  StudentInformation,
+  Guardian,
+  AdditionalInformation,
+  AdmissionData,
+  AdmissionDashboardInfo,
+  AdminDashboardStats,
+  Subject,
+  AssignSubjectTeacherPayload,
+  StudentResultsResponse,
+  Notification,
+  Reminder,
+  School,
+  ApproveClassResultsPayload,
+  CurriculumItem,
+  CurriculumPayload,
+  Topic,
+  TopicPayload,
+  AdminAssignment,
+  AssignmentSubmission,
+  PlannerEvent,
+  EventCategory,
+  CreatePlannerEventPayload,
+  CreateEventCategoryPayload,
+  VisibilityScope,
+} from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['mySchool'],
-        queryFn: () => {
-            return customAPI.get('/school-admin/my-school');
-        },
-        enabled,
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["mySchool"],
+    queryFn: () => {
+      return customAPI.get("/school-admin/my-school");
+    },
+    enabled,
+    refetchOnWindowFocus: true,
+  });
 
-    const school = data?.data as School
+  const school = data?.data as School;
 
-    return { school, isLoading, refetch }
-}
+  return { school, isLoading, refetch };
+};
 
 export const useGetMe = () => {
-    const { data, isPending} = useQuery({
-        queryKey: ['schoolAdminMe'],
-        queryFn: () => {
-            return customAPI.get(`/school-admin/me`)
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isPending } = useQuery({
+    queryKey: ["schoolAdminMe"],
+    queryFn: () => {
+      return customAPI.get(`/school-admin/me`);
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const me = data?.data as User;
+  const me = data?.data as User;
 
-    return { me, isPending }
-}
+  return { me, isPending };
+};
 
-export const useGetSchoolUsers = (page=1,search: string = "", status: string = "", role: string = "", roleLabel?: string,  limit?: number ) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allSchoolUsers', { page, search, status, role, roleLabel, limit }],
-        queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
-            }
+export const useGetSchoolUsers = (
+  page = 1,
+  search: string = "",
+  status: string = "",
+  role: string = "",
+  roleLabel?: string,
+  limit?: number
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "allSchoolUsers",
+      { page, search, status, role, roleLabel, limit },
+    ],
+    queryFn: () => {
+      const queryBuilder = [];
+      if (search) {
+        queryBuilder.push(`search=${search}`);
+      }
 
-            if(status) {
-                queryBuilder.push(`status=${status}`);
-            }
-            
-            if(role) {
-                queryBuilder.push(`role=${role}`);
-            }
-            
-            if(page) {
-                queryBuilder.push(`page=${page}`);
-            }
-            
-            if(roleLabel) {
-                queryBuilder.push(`roleLabel=${roleLabel}`);
-            }
+      if (status) {
+        queryBuilder.push(`status=${status}`);
+      }
 
-            if(limit) {
-                queryBuilder.push(`limit=${limit}`);
-            }
-            
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
-            
-            return customAPI.get(`/school-admin/users?${params}`);
-        },
-        refetchOnWindowFocus: true
-    });
+      if (role) {
+        queryBuilder.push(`role=${role}`);
+      }
 
-    const schoolUsers = data?.data?.data;
-    const paginationValues = data?.data.meta;
-    return { schoolUsers, isLoading, paginationValues, refetch }
-}
+      if (page) {
+        queryBuilder.push(`page=${page}`);
+      }
 
-export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: boolean}) => {
-    return useMutation({
-        mutationFn: () => {
-            return customAPI.put(`/school-admin/users/${id}/archive`, {archive: archiveState})
-        }
-    })
-}
+      if (roleLabel) {
+        queryBuilder.push(`roleLabel=${roleLabel}`);
+      }
 
-export const useResendAdminInvitation = ({id, role}: {id: string, role: string}) => {
-    return useMutation({
-        mutationFn: () => {
-            return customAPI.post(`/invitations/${role}/resend/${id}`)
-        }
-    })
-}
+      if (limit) {
+        queryBuilder.push(`limit=${limit}`);
+      }
 
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
 
- export const useCreateSchool = () => {
-    return useMutation({ 
-        mutationFn: (schoolDetails: {name: string, address: string, phone: string, email: string, calendlyUrl: string}) => {
-            return customAPI.post(`/schools/create`, schoolDetails);
-        }
-    })
-}
+      return customAPI.get(`/school-admin/users?${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const schoolUsers = data?.data?.data;
+  const paginationValues = data?.data.meta;
+  return { schoolUsers, isLoading, paginationValues, refetch };
+};
+
+export const useArchiveUser = ({
+  id,
+  archiveState,
+}: {
+  id: string;
+  archiveState: boolean;
+}) => {
+  return useMutation({
+    mutationFn: () => {
+      return customAPI.put(`/school-admin/users/${id}/archive`, {
+        archive: archiveState,
+      });
+    },
+  });
+};
+
+export const useResendAdminInvitation = ({
+  id,
+  role,
+}: {
+  id: string;
+  role: string;
+}) => {
+  return useMutation({
+    mutationFn: () => {
+      return customAPI.post(`/invitations/${role}/resend/${id}`);
+    },
+  });
+};
+
+export const useCreateSchool = () => {
+  return useMutation({
+    mutationFn: (schoolDetails: {
+      name: string;
+      address: string;
+      phone: string;
+      email: string;
+      calendlyUrl: string;
+    }) => {
+      return customAPI.post(`/schools/create`, schoolDetails);
+    },
+  });
+};
 
 export const useInvitation = (role: string) => {
-    return useMutation({
-        mutationFn: (inviteDetails: {firstName:string, lastName:string, email: string}) => {
-            return customAPI.post(`/invitations/${role}`, inviteDetails);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (inviteDetails: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    }) => {
+      return customAPI.post(`/invitations/${role}`, inviteDetails);
+    },
+  });
+};
 
 export const useGetSchoolAdminInfo = () => {
-    const { data, isLoading } = useQuery({
-        queryKey: ['schoolAdminInfo'],
-        queryFn: () => {
-            return customAPI.get('/school-admin/me');
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading } = useQuery({
+    queryKey: ["schoolAdminInfo"],
+    queryFn: () => {
+      return customAPI.get("/school-admin/me");
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const schoolAdminInfo = data?.data
+  const schoolAdminInfo = data?.data;
 
-    return { schoolAdminInfo, isLoading }
-}
+  return { schoolAdminInfo, isLoading };
+};
 
 export const useEditSchoolAdminInfo = () => {
-    return useMutation({
-        mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
-            return customAPI.put('/school-admin/profile/me', schoolAdminInfo);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (schoolAdminInfo: Partial<SchoolAdminInfo>) => {
+      return customAPI.put("/school-admin/profile/me", schoolAdminInfo);
+    },
+  });
+};
 
 export const useUploadProfileImage = (id: string) => {
   return useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       return customAPI.post(`/profiles/school-admin/${id}/avatar`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
     },
@@ -146,11 +218,11 @@ export const useUploadSchoolLogoFile = () => {
   return useMutation({
     mutationFn: (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
-      return customAPI.post('/schools/logo', formData, {
+      return customAPI.post("/schools/logo", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
     },
@@ -158,396 +230,395 @@ export const useUploadSchoolLogoFile = () => {
 };
 
 export const useDeleteProfileImage = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/profiles/school-admin/${id}/avatar`)
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/profiles/school-admin/${id}/avatar`);
+    },
+  });
+};
 
 export const useDeleteSchoolLogo = () => {
-    return useMutation({
-        mutationFn: () => {
-            return customAPI.delete('/schools/logo')
-        }
-    })
-}
+  return useMutation({
+    mutationFn: () => {
+      return customAPI.delete("/schools/logo");
+    },
+  });
+};
 
 /**
  * FEE STRUCTURE CRUD
- * @returns 
+ * @returns
  */
 
 export const useGetFeeStructure = () => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['myFeeStructure'],
-        queryFn: () => {
-            return customAPI.get('/fee-structure/my-school');
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["myFeeStructure"],
+    queryFn: () => {
+      return customAPI.get("/fee-structure/my-school");
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const feesStructure = data?.data as FeeStructure[] || [] ;
+  const feesStructure = (data?.data as FeeStructure[]) || [];
 
-    return { feesStructure, isLoading, refetch }
-}
+  return { feesStructure, isLoading, refetch };
+};
 
 export const useSaveFeeStructure = () => {
-    return useMutation({
-        mutationFn: (feeStructure: Partial<FeeStructure>) => {
-            return customAPI.post('/fee-structure', feeStructure);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (feeStructure: Partial<FeeStructure>) => {
+      return customAPI.post("/fee-structure", feeStructure);
+    },
+  });
+};
 export const useEditFeeStructure = (id: string) => {
-    return useMutation({
-        mutationFn: (feeStructure: Partial<FeeStructure>) => {
-            return customAPI.put(`/fee-structure/${id}`, feeStructure);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (feeStructure: Partial<FeeStructure>) => {
+      return customAPI.put(`/fee-structure/${id}`, feeStructure);
+    },
+  });
+};
 
 export const useDeleteFeeStructure = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/fee-structure/${id}`)
-        }
-    })
-}
-
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/fee-structure/${id}`);
+    },
+  });
+};
 
 /**
  * GRADING SYSTEM CRUD
  */
 export const useGetGradingSystem = () => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['myGradingSystem'],
-        queryFn: () => {
-            return customAPI.get('/grading-system/my-school');
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["myGradingSystem"],
+    queryFn: () => {
+      return customAPI.get("/grading-system/my-school");
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const grades = data?.data as Grade[] || [] ;
+  const grades = (data?.data as Grade[]) || [];
 
-    return { grades, isLoading, refetch }
-}
+  return { grades, isLoading, refetch };
+};
 
 export const useCreateGrade = () => {
-    return useMutation({
-        mutationFn: (grade: Partial<Grade>) => {
-            return customAPI.post('/grading-system', grade);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (grade: Partial<Grade>) => {
+      return customAPI.post("/grading-system", grade);
+    },
+  });
+};
 
 export const useDeleteGrade = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/grading-system/${id}`)
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/grading-system/${id}`);
+    },
+  });
+};
 
 export const useEditGrade = (id: string) => {
-    return useMutation({
-        mutationFn: (grade: Partial<Grade>) => {
-            return customAPI.put(`/grading-system/${id}`, grade);
-        }
-    })
-}
-
+  return useMutation({
+    mutationFn: (grade: Partial<Grade>) => {
+      return customAPI.put(`/grading-system/${id}`, grade);
+    },
+  });
+};
 
 /**
  * ACADEMIC CALENDAR CRUD
- * @returns 
+ * @returns
  */
 export const useGetCalendars = () => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['academicCalendars'],
-        queryFn: () => {
-            return customAPI.get('/academic-calendar');
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["academicCalendars"],
+    queryFn: () => {
+      return customAPI.get("/academic-calendar");
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const calendars = data?.data as Calendar[] || [] ;
+  const calendars = (data?.data as Calendar[]) || [];
 
-    return { calendars, isLoading, refetch }
-}
+  return { calendars, isLoading, refetch };
+};
 
 export const useCreateCalendar = () => {
-    return useMutation({
-        mutationFn: (calendar: Partial<Calendar>) => {
-            return customAPI.post('/academic-calendar', calendar);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (calendar: Partial<Calendar>) => {
+      return customAPI.post("/academic-calendar", calendar);
+    },
+  });
+};
 
 export const useDeleteCalendar = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/academic-calendar/${id}`)
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/academic-calendar/${id}`);
+    },
+  });
+};
 
 export const useEditCalendar = (id: string) => {
-    return useMutation({
-        mutationFn: (calendar: Partial<Calendar>) => {
-            return customAPI.put(`/academic-calendar/${id}`, calendar);
-        }
-    })
-}
-
+  return useMutation({
+    mutationFn: (calendar: Partial<Calendar>) => {
+      return customAPI.put(`/academic-calendar/${id}`, calendar);
+    },
+  });
+};
 
 /**
  * CALENDAR TERMS CRUD
- * @returns 
+ * @returns
  */
 export const useGetTerms = (id: string, enabled: boolean = true) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['academicTerm', id],
-        queryFn: () => {
-            return customAPI.get(`/academic-calendar/${id}/terms`);
-        },
-        enabled: Boolean(id) && enabled,
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["academicTerm", id],
+    queryFn: () => {
+      return customAPI.get(`/academic-calendar/${id}/terms`);
+    },
+    enabled: Boolean(id) && enabled,
+    refetchOnWindowFocus: true,
+  });
 
-    const terms = data?.data as Term[] || [] ;
+  const terms = (data?.data as Term[]) || [];
 
-    return { terms, isLoading, refetch }
-}
+  return { terms, isLoading, refetch };
+};
 
 export const useCreateTerm = () => {
-    return useMutation({
-        mutationFn: (term: Partial<Term>) => {
-            return customAPI.post('/academic-calendar/term', term);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (term: Partial<Term>) => {
+      return customAPI.post("/academic-calendar/term", term);
+    },
+  });
+};
 
 export const useDeleteTerm = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/academic-calendar/term/${id}`)
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/academic-calendar/term/${id}`);
+    },
+  });
+};
 
 export const useEditTerm = (id: string) => {
-    return useMutation({
-        mutationFn: (term: Partial<Term>) => {
-            return customAPI.put(`/academic-calendar/term/${id}`, term);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (term: Partial<Term>) => {
+      return customAPI.put(`/academic-calendar/term/${id}`, term);
+    },
+  });
+};
 
 /**
  * CLASS LEVELS CRUD
  */
 export const useGetClassLevels = (search: string = "") => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['myClassLevels', { search }],
-        queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
-            }
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["myClassLevels", { search }],
+    queryFn: () => {
+      const queryBuilder = [];
+      if (search) {
+        queryBuilder.push(`search=${search}`);
+      }
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
 
-            return customAPI.get(`/class-level?${params}`);
-        },
-        refetchOnWindowFocus: true
-    })
+      return customAPI.get(`/class-level?${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const classLevels = data?.data as ClassLevel[] || [] ;
+  const classLevels = (data?.data as ClassLevel[]) || [];
 
-    return { classLevels, isLoading, refetch }
-}
+  return { classLevels, isLoading, refetch };
+};
 
 export const useCreateClassLevel = () => {
-    return useMutation({
-        mutationFn: (classLevel: Partial<ClassLevel>) => {
-            return customAPI.post('/class-level', classLevel);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (classLevel: Partial<ClassLevel>) => {
+      return customAPI.post("/class-level", classLevel);
+    },
+  });
+};
 
 export const useDeleteClassLevel = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/class-level/${id}`)
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/class-level/${id}`);
+    },
+  });
+};
 
 export const useEditClassLevel = (id: string) => {
-    return useMutation({
-        mutationFn: (classLevel: Partial<ClassLevel>) => {
-            return customAPI.patch(`/class-level/${id}`, classLevel);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (classLevel: Partial<ClassLevel>) => {
+      return customAPI.patch(`/class-level/${id}`, classLevel);
+    },
+  });
+};
 
 /**
  * CURRICULUM CRUD
  */
 export const useGetCurricula = (search: string = "") => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['curricula', { search }],
-        queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
-            }
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["curricula", { search }],
+    queryFn: () => {
+      const queryBuilder = [];
+      if (search) {
+        queryBuilder.push(`search=${search}`);
+      }
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
 
-            return customAPI.get(`/curriculum?${params}`);
-        },
-        refetchOnWindowFocus: true
-    })
+      return customAPI.get(`/curriculum?${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const curricula = (data?.data?.data as CurriculumItem[]) || [];
+  const curricula = (data?.data?.data as CurriculumItem[]) || [];
 
-    return { curricula, isLoading, refetch }
-}
+  return { curricula, isLoading, refetch };
+};
 
 export const useCreateCurriculum = () => {
-    return useMutation({
-        mutationFn: (payload: CurriculumPayload) => {
-            return customAPI.post('/curriculum', payload);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (payload: CurriculumPayload) => {
+      return customAPI.post("/curriculum", payload);
+    },
+  });
+};
 
 export const useEditCurriculum = (id: string) => {
-    return useMutation({
-        mutationFn: (payload: Partial<CurriculumPayload>) => {
-            return customAPI.patch(`/curriculum/${id}`, payload);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (payload: Partial<CurriculumPayload>) => {
+      return customAPI.patch(`/curriculum/${id}`, payload);
+    },
+  });
+};
 
 export const useDeleteCurriculum = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/curriculum/${id}`);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/curriculum/${id}`);
+    },
+  });
+};
 
 export const useGetCurriculumById = (id: string, options?: UseQueryOptions) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['curriculum', id],
-        queryFn: () => {
-            return customAPI.get(`/curriculum/${id}`);
-        },
-        enabled: options?.enabled ?? Boolean(id),
-        refetchOnWindowFocus: true,
-        ...options,
-    });
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["curriculum", id],
+    queryFn: () => {
+      return customAPI.get(`/curriculum/${id}`);
+    },
+    enabled: options?.enabled ?? Boolean(id),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
 
-    const curriculum = (data as { data: CurriculumItem })?.data || {};
+  const curriculum = (data as { data: CurriculumItem })?.data || {};
 
-    return { curriculum, isLoading, refetch };
-}
+  return { curriculum, isLoading, refetch };
+};
 
 // Patch curriculum by passing id at call time - useful for quick toggles
 export const useEditCurriculumById = () => {
-    return useMutation({
-        mutationFn: (payload: Partial<CurriculumPayload> & { id: string }) => {
-            const { id, ...rest } = payload;
-            return customAPI.patch(`/curriculum/${id}`, rest);
-        }
-    });
-}
+  return useMutation({
+    mutationFn: (payload: Partial<CurriculumPayload> & { id: string }) => {
+      const { id, ...rest } = payload;
+      return customAPI.patch(`/curriculum/${id}`, rest);
+    },
+  });
+};
 
 /**
  * TOPICS CRUD
  */
 export const useGetTopics = () => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['curriculumTopics'],
-        queryFn: () => {
-            return customAPI.get(`/curriculum/topics`);
-        },
-        enabled: true,
-        refetchOnWindowFocus: true,
-    });
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["curriculumTopics"],
+    queryFn: () => {
+      return customAPI.get(`/curriculum/topics`);
+    },
+    enabled: true,
+    refetchOnWindowFocus: true,
+  });
 
-    const topics = (data?.data?.data as Topic[]) || [];
+  const topics = (data?.data?.data as Topic[]) || [];
 
-    return { topics, isLoading, refetch };
-}
+  return { topics, isLoading, refetch };
+};
 
 export const useCreateTopic = () => {
-    return useMutation({
-        mutationFn: (payload: TopicPayload) => {
-            return customAPI.post('/curriculum/topics', payload);
-        },
-    });
-}
+  return useMutation({
+    mutationFn: (payload: TopicPayload) => {
+      return customAPI.post("/curriculum/topics", payload);
+    },
+  });
+};
 
 export const useEditTopic = (id: string) => {
-    return useMutation({
-        mutationFn: (payload: Partial<TopicPayload>) => {
-            return customAPI.patch(`/curriculum/topics/${id}`, payload);
-        },
-    });
-}
+  return useMutation({
+    mutationFn: (payload: Partial<TopicPayload>) => {
+      return customAPI.patch(`/curriculum/topics/${id}`, payload);
+    },
+  });
+};
 
 export const useDeleteTopic = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/curriculum/topics/${id}`);
-        },
-    });
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/curriculum/topics/${id}`);
+    },
+  });
+};
 
 export const useGetSubjectTopics = (subjectCatalogId?: string) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['subjectCatalogTopics', subjectCatalogId],
-        queryFn: () => {
-            return customAPI.get(`/curriculum/subject-catalogs/${subjectCatalogId}/topics`);
-        },
-        enabled: Boolean(subjectCatalogId),
-        refetchOnWindowFocus: true,
-    });
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["subjectCatalogTopics", subjectCatalogId],
+    queryFn: () => {
+      return customAPI.get(
+        `/curriculum/subject-catalogs/${subjectCatalogId}/topics`
+      );
+    },
+    enabled: Boolean(subjectCatalogId),
+    refetchOnWindowFocus: true,
+  });
 
-    const topics = (data?.data as Topic[]) || (data?.data?.data as Topic[]) || [];
+  const topics = (data?.data as Topic[]) || (data?.data?.data as Topic[]) || [];
 
-    return { topics, isLoading, refetch };
-}
+  return { topics, isLoading, refetch };
+};
 
 /**
  * ADMISSION POLICY CRUD
  */
 export const useGetAdmissionPolicies = () => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['myAdmissionPolicies'],
-        queryFn: () => {
-            return customAPI.get('/admission-policies');
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["myAdmissionPolicies"],
+    queryFn: () => {
+      return customAPI.get("/admission-policies");
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const admissionPolicies = data?.data as AdmissionPolicy[] || [] ;
+  const admissionPolicies = (data?.data as AdmissionPolicy[]) || [];
 
-    return { admissionPolicies, isLoading, refetch }
-}
+  return { admissionPolicies, isLoading, refetch };
+};
 
 export const useCreateAdmissionPolicy = () => {
   return useMutation({
-    mutationFn: ({name, file}: {name: string, file: File}) => {
+    mutationFn: ({ name, file }: { name: string; file: File }) => {
       const formData = new FormData();
-      formData.append('name', name);
-      formData.append('file', file);
+      formData.append("name", name);
+      formData.append("file", file);
 
-      return customAPI.post('/admission-policies', formData, {
+      return customAPI.post("/admission-policies", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
     },
@@ -555,30 +626,29 @@ export const useCreateAdmissionPolicy = () => {
 };
 
 export const useDeleteAdmissionPolicy = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/admission-policies/${id}/document`)
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/admission-policies/${id}/document`);
+    },
+  });
+};
 
-// View student/teacher  
+// View student/teacher
 export const useGetSchoolUserById = (id: string, options?: UseQueryOptions) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['schoolUser', id],
-        queryFn: () => {
-            return customAPI.get(`/school-admin/users/${id}`);
-        },
-        enabled: options?.enabled ?? Boolean(id),
-        refetchOnWindowFocus: true,
-         ...options,
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["schoolUser", id],
+    queryFn: () => {
+      return customAPI.get(`/school-admin/users/${id}`);
+    },
+    enabled: options?.enabled ?? Boolean(id),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
 
-    const schoolUser = (data as {data: User | Student})?.data ;
+  const schoolUser = (data as { data: User | Student })?.data;
 
-    return { schoolUser, isLoading, refetch }
-}
-
+  return { schoolUser, isLoading, refetch };
+};
 
 /**
  * ADMISSION FORMS
@@ -599,43 +669,52 @@ export const useSubmitAdmissionForm = () => {
       const formData = new FormData();
 
       // Flat student data
-      formData.append('schoolId', schoolId);
-      formData.append('studentFirstName', studentData.firstName);
-      formData.append('studentLastName', studentData.lastName);
-      formData.append('studentOtherNames', studentData.otherNames);
-      formData.append('studentEmail', studentData.email);
-      formData.append('studentGender', studentData.gender)
-      formData.append('studentDOB', studentData.dateOfBirth);
-      formData.append('studentPlaceOfBirth', studentData.placeOfBirth)
-      formData.append('studentNationality', studentData.nationality);
-      formData.append('studentReligion', studentData.religion);
-      formData.append('studentPhone', studentData.phone);
-      formData.append('studentStreetAddress', studentData.streetAddress)
-      formData.append('studentBoxAddress', studentData.boxAddress);
-      formData.append('academicYear', studentData.academicYear);
-      formData.append('forClassId', studentData.classFor);
-      studentData.languagesSpoken.forEach(lang => {
-        formData.append('studentLanguages[]', lang); // format for sending a array of strings
+      formData.append("schoolId", schoolId);
+      formData.append("studentFirstName", studentData.firstName);
+      formData.append("studentLastName", studentData.lastName);
+      formData.append("studentOtherNames", studentData.otherNames);
+      formData.append("studentEmail", studentData.email);
+      formData.append("studentGender", studentData.gender);
+      formData.append("studentDOB", studentData.dateOfBirth);
+      formData.append("studentPlaceOfBirth", studentData.placeOfBirth);
+      formData.append("studentNationality", studentData.nationality);
+      formData.append("studentReligion", studentData.religion);
+      formData.append("studentPhone", studentData.phone);
+      formData.append("studentStreetAddress", studentData.streetAddress);
+      formData.append("studentBoxAddress", studentData.boxAddress);
+      formData.append("academicYear", studentData.academicYear);
+      formData.append("forClassId", studentData.classFor);
+      studentData.languagesSpoken.forEach((lang) => {
+        formData.append("studentLanguages[]", lang); // format for sending a array of strings
       });
-      formData.append('homePrimaryLanguage', additionalInfo.primaryHomeLanguage);
-      formData.append('homeOtherLanguage', additionalInfo.studentPrimaryLanguage);
+      formData.append(
+        "homePrimaryLanguage",
+        additionalInfo.primaryHomeLanguage
+      );
+      formData.append(
+        "homeOtherLanguage",
+        additionalInfo.studentPrimaryLanguage
+      );
       if (studentData.birthCertificateFile)
-        formData.append('studentBirthCert', studentData.birthCertificateFile);
+        formData.append("studentBirthCert", studentData.birthCertificateFile);
       if (studentData.headshotFile)
-        formData.append('studentHeadshot', studentData.headshotFile);
+        formData.append("studentHeadshot", studentData.headshotFile);
 
       // Previous School
-      if (additionalInfo.hasAcademicHistory === 'yes' && additionalInfo.previousSchool) {
+      if (
+        additionalInfo.hasAcademicHistory === "yes" &&
+        additionalInfo.previousSchool
+      ) {
         const ps = additionalInfo.previousSchool;
-        formData.append('previousSchoolName', ps.name);
-        formData.append('previousSchoolUrl', ps.url);
-        formData.append('previousSchoolStreetAddress', ps.street);
-        formData.append('previousSchoolCity', ps.city);
-        formData.append('previousSchoolState', ps.state);
-        formData.append('previousSchoolCountry', ps.country);
-        formData.append('previousSchoolAttendedFrom', ps.attendedFrom);
-        formData.append('previousSchoolAttendedTo', ps.attendedTo);
-        formData.append('previousSchoolGradeClass', ps.grade);
+        formData.append("previousSchoolName", ps.name);
+        formData.append("previousSchoolUrl", ps.url);
+        formData.append("previousSchoolStreetAddress", ps.street);
+        formData.append("previousSchoolCity", ps.city);
+        formData.append("previousSchoolState", ps.state);
+        formData.append("previousSchoolCountry", ps.country);
+        formData.append("previousSchoolAttendedFrom", ps.attendedFrom);
+        formData.append("previousSchoolAttendedTo", ps.attendedTo);
+        formData.append("previousSchoolGradeClass", ps.grade);
 
         ps.reportCards?.forEach((file, index) => {
           formData.append(`previousSchoolResult${index}`, file);
@@ -647,13 +726,25 @@ export const useSubmitAdmissionForm = () => {
         formData.append(`guardians[${index}][firstName]`, guardian.firstName);
         formData.append(`guardians[${index}][lastName]`, guardian.lastName);
         formData.append(`guardians[${index}][email]`, guardian.email);
-        formData.append(`guardians[${index}][relationship]`, guardian.relationship);
+        formData.append(
+          `guardians[${index}][relationship]`,
+          guardian.relationship
+        );
         formData.append(`guardians[${index}][guardianPhone]`, guardian.phone);
-        formData.append(`guardians[${index}][guardianOtherPhone]`, guardian.optionalPhone);
+        formData.append(
+          `guardians[${index}][guardianOtherPhone]`,
+          guardian.optionalPhone
+        );
         formData.append(`guardians[${index}][occupation]`, guardian.occupation);
         formData.append(`guardians[${index}][company]`, guardian.company);
-        formData.append(`guardians[${index}][nationality]`, guardian.nationality);
-        formData.append(`guardians[${index}][streetAddress]`, guardian.streetAddress);
+        formData.append(
+          `guardians[${index}][nationality]`,
+          guardian.nationality
+        );
+        formData.append(
+          `guardians[${index}][streetAddress]`,
+          guardian.streetAddress
+        );
         formData.append(`guardians[${index}][boxAddress]`, guardian.boxAddress);
 
         if (guardian.headshotFile) {
@@ -661,9 +752,9 @@ export const useSubmitAdmissionForm = () => {
         }
       });
 
-      return customAPI.post('/admissions', formData, {
+      return customAPI.post("/admissions", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
     },
@@ -671,127 +762,145 @@ export const useSubmitAdmissionForm = () => {
 };
 
 export const useGetAdmissionClassLevels = (id: string) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['admissionClassLevel'],
-        queryFn: () => {
-            return customAPI.get(`/admissions/class-levels/${id}`);
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["admissionClassLevel"],
+    queryFn: () => {
+      return customAPI.get(`/admissions/class-levels/${id}`);
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const classLevels = data?.data as ClassLevel[] || [] ;
+  const classLevels = (data?.data as ClassLevel[]) || [];
 
-    return { classLevels, isLoading, refetch }
-}
+  return { classLevels, isLoading, refetch };
+};
 
-export const useGetSchoolAdmissions = (page=1, search: string = "", status: string = "", role: string = "", roleLabel?: string,  limit?: number) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allSchoolAdmissions', { page, search, status, role, roleLabel, limit }],
-        queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
-            }
+export const useGetSchoolAdmissions = (
+  page = 1,
+  search: string = "",
+  status: string = "",
+  role: string = "",
+  roleLabel?: string,
+  limit?: number
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "allSchoolAdmissions",
+      { page, search, status, role, roleLabel, limit },
+    ],
+    queryFn: () => {
+      const queryBuilder = [];
+      if (search) {
+        queryBuilder.push(`search=${search}`);
+      }
 
-            if(status) {
-                queryBuilder.push(`status=${status}`);
-            }
-            
-            if(role) {
-                queryBuilder.push(`role=${role}`);
-            }
-            
-            if(page) {
-                queryBuilder.push(`page=${page}`);
-            }
-            
-            if(roleLabel) {
-                queryBuilder.push(`roleLabel=${roleLabel}`);
-            }
+      if (status) {
+        queryBuilder.push(`status=${status}`);
+      }
 
-            if(limit) {
-                queryBuilder.push(`limit=${limit}`);
-            }
-            
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
-            
-            return customAPI.get(`/school-admin/admissions?${params}`);
-        },
-        refetchOnWindowFocus: true
-    });
+      if (role) {
+        queryBuilder.push(`role=${role}`);
+      }
 
-    const admissionsList = data?.data?.data;
-    const paginationValues = data?.data.meta;
-    return { admissionsList, isLoading, paginationValues, refetch }
-}
+      if (page) {
+        queryBuilder.push(`page=${page}`);
+      }
+
+      if (roleLabel) {
+        queryBuilder.push(`roleLabel=${roleLabel}`);
+      }
+
+      if (limit) {
+        queryBuilder.push(`limit=${limit}`);
+      }
+
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+
+      return customAPI.get(`/school-admin/admissions?${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const admissionsList = data?.data?.data;
+  const paginationValues = data?.data.meta;
+  return { admissionsList, isLoading, paginationValues, refetch };
+};
 
 export const useGetAdmissionById = (id: string, options?: UseQueryOptions) => {
+  const { data, isPending, refetch } = useQuery({
+    queryKey: ["admission", id],
+    queryFn: () => {
+      return customAPI.get(`/school-admin/admissions/${id}`);
+    },
+    enabled: options?.enabled ?? Boolean(id),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
 
-    const { data, isPending, refetch} = useQuery({
-        queryKey: ['admission', id],
-        queryFn: () => {
-            return customAPI.get(`/school-admin/admissions/${id}`)
-        },
-        enabled: options?.enabled ?? Boolean(id),
-        refetchOnWindowFocus: true,
-        ...options,
-    })
-
-    const admissionData = (data as {data:  AdmissionData})?.data;
-    return { admissionData, isPending, refetch }
-}
+  const admissionData = (data as { data: AdmissionData })?.data;
+  return { admissionData, isPending, refetch };
+};
 
 export const useArchiveAdmission = (id: string) => {
-    return useMutation({
-        mutationFn: (archive: {archive: boolean}) => {
-            return customAPI.put(`/school-admin/admissions/${id}/archive`, archive)
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (archive: { archive: boolean }) => {
+      return customAPI.put(`/school-admin/admissions/${id}/archive`, archive);
+    },
+  });
+};
 
 export const useEditAdmission = (id: string) => {
-    return useMutation({
-        mutationFn: (statusData: Partial<AdmissionData>) => {
-            return customAPI.patch(`/school-admin/admissions/${id}/status`, statusData);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (statusData: Partial<AdmissionData>) => {
+      return customAPI.patch(
+        `/school-admin/admissions/${id}/status`,
+        statusData
+      );
+    },
+  });
+};
 
 export const useInterviewInvitation = (id: string) => {
-    return useMutation({
-        mutationFn: (inviteDetails: {interviewDate:string, interviewTime:string}) => {
-            return customAPI.post(`/school-admin/admissions/${id}/interview`, inviteDetails);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (inviteDetails: {
+      interviewDate: string;
+      interviewTime: string;
+    }) => {
+      return customAPI.post(
+        `/school-admin/admissions/${id}/interview`,
+        inviteDetails
+      );
+    },
+  });
+};
 
 export const useGetAdmisssionDashboardInfo = () => {
-    const { data, isPending} = useQuery({
-        queryKey: ['admissionDashboard'],
-        queryFn: () => {
-            return customAPI.get('school-admin/admissions/analytics')
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isPending } = useQuery({
+    queryKey: ["admissionDashboard"],
+    queryFn: () => {
+      return customAPI.get("school-admin/admissions/analytics");
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const dashboardStats = data?.data as AdmissionDashboardInfo;
+  const dashboardStats = data?.data as AdmissionDashboardInfo;
 
-    return { dashboardStats, isPending }
-}
+  return { dashboardStats, isPending };
+};
 
 export const useGetAdminDashboardStats = () => {
-    const { data, isPending} = useQuery({
-        queryKey: ['adminDashboardStats'],
-        queryFn: () => {
-            return customAPI.get('school-admin/dashboard/stats')
-        },
-        refetchOnWindowFocus: true
-    })
+  const { data, isPending } = useQuery({
+    queryKey: ["adminDashboardStats"],
+    queryFn: () => {
+      return customAPI.get("school-admin/dashboard/stats");
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const dashboardStats = data?.data as AdminDashboardStats;
+  const dashboardStats = data?.data as AdminDashboardStats;
 
-    return { dashboardStats, isPending }
-}
+  return { dashboardStats, isPending };
+};
 
 export const useGetClassAttendance = (
   classLevelId: string,
@@ -804,7 +913,19 @@ export const useGetClassAttendance = (
   endDate?: string
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['classAttendance', { classLevelId, filterType, month, year, week, summaryOnly, startDate, endDate }],
+    queryKey: [
+      "classAttendance",
+      {
+        classLevelId,
+        filterType,
+        month,
+        year,
+        week,
+        summaryOnly,
+        startDate,
+        endDate,
+      },
+    ],
     queryFn: () => {
       const queryBuilder = [];
 
@@ -824,20 +945,22 @@ export const useGetClassAttendance = (
         queryBuilder.push(`weekOfMonth=${week}`);
       }
 
-      if(summaryOnly) {
+      if (summaryOnly) {
         queryBuilder.push(`summaryOnly=${summaryOnly}`);
       }
-      
-      if(startDate) {
+
+      if (startDate) {
         queryBuilder.push(`startDate=${startDate}`);
       }
-      
-      if(endDate) {
+
+      if (endDate) {
         queryBuilder.push(`endDate=${endDate}`);
       }
 
       const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
-      return customAPI.get(`/school-admin/classes/${classLevelId}/attendance?${params}`);
+      return customAPI.get(
+        `/school-admin/classes/${classLevelId}/attendance?${params}`
+      );
     },
     enabled: !!classLevelId, // only run if classLevelId is provided
     refetchOnWindowFocus: true,
@@ -850,7 +973,7 @@ export const useGetClassAttendance = (
 
 interface AttendanceRecord {
   studentId: string;
-  status: 'present' | 'absent';
+  status: "present" | "absent";
 }
 interface PostAttendancePayload {
   date: string;
@@ -860,105 +983,110 @@ interface PostAttendancePayload {
 export const usePostClassAttendance = (classLevelId: string) => {
   return useMutation({
     mutationFn: (payload: PostAttendancePayload) =>
-      customAPI.post(`/school-admin/classes/${classLevelId}/attendance`, payload),
+      customAPI.post(
+        `/school-admin/classes/${classLevelId}/attendance`,
+        payload
+      ),
   });
 };
 
 export const useAdminViewStudentAttendance = (
-    classLevelId: string,
-    studentId: string,
-    calendarId: string
+  classLevelId: string,
+  studentId: string,
+  calendarId: string
 ) => {
-    const {data, isLoading, refetch} = useQuery({
-        queryKey: ['adminStudentAttendance', studentId, calendarId, classLevelId],
-        queryFn: () => {
-            return customAPI.get(`school-admin/classes/${classLevelId}/students/${studentId}/calendars/${calendarId}/attendance/grouped`);
-        },
-        enabled: !!calendarId,
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["adminStudentAttendance", studentId, calendarId, classLevelId],
+    queryFn: () => {
+      return customAPI.get(
+        `school-admin/classes/${classLevelId}/students/${studentId}/calendars/${calendarId}/attendance/grouped`
+      );
+    },
+    enabled: !!calendarId,
+    refetchOnWindowFocus: true,
+  });
 
-    const studentAttendance = data?.data;
-    return { studentAttendance, isLoading, refetch };
-}
+  const studentAttendance = data?.data;
+  return { studentAttendance, isLoading, refetch };
+};
 
 export const useGetAllSubjects = (enabled: boolean = true) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allSubjects'],
-        queryFn: () => {
-            return customAPI.get('/subject-catalog');
-        },
-        enabled,
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["allSubjects"],
+    queryFn: () => {
+      return customAPI.get("/subject-catalog");
+    },
+    enabled,
+    refetchOnWindowFocus: true,
+  });
 
-    const subjects: Subject[] = data?.data
+  const subjects: Subject[] = data?.data;
 
-    return { subjects, isLoading, refetch }
-}
+  return { subjects, isLoading, refetch };
+};
 
 export const useGetSubjectById = (id: string) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['allSubjects', id],
-        queryFn: () => {
-            return customAPI.get(`/subject-catalog/${id}`);
-        },
-        enabled: id.length > 0,
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["allSubjects", id],
+    queryFn: () => {
+      return customAPI.get(`/subject-catalog/${id}`);
+    },
+    enabled: id.length > 0,
+    refetchOnWindowFocus: true,
+  });
 
-    const subjects = data?.data
+  const subjects = data?.data;
 
-    return { subjects, isLoading, refetch }
-}
+  return { subjects, isLoading, refetch };
+};
 
 export const useCreateSubject = () => {
-    return useMutation({
-        mutationFn: (subject: Subject) => {
-            return customAPI.post(`/subject-catalog`, subject);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (subject: Subject) => {
+      return customAPI.post(`/subject-catalog`, subject);
+    },
+  });
+};
 
 export const useUpdateSubject = () => {
-    return useMutation({
-        mutationFn: (subject: Subject) => {
-            return customAPI.put(`/subject-catalog/${subject.id}`, subject);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (subject: Subject) => {
+      return customAPI.put(`/subject-catalog/${subject.id}`, subject);
+    },
+  });
+};
 
 export const useDeleteSubject = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/subject-catalog/${id}`);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/subject-catalog/${id}`);
+    },
+  });
+};
 
 export const useAssignSubjectTeacher = () => {
-    return useMutation({
-        mutationFn: (payload: AssignSubjectTeacherPayload) => {
-            return customAPI.post(`/subject`, payload);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (payload: AssignSubjectTeacherPayload) => {
+      return customAPI.post(`/subject`, payload);
+    },
+  });
+};
 
 export const useUpdateSubjectTeacher = (id: string) => {
-    return useMutation({
-        mutationFn: (payload: AssignSubjectTeacherPayload) => {
-            return customAPI.patch(`/subject/${id}`, payload);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (payload: AssignSubjectTeacherPayload) => {
+      return customAPI.patch(`/subject/${id}`, payload);
+    },
+  });
+};
 
 export const useRemoveSubjectAssignment = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.delete(`/subject/${id}`);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/subject/${id}`);
+    },
+  });
+};
 
 export const useGetStudentResults = (
   studentId: string,
@@ -966,51 +1094,52 @@ export const useGetStudentResults = (
   options?: UseQueryOptions
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['studentResults', studentId, academicCalendarId],
+    queryKey: ["studentResults", studentId, academicCalendarId],
     queryFn: () => {
-      return customAPI.get(`/subject/students/${studentId}/results/${academicCalendarId}`);
+      return customAPI.get(
+        `/subject/students/${studentId}/results/${academicCalendarId}`
+      );
     },
     enabled: options?.enabled ?? Boolean(studentId && academicCalendarId),
     refetchOnWindowFocus: true,
     ...options,
   });
 
-  const resultsData = (data as {data: StudentResultsResponse})?.data || {};
+  const resultsData = (data as { data: StudentResultsResponse })?.data || {};
 
   return { resultsData, isLoading, refetch };
 };
 
 export const useGetNotifications = (schoolId: string | null | undefined) => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['notifications', schoolId],
-        queryFn: () => {
-            return customAPI.get(`/notifications/school/${schoolId}`);
-        },
-        enabled: !!schoolId,
-        refetchOnWindowFocus: true
-    })
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["notifications", schoolId],
+    queryFn: () => {
+      return customAPI.get(`/notifications/school/${schoolId}`);
+    },
+    enabled: !!schoolId,
+    refetchOnWindowFocus: true,
+  });
 
-    const notifications: Notification[] = data?.data || [];
+  const notifications: Notification[] = data?.data || [];
 
-    return { notifications, isLoading, refetch }
-}
-
+  return { notifications, isLoading, refetch };
+};
 
 export const useMarkNotificationAsRead = () => {
-    return useMutation({
-        mutationFn: (id: string) => {
-            return customAPI.patch(`/notifications/${id}/markAsRead`);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.patch(`/notifications/${id}/markAsRead`);
+    },
+  });
+};
 
 export const useCreateNotification = () => {
-    return useMutation({
-        mutationFn: (notification: Notification) => {
-            return customAPI.post('/notifications', notification);
-        }
-    })
-}
+  return useMutation({
+    mutationFn: (notification: Notification) => {
+      return customAPI.post("/notifications", notification);
+    },
+  });
+};
 
 export const useGetReminders = (
   search: string = "",
@@ -1018,8 +1147,8 @@ export const useGetReminders = (
   type: string = "",
   dateFrom?: string,
   dateTo?: string,
-  page?: number | string,
-//   limit?: number
+  page?: number | string
+  //   limit?: number
 ) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["allReminders", { search }],
@@ -1032,7 +1161,7 @@ export const useGetReminders = (
       if (dateFrom) queryBuilder.push(`dateFrom=${dateFrom}`);
       if (dateTo) queryBuilder.push(`to=${dateTo}`);
       if (page) queryBuilder.push(`page=${page}`);
-    //   if (limit) queryBuilder.push(`limit=${limit}`);
+      //   if (limit) queryBuilder.push(`limit=${limit}`);
 
       const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
 
@@ -1042,7 +1171,7 @@ export const useGetReminders = (
   });
 
   const allReminders = data?.data || [];
-//   const paginationValues = data?.data?.meta;
+  //   const paginationValues = data?.data?.meta;
 
   return { allReminders, isLoading, refetch };
 };
@@ -1054,8 +1183,8 @@ export const useGetReminders = (
 export const useCreateReminder = () => {
   return useMutation({
     mutationFn: (reminder: Partial<Reminder>) => {
-      return customAPI.post('/message-reminders', reminder);
-    }
+      return customAPI.post("/message-reminders", reminder);
+    },
   });
 };
 
@@ -1063,7 +1192,7 @@ export const useDeleteReminder = () => {
   return useMutation({
     mutationFn: (id: string) => {
       return customAPI.delete(`/message-reminders/${id}`);
-    }
+    },
   });
 };
 
@@ -1071,29 +1200,32 @@ export const useEditReminder = (id: string) => {
   return useMutation({
     mutationFn: (reminder: Partial<Reminder>) => {
       return customAPI.patch(`/message-reminders/${id}`, reminder);
-    }
+    },
   });
 };
 
 export const useUpdateCalendlyUrl = () => {
-    return useMutation({
-        mutationFn: (payload: { calendlyUrl: string, schoolId: string }) => {
-            return customAPI.put('/schools/update-calendly-url', payload);
-        }
-    });
+  return useMutation({
+    mutationFn: (payload: { calendlyUrl: string; schoolId: string }) => {
+      return customAPI.put("/schools/update-calendly-url", payload);
+    },
+  });
 };
 
 export const useAdminApproveClassResults = () => {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: ApproveClassResultsPayload) => {
-       return customAPI.post(`/subject/school-admin/toggle-class-results-approval`, payload);
+      return customAPI.post(
+        `/subject/school-admin/toggle-class-results-approval`,
+        payload
+      );
     },
     onSuccess: () => {
-        // Invalidate and refetch
-        queryClient.invalidateQueries({ queryKey: ['teacherClasses'] });
-    }
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["teacherClasses"] });
+    },
   });
 };
 
@@ -1108,7 +1240,10 @@ export const useGetAssignments = (
   limit?: number
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['adminAssignments', { page, search, teacherId, classLevelId, limit }],
+    queryKey: [
+      "adminAssignments",
+      { page, search, teacherId, classLevelId, limit },
+    ],
     queryFn: () => {
       const queryBuilder: string[] = [];
 
@@ -1151,17 +1286,331 @@ export const useGetAssignmentStudents = (
   options?: UseQueryOptions
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['assignmentStudents', assignmentId, filter],
+    queryKey: ["assignmentStudents", assignmentId, filter],
     queryFn: () => {
       const queryParam = filter ? `?${filter}=true` : "";
-      return customAPI.get(`/school-admin/assignments/${assignmentId}/students${queryParam}`);
+      return customAPI.get(
+        `/school-admin/assignments/${assignmentId}/students${queryParam}`
+      );
     },
     enabled: options?.enabled ?? Boolean(assignmentId),
     refetchOnWindowFocus: true,
     ...options,
   });
 
-  const students = ((data as { data?: AssignmentSubmission[] })?.data) || [];
+  const students = (data as { data?: AssignmentSubmission[] })?.data || [];
 
   return { students, isLoading, refetch };
+};
+
+/**
+ * PLANNER EVENTS CRUD
+ */
+export const useGetPlannerEvents = (
+  startDate?: string,
+  endDate?: string,
+  categoryId?: string,
+  classLevelId?: string,
+  subjectId?: string,
+  visibilityScope?: VisibilityScope
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "plannerEvents",
+      {
+        startDate,
+        endDate,
+        categoryId,
+        classLevelId,
+        subjectId,
+        visibilityScope,
+      },
+    ],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+
+      if (startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+
+      if (endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
+      }
+
+      if (categoryId) {
+        queryBuilder.push(`categoryId=${categoryId}`);
+      }
+
+      if (classLevelId) {
+        queryBuilder.push(`classLevelId=${classLevelId}`);
+      }
+
+      if (subjectId) {
+        queryBuilder.push(`subjectId=${subjectId}`);
+      }
+
+      if (visibilityScope) {
+        queryBuilder.push(`visibilityScope=${visibilityScope}`);
+      }
+
+      const params =
+        queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
+
+      return customAPI.get(`/planner/events${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const events = (data?.data as PlannerEvent[]) || [];
+
+  return { events, isLoading, refetch };
+};
+
+export const useCreatePlannerEvent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreatePlannerEventPayload) => {
+      const formData = new FormData();
+
+      formData.append("title", payload.title);
+      if (payload.description) {
+        formData.append("description", payload.description);
+      }
+      formData.append("startDate", payload.startDate);
+      if (payload.endDate) {
+        formData.append("endDate", payload.endDate);
+      }
+      // Send isAllDay as string - backend Transform decorator will convert to boolean
+      formData.append("isAllDay", String(payload.isAllDay ?? false));
+      if (payload.location) {
+        formData.append("location", payload.location);
+      }
+      formData.append("categoryId", payload.categoryId);
+      formData.append("visibilityScope", payload.visibilityScope);
+
+      if (
+        payload.targetClassLevelIds &&
+        payload.targetClassLevelIds.length > 0
+      ) {
+        payload.targetClassLevelIds.forEach((id) => {
+          formData.append("targetClassLevelIds[]", id);
+        });
+      }
+
+      if (payload.targetSubjectIds && payload.targetSubjectIds.length > 0) {
+        payload.targetSubjectIds.forEach((id) => {
+          formData.append("targetSubjectIds[]", id);
+        });
+      }
+
+      if (payload.reminders && payload.reminders.length > 0) {
+        payload.reminders.forEach((reminder, index) => {
+          formData.append(
+            `reminders[${index}][reminderTime]`,
+            reminder.reminderTime
+          );
+          if (reminder.notificationType) {
+            formData.append(
+              `reminders[${index}][notificationType]`,
+              reminder.notificationType
+            );
+          }
+        });
+      }
+
+      if (payload.files && payload.files.length > 0) {
+        payload.files.forEach((file) => {
+          formData.append("files", file);
+        });
+      }
+
+      if (payload.sendNotifications !== undefined) {
+        formData.append("sendNotifications", String(payload.sendNotifications));
+      }
+
+      return customAPI.post("/planner/events", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plannerEvents"] });
+    },
+  });
+};
+
+export const useUpdatePlannerEvent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<CreatePlannerEventPayload>;
+    }) => {
+      const formData = new FormData();
+
+      // Always send title if it exists in payload (even if empty string)
+      if (payload.title !== undefined) {
+        formData.append("title", payload.title);
+      }
+      if (payload.description !== undefined) {
+        formData.append("description", payload.description || "");
+      }
+      if (payload.startDate !== undefined) {
+        formData.append("startDate", payload.startDate);
+      }
+      if (payload.endDate !== undefined) {
+        formData.append("endDate", payload.endDate || "");
+      }
+      if (payload.isAllDay !== undefined) {
+        formData.append("isAllDay", String(payload.isAllDay));
+      }
+      if (payload.location !== undefined) {
+        formData.append("location", payload.location || "");
+      }
+      if (payload.categoryId !== undefined) {
+        formData.append("categoryId", payload.categoryId);
+      }
+      if (payload.visibilityScope !== undefined) {
+        formData.append("visibilityScope", payload.visibilityScope);
+      }
+
+      // Send arrays even if empty to clear associations
+      if (payload.targetClassLevelIds !== undefined) {
+        if (payload.targetClassLevelIds.length > 0) {
+          payload.targetClassLevelIds.forEach((id) => {
+            formData.append("targetClassLevelIds[]", id);
+          });
+        }
+        // If empty array, send empty array to clear associations
+        // Backend will handle empty array
+      }
+
+      if (payload.targetSubjectIds !== undefined) {
+        if (payload.targetSubjectIds.length > 0) {
+          payload.targetSubjectIds.forEach((id) => {
+            formData.append("targetSubjectIds[]", id);
+          });
+        }
+        // If empty array, send empty array to clear associations
+      }
+
+      if (payload.reminders !== undefined) {
+        payload.reminders.forEach((reminder, index) => {
+          formData.append(
+            `reminders[${index}][reminderTime]`,
+            reminder.reminderTime
+          );
+          if (reminder.notificationType) {
+            formData.append(
+              `reminders[${index}][notificationType]`,
+              reminder.notificationType
+            );
+          }
+        });
+      }
+
+      if (payload.files !== undefined && payload.files.length > 0) {
+        payload.files.forEach((file) => {
+          formData.append("files", file);
+        });
+      }
+
+      if (payload.sendNotifications !== undefined) {
+        formData.append("sendNotifications", String(payload.sendNotifications));
+      }
+
+      return customAPI.put(`/planner/events/${id}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    },
+    onSuccess: () => {
+      // Invalidate all planner-related queries
+      queryClient.invalidateQueries({ queryKey: ["plannerEvents"] });
+      queryClient.invalidateQueries({ queryKey: ["planner"] });
+    },
+  });
+};
+
+export const useDeletePlannerEvent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/planner/events/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plannerEvents"] });
+    },
+  });
+};
+
+/**
+ * EVENT CATEGORIES CRUD
+ */
+export const useGetEventCategories = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["eventCategories"],
+    queryFn: () => {
+      return customAPI.get("/planner/categories");
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const categories = (data?.data as EventCategory[]) || [];
+
+  return { categories, isLoading, refetch };
+};
+
+export const useCreateEventCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateEventCategoryPayload) => {
+      return customAPI.post("/planner/categories", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["eventCategories"] });
+    },
+  });
+};
+
+export const useUpdateEventCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<CreateEventCategoryPayload>;
+    }) => {
+      return customAPI.put(`/planner/categories/${id}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["eventCategories"] });
+    },
+  });
+};
+
+export const useDeleteEventCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/planner/categories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["eventCategories"] });
+      queryClient.invalidateQueries({ queryKey: ["plannerEvents"] });
+    },
+  });
 };

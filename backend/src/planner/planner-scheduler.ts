@@ -13,6 +13,7 @@ import { SmsService } from '../common/services/sms.service';
 import { Student } from '../student/student.entity';
 import { Parent } from '../parent/parent.entity';
 import { Subject } from '../subject/subject.entity';
+import { SubjectCatalog } from '../subject/subject-catalog.entity';
 import { In } from 'typeorm';
 import { VisibilityScope } from './entities/event.entity';
 
@@ -32,12 +33,13 @@ export class PlannerScheduler {
     private readonly parentRepository: Repository<Parent>,
     @InjectRepository(Subject)
     private readonly subjectRepository: Repository<Subject>,
+    @InjectRepository(SubjectCatalog)
+    private readonly subjectCatalogRepository: Repository<SubjectCatalog>,
     private readonly plannerService: PlannerService,
     private readonly emailService: EmailService,
     private readonly smsService: SmsService,
   ) {}
 
-  // Run every minute to check for due reminders
   @Cron(process.env.EVENT_REMINDER_CRON ?? '0 * * * * *')
   async checkEventReminders() {
     if (this.running) return;
@@ -45,8 +47,6 @@ export class PlannerScheduler {
 
     try {
       const now = new Date();
-
-      // Find due reminders that haven't been sent
       const dueReminders = await this.reminderRepository.find({
         where: {
           reminderTime: LessThanOrEqual(now),
@@ -59,7 +59,7 @@ export class PlannerScheduler {
           'event.targetClassLevels',
           'event.targetSubjects',
         ],
-        take: 50, // Process in batches
+        take: 50,
       });
 
       for (const reminder of dueReminders) {
@@ -145,7 +145,6 @@ export class PlannerScheduler {
     }> = [];
 
     if (event.visibilityScope === VisibilityScope.SCHOOL_WIDE) {
-      // Get all students and parents in the school
       const students = await this.studentRepository.find({
         where: { school: { id: event.school.id } },
         relations: ['parents', 'profile'],
@@ -201,19 +200,39 @@ export class PlannerScheduler {
         }
       }
     } else if (event.visibilityScope === VisibilityScope.SUBJECT) {
-      // Get students in classes that have the target subjects
-      const subjectIds = event.targetSubjects.map((s) => s.id);
-      const subjects = await this.subjectRepository.find({
-        where: { id: In(subjectIds) },
-        relations: ['classLevels', 'classLevels.students'],
+      if (!event.targetSubjects || event.targetSubjects.length === 0) {
+        return recipients;
+      }
+
+      const subjectCatalogIds = event.targetSubjects.map(
+        (catalog) => catalog.id,
+      );
+
+      const subjectCatalogs = await this.subjectCatalogRepository.find({
+        where: { id: In(subjectCatalogIds) },
+        relations: [
+          'subjects',
+          'subjects.classLevels',
+          'subjects.classLevels.students',
+        ],
       });
 
       const studentIds = new Set<string>();
-      for (const subject of subjects) {
-        for (const classLevel of subject.classLevels || []) {
-          if (classLevel.students) {
-            for (const student of classLevel.students) {
-              studentIds.add(student.id);
+      for (const catalog of subjectCatalogs) {
+        if (!catalog.subjects || catalog.subjects.length === 0) {
+          continue;
+        }
+
+        for (const subject of catalog.subjects) {
+          if (!subject.classLevels || subject.classLevels.length === 0) {
+            continue;
+          }
+
+          for (const classLevel of subject.classLevels) {
+            if (classLevel.students) {
+              for (const student of classLevel.students) {
+                studentIds.add(student.id);
+              }
             }
           }
         }
@@ -246,7 +265,6 @@ export class PlannerScheduler {
       }
     }
 
-    // Remove duplicates
     const uniqueRecipients = new Map<string, (typeof recipients)[0]>();
     for (const recipient of recipients) {
       const key = recipient.email || recipient.phone || '';

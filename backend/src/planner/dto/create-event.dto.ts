@@ -8,6 +8,7 @@ import {
   IsArray,
   IsUUID,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { VisibilityScope } from '../entities/event.entity';
 
 export class CreateEventDto {
@@ -29,6 +30,11 @@ export class CreateEventDto {
 
   @IsBoolean()
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
+  })
   isAllDay?: boolean;
 
   @IsString()
@@ -46,11 +52,21 @@ export class CreateEventDto {
   @IsArray()
   @IsUUID('4', { each: true })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    if (Array.isArray(value)) return value;
+    return [value];
+  })
   targetClassLevelIds?: string[];
 
   @IsArray()
   @IsUUID('4', { each: true })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    if (Array.isArray(value)) return value;
+    return [value];
+  })
   targetSubjectIds?: string[];
 
   @IsArray()
@@ -59,6 +75,15 @@ export class CreateEventDto {
     reminderTime: string; // ISO date string
     notificationType?: 'email' | 'sms' | 'both';
   }[];
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined; // Return undefined if not provided, let default handle it
+  })
+  sendNotifications?: boolean;
 }
 
 
