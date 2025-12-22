@@ -275,14 +275,32 @@ export class PlannerService {
     }
 
     if (dto.targetClassLevelIds) {
-      const teacherClasses = await this.classLevelRepository.find({
-        where: {
-          id: In(dto.targetClassLevelIds),
-          teachers: { id: creator.id },
-        },
-      });
+      const [teacherClasses, classTeacherClasses] = await Promise.all([
+        this.classLevelRepository.find({
+          where: {
+            id: In(dto.targetClassLevelIds),
+            teachers: { id: creator.id },
+          },
+        }),
+        this.classLevelRepository.find({
+          where: {
+            id: In(dto.targetClassLevelIds),
+            classTeacher: { id: creator.id },
+          },
+        }),
+      ]);
 
-      if (teacherClasses.length !== dto.targetClassLevelIds.length) {
+      const allValidClassIds = new Set([
+        ...teacherClasses.map((cl) => cl.id),
+        ...classTeacherClasses.map((cl) => cl.id),
+      ]);
+
+      const requestedClassIds = new Set(dto.targetClassLevelIds);
+      const allAssigned = Array.from(requestedClassIds).every((id) =>
+        allValidClassIds.has(id),
+      );
+
+      if (!allAssigned) {
         throw new ForbiddenException(
           'You can only create events for classes you are assigned to',
         );
@@ -461,6 +479,102 @@ export class PlannerService {
     if (filters?.visibilityScope) {
       queryBuilder.andWhere('event.visibilityScope = :visibilityScope', {
         visibilityScope: filters.visibilityScope,
+      });
+    }
+
+    const events = await queryBuilder
+      .orderBy('event.startDate', 'ASC')
+      .getMany();
+
+    await Promise.all(
+      events.map((event) => this.enrichAttachmentsWithSignedUrls(event)),
+    );
+
+    return events;
+  }
+
+  async findEventsForTeacher(
+    teacherId: string,
+    schoolId: string,
+    filters?: {
+      categoryId?: string;
+      classLevelId?: string;
+      subjectId?: string;
+      startDate?: Date;
+      endDate?: Date;
+    },
+  ): Promise<Event[]> {
+    const queryBuilder = this.eventRepository
+      .createQueryBuilder('event')
+      .leftJoinAndSelect('event.category', 'category')
+      .leftJoinAndSelect('event.targetClassLevels', 'targetClassLevels')
+      .leftJoinAndSelect('event.targetSubjects', 'targetSubjects')
+      .leftJoinAndSelect('event.attachments', 'attachments')
+      .leftJoinAndSelect('event.reminders', 'reminders')
+      .where('event.school.id = :schoolId', { schoolId });
+
+    queryBuilder.andWhere(
+      `(
+        event.createdByTeacherId = :teacherId OR
+        event.visibilityScope = :schoolWide OR
+        (
+          event.visibilityScope = :classLevel AND
+          EXISTS (
+            SELECT 1 FROM class_level_teachers clt
+            WHERE clt.class_level_id IN (
+              SELECT ecl.class_level_id FROM event_class_levels ecl
+              WHERE ecl.event_id = event.id
+            )
+            AND clt.teacher_id = :teacherId
+          )
+        ) OR
+        (
+          event.visibilityScope = :subject AND
+          EXISTS (
+            SELECT 1 FROM subject s
+            WHERE s.subject_catalog_id IN (
+              SELECT esc.subject_catalog_id FROM event_subject_catalogs esc
+              WHERE esc.event_id = event.id
+            )
+            AND s.teacher_id = :teacherId
+          )
+        )
+      )`,
+      {
+        teacherId,
+        schoolWide: VisibilityScope.SCHOOL_WIDE,
+        classLevel: VisibilityScope.CLASS_LEVEL,
+        subject: VisibilityScope.SUBJECT,
+      },
+    );
+
+    if (filters?.categoryId) {
+      queryBuilder.andWhere('category.id = :categoryId', {
+        categoryId: filters.categoryId,
+      });
+    }
+
+    if (filters?.classLevelId) {
+      queryBuilder.andWhere('targetClassLevels.id = :classLevelId', {
+        classLevelId: filters.classLevelId,
+      });
+    }
+
+    if (filters?.subjectId) {
+      queryBuilder.andWhere('targetSubjects.id = :subjectId', {
+        subjectId: filters.subjectId,
+      });
+    }
+
+    if (filters?.startDate) {
+      queryBuilder.andWhere('event.startDate >= :startDate', {
+        startDate: filters.startDate,
+      });
+    }
+
+    if (filters?.endDate) {
+      queryBuilder.andWhere('event.startDate <= :endDate', {
+        endDate: filters.endDate,
       });
     }
 
