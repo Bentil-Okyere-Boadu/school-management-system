@@ -238,14 +238,27 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
     label: cls.name,
   }));
 
-  // Get unique subject catalogs from teacher subjects
-  // Note: teacherSubjects is actually SubjectCatalog[] from backend
+  // Get unique subject catalogs from teacher subjects and event subjects
+  // Merge to ensure all subjects in the event have names displayed
   const subjectOptions = React.useMemo(() => {
-    return (teacherSubjects)?.map((subj: Subject) => ({
+    const teacherSubjectMap = new Map(
+      (teacherSubjects || []).map((subj: Subject) => [subj.id || "", subj])
+    );
+
+    // Add subjects from the event if they're not already in teacherSubjects
+    if (event?.targetSubjects) {
+      event.targetSubjects.forEach((subj) => {
+        if (subj.id && !teacherSubjectMap.has(subj.id)) {
+          teacherSubjectMap.set(subj.id, subj);
+        }
+      });
+    }
+
+    return Array.from(teacherSubjectMap.values()).map((subj: Subject) => ({
       value: subj.id || "",
       label: subj.name || "",
-    })) || [];
-  }, [teacherSubjects]);
+    }));
+  }, [teacherSubjects, event]);
 
   // Teachers can only create class-level or subject events, not school-wide
   const visibilityOptions = [
