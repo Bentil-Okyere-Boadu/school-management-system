@@ -54,6 +54,9 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
   const createMutation = useCreateTeacherPlannerEvent();
   const updateMutation = useUpdateTeacherPlannerEvent();
 
+  // Check if the event is read-only (admin-created)
+  const isReadOnly = event ? !!event.createdByAdminId : false;
+
   useEffect(() => {
     if (event) {
       const startDate = new Date(event.startDate);
@@ -269,22 +272,30 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
   return (
     <Dialog
       isOpen={isOpen}
-      dialogTitle={event ? "Edit Event" : "Create New Event"}
-      saveButtonText={event ? "Update Event" : "Create Event"}
+      dialogTitle={event ? (isReadOnly ? "View Event" : "Edit Event") : "Create New Event"}
+      saveButtonText={event ? (isReadOnly ? undefined : "Update Event") : "Create Event"}
       onClose={onClose}
-      onSave={handleSubmit}
+      onSave={isReadOnly ? () => {} : handleSubmit}
       busy={createMutation.isPending || updateMutation.isPending}
       dialogWidth="w-[700px] max-w-[701px]"
     >
+      {isReadOnly && (
+        <div className="my-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            This event was created by an administrator and cannot be modified.
+          </p>
+        </div>
+      )}
       <div className="my-3 flex flex-col gap-4">
         <InputField
           className="!py-0"
           label="Event Title"
           placeholder="Enter event title"
           value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          onChange={(e) => !isReadOnly && setFormData({ ...formData, title: e.target.value })}
           required
           isTransulent={false}
+          disabled={isReadOnly}
         />
 
         <InputField
@@ -292,14 +303,17 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
           label="Description"
           placeholder="Enter event description (optional)"
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) => !isReadOnly && setFormData({ ...formData, description: e.target.value })}
           isTransulent={false}
+          disabled={isReadOnly}
         />
 
         <Checkbox
           label="All-day event"
           checked={formData.isAllDay}
+          disabled={isReadOnly}
           onChange={(e) => {
+            if (isReadOnly) return;
             const isAllDay = e.currentTarget.checked;
             let newStartDate = formData.startDate;
             let newEndDate = formData.endDate;
@@ -358,7 +372,9 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
               value={formData.isAllDay && formData.startDate 
                 ? formData.startDate.slice(0, 10) 
                 : formData.startDate}
+              disabled={isReadOnly}
               onChange={(e) => {
+                if (isReadOnly) return;
                 let newStartDate = e.target.value;
                 let newEndDate = formData.endDate;
 
@@ -394,7 +410,9 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
               value={formData.isAllDay && formData.endDate 
                 ? formData.endDate.slice(0, 10) 
                 : formData.endDate}
+              disabled={isReadOnly}
               onChange={(e) => {
+                if (isReadOnly) return;
                 let newEndDate = e.target.value;
                 if (formData.isAllDay) {
                   newEndDate = `${newEndDate}T23:59`;
@@ -415,14 +433,16 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
           label="Location"
           placeholder="Enter event location (optional)"
           value={formData.location}
-          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          onChange={(e) => !isReadOnly && setFormData({ ...formData, location: e.target.value })}
           isTransulent={false}
+          disabled={isReadOnly}
         />
 
         <Checkbox
           label="Send Notifications"
           checked={formData.sendNotifications ?? true}
-          onChange={(e) => setFormData({ ...formData, sendNotifications: e.currentTarget.checked })}
+          disabled={isReadOnly}
+          onChange={(e) => !isReadOnly && setFormData({ ...formData, sendNotifications: e.currentTarget.checked })}
         />
 
         <Select
@@ -430,8 +450,9 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
           placeholder="Select category"
           data={categoryOptions}
           value={formData.categoryId || null}
-          onChange={(value) => setFormData({ ...formData, categoryId: value || "" })}
+          onChange={(value) => !isReadOnly && setFormData({ ...formData, categoryId: value || "" })}
           required
+          disabled={isReadOnly}
         />
 
         <Select
@@ -440,6 +461,7 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
           data={visibilityOptions}
           value={formData.visibilityScope}
           onChange={(value) => {
+            if (isReadOnly) return;
             const scope = value as VisibilityScope;
             setFormData({ 
               ...formData, 
@@ -449,6 +471,7 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
             });
           }}
           required
+          disabled={isReadOnly}
         />
 
         {formData.visibilityScope === VisibilityScope.CLASS_LEVEL && (
@@ -457,10 +480,11 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
             placeholder="Select classes"
             data={classLevelOptions}
             value={formData.targetClassLevelIds || []}
-            onChange={(value) => setFormData({ ...formData, targetClassLevelIds: value })}
+            onChange={(value) => !isReadOnly && setFormData({ ...formData, targetClassLevelIds: value })}
             searchable
             withCheckIcon
             required
+            disabled={isReadOnly}
           />
         )}
 
@@ -470,51 +494,62 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
             placeholder="Select subjects"
             data={subjectOptions}
             value={formData.targetSubjectIds || []}
-            onChange={(value) => setFormData({ ...formData, targetSubjectIds: value })}
+            onChange={(value) => !isReadOnly && setFormData({ ...formData, targetSubjectIds: value })}
             searchable
             withCheckIcon
             required
+            disabled={isReadOnly}
           />
         )}
 
         <div className="border-t pt-4">
           <div className="flex justify-between items-center mb-2">
             <label className="text-sm font-medium">Reminders</label>
-            <Button size="xs" variant="light" onClick={addReminder}>
-              + Add Reminder
-            </Button>
-          </div>
-          {reminders.map((reminder, index) => (
-            <div key={index} className="flex items-center gap-2 mb-2">
-              <InputField
-                className="!py-0 flex-1 !mt-3"
-                label=""
-                type="datetime-local"
-                value={reminder.reminderTime}
-                onChange={(e) => updateReminder(index, 'reminderTime', e.target.value)}
-                isTransulent={false}
-              />
-              <Select
-                className="flex-1 -mt-3"
-                data={[
-                  { value: 'email', label: 'Email' },
-                  { value: 'sms', label: 'SMS' },
-                  { value: 'both', label: 'Both' },
-                ]}
-                value={reminder.notificationType}
-                onChange={(value) => updateReminder(index, 'notificationType', value as 'email' | 'sms' | 'both')}
-              />
-              <Button
-                className="-mt-4"
-                size="sm"
-                variant="light"
-                color="red"
-                onClick={() => removeReminder(index)}
-              >
-                <IconX size={16} />
+            {!isReadOnly && (
+              <Button size="xs" variant="light" onClick={addReminder}>
+                + Add Reminder
               </Button>
-            </div>
-          ))}
+            )}
+          </div>
+          {reminders.length > 0 ? (
+            reminders.map((reminder, index) => (
+              <div key={index} className="flex items-center gap-2 mb-2">
+                <InputField
+                  className="!py-0 flex-1 !mt-3"
+                  label=""
+                  type="datetime-local"
+                  value={reminder.reminderTime}
+                  onChange={(e) => !isReadOnly && updateReminder(index, 'reminderTime', e.target.value)}
+                  isTransulent={false}
+                  disabled={isReadOnly}
+                />
+                <Select
+                  className="flex-1 -mt-3"
+                  data={[
+                    { value: 'email', label: 'Email' },
+                    { value: 'sms', label: 'SMS' },
+                    { value: 'both', label: 'Both' },
+                  ]}
+                  value={reminder.notificationType}
+                  onChange={(value) => !isReadOnly && updateReminder(index, 'notificationType', value as 'email' | 'sms' | 'both')}
+                  disabled={isReadOnly}
+                />
+                {!isReadOnly && (
+                  <Button
+                    className="-mt-4"
+                    size="sm"
+                    variant="light"
+                    color="red"
+                    onClick={() => removeReminder(index)}
+                  >
+                    <IconX size={16} />
+                  </Button>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">No reminders set</p>
+          )}
         </div>
 
         <div className="border-t pt-4">
@@ -564,45 +599,51 @@ export const TeacherEventFormModal: React.FC<TeacherEventFormModalProps> = ({
                   </div>
                 );
               })}
-              <p className="text-xs text-blue-600 mt-1">
-                Upload new files below to add more attachments
-              </p>
+              {!isReadOnly && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Upload new files below to add more attachments
+                </p>
+              )}
             </div>
           )}
           
 
-          {selectedFiles.length > 0 && (
-            <div className="mt-2 space-y-1">
-              {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="text-sm truncate flex-1">{file.name}</span>
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color="red"
-                    onClick={() => handleRemoveFile(index)}
-                  >
-                    <IconX size={14} />
-                  </Button>
+          {!isReadOnly && (
+            <>
+              {selectedFiles.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <span className="text-sm truncate flex-1">{file.name}</span>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="red"
+                        onClick={() => handleRemoveFile(index)}
+                      >
+                        <IconX size={14} />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50  mt-1"
+              >
+                <IconPaperclip size={16} />
+                <span>Select Files</span>
+              </label>
+            </>
           )}
-          <input
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="file-upload"
-          />
-          <label
-            htmlFor="file-upload"
-            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50  mt-1"
-          >
-            <IconPaperclip size={16} />
-            <span>Select Files</span>
-          </label>
         </div>
       </div>
     </Dialog>

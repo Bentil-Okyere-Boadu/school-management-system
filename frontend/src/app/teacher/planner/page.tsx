@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import type { EventInput, EventClickArg, EventDropArg } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
-import { useGetTeacherPlannerEvents, useGetTeacherEventCategories, useGetTeacherClasses, useGetTeacherSubjects } from "@/hooks/teacher";
+import { useGetTeacherPlannerEvents, useGetTeacherEventCategories, useGetTeacherClasses, useGetTeacherSubjects, useDeleteTeacherPlannerEvent, useUpdateTeacherPlannerEvent, useTeacherGetMe } from "@/hooks/teacher";
 import { PlannerEvent, Subject } from "@/@types";
 import { PlannerCalendar } from "@/components/admin/planner/PlannerCalendar";
 import { TeacherEventFormModal } from "@/components/teacher/planner/TeacherEventFormModal";
@@ -13,7 +13,6 @@ import { IconPlus, IconX } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 import { lightenColor } from "@/utils/colorUtils";
 import { calculateEventEndTime, calculateAllDayEventDuration, setAllDayStartTime, setAllDayEndTime } from "@/utils/dateUtils";
-import { useDeleteTeacherPlannerEvent, useUpdateTeacherPlannerEvent } from "@/hooks/teacher";
 
 interface EventFilters {
   categoryId?: string;
@@ -47,8 +46,21 @@ const TeacherPlannerPage: React.FC = () => {
   const { categories } = useGetTeacherEventCategories();
   const { classLevels } = useGetTeacherClasses();
   const { teacherSubjects } = useGetTeacherSubjects();
+  const { me: currentTeacher } = useTeacherGetMe();
   const deleteEventMutation = useDeleteTeacherPlannerEvent();
   const updateEventMutation = useUpdateTeacherPlannerEvent();
+
+  // Check if an event is editable (not admin-created)
+  const isEventEditable = useCallback((event: PlannerEvent): boolean => {
+    if (event.createdByAdminId) {
+      return false;
+    }
+    if (event.createdByTeacherId && currentTeacher?.id) {
+      return event.createdByTeacherId === currentTeacher.id;
+    }
+    
+    return true;
+  }, [currentTeacher]);
 
   const calendarEvents: EventInput[] = useMemo(() => {
     if (!events) return [];
@@ -57,6 +69,7 @@ const TeacherPlannerPage: React.FC = () => {
       const categoryColor = event.category?.color || DEFAULT_CATEGORY_COLOR;
       const lightBackground = lightenColor(categoryColor, LIGHTEN_PERCENT);
       const endTime = calculateEventEndTime(event.startDate, event.endDate, event.isAllDay);
+      const editable = isEventEditable(event);
 
       return {
         id: event.id,
@@ -69,6 +82,7 @@ const TeacherPlannerPage: React.FC = () => {
         borderWidth: 0,
         textColor: DEFAULT_TEXT_COLOR,
         className: 'planner-event',
+        editable: editable,
         extendedProps: {
           event,
           categoryColor,
@@ -79,7 +93,7 @@ const TeacherPlannerPage: React.FC = () => {
         },
       };
     });
-  }, [events]);
+  }, [events, isEventEditable]);
 
   const handleDateSelect = useCallback((selectInfo: { start: Date; end: Date; allDay: boolean }) => {
     setSelectedDate(selectInfo.start);
@@ -94,9 +108,14 @@ const TeacherPlannerPage: React.FC = () => {
   }, []);
 
   const handleDeleteClick = useCallback((event: PlannerEvent) => {
+    // Prevent deleting admin-created events
+    if (!isEventEditable(event)) {
+      toast.error("Cannot delete admin-created events");
+      return;
+    }
     setEventToDelete(event);
     setIsDeleteDialogOpen(true);
-  }, []);
+  }, [isEventEditable]);
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!eventToDelete) return;
@@ -118,6 +137,13 @@ const TeacherPlannerPage: React.FC = () => {
   const handleEventDrop = useCallback(async (dropInfo: EventDropArg) => {
     const event = dropInfo.event.extendedProps.event as PlannerEvent;
     if (!event) return;
+
+    // Prevent dropping admin-created events
+    if (!isEventEditable(event)) {
+      dropInfo.revert();
+      toast.error("Cannot modify admin-created events");
+      return;
+    }
 
     const newStartDate = dropInfo.event.start;
     if (!newStartDate) {
@@ -173,11 +199,18 @@ const TeacherPlannerPage: React.FC = () => {
         : "Failed to update event";
       toast.error(errorMessage || "Failed to update event");
     }
-  }, [updateEventMutation, refetchEvents]);
+  }, [updateEventMutation, refetchEvents, isEventEditable]);
 
   const handleEventResize = useCallback(async (resizeInfo: EventResizeDoneArg) => {
     const event = resizeInfo.event.extendedProps.event as PlannerEvent;
     if (!event) return;
+
+    // Prevent resizing admin-created events
+    if (!isEventEditable(event)) {
+      resizeInfo.revert();
+      toast.error("Cannot modify admin-created events");
+      return;
+    }
 
     const newStartDate = resizeInfo.event.start;
     const newEndDate = resizeInfo.event.end || resizeInfo.event.start;
@@ -205,7 +238,7 @@ const TeacherPlannerPage: React.FC = () => {
         : "Failed to update event";
       toast.error(errorMessage || "Failed to update event");
     }
-  }, [updateEventMutation, refetchEvents]);
+  }, [updateEventMutation, refetchEvents, isEventEditable]);
 
   const handleDatesSet = useCallback((dateInfo: { start: Date; end: Date }) => {
     setViewStart(dateInfo.start.toISOString());
@@ -331,6 +364,7 @@ const TeacherPlannerPage: React.FC = () => {
           onEventDrop={handleEventDrop}
           onEventResize={handleEventResize}
           onDatesSet={handleDatesSet}
+          isEventEditable={isEventEditable}
         />
       </div>
 
