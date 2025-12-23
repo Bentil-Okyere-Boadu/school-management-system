@@ -5,13 +5,13 @@ import { PlannerEvent } from "@/@types";
 import { IconDownload, IconFile, IconMapPin, IconCalendar, IconTag } from "@tabler/icons-react";
 import { Badge } from "@mantine/core";
 
-interface StudentEventDetailModalProps {
+interface TeacherEventDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   event: PlannerEvent | null;
 }
 
-export const StudentEventDetailModal: React.FC<StudentEventDetailModalProps> = ({
+export const TeacherEventDetailModal: React.FC<TeacherEventDetailModalProps> = ({
   isOpen,
   onClose,
   event,

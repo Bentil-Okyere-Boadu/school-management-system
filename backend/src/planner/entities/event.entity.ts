@@ -23,6 +23,7 @@ export enum VisibilityScope {
   SCHOOL_WIDE = 'school_wide',
   CLASS_LEVEL = 'class_level',
   SUBJECT = 'subject',
+  TEACHERS = 'teachers',
 }
 
 @Entity()

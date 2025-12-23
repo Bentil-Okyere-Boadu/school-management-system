@@ -6,6 +6,7 @@ import { useGetTeacherPlannerEvents, useGetTeacherEventCategories, useGetTeacher
 import { PlannerEvent, Subject } from "@/@types";
 import { PlannerCalendar } from "@/components/admin/planner/PlannerCalendar";
 import { TeacherEventFormModal } from "@/components/teacher/planner/TeacherEventFormModal";
+import { TeacherEventDetailModal } from "@/components/teacher/planner/TeacherEventDetailModal";
 import { Dialog } from "@/components/common/Dialog";
 import FilterButton from "@/components/common/FilterButton";
 import { Button, Select, Group } from "@mantine/core";
@@ -28,6 +29,7 @@ const TeacherPlannerPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<PlannerEvent | null>(null);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isEventDetailModalOpen, setIsEventDetailModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<PlannerEvent | null>(null);
   const [viewStart, setViewStart] = useState<string>("");
@@ -104,7 +106,14 @@ const TeacherPlannerPage: React.FC = () => {
   const handleEventClick = useCallback((clickInfo: EventClickArg) => {
     const event = clickInfo.event.extendedProps.event as PlannerEvent;
     setSelectedEvent(event);
-    setIsEventModalOpen(true);
+    
+    // If event is admin-created, show read-only detail modal
+    // Otherwise, show edit modal
+    if (event.createdByAdminId) {
+      setIsEventDetailModalOpen(true);
+    } else {
+      setIsEventModalOpen(true);
+    }
   }, []);
 
   const handleDeleteClick = useCallback((event: PlannerEvent) => {
@@ -251,6 +260,11 @@ const TeacherPlannerPage: React.FC = () => {
     setSelectedDate(null);
   }, []);
 
+  const handleEventDetailModalClose = useCallback(() => {
+    setIsEventDetailModalOpen(false);
+    setSelectedEvent(null);
+  }, []);
+
   const handleClearFilters = useCallback(() => {
     setFilters({});
   }, []);
@@ -381,6 +395,14 @@ const TeacherPlannerPage: React.FC = () => {
             refetchEvents();
             handleEventModalClose();
           }}
+        />
+      )}
+
+      {isEventDetailModalOpen && (
+        <TeacherEventDetailModal
+          isOpen={isEventDetailModalOpen}
+          onClose={handleEventDetailModalClose}
+          event={selectedEvent}
         />
       )}
 

@@ -53,6 +53,8 @@ export class PlannerService {
     private studentRepository: Repository<Student>,
     @InjectRepository(Parent)
     private parentRepository: Repository<Parent>,
+    @InjectRepository(Teacher)
+    private teacherRepository: Repository<Teacher>,
     private objectStorageService: ObjectStorageServiceService,
     private emailService: EmailService,
     private smsService: SmsService,
@@ -264,6 +266,8 @@ export class PlannerService {
         );
       }
     }
+
+    // TEACHERS scope doesn't require any target IDs
   }
 
   private async validateTeacherPermissions(
@@ -444,6 +448,8 @@ export class PlannerService {
       .leftJoinAndSelect('event.targetSubjects', 'targetSubjects')
       .leftJoinAndSelect('event.attachments', 'attachments')
       .leftJoinAndSelect('event.reminders', 'reminders')
+      .leftJoinAndSelect('event.createdByTeacher', 'createdByTeacher')
+      .leftJoinAndSelect('event.createdByAdmin', 'createdByAdmin')
       .where('event.school.id = :schoolId', { schoolId });
 
     if (filters?.categoryId) {
@@ -511,12 +517,15 @@ export class PlannerService {
       .leftJoinAndSelect('event.targetSubjects', 'targetSubjects')
       .leftJoinAndSelect('event.attachments', 'attachments')
       .leftJoinAndSelect('event.reminders', 'reminders')
+      .leftJoinAndSelect('event.createdByTeacher', 'createdByTeacher')
+      .leftJoinAndSelect('event.createdByAdmin', 'createdByAdmin')
       .where('event.school.id = :schoolId', { schoolId });
 
     queryBuilder.andWhere(
       `(
         event.createdByTeacherId = :teacherId OR
         event.visibilityScope = :schoolWide OR
+        event.visibilityScope = :teachers OR
         (
           event.visibilityScope = :classLevel AND
           EXISTS (
@@ -543,6 +552,7 @@ export class PlannerService {
       {
         teacherId,
         schoolWide: VisibilityScope.SCHOOL_WIDE,
+        teachers: VisibilityScope.TEACHERS,
         classLevel: VisibilityScope.CLASS_LEVEL,
         subject: VisibilityScope.SUBJECT,
       },
@@ -618,6 +628,8 @@ export class PlannerService {
       .leftJoinAndSelect('event.targetClassLevels', 'targetClassLevels')
       .leftJoinAndSelect('event.targetSubjects', 'targetSubjects')
       .leftJoinAndSelect('event.attachments', 'attachments')
+      .leftJoinAndSelect('event.createdByTeacher', 'createdByTeacher')
+      .leftJoinAndSelect('event.createdByAdmin', 'createdByAdmin')
       .where('event.school.id = :schoolId', { schoolId })
       .andWhere(
         '(event.visibilityScope = :schoolWide OR targetClassLevels.id IN (:...classLevelIds) OR (event.visibilityScope = :subject AND targetSubjects.id IN (:...subjectCatalogIds)))',
@@ -630,7 +642,10 @@ export class PlannerService {
               ? Array.from(studentSubjectCatalogIds)
               : [''],
         },
-      );
+      )
+      .andWhere('event.visibilityScope != :teachers', {
+        teachers: VisibilityScope.TEACHERS,
+      });
 
     if (filters?.categoryId) {
       queryBuilder.andWhere('category.id = :categoryId', {
@@ -747,6 +762,15 @@ export class PlannerService {
       ) {
         throw new ForbiddenException(
           'Teachers cannot modify school-wide events',
+        );
+      }
+
+      if (
+        dto.visibilityScope === VisibilityScope.TEACHERS ||
+        event.visibilityScope === VisibilityScope.TEACHERS
+      ) {
+        throw new ForbiddenException(
+          'Teachers cannot modify teacher-only events',
         );
       }
     }
@@ -929,6 +953,18 @@ export class PlannerService {
     } else if (event.visibilityScope === VisibilityScope.SUBJECT) {
       const students = await this.getStudentsForSubjectEvent(event);
       this.addStudentsToRecipients(students, recipients);
+    } else if (event.visibilityScope === VisibilityScope.TEACHERS) {
+      const teachers = await this.teacherRepository.find({
+        where: { school: { id: event.school.id }, isArchived: false },
+      });
+      for (const teacher of teachers) {
+        if (teacher.email) {
+          recipients.push({
+            email: teacher.email,
+            name: `${teacher.firstName} ${teacher.lastName}`,
+          });
+        }
+      }
     }
 
     return this.deduplicateRecipients(recipients);
