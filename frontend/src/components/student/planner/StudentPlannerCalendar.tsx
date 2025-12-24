@@ -1,51 +1,29 @@
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useCallback } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin, { EventResizeDoneArg }  from "@fullcalendar/interaction";
-import { EventInput, DateSelectArg, EventClickArg, DatesSetArg, EventContentArg, EventDropArg } from "@fullcalendar/core";
+import interactionPlugin from "@fullcalendar/interaction";
+import { EventInput, EventClickArg, DatesSetArg, EventContentArg } from "@fullcalendar/core";
 import { PlannerEvent } from "@/@types";
-import { ActionIcon } from "@mantine/core";
-import { IconTrash } from "@tabler/icons-react";
 
 const DEFAULT_CATEGORY_COLOR = "#10b981";
 
-interface PlannerCalendarProps {
+interface StudentPlannerCalendarProps {
   events: EventInput[];
-  onDateSelect: (selectInfo: DateSelectArg) => void;
   onEventClick: (clickInfo: EventClickArg) => void;
-  onDeleteClick: (event: PlannerEvent) => void;
-  onEventDrop: (dropInfo: EventDropArg) => void;
-  onEventResize?: (resizeInfo: EventResizeDoneArg) => void;
   onDatesSet: (dateInfo: DatesSetArg) => void;
-  isEventEditable?: (event: PlannerEvent) => boolean;
 }
 
 interface EventContentWrapperProps {
   eventInfo: EventContentArg;
-  onDeleteClick: (event: PlannerEvent) => void;
-  isEditable?: boolean;
 }
 
 const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
   eventInfo,
-  onDeleteClick,
-  isEditable = true,
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
   const event = eventInfo.event.extendedProps.event as PlannerEvent;
   const categoryColor = eventInfo.event.extendedProps.categoryColor || event?.category?.color || DEFAULT_CATEGORY_COLOR;
-
-  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (event && isEditable) {
-      onDeleteClick(event);
-    }
-  }, [event, onDeleteClick, isEditable]);
-
-  const handleMouseEnter = useCallback(() => setIsHovered(true), []);
-  const handleMouseLeave = useCallback(() => setIsHovered(false), []);
 
   const start = eventInfo.event.start ? new Date(eventInfo.event.start) : null;
   const end = eventInfo.event.end ? new Date(eventInfo.event.end) : null;
@@ -56,8 +34,6 @@ const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
     <div
       className="fc-event-content-wrapper relative group flex items-start gap-1 cursor-pointer"
       style={{ borderLeftColor: categoryColor }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       <div className="flex-1 min-w-0">
         {!eventInfo.event.allDay && (
@@ -88,46 +64,22 @@ const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
           </>
         )}
       </div>
-      {event && isEditable && (
-        <ActionIcon
-          size="sm"
-          variant="filled"
-          color="red"
-          className={`flex-shrink-0 transition-opacity duration-150 z-10 ${
-            isHovered ? 'opacity-100' : 'opacity-0'
-          } hover:opacity-100`}
-          onClick={handleDeleteClick}
-          title="Delete event"
-        >
-          <IconTrash size={14} />
-        </ActionIcon>
-      )}
     </div>
   );
 };
 
-export const PlannerCalendar: React.FC<PlannerCalendarProps> = ({
+export const StudentPlannerCalendar: React.FC<StudentPlannerCalendarProps> = ({
   events,
-  onDateSelect,
   onEventClick,
-  onDeleteClick,
-  onEventDrop,
-  onEventResize,
   onDatesSet,
-  isEventEditable,
 }) => {
   const renderEventContent = useCallback((eventInfo: EventContentArg) => {
-    const event = eventInfo.event.extendedProps.event as PlannerEvent;
-    const editable = isEventEditable ? isEventEditable(event) : true;
-    
     return (
       <EventContentWrapper
         eventInfo={eventInfo}
-        onDeleteClick={onDeleteClick}
-        isEditable={editable}
       />
     );
-  }, [onDeleteClick, isEventEditable]);
+  }, []);
 
   return (
     <div className="planner-calendar-container [&_.fc]:font-sans">
@@ -140,26 +92,15 @@ export const PlannerCalendar: React.FC<PlannerCalendarProps> = ({
           right: "dayGridMonth,timeGridWeek,timeGridDay",
         }}
         events={events}
-        editable={true}
-        selectable={true}
-        selectMirror={true}
+        editable={false}
+        selectable={false}
         dayMaxEvents={false}
         weekends={true}
-        select={onDateSelect}
         eventClick={onEventClick}
-        eventDrop={onEventDrop}
-        eventResize={onEventResize}
         datesSet={onDatesSet}
         height="auto"
         eventDisplay="block"
         eventContent={renderEventContent}
-        eventAllow={(_dropInfo, draggedEvent) => {
-          if (isEventEditable && draggedEvent?.extendedProps?.event) {
-            const event = draggedEvent.extendedProps.event as PlannerEvent;
-            return isEventEditable(event);
-          }
-          return true;
-        }}
         slotMinTime="07:00:00"
         slotMaxTime="18:00:00"
         slotDuration="00:30:00"
