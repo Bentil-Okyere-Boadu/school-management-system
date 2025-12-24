@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { SchoolModule } from './school/school.module';
 import { CommonModule } from './common/common.module';
@@ -28,12 +28,26 @@ import { NotificationModule } from './notification/notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CurriculumModule } from './curriculum/curriculum.module';
 import { PlannerModule } from './planner/planner.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: (configService.get<number>('THROTTLE_TTL') || 60) * 1000, // Time window in milliseconds
+            limit: configService.get<number>('THROTTLE_LIMIT') || 100, // Max requests per window
+          },
+        ],
+      }),
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
@@ -76,6 +90,12 @@ import { PlannerModule } from './planner/planner.module';
     PlannerModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

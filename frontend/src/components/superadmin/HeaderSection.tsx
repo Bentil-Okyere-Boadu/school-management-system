@@ -10,9 +10,11 @@ import Cookies from "js-cookie";
 import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
+import { getCookieNameForPath } from "@/utils/auth";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById, useGetNotifications } from "@/hooks/school-admin";
 import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
+import config from "../../../config";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -123,8 +125,46 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     }
   };
 
-  const onHandleLogout = () => {
-    Cookies.remove("authToken");
+  const onHandleLogout = async () => {
+    // Get refresh token before clearing cookies
+    const cookieName = getCookieNameForPath(pathName);
+    let refreshToken: string | undefined;
+    
+    if (cookieName) {
+      refreshToken = Cookies.get(`${cookieName}Refresh`);
+    }
+
+    // Call backend logout to invalidate refresh token
+    if (refreshToken) {
+      try {
+        await fetch(`${config().apiURL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    // Remove all cookies for this role
+    if (cookieName) {
+      Cookies.remove(cookieName);
+      Cookies.remove(`${cookieName}Refresh`);
+    } else {
+      // Fallback: remove all role cookies if we can't determine the role
+      Cookies.remove("superAdminToken");
+      Cookies.remove("superAdminTokenRefresh");
+      Cookies.remove("adminToken");
+      Cookies.remove("adminTokenRefresh");
+      Cookies.remove("teacherToken");
+      Cookies.remove("teacherTokenRefresh");
+      Cookies.remove("studentToken");
+      Cookies.remove("studentTokenRefresh");
+    }
+    
     router.push("/home");
   }
 

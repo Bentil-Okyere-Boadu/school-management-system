@@ -22,6 +22,7 @@ import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.enti
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
 import { Student } from 'src/student/student.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
+import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       AcademicTerm,
       AcademicCalendar,
       Student,
+      RefreshToken,
     ]),
     PassportModule,
     JwtModule.registerAsync({
