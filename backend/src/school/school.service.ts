@@ -14,6 +14,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 import { StudentGrade } from 'src/subject/student-grade.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { AttendanceService } from 'src/attendance/attendance.service';
+import { EventCategory } from 'src/planner/entities/event-category.entity';
 
 @Injectable()
 export class SchoolService {
@@ -29,6 +30,8 @@ export class SchoolService {
     private studentGradeRepository: Repository<StudentGrade>,
     @InjectRepository(AcademicTerm)
     private academicTermRepository: Repository<AcademicTerm>,
+    @InjectRepository(EventCategory)
+    private eventCategoryRepository: Repository<EventCategory>,
     private attendanceService: AttendanceService,
   ) {}
 
@@ -67,7 +70,46 @@ export class SchoolService {
 
     await this.adminRepository.save(adminUser);
 
+    // Create default event categories for the new school
+    await this.createDefaultEventCategories(savedSchool);
+
     return savedSchool;
+  }
+
+  private async createDefaultEventCategories(school: School): Promise<void> {
+    const defaultCategories = [
+      { name: 'General', color: '#6366f1', description: 'General events' },
+      {
+        name: 'Uncategorized',
+        color: '#94a3b8',
+        description: 'Uncategorized events',
+      },
+      {
+        name: 'School Event',
+        color: '#10b981',
+        description: 'School-wide events and activities',
+      },
+    ];
+
+    for (const categoryData of defaultCategories) {
+      const exists = await this.eventCategoryRepository.findOne({
+        where: {
+          name: categoryData.name,
+          school: { id: school.id },
+        },
+      });
+
+      if (!exists) {
+        const category = this.eventCategoryRepository.create({
+          ...categoryData,
+          school,
+        });
+        await this.eventCategoryRepository.save(category);
+        this.logger.log(
+          `Created default event category "${categoryData.name}" for school: ${school.name}`,
+        );
+      }
+    }
   }
 
   async findOneWithDetails(id: string): Promise<any> {

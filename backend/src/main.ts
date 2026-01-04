@@ -3,6 +3,8 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger, INestApplication } from '@nestjs/common';
 import { SanitizeResponseInterceptor } from './common/interceptors/sanitize-response.interceptor';
 import { Role } from './role/role.entity';
+import { EventCategory } from './planner/entities/event-category.entity';
+import { School } from './school/school.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +26,55 @@ async function seedRoles(app: INestApplication) {
     if (!exists) {
       await roleRepository.save(role);
       logger.log(`Seeded role: ${role.name}`);
+    }
+  }
+}
+
+async function seedDefaultEventCategories(app: INestApplication) {
+  const logger = new Logger('EventCategorySeeder');
+  const categoryRepository = app.get(
+    getRepositoryToken(EventCategory),
+  ) as Repository<EventCategory>;
+  const schoolRepository = app.get(
+    getRepositoryToken(School),
+  ) as Repository<School>;
+
+  const defaultCategories = [
+    { name: 'General', color: '#6366f1', description: 'General events' },
+    {
+      name: 'Uncategorized',
+      color: '#94a3b8',
+      description: 'Uncategorized events',
+    },
+    {
+      name: 'School Event',
+      color: '#10b981',
+      description: 'School-wide events and activities',
+    },
+  ];
+
+  // Get all schools
+  const schools = await schoolRepository.find();
+
+  for (const school of schools) {
+    for (const categoryData of defaultCategories) {
+      const exists = await categoryRepository.findOne({
+        where: {
+          name: categoryData.name,
+          school: { id: school.id },
+        },
+      });
+
+      if (!exists) {
+        const category = categoryRepository.create({
+          ...categoryData,
+          school,
+        });
+        await categoryRepository.save(category);
+        logger.log(
+          `Seeded event category "${categoryData.name}" for school: ${school.name}`,
+        );
+      }
     }
   }
 }
@@ -85,6 +136,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new SanitizeResponseInterceptor());
 
   await seedRoles(app);
+  await seedDefaultEventCategories(app);
 
   await app.listen(process.env.PORT ?? 5000);
 }

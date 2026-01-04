@@ -1,4 +1,4 @@
-import { Parent } from "@/@types";
+import { Parent, ErrorResponse } from "@/@types";
 import { Dialog } from "@/components/common/Dialog";
 import InputField from "@/components/InputField";
 import { useDeleteGuardian, useUpdateGuardian } from "@/hooks/student";
@@ -37,8 +37,10 @@ const Guardian = ({
         toast.success("Guardian deleted successfully.");
         refetchStudentData();
       },
-      onError: () => {
-        toast.error("Error occured while deleting guardian.");
+      onError: (error: unknown) => {
+        toast.error(
+          JSON.stringify((error as ErrorResponse)?.response?.data?.message || 'Error occurred while deleting guardian.')
+        );
       },
     });
   };
@@ -70,8 +72,10 @@ const Guardian = ({
         setEditParent({} as Parent);
         refetchStudentData();
       },
-      onError: () => {
-        toast.error("Error occured while updating guardian.");
+      onError: (error: unknown) => {
+        toast.error(
+          JSON.stringify((error as ErrorResponse)?.response?.data?.message || 'Error occurred while updating guardian.')
+        );
       }
     })
   };

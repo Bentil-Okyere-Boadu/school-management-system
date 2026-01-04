@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { ProfileIcon, ResultsIcon, AttendanceIcon, ClipboardIcon } from "@/utils/icons";
+import { ProfileIcon, ResultsIcon, AttendanceIcon, ClipboardIcon, PlannerIcon } from "@/utils/icons";
 import { useStudentGetMe } from "@/hooks/student";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
@@ -33,6 +33,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: ClipboardIcon,      
       label: "My Assignments",
     },
+    {
+      icon: PlannerIcon,      
+      label: "Planner",
+    },
     // {
     //   icon: PaymentsIcon,      
     //   label: "Payments",
@@ -53,6 +57,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/student/assignments") {
       setActiveMenuItem("My Assignments");
+      setIsOverviewPage(true);
+    } else if (pathname === "/student/planner") {
+      setActiveMenuItem("Planner");
       setIsOverviewPage(true);
     } else if (pathname === "/student/payments") {
       setActiveMenuItem("Payments");
@@ -78,6 +85,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "My Assignments":
         router.push("/student/assignments");
+        break;
+      case "Planner":
+        router.push("/student/planner");
         break;
       case "Payments":
         router.push("/student/payments");
