@@ -58,3 +58,11 @@ export const useGetRoles = () => {
 
     return { roles , isLoading, error, isSuccess }
 }
+
+export const useLogout = () => {
+    return useMutation({ 
+        mutationFn: (refreshToken: string) => {
+            return customAPI.post('/auth/logout', { refresh_token: refreshToken })
+        }
+    })
+}
