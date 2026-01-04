@@ -542,12 +542,12 @@ const items = FAQs.map((item, i) => (
             rights reserved.
           </div>
           <div className="flex gap-4 mt-2 md:mt-0">
-            <Link href="/privacy-policy" className="hover:underline">
+            {/* <Link href="/privacy-policy" className="hover:underline">
               Privacy Policy
             </Link>
             <Link href="/terms-of-service" className="hover:underline">
               Terms of Service
-            </Link>
+            </Link> */}
           </div>
         </div>
       </footer>
