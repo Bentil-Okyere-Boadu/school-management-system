@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import Cookies from "js-cookie";
-import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { getCookieNameForPath, getCookieNameForRole } from "@/utils/auth";
+// import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 interface LoginConfigData {
   data: {
@@ -72,8 +72,7 @@ export async function updateSession(request: NextRequest, cookieName: string) {
 }
 
 export function handleLoginRedirectAndToken(
-  data: LoginConfigData,
-  router: AppRouterInstance
+  data: LoginConfigData
 ): void {
   if (
     !data?.data?.access_token ||

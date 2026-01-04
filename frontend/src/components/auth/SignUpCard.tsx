@@ -10,7 +10,6 @@ import { ButtonType } from "@/@types";
 import { useAdminSignUp } from "@/hooks/auth";
 import { AxiosError } from "axios";
 import { toast } from "react-toastify";
-import { useRouter } from "next/navigation";
 import { handleLoginRedirectAndToken } from "@/middleware";
 
 // Define the password schema with Zod
@@ -55,7 +54,6 @@ const SignUpCard: React.FC = () => {
   const watchedValues = watch();
 
   const validationResult = signUpSchema.safeParse(watchedValues);
-  const router = useRouter()
   
   const passwordChecks = {
     minLength: password?.length >= 8,
@@ -88,7 +86,7 @@ const SignUpCard: React.FC = () => {
       mutate({firstName: "Super", lastName: "Admin", email: data.email, password: data.password}, {
         onSuccess: (succesData) => {
           toast.success("Sign up successful");
-          handleLoginRedirectAndToken(succesData, router);
+          handleLoginRedirectAndToken(succesData);
         }, 
         onError: (error: AxiosError) => {
           toast.error(error.response?.data.message);
