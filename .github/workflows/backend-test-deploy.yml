@@ -1,0 +1,64 @@
+name: Backend Test Deployment to EC2
+
+on:
+  push:
+    branches:
+      - test
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+env:
+  BRANCH: test
+
+jobs:
+  deploy-to-ec2:
+    name: Deploy to EC2 Instance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/test'
+    environment:
+      name: test-ec2
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting deployment..."
+            
+            # Navigate to application directory
+            cd ${{ secrets.EC2_APP_DIRECTORY }}
+            
+            # Pull latest changes from test branch
+            echo "📥 Pulling latest changes from test branch..."
+            git fetch origin
+            git checkout ${{ env.BRANCH }}
+            git pull origin ${{ env.BRANCH }}
+            
+            # Navigate to backend directory
+            cd backend
+            
+            # Build and restart containers
+            echo "🔨 Building Docker images..."
+            sudo docker compose build --no-cache backend
+            
+            echo "🔄 Restarting services..."
+            sudo docker compose up -d
+            
+            # Wait for services to be healthy
+            echo "⏳ Waiting for services to start..."
+            sleep 10
+            
+            # Show running containers
+            echo "📊 Container status:"
+            sudo docker compose ps
+            
+            # Clean up unused images
+            echo "🧹 Cleaning up unused images..."
+            sudo docker image prune -f
+            
+            echo "✅ Deployment completed successfully!"
