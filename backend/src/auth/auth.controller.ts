@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { IsString, IsOptional } from 'class-validator';
 import { AuthService } from './auth.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,7 +19,9 @@ import { Student } from '../student/student.entity';
 import { SuperAdmin } from '../super-admin/super-admin.entity';
 
 export class RefreshTokenDto {
-  refresh_token: string;
+  @IsString()
+  @IsOptional()
+  refresh_token?: string;
 }
 
 @Controller('auth')
