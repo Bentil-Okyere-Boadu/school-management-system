@@ -77,12 +77,14 @@ customAPI.interceptors.response.use(
         if (newAccessToken) {
           // Update the authorization header with new token
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-          // Retry the original request
           return customAPI(originalRequest);
+        } else {
+          if (typeof window !== "undefined") {
+            window.location.href = "/home";
+          }
+          return Promise.reject(error);
         }
       } catch (refreshError) {
-        // Refresh failed, redirect to login
         if (typeof window !== "undefined") {
           window.location.href = "/home";
         }
