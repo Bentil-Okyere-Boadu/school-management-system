@@ -101,7 +101,9 @@ export class AuthController {
 
     const accessToken = this.authService.generateToken(payload, '15m');
 
-    this.logger.log(`Token refreshed for user ${user.id} (${refreshToken.userType})`);
+    this.logger.log(
+      `Token refreshed for user ${user.id} (${refreshToken.userType})`,
+    );
 
     return {
       access_token: accessToken,
