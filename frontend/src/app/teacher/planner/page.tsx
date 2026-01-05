@@ -54,7 +54,7 @@ const TeacherPlannerPage: React.FC = () => {
 
   // Check if an event is editable (not admin-created)
   const isEventEditable = useCallback((event: PlannerEvent): boolean => {
-    if (event.createdByAdminId) {
+    if (event?.createdByAdminId) {
       return false;
     }
     if (event.createdByTeacherId && currentTeacher?.id) {
@@ -109,7 +109,7 @@ const TeacherPlannerPage: React.FC = () => {
     
     // If event is admin-created, show read-only detail modal
     // Otherwise, show edit modal
-    if (event.createdByAdminId) {
+    if (event?.createdByAdminId) {
       setIsEventDetailModalOpen(true);
     } else {
       setIsEventModalOpen(true);
