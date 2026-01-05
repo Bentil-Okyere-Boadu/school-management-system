@@ -10,9 +10,11 @@ import Cookies from "js-cookie";
 import Image from "next/image";
 import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
+import { getCookieNameForPath } from "@/utils/auth";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById, useGetNotifications } from "@/hooks/school-admin";
 import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
+import { useLogout } from "@/hooks/auth";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -73,6 +75,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
   const signedInRole = getSignedInRole();
 
+  const { mutate: logoutMutation } = useLogout();
+
   // Get notifications for unread count badge
   const schoolIdForNotifications = signedInRole === Roles.SCHOOL_ADMIN ? user?.school?.id : null;
   const { notifications } = useGetNotifications(schoolIdForNotifications);
@@ -113,7 +117,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
   }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData, classData, studentData]);
 
-  const onHandleBreadCrumbPress = (event) => {
+  const onHandleBreadCrumbPress = (event: any) => {
     const oEventTarget = (event.currentTarget ?? event.target) as HTMLElement;
     const spanText = oEventTarget.textContent?.trim() ?? '';
     if (spanText === activeMenuItem && getSignedInRole() === Roles.SUPER_ADMIN) {
@@ -124,8 +128,41 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   };
 
   const onHandleLogout = () => {
-    Cookies.remove("authToken");
-    router.push("/home");
+    // Get refresh token before clearing cookies
+    const cookieName = getCookieNameForPath(pathName);
+    let refreshToken: string | undefined;
+    
+    if (cookieName) {
+      refreshToken = Cookies.get(`${cookieName}Refresh`);
+    }
+
+    // Call backend logout to invalidate refresh token
+    if (refreshToken) {
+        logoutMutation(refreshToken as string, {
+          onSuccess: () => {
+             // Remove all cookies for this role
+            if (cookieName) {
+              Cookies.remove(cookieName);
+              Cookies.remove(`${cookieName}Refresh`);
+            } else {
+              // Fallback: remove all role cookies if we can't determine the role
+              Cookies.remove("superAdminToken");
+              Cookies.remove("superAdminTokenRefresh");
+              Cookies.remove("adminToken");
+              Cookies.remove("adminTokenRefresh");
+              Cookies.remove("teacherToken");
+              Cookies.remove("teacherTokenRefresh");
+              Cookies.remove("studentToken");
+              Cookies.remove("studentTokenRefresh");
+            }
+    
+            router.push("/home");
+          },  
+          onError: (error: unknown) => {
+            console.error('Logout error:', error);
+          }
+        });
+    }
   }
 
   return (

@@ -14,6 +14,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { TeacherAuthService } from './teacher.auth.service';
 import { TeacherService } from './teacher.service';
 import { TeacherLocalAuthGuard } from './guards/teacher-local-auth.guard';
@@ -53,6 +54,7 @@ export class TeacherController {
     private readonly academicCalendarService: AcademicCalendarService,
   ) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(TeacherLocalAuthGuard)
   @Post('login')
   @Roles(Role.Teacher)

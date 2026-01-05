@@ -1,59 +1,97 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import Cookies from "js-cookie";
-import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { getCookieNameForPath, getCookieNameForRole } from "@/utils/auth";
+// import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 interface LoginConfigData {
   data: {
     access_token: string;
+    refresh_token: string;
     role: {
       name: string;
     };
   };
 }
-  
-
 
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
-  const cookie = request.cookies.get("authToken");
-  if(!cookie) {
-    return NextResponse.redirect(new URL('/home', request.url))
+  const pathname = request.nextUrl.pathname;
+
+  const isAuthPage =
+    pathname.includes("/auth/") ||
+    pathname.includes("/login") ||
+    pathname.includes("/forgotPassword") ||
+    pathname.includes("/signup") ||
+    pathname.includes("/complete-registration") ||
+    pathname === "/home" ||
+    pathname === "/";
+
+  if (isAuthPage) {
+    return NextResponse.next();
+  }
+
+  const cookieName = getCookieNameForPath(pathname);
+
+  if (!cookieName) {
+    return NextResponse.redirect(new URL("/home", request.url));
+  }
+
+  const cookie = request.cookies.get(cookieName);
+  if (!cookie) {
+    return NextResponse.redirect(new URL("/home", request.url));
   } else {
-    await updateSession(request);
+    await updateSession(request, cookieName);
   }
 }
 
-//See "Matching Paths" below to learn more
-export const config = {
-    matcher: ['/superadmin/:path*', '/admin/:path*', '/teacher/:path*', '/student/:path*'],    
-  }
+export async function updateSession(request: NextRequest, cookieName: string) {
+  const authToken = request.cookies.get(cookieName)?.value;
+  if (!authToken) return;
 
-export async function updateSession(request: NextRequest) {
-    const authToken = request.cookies.get("authToken")?.value;
-    if (!authToken) return;
-
-    // Refresh the auth so it doesn't expire
-    const expires = new Date(Date.now() + 6 * 60 * 60 * 1000);
-    const res = NextResponse.next();
-    res.cookies.set({
-        name: "authToken",
-        value: authToken,
-        httpOnly: true,
-        expires: expires,
-    });
-    return res;
+  // Refresh the auth so it doesn't expire
+  const expires = new Date(Date.now() + 6 * 60 * 60 * 1000);
+  const res = NextResponse.next();
+  res.cookies.set({
+    name: cookieName,
+    value: authToken,
+    httpOnly: true,
+    expires: expires,
+  });
+  return res;
 }
-
 
 export function handleLoginRedirectAndToken(
-  data: LoginConfigData,
-  router: AppRouterInstance
+  data: LoginConfigData
 ): void {
-  if (!data?.data?.access_token || !data?.data?.role?.name) return;
+  if (
+    !data?.data?.access_token ||
+    !data?.data?.refresh_token ||
+    !data?.data?.role?.name
+  )
+    return;
 
-  const expireToken = new Date(Date.now() + 6 * 60 * 60 * 1000);
-  Cookies.set("authToken", data.data.access_token, { expires: expireToken });
+  const roleName = data.data.role.name;
+  const cookieName = getCookieNameForRole(roleName);
+  const refreshCookieName = `${cookieName}Refresh`;
+
+  if (!cookieName) {
+    console.error(`No cookie name found for role: ${roleName}`);
+    return;
+  }
+
+  // Store access token (15 minutes expiry)
+  const accessTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+  Cookies.set(cookieName, data.data.access_token, {
+    expires: accessTokenExpiry,
+  });
+
+  // Store refresh token (expiry matches backend configuration)
+  // Default is 7 days, but can be configured via JWT_REFRESH_TOKEN_EXPIRES_DAYS
+  const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  Cookies.set(refreshCookieName, data.data.refresh_token, {
+    expires: refreshTokenExpiry,
+  });
 
   const roleToRouteMap: Record<string, string> = {
     super_admin: "/superadmin/dashboard",
@@ -62,8 +100,10 @@ export function handleLoginRedirectAndToken(
     student: "/student/profile",
   };
 
-  const route = roleToRouteMap[data.data.role.name];
+  const route = roleToRouteMap[roleName];
   if (route) {
-    router.push(route);
+    // Use window.location.href instead of router.push to ensure cookies are sent with the request
+    // This forces a full page reload so the middleware can see the cookies
+    window.location.href = route;
   }
 }

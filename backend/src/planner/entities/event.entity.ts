@@ -96,7 +96,10 @@ export class Event {
   @JoinTable({
     name: 'event_subject_catalogs',
     joinColumn: { name: 'event_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'subject_catalog_id', referencedColumnName: 'id' },
+    inverseJoinColumn: {
+      name: 'subject_catalog_id',
+      referencedColumnName: 'id',
+    },
   })
   targetSubjects: SubjectCatalog[];
 

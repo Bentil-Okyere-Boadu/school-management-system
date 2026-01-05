@@ -8,6 +8,7 @@ import { School } from './school/school.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 
 async function seedRoles(app: INestApplication) {
   const logger = new Logger('Seeder');
@@ -84,20 +85,43 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
+
+  // Configure Helmet for secure HTTP headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   // CORS configuration - get from environment variable
   // Supports comma-separated multiple origins: "https://domain1.com,https://domain2.com"
   const frontendUrl = configService.get<string>('FRONTEND_URL', '');
   const allowedOrigins = frontendUrl
     .split(',')
-    .map(url => url.trim())
+    .map((url) => url.trim())
     .filter(Boolean)
-    .map(url => {
+    .map((url) => {
       // Normalize URLs: remove trailing slashes for consistent comparison
       return url.replace(/\/+$/, '');
     });
-  
-  logger.log(`CORS: Allowed origins configured: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'NONE (allowing all in development)'}`);
-  
+
+  logger.log(
+    `CORS: Allowed origins configured: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'NONE (allowing all in development)'}`,
+  );
+
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, curl)
@@ -110,19 +134,23 @@ async function bootstrap() {
 
       if (allowedOrigins.length === 0) {
         // If no origins configured, allow all (development only)
-        logger.warn('CORS: No FRONTEND_URL configured - allowing all origins (development mode)');
+        logger.warn(
+          'CORS: No FRONTEND_URL configured - allowing all origins (development mode)',
+        );
         callback(null, true);
       } else if (allowedOrigins.includes(normalizedOrigin)) {
         callback(null, true);
       } else {
-        logger.warn(`CORS: Origin "${normalizedOrigin}" not allowed. Allowed: ${allowedOrigins.join(', ')}`);
+        logger.warn(
+          `CORS: Origin "${normalizedOrigin}" not allowed. Allowed: ${allowedOrigins.join(', ')}`,
+        );
         callback(null, false);
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposedHeaders: ['Authorization'],
-    preflightContinue: false, 
+    preflightContinue: false,
     optionsSuccessStatus: 204,
   });
   app.useGlobalPipes(
