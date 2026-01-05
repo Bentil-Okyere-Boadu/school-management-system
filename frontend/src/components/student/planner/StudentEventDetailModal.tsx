@@ -86,12 +86,12 @@ export const StudentEventDetailModal: React.FC<StudentEventDetailModalProps> = (
             <Badge variant="outline" color="gray">
               {getVisibilityScopeLabel(event.visibilityScope)}
             </Badge>
-            {event.createdByAdminId && (
+            {event?.createdByAdminId && (
               <Badge variant="light" color="blue" size="sm">
                 Created by Admin
               </Badge>
             )}
-            {event.createdByTeacherId && event.createdByTeacher && (
+            {event?.createdByTeacherId && event?.createdByTeacher && (
               <Badge variant="light" color="green" size="sm">
                 Created by Teacher ({event.createdByTeacher.firstName} {event.createdByTeacher.lastName})
               </Badge>

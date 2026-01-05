@@ -259,7 +259,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
       dialogWidth="w-[700px] max-w-[701px]"
     >
       <div className="my-3 flex flex-col gap-4">
-        {event && (event.createdByAdminId || event.createdByTeacherId) && (
+        {event && (event?.createdByAdminId || event?.createdByTeacherId) && (
           <div className="flex items-center gap-2">
             {event.createdByAdminId && (
               <Badge variant="light" color="blue" size="sm">
