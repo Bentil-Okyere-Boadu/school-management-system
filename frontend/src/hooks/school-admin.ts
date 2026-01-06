@@ -175,14 +175,15 @@ export const useArchiveUser = ({
     },
     onSuccess: () => {
       // Invalidate all user-related queries to refetch with updated data
-      queryClient.invalidateQueries({ queryKey: ["allSchoolUsers"] });
-      queryClient.invalidateQueries({
-        queryKey: ["studentsForClassAssignment"],
+      queryClient.invalidateQueries({ queryKey: [
+          "allSchoolUsers", 
+          "allStudents", 
+          "schoolAdminInfo", 
+          "adminDashboardStats", 
+          "studentsForClassAssignment"
+        ] 
       });
       queryClient.invalidateQueries({ queryKey: ["schoolUser", id] });
-      queryClient.invalidateQueries({ queryKey: ["allStudents"] });
-      queryClient.invalidateQueries({ queryKey: ["schoolAdminInfo"] });
-      queryClient.invalidateQueries({ queryKey: ["adminDashboardStats"] });
     },
   });
 };
@@ -213,10 +214,12 @@ export const useSuspendTeacher = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["allSchoolUsers"] });
+      queryClient.invalidateQueries({ queryKey: [
+        "allSchoolUsers",
+        "schoolAdminInfo",
+        "adminDashboardStats"
+      ] });
       queryClient.invalidateQueries({ queryKey: ["schoolUser", id] });
-      queryClient.invalidateQueries({ queryKey: ["schoolAdminInfo"] });
-      queryClient.invalidateQueries({ queryKey: ["adminDashboardStats"] });
     },
   });
 };
