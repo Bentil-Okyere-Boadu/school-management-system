@@ -87,8 +87,8 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
     });
   } 
 
-  const isTeacher = selectedUser.role?.name === 'teacher';
-  const isSuspended = (selectedUser as Teacher)?.isSuspended ?? false;
+  // const isTeacher = selectedUser.role?.name === 'teacher';
+  const isSuspended = (selectedUser as unknown as Teacher)?.isSuspended ?? false;
 
   const { mutate: archiveMutate, isPending: isArchiving } = useArchiveUser({
     id: selectedUser.id,
@@ -295,7 +295,7 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-yellow-800 font-semibold mb-3 flex items-center gap-2">
                   <span className="text-lg">⚠️</span>
-                  <span>This action will restrict the teacher's access and may affect ongoing activities:</span>
+                  <span>This action will restrict the teacher&apos;s access and may affect ongoing activities:</span>
                 </p>
                 <ul className="list-disc list-inside text-yellow-700 space-y-1.5 text-sm ml-6">
                   <li>Subject assignments and grading</li>
