@@ -13,16 +13,6 @@ export const config = {
   ],
 };
 
-// Configure which routes the middleware should run on
-export const config = {
-  matcher: [
-    "/superadmin/:path*",
-    "/admin/:path*",
-    "/teacher/:path*",
-    "/student/:path*",
-  ],
-};
-
 interface LoginConfigData {
   data: {
     access_token: string;
