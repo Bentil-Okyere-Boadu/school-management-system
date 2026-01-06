@@ -1,6 +1,5 @@
 import { Injectable, Logger, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as twilio from 'twilio';
 import { BaseException } from '../exceptions/base.exception';
 
 /**
@@ -24,51 +23,84 @@ export enum SmsTemplate {
 }
 
 /**
- * SMS service for sending various types of SMS messages
+ * SMS service for sending various types of SMS messages using Arkesel
  */
 @Injectable()
 export class SmsService {
-  private client: twilio.Twilio;
   private readonly logger = new Logger(SmsService.name);
-  private readonly fromNumber: string;
+  private readonly apiKey: string;
+  private readonly senderId: string;
+  private readonly apiUrl: string;
 
   constructor(private configService: ConfigService) {
-    this.initializeClient();
-    this.fromNumber = this.configService.get<string>('TWILIO_PHONE_NUMBER', '');
-  }
+    this.apiKey = this.configService.get<string>('ARKESEL_API_KEY', '');
+    this.senderId = this.configService.get<string>('ARKESEL_SENDER_ID', '');
+    this.apiUrl = this.configService.get<string>(
+      'ARKESEL_API_URL',
+      'https://sms.arkesel.com/api/v2/sms/send',
+    );
 
-  private initializeClient(): void {
-    const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID', '');
-    const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN', '');
-
-    if (!accountSid || !authToken) {
-      this.logger.error('Twilio credentials not configured');
-      return;
+    if (!this.apiKey || !this.senderId) {
+      this.logger.warn('Arkesel credentials not fully configured');
+    } else {
+      this.logger.log('SMS service (Arkesel) is ready to send messages');
     }
-
-    this.client = twilio(accountSid, authToken);
-    this.logger.log('SMS service is ready to send messages');
   }
 
   /**
-   * Send an SMS message
+   * Format phone number for Arkesel (remove + and ensure proper format)
+   * @param phoneNumber The phone number to format
+   * @returns Formatted phone number
+   */
+  private formatPhoneNumber(phoneNumber: string): string {
+    let formatted = phoneNumber.trim();
+    if (formatted.startsWith('+')) {
+      formatted = formatted.substring(1);
+    }
+    return formatted;
+  }
+
+  /**
+   * Send an SMS message using Arkesel API
    * @param to The recipient phone number
    * @param message The message content
    * @returns Promise resolving to the SMS send info
    */
   async sendSms(to: string, message: string): Promise<void> {
-    if (!this.client || !this.fromNumber) {
+    if (!this.apiKey || !this.senderId) {
       this.logger.error('SMS service not properly configured');
       throw new Error('SMS service not properly configured');
     }
 
+    const formattedPhone = this.formatPhoneNumber(to);
+
+    const data = {
+      sender: this.senderId,
+      message,
+      recipients: [formattedPhone],
+    };
     try {
-      await this.client.messages.create({
-        body: message,
-        from: this.fromNumber,
-        to: to,
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': this.apiKey,
+        },
+        body: JSON.stringify(data),
       });
-      this.logger.log(`SMS sent to ${to}`);
+
+      const result = (await response.json()) as {
+        status: string;
+        sms_balance?: number;
+        main_balance?: number;
+        message_id?: string;
+        message?: string;
+      };
+
+      if (result.status !== 'success') {
+        this.logger.error(`Failed to send SMS to ${to}`, result);
+        throw new Error(result.message || 'Arkesel SMS failed');
+      }
     } catch (error) {
       this.logger.error(`Failed to send SMS to ${to}`, error);
       throw new Error(

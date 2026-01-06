@@ -238,6 +238,37 @@ export class ObjectStorageServiceService {
     return { path: documentPath, url };
   }
 
+  // Upload event attachment
+  async uploadEventAttachment(
+    file: Express.Multer.File,
+    schoolId: string,
+    eventId: string,
+  ): Promise<{ path: string; url: string }> {
+    this.validateDocumentFile(file);
+
+    const attachmentPath = `schools/${schoolId}/events/${eventId}/attachments/${uuidv4()}${path.extname(file.originalname)}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: attachmentPath,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      Metadata: {
+        schoolId,
+        eventId,
+        uploadedAt: new Date().toISOString(),
+        originalName: file.originalname,
+        assetType: 'event-attachment',
+      },
+      CacheControl: 'max-age=86400', // 24 hours
+    });
+
+    await this.s3Client.send(command);
+    const url = await this.getSignedUrl(attachmentPath);
+
+    return { path: attachmentPath, url };
+  }
+
   // Validate file for profile image upload
   private validateImageFile(file: Express.Multer.File): void {
     if (!file) {

@@ -1,4 +1,4 @@
-import { Calendar, Parent, Profile, Student, StudentResultsResponse } from "@/@types";
+import { Calendar, Parent, Profile, Student, StudentResultsResponse, PlannerEvent, EventCategory } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -149,4 +149,81 @@ export const useSubmitAssignment = (assignmentId: string) => {
       });
     },
   });
+};
+
+/**
+ * STUDENT PLANNER EVENTS (Read-Only)
+ */
+export const useGetStudentPlannerEvents = (
+  startDate?: string,
+  endDate?: string,
+  categoryId?: string,
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "studentPlannerEvents",
+      {
+        startDate,
+        endDate,
+        categoryId,
+      },
+    ],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+
+      if (startDate) {
+        queryBuilder.push(`startDate=${startDate}`);
+      }
+
+      if (endDate) {
+        queryBuilder.push(`endDate=${endDate}`);
+      }
+
+      if (categoryId) {
+        queryBuilder.push(`categoryId=${categoryId}`);
+      }
+
+      const params =
+        queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
+
+      return customAPI.get(`/planner/student/events${params}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const events = (data?.data as PlannerEvent[]) || [];
+
+  return { events, isLoading, refetch };
+};
+
+export const useGetStudentPlannerEvent = (eventId: string) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["studentPlannerEvent", eventId],
+    queryFn: () => {
+      return customAPI.get(`/planner/student/events/${eventId}`);
+    },
+    enabled: !!eventId,
+    refetchOnWindowFocus: true,
+  });
+
+  const event = (data?.data as PlannerEvent) || null;
+
+  return { event, isLoading, refetch };
+};
+
+/**
+ * STUDENT EVENT CATEGORIES (Read-Only)
+ */
+export const useGetStudentEventCategories = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["studentEventCategories"],
+    queryFn: () => {
+      return customAPI.get("/planner/student/categories");
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const categories = (data?.data as EventCategory[]) || [];
+
+  return { categories, isLoading, refetch };
 };

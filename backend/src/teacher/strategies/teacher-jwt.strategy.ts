@@ -32,7 +32,7 @@ export class TeacherJwtStrategy extends PassportStrategy(
       return null;
     }
     const teacher = await this.teacherAuthService.findByEmailOrTeacherId(payload.email);
-    if (!teacher) {
+    if (!teacher || teacher.isSuspended) {
       return null;
     }
     return {

@@ -1,23 +1,25 @@
 # SMS Service Setup Guide
 
-This guide explains how to set up and use the SMS notification service in the School Management System.
+This guide explains how to set up and use the SMS notification service in the School Management System using Arkesel.
 
 ## Prerequisites
 
-1. A Twilio account (sign up at https://www.twilio.com)
-2. Twilio Account SID and Auth Token
-3. A Twilio phone number
+1. An Arkesel account (sign up at https://arkesel.com)
+2. Arkesel API Key
+3. A registered Sender ID
 
 ## Environment Variables
 
 Add the following environment variables to your `.env` file:
 
 ```env
-# Twilio Configuration
-TWILIO_ACCOUNT_SID=your_account_sid_here
-TWILIO_AUTH_TOKEN=your_auth_token_here
-TWILIO_PHONE_NUMBER=your_twilio_phone_number_here
+# Arkesel Configuration
+ARKESEL_API_KEY=your_api_key_here
+ARKESEL_SENDER_ID=your_sender_id_here
+ARKESEL_API_URL=https://sms.arkesel.com/api/sms/send
 ```
+
+Note: `ARKESEL_API_URL` is optional and defaults to `https://sms.arkesel.com/api/sms/send` if not provided.
 
 ## Features
 
@@ -101,21 +103,23 @@ The SMS service includes comprehensive error handling:
 
 To test the SMS service:
 
-1. Ensure your Twilio credentials are properly configured
-2. Use a valid phone number for testing
+1. Ensure your Arkesel credentials are properly configured
+2. Use a valid phone number for testing (format: country code + number, e.g., 233XXXXXXXXX for Ghana)
 3. Check the application logs for SMS delivery status
 
 ## Cost Considerations
 
-- Twilio charges per SMS sent
+- Arkesel charges per SMS sent
 - Consider implementing rate limiting for high-volume scenarios
-- Monitor your Twilio usage to manage costs
+- Monitor your Arkesel usage to manage costs
+- Check Arkesel dashboard for pricing and balance
 
 ## Security Notes
 
-- Never commit Twilio credentials to version control
+- Never commit Arkesel credentials to version control
 - Use environment variables for all sensitive configuration
 - Consider implementing phone number validation before sending SMS
+- Keep your API key secure and rotate it periodically
 
 ## Troubleshooting
 
@@ -123,19 +127,22 @@ To test the SMS service:
 
 1. **"SMS service not properly configured"**
 
-   - Check that all Twilio environment variables are set
-   - Verify your Twilio credentials are correct
+   - Check that all Arkesel environment variables are set (`ARKESEL_API_KEY` and `ARKESEL_SENDER_ID`)
+   - Verify your Arkesel credentials are correct
+   - Ensure your Sender ID is registered and approved in your Arkesel dashboard
 
 2. **"Failed to send SMS"**
 
-   - Check your Twilio account balance
-   - Verify the phone number format (should include country code)
-   - Check Twilio console for delivery status
+   - Check your Arkesel account balance
+   - Verify the phone number format (should include country code without +, e.g., 233XXXXXXXXX)
+   - Check Arkesel dashboard for delivery status
+   - Verify your API key has the necessary permissions
 
 3. **SMS not received**
-   - Verify the recipient phone number is correct
+   - Verify the recipient phone number is correct and in the right format
    - Check if the recipient's carrier supports SMS
-   - Review Twilio logs for delivery status
+   - Review Arkesel dashboard logs for delivery status
+   - Ensure your Sender ID is approved and active
 
 ### Debug Mode
 

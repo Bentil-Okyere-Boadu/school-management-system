@@ -19,6 +19,8 @@ interface Student {
   firstName: string;
   lastName: string;
   fullName: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
   attendanceByDate: Record<string, "present" | "absent" | "weekend" | "holiday" | null>;
 }
 
@@ -217,6 +219,9 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                   {/* Student name column */}
                   <div className="sticky left-0 z-10 bg-white px-4 py-5 border-b border-gray-200 whitespace-nowrap">
                     {student.fullName}
+                    {student.isArchived && (
+                      <span className="ml-2 text-xs text-gray-500 italic">(archived)</span>
+                    )}
                   </div>
 
                   {/* Class level column */}
@@ -237,8 +242,15 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                       loadingCell?.studentId === student.id &&
                       loadingCell?.date === date;
 
+                    // Check if student is archived and if this date is on/after archive date
+                    const isArchived = student.isArchived || false;
+                    const archivedAt = student.archivedAt ? new Date(student.archivedAt) : null;
+                    const cellDate = new Date(date);
+                    cellDate.setHours(0, 0, 0, 0);
+                    const isAfterArchiveDate = isArchived && archivedAt && cellDate >= archivedAt;
+
                     const isDisabled =
-                      isWeekend || isHoliday || isCellLoading;
+                      isWeekend || isHoliday || isCellLoading || isAfterArchiveDate;
 
                     return (
                       <div
@@ -246,6 +258,8 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                         className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center transition-all ${
                           new Date(date).getDay() === 0 || new Date(date).getDay() === 6
                             ? "bg-white pointer-events-none"
+                            : isAfterArchiveDate
+                            ? "bg-gray-100 pointer-events-none"
                             : "bg-[#F9F5FF] cursor-pointer hover:bg-[#F3E8FF]"
                         } ${isHoliday && "bg-[#FCEBCF] pointer-events-none"} ${
                           isCellLoading && "cursor-wait opacity-70"
@@ -260,6 +274,8 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                           <span className="text-[11px] font-bold text-black-500 rotate-[-45deg] whitespace-nowrap">
                             Holiday
                           </span>
+                        ) : isAfterArchiveDate ? (
+                          <span className="text-xs text-gray-400">–</span>
                         ) : icon ? (
                           <Image
                             src={icon}

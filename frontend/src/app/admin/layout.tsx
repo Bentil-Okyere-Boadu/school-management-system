@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, SubjectIcon } from "@/utils/icons";
+import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, SubjectIcon, AssignmentIcon, PlannerIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
 import NotificationCard from "@/components/common/NotificationCard";
@@ -47,6 +47,14 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     {
       icon: SubjectIcon,
       label: "Subjects"
+    },
+    {
+      icon: AssignmentIcon,
+      label: "Assignments"
+    },
+    {
+      icon: PlannerIcon,
+      label: "Planner"
     }
   ];
 
@@ -76,8 +84,14 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/subjects") {
       setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
+    } else if (pathname === "/admin/assignments" || pathname.startsWith("/admin/assignments/")) {
+      setActiveMenuItem("Assignments");
+      setIsOverviewPage(true);
     } else if (pathname === "/admin/notifications") {
       setActiveMenuItem("Notifications");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/planner") {
+      setActiveMenuItem("Planner");
       setIsOverviewPage(true);
     }
     
@@ -109,7 +123,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname.startsWith("/admin/subjects/curriculum")) {
       setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
-    } 
+    }
     
     // Default
     else {
@@ -142,6 +156,12 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Subjects":
         router.push("/admin/subjects");
+        break;
+      case "Assignments":
+        router.push("/admin/assignments");
+        break;
+      case "Planner":
+        router.push("/admin/planner");
         break;
     }
     setIsSidebarOpen(false);

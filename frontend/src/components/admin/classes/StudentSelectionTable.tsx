@@ -6,6 +6,7 @@ interface Student {
   firstName: string;
   lastName: string;
   email: string;
+  isArchived?: boolean;
 }
 
 interface Props {
@@ -91,6 +92,9 @@ const StudentSelectionTable = ({ students, selectedStudents, onChange }: Props) 
               </td>
               <td className="px-6 py-2">
                 {student.firstName} {student.lastName}
+                {student.isArchived && (
+                  <span className="ml-2 text-xs text-gray-500 italic">(archived)</span>
+                )}
               </td>
               <td className="px-6 py-2">{student.email}</td>
             </tr>

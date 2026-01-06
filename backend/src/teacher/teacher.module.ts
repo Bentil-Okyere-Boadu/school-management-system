@@ -32,7 +32,10 @@ import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
+import { Parent } from 'src/parent/parent.entity';
 import { Assignment } from './entities/assignment.entity';
+import { Subject } from 'rxjs';
+import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 
 @Module({
   imports: [
@@ -50,7 +53,10 @@ import { Assignment } from './entities/assignment.entity';
       AcademicTerm,
       ClassLevelResultApproval,
       AssignmentSubmission,
+      Parent,
       Assignment,
+      Subject,
+      RefreshToken,
     ]),
     EmailModule,
     JwtModule.registerAsync({

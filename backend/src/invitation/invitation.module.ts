@@ -26,8 +26,11 @@ import { Attendance } from 'src/attendance/attendance.entity';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
+import { Subject } from 'rxjs';
+import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 
 @Module({
   imports: [
@@ -45,6 +48,8 @@ import { AssignmentSubmission } from 'src/student/entities/assignment-submission
       AcademicTerm,
       Assignment,
       AssignmentSubmission,
+      Subject,
+      RefreshToken,
     ]),
     PassportModule,
     JwtModule.registerAsync({
@@ -68,6 +73,7 @@ import { AssignmentSubmission } from 'src/student/entities/assignment-submission
     SchoolAdminAuthService,
     AttendanceService,
     AuthService,
+    AcademicCalendarService,
   ],
   controllers: [InvitationController],
   exports: [InvitationService],

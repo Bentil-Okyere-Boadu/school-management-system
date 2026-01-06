@@ -667,6 +667,8 @@ export class SubjectService {
           firstName: student.firstName,
           lastName: student.lastName,
           studentId: student.studentId,
+          isArchived: student.isArchived,
+          archivedAt: student.isArchived ? student.updatedAt : null,
           scores: {
             classScore: existingGrade?.classScore || 0, // 30%
             examScore: existingGrade?.examScore || 0, // 70%

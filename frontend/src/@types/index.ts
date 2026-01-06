@@ -54,6 +54,7 @@ export interface Student extends User {
 export interface Teacher extends User {
   teacherId: string;
   isArchived: boolean;
+  isSuspended?: boolean;
   phoneContact: string;
   BoxAddress: string;
   streetAddress: string;
@@ -474,6 +475,42 @@ export interface TeacherSubject {
   description: string;
 }
 
+export interface AdminAssignment {
+  id: string;
+  title: string;
+  instructions?: string | null;
+  dueDate: string;
+  maxScore: number;
+  state: "published" | "draft";
+  createdAt: string;
+  updatedAt: string;
+  assignmentType?: "online" | "offline";
+  termAggregatedScore?: number;
+  topic: {
+    id: string;
+    name: string;
+  } | null;
+  subject: {
+    id: string;
+    name: string;
+  } | null;
+  classLevel: {
+    id: string;
+    name: string;
+  } | null;
+  teacher: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    teacherId: string;
+  } | null;
+  attachmentPath?: string | null;
+  attachmentUrl?: string | null;
+  attachmentMediaType?: string | null;
+  submissions: number;
+}
+
 export interface Assignment {
   id: string;
   title: string;
@@ -485,6 +522,8 @@ export interface Assignment {
   status: "published" | "draft";
   submissions:  number;
   isPublished: boolean;
+  assignmentType?: "online" | "offline";
+  termAggregatedScore?: number;
   classLevelId?: string;
   class?: string;
   attachmentPath?: string | null;
@@ -497,6 +536,7 @@ export interface StudentAssignment {
   title: string;
   assignment: string;
   subject: string;
+  topic?: string;
   teacher: string;
   dueDate: string;
   submittedDate?: string;
@@ -504,6 +544,7 @@ export interface StudentAssignment {
   score?: number;
   maxScore?: number;
   status: "pending" | "submitted" | "graded";
+  assignmentType?: "online" | "offline";
   daysOverdue?: number;
   instructions?: string;
   attachmentPath?: string;
@@ -519,12 +560,16 @@ export interface AssignmentSubmission {
   lastName: string;
   email: string;
   studentId: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
   hasSubmitted: boolean;
   submissionId: string | null;
   status: string;
   score: number | null;
   feedback: string | null;
-  submittedAt: Date | null;
+  submittedAt: string | null;
+  assignmentType?: "online" | "offline";
+  termAggregatedScore?: number;
 }
 
 export interface AssignSubjectTeacherPayload {
@@ -705,4 +750,97 @@ export interface TopicPayload {
   description?: string;
   subjectCatalogId: string;
   curriculumId: string;
+}
+
+export enum VisibilityScope {
+  SCHOOL_WIDE = 'school_wide',
+  CLASS_LEVEL = 'class_level',
+  SUBJECT = 'subject',
+  TEACHERS = 'teachers',
+}
+
+export interface EventCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventAttachment {
+  id: string;
+  filePath: string;
+  fileName: string;
+  fileSize: number;
+  mediaType: string;
+  uploadedAt: string;
+  signedUrl?: string | null; // Signed URL from backend
+}
+
+export interface EventReminder {
+  id: string;
+  reminderTime: string;
+  sent: boolean;
+  notificationType: 'email' | 'sms' | 'both';
+  createdAt: string;
+}
+
+export interface PlannerEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  isAllDay: boolean;
+  sendNotifications?: boolean;
+  location?: string;
+  category?: EventCategory;
+  categoryId: string;
+  visibilityScope: VisibilityScope;
+  targetClassLevelIds?: string[];
+  targetSubjectIds?: string[];
+  targetClassLevels?: ClassLevel[];
+  targetSubjects?: Subject[];
+  attachments?: EventAttachment[];
+  reminders?: EventReminder[];
+  createdByTeacherId?: string;
+  createdByAdminId?: string;
+  createdByTeacher?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  createdByAdmin?: {
+    id: string;
+    firstName: string;
+    lastName?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePlannerEventPayload {
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  isAllDay?: boolean;
+  location?: string;
+  categoryId: string;
+  visibilityScope: VisibilityScope;
+  targetClassLevelIds?: string[];
+  targetSubjectIds?: string[];
+  reminders?: Array<{
+    reminderTime: string;
+    notificationType?: 'email' | 'sms' | 'both';
+  }>;
+  files?: File[];
+  sendNotifications?: boolean;
+}
+
+export interface CreateEventCategoryPayload {
+  name: string;
+  description?: string;
+  color: string;
 }
