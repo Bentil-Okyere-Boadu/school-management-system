@@ -368,7 +368,6 @@ export class StudentService {
       throw new BadRequestException('This assignment is not published');
     }
 
-    // Verify student is in the assignment's class level
     const me = await this.studentRepository.findOne({
       where: { id: student.id },
       relations: ['classLevels', 'school'],
@@ -376,6 +375,12 @@ export class StudentService {
 
     if (!me) {
       throw new NotFoundException('Student not found');
+    }
+
+    if (me.isArchived) {
+      throw new BadRequestException(
+        'Archived students cannot submit assignments',
+      );
     }
 
     const isInClass = me.classLevels?.some(

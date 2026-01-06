@@ -64,11 +64,12 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('students')
   @Roles(Role.Teacher)
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
   async findAllStudents(
     @CurrentUser() user: Teacher,
     @Query() query: QueryString,
   ) {
-    return this.schoolAdminService.findAllStudents(user.school.id, query);
+    return this.TeacherService.findMyStudents(user, query);
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('users/:id')

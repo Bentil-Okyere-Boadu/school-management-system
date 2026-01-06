@@ -65,31 +65,45 @@ const PendingAssignmentStudentsTable = ({
                 );
               }
 
-              return students.map((student: AssignmentSubmission) => (
-                <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    <span className="text-sm font-medium text-zinc-800">
-                      {student.firstName} {student.lastName}
-                    </span>
-                  </td>
+              return students.map((student: AssignmentSubmission) => {
+                const isArchived = student.isArchived || false;
+                return (
+                  <tr key={student.id} className={`hover:bg-gray-50 ${isArchived ? "bg-gray-50" : ""}`}>
+                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-zinc-800">
+                          {student.firstName} {student.lastName}
+                        </span>
+                        {isArchived && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700">
+                            Archived
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
-                  <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 text-center max-md:px-5">
-                    {student.studentId}
-                  </td>
+                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 text-center max-md:px-5">
+                      {student.studentId}
+                    </td>
 
-                  <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                    {student.email}
-                  </td>
+                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                      {student.email}
+                    </td>
 
-                  <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    <div className="flex justify-end">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                        Not Submitted
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ));
+                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <div className="flex justify-end">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          isArchived 
+                            ? "bg-gray-200 text-gray-600 cursor-not-allowed" 
+                            : "bg-orange-100 text-orange-700"
+                        }`} title={isArchived ? "Archived students cannot submit assignments" : ""}>
+                          {isArchived ? "Cannot Submit" : "Not Submitted"}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              });
             })()}
           </tbody>
         </table>

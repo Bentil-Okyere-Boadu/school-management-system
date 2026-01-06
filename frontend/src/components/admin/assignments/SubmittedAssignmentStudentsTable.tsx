@@ -126,54 +126,58 @@ const SubmittedAssignmentStudentsTable = ({
                   );
                 }
 
-                return students.map((student: AssignmentSubmission) => (
-                  <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <span className="text-sm font-medium text-zinc-800">
-                        {student.firstName} {student.lastName}
-                      </span>
-                    </td>
+                return students.map((student: AssignmentSubmission) => {
+                  const isArchived = student.isArchived || false;
+                  return (
+                    <tr key={student.id} className={`hover:bg-gray-50 ${isArchived ? "bg-gray-50" : ""}`}>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-zinc-800">
+                            {student.firstName} {student.lastName}
+                          </span>
+                          {isArchived && (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700">
+                              Archived
+                            </span>
+                          )}
+                        </div>
+                      </td>
 
-                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 text-center max-md:px-5">
-                      {student.studentId}
-                    </td>
+                      <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 text-center max-md:px-5">
+                        {student.studentId}
+                      </td>
 
-                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                      {student.email}
-                    </td>
+                      <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                        {student.email}
+                      </td>
 
-                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                      {formatDate(student.submittedAt)}
-                    </td>
+                      <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                        {formatDate(student.submittedAt)}
+                      </td>
 
-                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <div className="flex justify-end">
-                        {getStatusBadge(student.status)}
-                      </div>
-                    </td>
+                      <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div className="flex justify-end">
+                          {getStatusBadge(student.status)}
+                        </div>
+                      </td>
 
-                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                      {student.score !== null && student.score !== undefined 
-                        ? `${student.score}/100` 
-                        : "-"}
-                    </td>
+                      <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                        {student.score !== null && student.score !== undefined 
+                          ? `${student.score}/100` 
+                          : "-"}
+                      </td>
 
-                    <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      {/* <button 
-                        onClick={() => handleViewSubmissionClick(student)}
-                        className="text-purple-600 hover:text-purple-700 font-medium text-sm"
-                      >
-                        {student.status === "graded" ? "View" : "View & Grade"}
-                      </button> */}
-
+                      <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <CustomButton 
                           text="View Submission"
                           onClick={() => handleViewSubmissionClick(student)}
                           className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1"
+                          disabled={isArchived}
                         />
-                    </td>
-                  </tr>
-                ));
+                      </td>
+                    </tr>
+                  );
+                });
               })()}
             </tbody>
           </table>

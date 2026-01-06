@@ -34,6 +34,7 @@ import { ClassLevelResultApproval } from 'src/class-level/class-level-result-app
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { Parent } from 'src/parent/parent.entity';
 import { Assignment } from './entities/assignment.entity';
+import { Subject } from 'rxjs';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 
 @Module({
@@ -54,6 +55,7 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
       AssignmentSubmission,
       Parent,
       Assignment,
+      Subject,
       RefreshToken,
     ]),
     EmailModule,
