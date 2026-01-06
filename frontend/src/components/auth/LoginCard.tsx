@@ -4,7 +4,7 @@ import InputField from "../InputField";
 import ActionButton from "../ActionButton";
 import Link from "next/link";
 import { useLogin } from "@/hooks/auth";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { handleLoginRedirectAndToken } from "@/middleware";
@@ -15,7 +15,6 @@ const LoginCard: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState("")
-  const router = useRouter();
   const pathname = usePathname();
 
   // To set the user data
@@ -48,7 +47,7 @@ const LoginCard: React.FC = () => {
       onSuccess: (data) => {
         toast.success("Login successful");
         setLoggedInUser(data.data);
-        handleLoginRedirectAndToken(data, router);
+        handleLoginRedirectAndToken(data);
       },
     });
   };

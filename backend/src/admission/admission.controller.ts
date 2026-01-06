@@ -34,10 +34,4 @@ export class AdmissionController {
   getClassLevelsBySchool(@Param('schoolId') schoolId: string) {
     return this.admissionService.findAllNamesBySchool(schoolId);
   }
-  @UseGuards(SchoolAdminJwtAuthGuard)
-  @Roles(Role.SchoolAdmin)
-  @Get('url/me')
-  getAdmissionUrlForAdmin(@CurrentUser() admin: SchoolAdmin) {
-    return this.admissionService.getAdmissionUrlForAdmin(admin);
-  }
 }

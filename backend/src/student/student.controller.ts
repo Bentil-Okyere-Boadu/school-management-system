@@ -14,6 +14,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 
 import { StudentAuthService } from './student.auth.service';
 import { Student } from './student.entity';
@@ -44,12 +45,14 @@ export class StudentController {
     private readonly academicCalendarService: AcademicCalendarService,
   ) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(StudentLocalAuthGuard)
   @Post('login')
   login(@Request() req: { user: Student }) {
     return this.studentAuthService.login(req.user);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
   @Post('forgot-password')
   forgotPassword(@Body() forgotPasswordDto: ForgotStudentPasswordDto) {
     return this.studentService.forgotPin(forgotPasswordDto.email);

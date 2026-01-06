@@ -2,15 +2,15 @@
 import React, { useState, useMemo, useCallback } from "react";
 import type { EventInput, EventClickArg, EventDropArg } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
-import { useGetPlannerEvents, useGetEventCategories, useGetClassLevels, useGetAllSubjects, useDeletePlannerEvent, useUpdatePlannerEvent } from "@/hooks/school-admin";
-import { PlannerEvent, VisibilityScope } from "@/@types";
+import { useGetTeacherPlannerEvents, useGetTeacherEventCategories, useGetTeacherClasses, useGetTeacherSubjects, useDeleteTeacherPlannerEvent, useUpdateTeacherPlannerEvent, useTeacherGetMe } from "@/hooks/teacher";
+import { PlannerEvent, Subject } from "@/@types";
 import { PlannerCalendar } from "@/components/admin/planner/PlannerCalendar";
-import { EventFormModal } from "@/components/admin/planner/EventFormModal";
-import { CategoryManagementModal } from "@/components/admin/planner/CategoryManagementModal";
+import { TeacherEventFormModal } from "@/components/teacher/planner/TeacherEventFormModal";
+import { TeacherEventDetailModal } from "@/components/teacher/planner/TeacherEventDetailModal";
 import { Dialog } from "@/components/common/Dialog";
 import FilterButton from "@/components/common/FilterButton";
 import { Button, Select, Group } from "@mantine/core";
-import { IconPlus, IconCategory, IconX } from "@tabler/icons-react";
+import { IconPlus, IconX } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 import { lightenColor } from "@/utils/colorUtils";
 import { calculateEventEndTime, calculateAllDayEventDuration, setAllDayStartTime, setAllDayEndTime } from "@/utils/dateUtils";
@@ -19,18 +19,17 @@ interface EventFilters {
   categoryId?: string;
   classLevelId?: string;
   subjectId?: string;
-  visibilityScope?: VisibilityScope;
 }
 
 const DEFAULT_CATEGORY_COLOR = "#10b981";
 const DEFAULT_TEXT_COLOR = "#1F2937";
 const LIGHTEN_PERCENT = 85;
 
-const PlannerPage: React.FC = () => {
+const TeacherPlannerPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<PlannerEvent | null>(null);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isEventDetailModalOpen, setIsEventDetailModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<PlannerEvent | null>(null);
   const [viewStart, setViewStart] = useState<string>("");
@@ -38,20 +37,32 @@ const PlannerPage: React.FC = () => {
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [filters, setFilters] = useState<EventFilters>({});
 
-  const { events, refetch: refetchEvents } = useGetPlannerEvents(
+  const { events, refetch: refetchEvents } = useGetTeacherPlannerEvents(
     viewStart,
     viewEnd,
     filters.categoryId,
     filters.classLevelId,
     filters.subjectId,
-    filters.visibilityScope,
   );
 
-  const { categories } = useGetEventCategories();
-  const { classLevels } = useGetClassLevels();
-  const { subjects } = useGetAllSubjects();
-  const deleteEventMutation = useDeletePlannerEvent();
-  const updateEventMutation = useUpdatePlannerEvent();
+  const { categories } = useGetTeacherEventCategories();
+  const { classLevels } = useGetTeacherClasses();
+  const { teacherSubjects } = useGetTeacherSubjects();
+  const { me: currentTeacher } = useTeacherGetMe();
+  const deleteEventMutation = useDeleteTeacherPlannerEvent();
+  const updateEventMutation = useUpdateTeacherPlannerEvent();
+
+  // Check if an event is editable (not admin-created)
+  const isEventEditable = useCallback((event: PlannerEvent): boolean => {
+    if (event?.createdByAdminId) {
+      return false;
+    }
+    if (event.createdByTeacherId && currentTeacher?.id) {
+      return event.createdByTeacherId === currentTeacher.id;
+    }
+    
+    return true;
+  }, [currentTeacher]);
 
   const calendarEvents: EventInput[] = useMemo(() => {
     if (!events) return [];
@@ -60,6 +71,7 @@ const PlannerPage: React.FC = () => {
       const categoryColor = event.category?.color || DEFAULT_CATEGORY_COLOR;
       const lightBackground = lightenColor(categoryColor, LIGHTEN_PERCENT);
       const endTime = calculateEventEndTime(event.startDate, event.endDate, event.isAllDay);
+      const editable = isEventEditable(event);
 
       return {
         id: event.id,
@@ -72,6 +84,7 @@ const PlannerPage: React.FC = () => {
         borderWidth: 0,
         textColor: DEFAULT_TEXT_COLOR,
         className: 'planner-event',
+        editable: editable,
         extendedProps: {
           event,
           categoryColor,
@@ -82,7 +95,7 @@ const PlannerPage: React.FC = () => {
         },
       };
     });
-  }, [events]);
+  }, [events, isEventEditable]);
 
   const handleDateSelect = useCallback((selectInfo: { start: Date; end: Date; allDay: boolean }) => {
     setSelectedDate(selectInfo.start);
@@ -93,13 +106,25 @@ const PlannerPage: React.FC = () => {
   const handleEventClick = useCallback((clickInfo: EventClickArg) => {
     const event = clickInfo.event.extendedProps.event as PlannerEvent;
     setSelectedEvent(event);
-    setIsEventModalOpen(true);
+    
+    // If event is admin-created, show read-only detail modal
+    // Otherwise, show edit modal
+    if (event?.createdByAdminId) {
+      setIsEventDetailModalOpen(true);
+    } else {
+      setIsEventModalOpen(true);
+    }
   }, []);
 
   const handleDeleteClick = useCallback((event: PlannerEvent) => {
+    // Prevent deleting admin-created events
+    if (!isEventEditable(event)) {
+      toast.error("Cannot delete admin-created events");
+      return;
+    }
     setEventToDelete(event);
     setIsDeleteDialogOpen(true);
-  }, []);
+  }, [isEventEditable]);
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!eventToDelete) return;
@@ -121,6 +146,13 @@ const PlannerPage: React.FC = () => {
   const handleEventDrop = useCallback(async (dropInfo: EventDropArg) => {
     const event = dropInfo.event.extendedProps.event as PlannerEvent;
     if (!event) return;
+
+    // Prevent dropping admin-created events
+    if (!isEventEditable(event)) {
+      dropInfo.revert();
+      toast.error("Cannot modify admin-created events");
+      return;
+    }
 
     const newStartDate = dropInfo.event.start;
     if (!newStartDate) {
@@ -176,11 +208,18 @@ const PlannerPage: React.FC = () => {
         : "Failed to update event";
       toast.error(errorMessage || "Failed to update event");
     }
-  }, [updateEventMutation, refetchEvents]);
+  }, [updateEventMutation, refetchEvents, isEventEditable]);
 
   const handleEventResize = useCallback(async (resizeInfo: EventResizeDoneArg) => {
     const event = resizeInfo.event.extendedProps.event as PlannerEvent;
     if (!event) return;
+
+    // Prevent resizing admin-created events
+    if (!isEventEditable(event)) {
+      resizeInfo.revert();
+      toast.error("Cannot modify admin-created events");
+      return;
+    }
 
     const newStartDate = resizeInfo.event.start;
     const newEndDate = resizeInfo.event.end || resizeInfo.event.start;
@@ -208,7 +247,7 @@ const PlannerPage: React.FC = () => {
         : "Failed to update event";
       toast.error(errorMessage || "Failed to update event");
     }
-  }, [updateEventMutation, refetchEvents]);
+  }, [updateEventMutation, refetchEvents, isEventEditable]);
 
   const handleDatesSet = useCallback((dateInfo: { start: Date; end: Date }) => {
     setViewStart(dateInfo.start.toISOString());
@@ -219,6 +258,11 @@ const PlannerPage: React.FC = () => {
     setIsEventModalOpen(false);
     setSelectedEvent(null);
     setSelectedDate(null);
+  }, []);
+
+  const handleEventDetailModalClose = useCallback(() => {
+    setIsEventDetailModalOpen(false);
+    setSelectedEvent(null);
   }, []);
 
   const handleClearFilters = useCallback(() => {
@@ -235,6 +279,15 @@ const PlannerPage: React.FC = () => {
     return Object.values(filters).some(value => value !== undefined && value !== "");
   }, [filters]);
 
+  // Get unique subject catalogs from teacher subjects
+  // Note: teacherSubjects is actually SubjectCatalog[] from backend
+  const subjectOptions = useMemo(() => {
+    return (teacherSubjects)?.map((subj: Subject) => ({
+      value: subj.id || "",
+      label: subj.name || "",
+    })) || [];
+  }, [teacherSubjects]);
+
   const filterOptions = useMemo(() => ({
     categories: categories?.map((cat) => ({
       value: cat.id,
@@ -244,19 +297,10 @@ const PlannerPage: React.FC = () => {
       value: cls.id,
       label: cls.name,
     })) || [],
-    subjects: subjects?.map((subj) => ({
-      value: subj.id || "",
-      label: subj.name,
-    })) || [],
-    visibilityScopes: [
-      { value: VisibilityScope.SCHOOL_WIDE, label: "School Wide" },
-      { value: VisibilityScope.CLASS_LEVEL, label: "Class Level" },
-      { value: VisibilityScope.SUBJECT, label: "Subject" },
-      { value: VisibilityScope.TEACHERS, label: "Teachers Only" },
-    ],
-  }), [categories, classLevels, subjects]);
+    subjects: subjectOptions,
+  }), [categories, classLevels, subjectOptions]);
 
-  const handleFilterChange = useCallback((key: keyof EventFilters, value: string | VisibilityScope | null) => {
+  const handleFilterChange = useCallback((key: keyof EventFilters, value: string | null) => {
     setFilters(prev => ({
       ...prev,
       [key]: value || undefined,
@@ -267,21 +311,12 @@ const PlannerPage: React.FC = () => {
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-neutral-800">Planner</h1>
-        <div className="flex gap-2">
-          <Button
-            leftSection={<IconCategory size={16} />}
-            variant="outline"
-            onClick={() => setIsCategoryModalOpen(true)}
-          >
-            Manage Categories
-          </Button>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={handleNewEventClick}
-          >
-            New Event
-          </Button>
-        </div>
+        <Button
+          leftSection={<IconPlus size={16} />}
+          onClick={handleNewEventClick}
+        >
+          New Event
+        </Button>
       </div>
 
       <div className="flex flex-col items-start">
@@ -329,15 +364,6 @@ const PlannerPage: React.FC = () => {
                 clearable
                 style={{ flex: 1, minWidth: 180 }}
               />
-              <Select
-                label="Visibility Scope"
-                placeholder="All scopes"
-                data={filterOptions.visibilityScopes}
-                value={filters.visibilityScope || null}
-                onChange={(value) => handleFilterChange('visibilityScope', value as VisibilityScope)}
-                clearable
-                style={{ flex: 1, minWidth: 180 }}
-              />
             </Group>
           </div>
         )}
@@ -352,17 +378,19 @@ const PlannerPage: React.FC = () => {
           onEventDrop={handleEventDrop}
           onEventResize={handleEventResize}
           onDatesSet={handleDatesSet}
+          isEventEditable={isEventEditable}
         />
       </div>
 
       {isEventModalOpen && (
-        <EventFormModal
+        <TeacherEventFormModal
           isOpen={isEventModalOpen}
           onClose={handleEventModalClose}
           event={selectedEvent}
           initialDate={selectedDate}
           categories={categories}
           classLevels={classLevels}
+          teacherSubjects={teacherSubjects}
           onSuccess={() => {
             refetchEvents();
             handleEventModalClose();
@@ -370,14 +398,11 @@ const PlannerPage: React.FC = () => {
         />
       )}
 
-      {isCategoryModalOpen && (
-        <CategoryManagementModal
-          isOpen={isCategoryModalOpen}
-          onClose={() => setIsCategoryModalOpen(false)}
-          categories={categories}
-          onSuccess={() => {
-            refetchEvents();
-          }}
+      {isEventDetailModalOpen && (
+        <TeacherEventDetailModal
+          isOpen={isEventDetailModalOpen}
+          onClose={handleEventDetailModalClose}
+          event={selectedEvent}
         />
       )}
 
@@ -403,5 +428,5 @@ const PlannerPage: React.FC = () => {
   );
 };
 
-export default PlannerPage;
+export default TeacherPlannerPage;
 

@@ -33,6 +33,7 @@ import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calen
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { Subject } from 'rxjs';
+import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { Subject } from 'rxjs';
       Assignment,
       AssignmentSubmission,
       Subject,
+      RefreshToken,
     ]),
     PassportModule,
     JwtModule.registerAsync({

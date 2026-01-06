@@ -3,7 +3,6 @@ import ActionButton from '../ActionButton';
 import InputField from '../InputField';
 import { useCompleteRegistration } from '@/hooks/auth';
 import { toast } from 'react-toastify';
-import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -66,7 +65,6 @@ const CompleteRegistration: React.FC<ResetPwdProps> = ({token}) => {
       };
 
     const {mutate, isPending} = useCompleteRegistration({ token: token, password: password });
-    const router = useRouter();
 
   const handlePwdReset = () => {
     // Handle sign in logic here
@@ -75,7 +73,7 @@ const CompleteRegistration: React.FC<ResetPwdProps> = ({token}) => {
         onSuccess: (data) => {
           toast.success(data.data.message);
           setLoggedInUser(data.data);
-          handleLoginRedirectAndToken(data, router);
+          handleLoginRedirectAndToken(data);
         },
         onError: (error: unknown) => {
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));

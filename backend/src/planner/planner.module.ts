@@ -13,6 +13,7 @@ import { Student } from '../student/student.entity';
 import { Parent } from '../parent/parent.entity';
 import { Subject } from '../subject/subject.entity';
 import { SubjectCatalog } from '../subject/subject-catalog.entity';
+import { Teacher } from '../teacher/teacher.entity';
 import { PlannerScheduler } from './planner-scheduler';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 
@@ -28,6 +29,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
       SubjectCatalog,
       Student,
       Parent,
+      Teacher,
     ]),
     ObjectStorageServiceModule,
     CommonModule,
