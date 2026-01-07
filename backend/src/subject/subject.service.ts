@@ -1084,16 +1084,27 @@ export class SubjectService {
       throw new NotFoundException('Grading system not found for this school');
     }
 
+    // Get school grading percentages
+    const school = await this.schoolRepository.findOne({
+      where: { id: subject.school.id },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    const classScoreMax = school.classScorePercentage || 30;
+    const examScoreMax = school.examScorePercentage || 70;
+
     // Validate scores
     for (const grade of grades) {
-      if (grade.classScore < 0 || grade.classScore > 30) {
+      if (grade.classScore < 0 || grade.classScore > classScoreMax) {
         throw new BadRequestException(
-          `Class score must be between 0 and 30 for student ${grade.studentId}`,
+          `Class score must be between 0 and ${classScoreMax} for student ${grade.studentId}`,
         );
       }
-      if (grade.examScore < 0 || grade.examScore > 70) {
+      if (grade.examScore < 0 || grade.examScore > examScoreMax) {
         throw new BadRequestException(
-          `Exam score must be between 0 and 70 for student ${grade.studentId}`,
+          `Exam score must be between 0 and ${examScoreMax} for student ${grade.studentId}`,
         );
       }
     }

@@ -1197,11 +1197,15 @@ export const useGetStudentResults = (
   return { resultsData, isLoading, refetch };
 };
 
-export const useGetNotifications = (schoolId: string | null | undefined) => {
+export const useGetNotifications = (
+  schoolId: string | null | undefined,
+  search?: string,
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["notifications", schoolId],
+    queryKey: ["notifications", schoolId, search],
     queryFn: () => {
-      return customAPI.get(`/notifications/school/${schoolId}`);
+      const queryParams = search ? `?search=${encodeURIComponent(search)}` : '';
+      return customAPI.get(`/notifications/school/${schoolId}${queryParams}`);
     },
     enabled: !!schoolId,
     refetchOnWindowFocus: true,
@@ -1287,6 +1291,23 @@ export const useEditReminder = (id: string) => {
   return useMutation({
     mutationFn: (reminder: Partial<Reminder>) => {
       return customAPI.patch(`/message-reminders/${id}`, reminder);
+    },
+  });
+};
+
+export const useUpdateGradingPercentages = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      schoolId: string;
+      classScorePercentage: number;
+      examScorePercentage: number;
+    }) => {
+      return customAPI.put('/schools/update-grading-percentages', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mySchool'] });
     },
   });
 };

@@ -139,7 +139,7 @@ export class TeacherService {
 
     const teacherInfo = await this.teacherRepository.findOne({
       where: { id: user.id },
-      relations: ['role', 'profile'],
+      relations: ['role', 'profile', 'school'],
     });
     if (teacherInfo?.profile?.id) {
       const profileWithUrl = await this.profileService.getProfileWithImageUrl(
@@ -1291,20 +1291,32 @@ export class TeacherService {
   }
 
   async findMyStudents(teacher: Teacher, queryString: QueryString) {
-    const teacherWithRelations = await this.teacherRepository.findOne({
+    // Get teacher with school (school is eager, so it should be loaded)
+    const teacherWithSchool = await this.teacherRepository.findOne({
       where: { id: teacher.id },
-      relations: ['classLevels', 'school'],
     });
 
-    if (!teacherWithRelations) {
+    if (!teacherWithSchool || !teacherWithSchool.school) {
       throw new NotFoundException('Teacher not found');
     }
 
-    const assignedClassIds = teacherWithRelations.classLevels?.map((cl) => cl.id) || [];
-    const classesAsClassTeacher = await this.classLevelRepository.find({
-      where: { classTeacher: { id: teacher.id } },
-      select: ['id'],
-    });
+    // Get class levels assigned to teacher via ManyToMany
+    const teacherClassLevels = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .innerJoin('classLevel.teachers', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId: teacher.id })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
+
+    const assignedClassIds = teacherClassLevels.map((cl) => cl.id);
+
+    // Get classes where teacher is class teacher
+    const classesAsClassTeacher = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoin('classLevel.classTeacher', 'classTeacher')
+      .where('classTeacher.id = :teacherId', { teacherId: teacher.id })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
     const classTeacherIds = classesAsClassTeacher.map((cl) => cl.id);
     const uniqueClassLevelIds = [...new Set([...assignedClassIds, ...classTeacherIds])];
 
@@ -1324,7 +1336,7 @@ export class TeacherService {
       .leftJoinAndSelect('student.classLevels', 'classLevel')
       .leftJoinAndSelect('student.profile', 'profile')
       .where('student.school.id = :schoolId', {
-        schoolId: teacherWithRelations.school.id,
+        schoolId: teacherWithSchool.school.id,
       })
       .andWhere('student.isArchived = :isArchived', { isArchived: false })
       .andWhere('classLevel.id IN (:...classLevelIds)', {

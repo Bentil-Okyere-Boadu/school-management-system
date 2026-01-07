@@ -3,6 +3,7 @@ import { Repository } from 'typeorm/repository/Repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { Student } from './student.entity';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class StudentAuthService {
   constructor(
     @InjectRepository(Student)
     private readonly studentRepository: Repository<Student>,
+    @InjectRepository(SchoolAdmin)
+    private readonly schoolAdminRepository: Repository<SchoolAdmin>,
     private readonly authService: AuthService,
   ) {}
 
@@ -31,6 +34,17 @@ export class StudentAuthService {
     const isPasswordValid = await bcrypt.compare(pin, student.password);
     if (!isPasswordValid) {
       return null;
+    }
+
+    // Check if any school admin for this school is suspended
+    // If yes, prevent login
+    if (student.school?.id) {
+      const hasSuspendedAdmin = await this.schoolAdminRepository.findOne({
+        where: { school: { id: student.school.id }, isSuspended: true },
+      });
+      if (hasSuspendedAdmin) {
+        return null; // Prevent login
+      }
     }
 
     if (student.status === 'pending') {

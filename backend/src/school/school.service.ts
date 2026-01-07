@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
@@ -328,6 +329,30 @@ export class SchoolService {
     }
 
     school.calendlyUrl = calendlyUrl;
+    return this.schoolRepository.save(school);
+  }
+
+  async updateGradingPercentages(
+    schoolId: string,
+    classScorePercentage: number,
+    examScorePercentage: number,
+  ) {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+
+    // Validate that percentages sum to 100
+    if (Math.abs(classScorePercentage + examScorePercentage - 100) > 0.01) {
+      throw new BadRequestException(
+        'Class score and exam score percentages must sum to 100',
+      );
+    }
+
+    school.classScorePercentage = classScorePercentage;
+    school.examScorePercentage = examScorePercentage;
     return this.schoolRepository.save(school);
   }
 

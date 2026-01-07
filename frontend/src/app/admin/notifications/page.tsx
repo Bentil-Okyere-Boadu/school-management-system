@@ -34,7 +34,7 @@ const NotificationsPage: React.FC = () => {
 
   const {me} = useGetMe();
   const schoolId = me?.school.id;
-  const { notifications } = useGetNotifications(schoolId);
+  const { notifications } = useGetNotifications(schoolId, searchQuery);
   const { mutate: markAsRead } = useMarkNotificationAsRead();
 
   const queryClient = useQueryClient();
@@ -52,7 +52,6 @@ const NotificationsPage: React.FC = () => {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    console.log(searchQuery);
   };
 
   const handleItemClick = (item: TabListItem) => {

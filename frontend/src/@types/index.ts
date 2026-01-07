@@ -129,6 +129,8 @@ export interface GradingSystem {
 }
 
 export interface School {
+  classScorePercentage?: number;
+  examScorePercentage?: number;
   id: string;
   name: string;
   address: string;
