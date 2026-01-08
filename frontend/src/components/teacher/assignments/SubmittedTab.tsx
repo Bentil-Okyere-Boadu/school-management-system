@@ -155,67 +155,79 @@ export const SubmittedTab: React.FC<SubmittedTabProps> = ({ assignmentId, maxSco
                   );
                 }
 
-                return submittedStudents.map((student: AssignmentSubmission) => (
-                  <tr key={student.id}>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <div>{`${student.firstName} ${student.lastName}`}</div>
-                    </td>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <div>{student.studentId || "-"}</div>
-                    </td>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          (assignmentType || "online") === "online"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {(assignmentType || "online") === "online" ? "Online" : "Offline"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <div>{student.submittedAt ? formatDate(student.submittedAt.toString()) : "-"}</div>
-                    </td>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          student.status === "graded" || (student.score !== null && student.score !== undefined)
-                            ? "bg-green-200 text-green-700"
-                            : "bg-purple-200 text-purple-700"
-                        }`}
-                      >
-                        {student.status === "graded" || (student.score !== null && student.score !== undefined) ? "Graded" : "Submitted"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <div>
-                        {student.score !== undefined && student.score !== null
-                          ? `${student.score}/${maxScore}`
-                          : "-"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <div>{student.termAggregatedScore}</div>
-                    </td>
-                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                      <div className="flex gap-2">
-                        {(assignmentType === "online" || !assignmentType) && (
+                return submittedStudents.map((student: AssignmentSubmission) => {
+                  const isArchived = student.isArchived || false;
+                  return (
+                    <tr key={student.id} className={isArchived ? "bg-gray-50" : ""}>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div className="flex items-center gap-2">
+                          <span>{`${student.firstName} ${student.lastName}`}</span>
+                          {isArchived && (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700">
+                              Archived
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div>{student.studentId || "-"}</div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            (assignmentType || "online") === "online"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {(assignmentType || "online") === "online" ? "Online" : "Offline"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div>{student.submittedAt ? formatDate(student.submittedAt.toString()) : "-"}</div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            student.status === "graded" || (student.score !== null && student.score !== undefined)
+                              ? "bg-green-200 text-green-700"
+                              : "bg-purple-200 text-purple-700"
+                          }`}
+                        >
+                          {student.status === "graded" || (student.score !== null && student.score !== undefined) ? "Graded" : "Submitted"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div>
+                          {student.score !== undefined && student.score !== null
+                            ? `${student.score}/${maxScore}`
+                            : "-"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div>{student.termAggregatedScore}</div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                        <div className="flex gap-2">
+                          {(assignmentType === "online" || !assignmentType) && (
+                            <CustomButton 
+                              text="View Submission"
+                              onClick={() => handleViewSubmissionClick(student)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1"
+                              disabled={isArchived}
+                            />
+                          )}
                           <CustomButton 
-                            text="View Submission"
-                            onClick={() => handleViewSubmissionClick(student)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1"
+                            text="Grade"
+                            onClick={() => handleGradeClick(student)}
+                            className="text-xs px-3 py-1"
+                            disabled={isArchived}
                           />
-                        )}
-                        <CustomButton 
-                          text="Grade"
-                          onClick={() => handleGradeClick(student)}
-                          className="text-xs px-3 py-1" 
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ));
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                });
               })()}
             </tbody>
           </table>

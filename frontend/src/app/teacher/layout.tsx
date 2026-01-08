@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon, ClipboardIcon } from "@/utils/icons";
+import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon, ClipboardIcon, PlannerIcon } from "@/utils/icons";
 
 import { useTeacherGetMe } from "@/hooks/teacher";
 
@@ -36,6 +36,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Subjects",
     },
     {
+      icon: PlannerIcon,      
+      label: "Planner",
+    },
+    {
       icon: ProfileIcon,      
       label: "Profile",
     },
@@ -59,6 +63,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/teacher/subjects" || pathname.startsWith("/teacher/assignments/")) {
       setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
+    } else if (pathname === "/teacher/planner") {
+      setActiveMenuItem("Planner");
+      setIsOverviewPage(true);
     }
 
     // Detail Pages
@@ -73,6 +80,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(false);
     } else if (pathname.startsWith("/teacher/subjects")) {
       setActiveMenuItem("Subjects");
+      setIsOverviewPage(false);
+    } else if (pathname.startsWith("/teacher/planner")) {
+      setActiveMenuItem("Planner");
       setIsOverviewPage(false);
     }
     
@@ -98,6 +108,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Subjects":
         router.push("/teacher/subjects");
+        break;
+      case "Planner":
+        router.push("/teacher/planner");
         break;
     }
     setIsSidebarOpen(false);

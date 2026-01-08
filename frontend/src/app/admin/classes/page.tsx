@@ -7,7 +7,7 @@ import { SearchBar } from '@/components/common/SearchBar';
 import InputField from '@/components/InputField';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
 import { ErrorResponse, ClassLevel, User } from "@/@types";
-import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetClassLevels, useGetSchoolUsers } from "@/hooks/school-admin";
+import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetClassLevels, useGetSchoolUsers, useGetStudentsForClassAssignment } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { Select } from '@mantine/core';
 import { useDebouncer } from '@/hooks/generalHooks';
@@ -52,13 +52,10 @@ const ClassesPage = () => {
   }));
   
 
-  const { schoolUsers: schoolStudents } = useGetSchoolUsers(
-    currentPage,
+  const { students: schoolStudents } = useGetStudentsForClassAssignment(
     "",
-    "",
-    "",
-    "Student",
-    500
+    true, // Only get students without classes (or in the current class if editing)
+    editMode && classLevelId ? classLevelId : undefined // When editing, include students already in this class
   );
 
   const handleSearch = (query: string) => {
@@ -313,7 +310,7 @@ const ClassesPage = () => {
           <div>
             <p className="text-xs text-[#52525c] mb-1">Students</p>
             <StudentSelectionTable
-              students={schoolStudents}
+              students={schoolStudents || []}
               selectedStudents={selectedStudents}
               onChange={setSelectedStudents}
             /> 

@@ -55,6 +55,16 @@ export class SuperAdminController {
   }
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('/admin/:id/suspend')
+  @Roles(Role.SuperAdmin)
+  async suspendSchoolAdmin(
+    @Param('id') id: string,
+    @Body() body: { suspend: boolean },
+  ) {
+    return this.superAdminService.suspendSchoolAdmin(id, body.suspend);
+  }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Put('profile/me')
   @Roles(Role.SuperAdmin)
   async updateProfile(

@@ -162,6 +162,8 @@ export class AttendanceService {
         firstName: student.firstName,
         lastName: student.lastName,
         fullName: `${student.firstName} ${student.lastName}`,
+        isArchived: student.isArchived,
+        archivedAt: student.isArchived ? student.updatedAt : null,
         attendanceByDate,
         statistics: {
           totalMarkedDays,

@@ -19,7 +19,7 @@ export class APIFeatures<T extends ObjectLiteral> {
 
   filter(): this {
     const queryObj = { ...this.queryString };
-    const excludedFields = ['page', 'sort', 'limit', 'fields', 'search'];
+    const excludedFields = ['page', 'sort', 'limit', 'fields', 'search', 'withoutClass', 'excludeClassId'];
     excludedFields.forEach((el) => delete queryObj[el]);
 
     Object.entries(queryObj).forEach(([key, value]) => {

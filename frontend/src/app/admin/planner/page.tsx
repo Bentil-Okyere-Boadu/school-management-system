@@ -252,6 +252,7 @@ const PlannerPage: React.FC = () => {
       { value: VisibilityScope.SCHOOL_WIDE, label: "School Wide" },
       { value: VisibilityScope.CLASS_LEVEL, label: "Class Level" },
       { value: VisibilityScope.SUBJECT, label: "Subject" },
+      { value: VisibilityScope.TEACHERS, label: "Teachers Only" },
     ],
   }), [categories, classLevels, subjects]);
 

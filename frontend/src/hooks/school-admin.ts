@@ -121,6 +121,43 @@ export const useGetSchoolUsers = (
   return { schoolUsers, isLoading, paginationValues, refetch };
 };
 
+export const useGetStudentsForClassAssignment = (
+  search: string = "",
+  withoutClass?: boolean,
+  excludeClassId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "studentsForClassAssignment",
+      { search, withoutClass, excludeClassId },
+    ],
+    queryFn: () => {
+      const queryBuilder = [];
+      if (search) {
+        queryBuilder.push(`search=${search}`);
+      }
+
+      if (withoutClass) {
+        queryBuilder.push(`withoutClass=true`);
+      }
+
+      if (excludeClassId) {
+        queryBuilder.push(`excludeClassId=${excludeClassId}`);
+      }
+
+      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+
+      return customAPI.get(
+        `/school-admin/students/for-class-assignment?${params}`
+      );
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const students = (data?.data as Student[]) || [];
+  return { students, isLoading, refetch };
+};
+
 export const useArchiveUser = ({
   id,
   archiveState,
@@ -128,11 +165,61 @@ export const useArchiveUser = ({
   id: string;
   archiveState: boolean;
 }) => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: () => {
       return customAPI.put(`/school-admin/users/${id}/archive`, {
         archive: archiveState,
       });
+    },
+    onSuccess: () => {
+      // Invalidate all user-related queries to refetch with updated data
+      queryClient.invalidateQueries({ queryKey: [
+          "allSchoolUsers", 
+          "allStudents", 
+          "schoolAdminInfo", 
+          "adminDashboardStats", 
+          "studentsForClassAssignment"
+        ] 
+      });
+      queryClient.invalidateQueries({ queryKey: ["schoolUser", id] });
+    },
+  });
+};
+
+export const useGetTeacherAssignments = (teacherId: string) => {
+  return useQuery({
+    queryKey: ["teacherAssignments", teacherId],
+    queryFn: () => {
+      return customAPI.get(`/school-admin/teachers/${teacherId}/assignments`);
+    },
+    enabled: !!teacherId,
+  });
+};
+
+export const useSuspendTeacher = ({
+  id,
+  suspendState,
+}: {
+  id: string;
+  suspendState: boolean;
+}) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => {
+      return customAPI.put(`/school-admin/teachers/${id}/suspend`, {
+        suspend: suspendState,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [
+        "allSchoolUsers",
+        "schoolAdminInfo",
+        "adminDashboardStats"
+      ] });
+      queryClient.invalidateQueries({ queryKey: ["schoolUser", id] });
     },
   });
 };
@@ -1110,11 +1197,15 @@ export const useGetStudentResults = (
   return { resultsData, isLoading, refetch };
 };
 
-export const useGetNotifications = (schoolId: string | null | undefined) => {
+export const useGetNotifications = (
+  schoolId: string | null | undefined,
+  search?: string,
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["notifications", schoolId],
+    queryKey: ["notifications", schoolId, search],
     queryFn: () => {
-      return customAPI.get(`/notifications/school/${schoolId}`);
+      const queryParams = search ? `?search=${encodeURIComponent(search)}` : '';
+      return customAPI.get(`/notifications/school/${schoolId}${queryParams}`);
     },
     enabled: !!schoolId,
     refetchOnWindowFocus: true,
@@ -1200,6 +1291,23 @@ export const useEditReminder = (id: string) => {
   return useMutation({
     mutationFn: (reminder: Partial<Reminder>) => {
       return customAPI.patch(`/message-reminders/${id}`, reminder);
+    },
+  });
+};
+
+export const useUpdateGradingPercentages = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      schoolId: string;
+      classScorePercentage: number;
+      examScorePercentage: number;
+    }) => {
+      return customAPI.put('/schools/update-grading-percentages', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mySchool'] });
     },
   });
 };

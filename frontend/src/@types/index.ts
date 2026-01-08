@@ -54,6 +54,7 @@ export interface Student extends User {
 export interface Teacher extends User {
   teacherId: string;
   isArchived: boolean;
+  isSuspended?: boolean;
   phoneContact: string;
   BoxAddress: string;
   streetAddress: string;
@@ -128,6 +129,8 @@ export interface GradingSystem {
 }
 
 export interface School {
+  classScorePercentage?: number;
+  examScorePercentage?: number;
   id: string;
   name: string;
   address: string;
@@ -559,6 +562,8 @@ export interface AssignmentSubmission {
   lastName: string;
   email: string;
   studentId: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
   hasSubmitted: boolean;
   submissionId: string | null;
   status: string;
@@ -753,6 +758,7 @@ export enum VisibilityScope {
   SCHOOL_WIDE = 'school_wide',
   CLASS_LEVEL = 'class_level',
   SUBJECT = 'subject',
+  TEACHERS = 'teachers',
 }
 
 export interface EventCategory {
@@ -802,6 +808,16 @@ export interface PlannerEvent {
   reminders?: EventReminder[];
   createdByTeacherId?: string;
   createdByAdminId?: string;
+  createdByTeacher?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  createdByAdmin?: {
+    id: string;
+    firstName: string;
+    lastName?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

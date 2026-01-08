@@ -21,6 +21,13 @@ export class SchoolAdminLocalStrategy extends PassportStrategy(
     );
 
     if (!schoolAdmin) {
+      // Check if the admin exists and is suspended
+      const admin = await this.schoolAdminAuthService.findByEmail(email);
+      if (admin?.isSuspended) {
+        throw new UnauthorizedException(
+          'Your account has been suspended. Please contact the super administrator for assistance.',
+        );
+      }
       throw new UnauthorizedException('Invalid credentials');
     }
 

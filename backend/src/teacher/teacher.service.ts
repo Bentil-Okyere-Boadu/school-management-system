@@ -13,7 +13,6 @@ import { EmailService } from '../common/services/email.service';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { InvitationService } from 'src/invitation/invitation.service';
-import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { Student } from 'src/student/student.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
@@ -31,6 +30,9 @@ import { GradeSubmissionDto } from './dto/grade-submission.dto';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { Parent } from 'src/parent/parent.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { QueryString } from 'src/common/api-features/api-features';
+import { APIFeatures } from 'src/common/api-features/api-features';
+import { ProfileService } from 'src/profile/profile.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 
 @Injectable()
@@ -39,6 +41,10 @@ export class TeacherService {
   constructor(
     @InjectRepository(Teacher)
     private teacherRepository: Repository<Teacher>,
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
+    @InjectRepository(ClassLevel)
+    private classLevelRepository: Repository<ClassLevel>,
     private emailService: EmailService,
     private invitationService: InvitationService,
     private readonly profileService: ProfileService,
@@ -133,7 +139,7 @@ export class TeacherService {
 
     const teacherInfo = await this.teacherRepository.findOne({
       where: { id: user.id },
-      relations: ['role', 'profile'],
+      relations: ['role', 'profile', 'school'],
     });
     if (teacherInfo?.profile?.id) {
       const profileWithUrl = await this.profileService.getProfileWithImageUrl(
@@ -986,6 +992,8 @@ export class TeacherService {
         lastName: student.lastName,
         email: student.email,
         studentId: student.studentId,
+        isArchived: student.isArchived,
+        archivedAt: student.isArchived ? student.updatedAt : null,
         hasSubmitted: !!submission,
         submissionId: submission?.id ?? null,
         status,
@@ -1279,6 +1287,89 @@ export class TeacherService {
       feedback: saved.feedback,
       status: saved.status,
       message: 'Submission graded successfully',
+    };
+  }
+
+  async findMyStudents(teacher: Teacher, queryString: QueryString) {
+    // Get teacher with school (school is eager, so it should be loaded)
+    const teacherWithSchool = await this.teacherRepository.findOne({
+      where: { id: teacher.id },
+    });
+
+    if (!teacherWithSchool || !teacherWithSchool.school) {
+      throw new NotFoundException('Teacher not found');
+    }
+
+    // Get class levels assigned to teacher via ManyToMany
+    const teacherClassLevels = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .innerJoin('classLevel.teachers', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId: teacher.id })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
+
+    const assignedClassIds = teacherClassLevels.map((cl) => cl.id);
+
+    // Get classes where teacher is class teacher
+    const classesAsClassTeacher = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .leftJoin('classLevel.classTeacher', 'classTeacher')
+      .where('classTeacher.id = :teacherId', { teacherId: teacher.id })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
+    const classTeacherIds = classesAsClassTeacher.map((cl) => cl.id);
+    const uniqueClassLevelIds = [...new Set([...assignedClassIds, ...classTeacherIds])];
+
+    if (uniqueClassLevelIds.length === 0) {
+      const page = parseInt(queryString.page ?? '1', 10);
+      const limit = parseInt(queryString.limit ?? '20', 10);
+      return {
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 },
+      };
+    }
+
+    const baseQuery = this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.role', 'role')
+      .leftJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('student.classLevels', 'classLevel')
+      .leftJoinAndSelect('student.profile', 'profile')
+      .where('student.school.id = :schoolId', {
+        schoolId: teacherWithSchool.school.id,
+      })
+      .andWhere('student.isArchived = :isArchived', { isArchived: false })
+      .andWhere('classLevel.id IN (:...classLevelIds)', {
+        classLevelIds: uniqueClassLevelIds,
+      });
+
+    const features = new APIFeatures(baseQuery.clone(), queryString)
+      .filter()
+      .sort()
+      .search(['firstName', 'lastName', 'email'])
+      .limitFields();
+
+    const total = await features.getQuery().getCount();
+    const students = await features.paginate().getQuery().getMany();
+
+    const signedStudents = await Promise.all(
+      students.map(async (student) => {
+        if (student.profile?.id) {
+          student.profile = await this.profileService.getProfileWithImageUrl(
+            student.profile.id,
+          );
+        }
+        return student;
+      }),
+    );
+
+    const page = parseInt(queryString.page ?? '1', 10);
+    const limit = parseInt(queryString.limit ?? '20', 10);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: signedStudents,
+      meta: { total, page, limit, totalPages },
     };
   }
 }

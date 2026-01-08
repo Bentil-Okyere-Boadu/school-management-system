@@ -19,16 +19,19 @@ interface PlannerCalendarProps {
   onEventDrop: (dropInfo: EventDropArg) => void;
   onEventResize?: (resizeInfo: EventResizeDoneArg) => void;
   onDatesSet: (dateInfo: DatesSetArg) => void;
+  isEventEditable?: (event: PlannerEvent) => boolean;
 }
 
 interface EventContentWrapperProps {
   eventInfo: EventContentArg;
   onDeleteClick: (event: PlannerEvent) => void;
+  isEditable?: boolean;
 }
 
 const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
   eventInfo,
   onDeleteClick,
+  isEditable = true,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const event = eventInfo.event.extendedProps.event as PlannerEvent;
@@ -36,10 +39,10 @@ const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
 
   const handleDeleteClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (event) {
+    if (event && isEditable) {
       onDeleteClick(event);
     }
-  }, [event, onDeleteClick]);
+  }, [event, onDeleteClick, isEditable]);
 
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
   const handleMouseLeave = useCallback(() => setIsHovered(false), []);
@@ -51,7 +54,7 @@ const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
 
   return (
     <div
-      className="fc-event-content-wrapper relative group flex items-start gap-1"
+      className="fc-event-content-wrapper relative group flex items-start gap-1 cursor-pointer"
       style={{ borderLeftColor: categoryColor }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -85,7 +88,7 @@ const EventContentWrapper: React.FC<EventContentWrapperProps> = ({
           </>
         )}
       </div>
-      {event && (
+      {event && isEditable && (
         <ActionIcon
           size="sm"
           variant="filled"
@@ -111,15 +114,20 @@ export const PlannerCalendar: React.FC<PlannerCalendarProps> = ({
   onEventDrop,
   onEventResize,
   onDatesSet,
+  isEventEditable,
 }) => {
   const renderEventContent = useCallback((eventInfo: EventContentArg) => {
+    const event = eventInfo.event.extendedProps.event as PlannerEvent;
+    const editable = isEventEditable ? isEventEditable(event) : true;
+    
     return (
       <EventContentWrapper
         eventInfo={eventInfo}
         onDeleteClick={onDeleteClick}
+        isEditable={editable}
       />
     );
-  }, [onDeleteClick]);
+  }, [onDeleteClick, isEventEditable]);
 
   return (
     <div className="planner-calendar-container [&_.fc]:font-sans">
@@ -145,6 +153,13 @@ export const PlannerCalendar: React.FC<PlannerCalendarProps> = ({
         height="auto"
         eventDisplay="block"
         eventContent={renderEventContent}
+        eventAllow={(_dropInfo, draggedEvent) => {
+          if (isEventEditable && draggedEvent?.extendedProps?.event) {
+            const event = draggedEvent.extendedProps.event as PlannerEvent;
+            return isEventEditable(event);
+          }
+          return true;
+        }}
         slotMinTime="07:00:00"
         slotMaxTime="18:00:00"
         slotDuration="00:30:00"

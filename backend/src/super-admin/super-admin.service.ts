@@ -280,6 +280,16 @@ export class SuperAdminService {
     admin.status = archive ? 'archived' : 'active';
     return this.adminRepository.save(admin);
   }
+
+  async suspendSchoolAdmin(id: string, suspend: boolean) {
+    const admin = await this.findOne(id);
+    if (!admin) {
+      throw new NotFoundException('School admin not found');
+    }
+    admin.isSuspended = suspend;
+    admin.status = suspend ? 'suspended' : 'active';
+    return this.adminRepository.save(admin);
+  }
   async findAllArchivedUsers(queryString: QueryString) {
     const query = this.adminRepository
       .createQueryBuilder('admin')

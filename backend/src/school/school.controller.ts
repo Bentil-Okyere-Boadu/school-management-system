@@ -20,6 +20,7 @@ import { RolesGuard } from 'src/auth/roles.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateCalendlyUrlDto } from './dto/update-calendly-url.dto';
+import { UpdateGradingPercentagesDto } from './dto/update-grading-percentages.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
@@ -161,6 +162,31 @@ export class SchoolController {
 
     return {
       message: 'Calendly URL updated successfully',
+      school: updatedSchool,
+    };
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('update-grading-percentages')
+  @Roles(Role.SchoolAdmin)
+  async updateGradingPercentages(
+    @CurrentUser() user: SchoolAdmin,
+    @Body() body: UpdateGradingPercentagesDto,
+  ) {
+    if (user.school.id !== body.schoolId) {
+      throw new BadRequestException(
+        'You can only update your own school grading percentages',
+      );
+    }
+
+    const updatedSchool = await this.schoolService.updateGradingPercentages(
+      body.schoolId,
+      body.classScorePercentage,
+      body.examScorePercentage,
+    );
+
+    return {
+      message: 'Grading percentages updated successfully',
       school: updatedSchool,
     };
   }

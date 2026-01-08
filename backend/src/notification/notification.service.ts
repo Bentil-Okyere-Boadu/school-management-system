@@ -32,11 +32,23 @@ export class NotificationService {
     return this.notificationRepository.save(notification);
   }
 
-  async findAllForSchool(schoolId: string): Promise<Notification[]> {
-    return this.notificationRepository.find({
-      where: { school: { id: schoolId } },
-      order: { createdAt: 'DESC' },
-    });
+  async findAllForSchool(
+    schoolId: string,
+    search?: string,
+  ): Promise<Notification[]> {
+    const queryBuilder = this.notificationRepository
+      .createQueryBuilder('notification')
+      .where('notification.school.id = :schoolId', { schoolId });
+
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      queryBuilder.andWhere(
+        '(notification.title ILIKE :search OR notification.message ILIKE :search)',
+        { search: searchTerm },
+      );
+    }
+
+    return queryBuilder.orderBy('notification.createdAt', 'DESC').getMany();
   }
 
   async update(id: string, dto: UpdateNotificationDto): Promise<Notification> {

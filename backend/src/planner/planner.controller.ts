@@ -164,13 +164,17 @@ export class PlannerController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.plannerService.findAllEvents(teacher.school.id, {
-      categoryId,
-      classLevelId,
-      subjectId,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    });
+    return this.plannerService.findEventsForTeacher(
+      teacher.id,
+      teacher.school.id,
+      {
+        categoryId,
+        classLevelId,
+        subjectId,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      },
+    );
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)

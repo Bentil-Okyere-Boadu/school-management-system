@@ -14,6 +14,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { TeacherAuthService } from './teacher.auth.service';
 import { TeacherService } from './teacher.service';
 import { TeacherLocalAuthGuard } from './guards/teacher-local-auth.guard';
@@ -53,6 +54,7 @@ export class TeacherController {
     private readonly academicCalendarService: AcademicCalendarService,
   ) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(TeacherLocalAuthGuard)
   @Post('login')
   @Roles(Role.Teacher)
@@ -62,11 +64,12 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('students')
   @Roles(Role.Teacher)
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
   async findAllStudents(
     @CurrentUser() user: Teacher,
     @Query() query: QueryString,
   ) {
-    return this.schoolAdminService.findAllStudents(user.school.id, query);
+    return this.TeacherService.findMyStudents(user, query);
   }
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('users/:id')

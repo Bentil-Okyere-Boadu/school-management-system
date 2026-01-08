@@ -7,7 +7,7 @@ import CustomButton from '@/components/Button';
 import { SearchBar } from '@/components/common/SearchBar';
 import { Pagination } from '@/components/common/Pagination';
 import TableInputField from '@/components/common/TableInputField';
-import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses, usePostStudentGrades,  } from '@/hooks/teacher';
+import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses, usePostStudentGrades, useTeacherGetMe } from '@/hooks/teacher';
 import { ErrorResponse, PostGradesPayload } from '@/@types';
 import { toast } from 'react-toastify';
 import { HashLoader } from 'react-spinners';
@@ -17,6 +17,8 @@ type StudentGrading = {
   firstName: string;
   lastName: string;
   studentId: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
   classScore: number | undefined;
   examScore: number | undefined;
   totalScore: number;
@@ -28,6 +30,8 @@ export type RawStudentScore = {
   lastName: string;
   studentId: string;
   otherName: string | null;
+  isArchived?: boolean;
+  archivedAt?: string | null;
   scores: {
     classScore: number;
     examScore: number;
@@ -50,9 +54,11 @@ const ClassGrading = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [termOptions, setTermOptions] = useState([{ label: "Term", value: "" }]);
+  const [showArchived, setShowArchived] = useState(false);
 
 
   const { classSubjects } = useGetSubjectClasses();
+  const { me } = useTeacherGetMe();
 
   const handleSelectChange = (
     event: React.ChangeEvent<HTMLSelectElement>,
@@ -180,11 +186,14 @@ const ClassGrading = () => {
       return;
     }
 
-    const grades = studentScores.map((student) => ({
-      studentId: student.id,
-      classScore: student.classScore || 0,
-      examScore: student.examScore || 0,
-    }));
+    // Exclude archived students from grades submission
+    const grades = studentScores
+      .filter((student) => !student.isArchived)
+      .map((student) => ({
+        studentId: student.id,
+        classScore: student.classScore || 0,
+        examScore: student.examScore || 0,
+      }));
 
     const payload: PostGradesPayload = {
       classLevelId: currentClass,
@@ -215,7 +224,14 @@ const ClassGrading = () => {
 
   useEffect(() => {
     if (studentsForGrading?.students?.length) {
-      const normalized = studentsForGrading.students.map((s: RawStudentScore) => ({
+      let filtered = studentsForGrading.students;
+      
+      // Filter out archived students by default
+      if (!showArchived) {
+        filtered = filtered.filter((s: RawStudentScore) => !s.isArchived);
+      }
+      
+      const normalized = filtered.map((s: RawStudentScore) => ({
         ...s,
         classScore: s.scores?.classScore || 0,
         examScore: s.scores?.examScore || 0,
@@ -225,7 +241,7 @@ const ClassGrading = () => {
     } else {
       setStudentScores([]);
     }
-  }, [studentsForGrading]);
+  }, [studentsForGrading, showArchived]);
 
   return (
     <div className="pb-8">
@@ -244,11 +260,20 @@ const ClassGrading = () => {
 
         <h3 className="my-4 font-bold">Academic Calendar</h3>
         <div className="flex justify-between items-end mb-6">
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-wrap items-center">
             <CustomSelectTag selectClassName="py-2.5" value={currentAcademicYear} options={academicYearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "academicYear")} />
             <CustomSelectTag selectClassName="py-2.5" value={currentTerm} options={termOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "term")} />
               {/* TODO: Out of scope */}
             {false && <SearchBar onSearch={handleSearch} placeholder='Search by name' className="w-[366px] py-[-3px] max-md:w-full mx-0.5" />}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <span className="text-sm text-gray-700">Show archived students</span>
+            </label>
           </div>
 
           <CustomButton text="Save Changes" onClick={() => handleSubmitGrades()} />
@@ -269,10 +294,10 @@ const ClassGrading = () => {
                     <div>ID</div>
                   </th>
                   <th className="px-2 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[200px]">
-                    <div>Class Score(30%)</div>
+                    <div>Class Score({me?.school?.classScorePercentage || 30}%)</div>
                   </th>
                   <th className="px-2 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[100px]">
-                    <div>Exams Score(70%)</div>
+                    <div>Exams Score({me?.school?.examScorePercentage || 70}%)</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[100px]">
                     <div>Total Score(100%)</div>
@@ -314,40 +339,48 @@ const ClassGrading = () => {
                   }
 
                   // Data state
-                  return studentScores.map((student, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                        {student.firstName}
-                      </td>
-                      <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                        {student.lastName}
-                      </td>
-                      <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                        {student.studentId}
-                      </td>
-                      <td className="text-sm px-3 py-1 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                        <TableInputField
-                          value={student?.classScore?.toString()}
-                          placeholder="Enter class score"
-                          onChange={(e) =>
-                            handleScoreChange(student.id, 'classScore', e.target.value)
-                          }
-                        />
-                      </td>
-                      <td className="text-sm py-1 px-3 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                        <TableInputField
-                          value={student?.examScore?.toString()}
-                          placeholder="Enter exam score"
-                          onChange={(e) =>
-                            handleScoreChange(student.id, 'examScore', e.target.value)
-                          }
-                        />
-                      </td>
-                      <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
-                        {student.totalScore}
-                      </td>
-                    </tr>
-                  ));
+                  return studentScores.map((student, index) => {
+                    const isArchived = student.isArchived || false;
+                    return (
+                      <tr key={index} className={isArchived ? "bg-gray-50" : ""}>
+                        <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                          {student.firstName}
+                          {isArchived && (
+                            <span className="ml-2 text-xs text-gray-500 italic">(archived)</span>
+                          )}
+                        </td>
+                        <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                          {student.lastName}
+                        </td>
+                        <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                          {student.studentId}
+                        </td>
+                        <td className="text-sm px-3 py-1 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                          <TableInputField
+                            value={student?.classScore?.toString()}
+                            placeholder="Enter class score"
+                            disabled={isArchived}
+                            onChange={(e) =>
+                              handleScoreChange(student.id, 'classScore', e.target.value)
+                            }
+                          />
+                        </td>
+                        <td className="text-sm py-1 px-3 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                          <TableInputField
+                            value={student?.examScore?.toString()}
+                            placeholder="Enter exam score"
+                            disabled={isArchived}
+                            onChange={(e) =>
+                              handleScoreChange(student.id, 'examScore', e.target.value)
+                            }
+                          />
+                        </td>
+                        <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                          {student.totalScore}
+                        </td>
+                      </tr>
+                    );
+                  });
                 })()}
               </tbody>
             </table>

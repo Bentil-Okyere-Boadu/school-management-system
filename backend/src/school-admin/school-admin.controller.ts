@@ -12,6 +12,7 @@ import {
   Patch,
   Delete,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -46,17 +47,20 @@ export class SchoolAdminController {
     private readonly attendanceService: AttendanceService,
   ) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(SchoolAdminLocalAuthGuard)
   @Post('login')
   login(@Request() req: { user: SchoolAdmin }) {
     return this.schoolAdminAuthService.login(req.user);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
   @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.schoolAdminAuthService.forgotPassword(forgotPasswordDto.email);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.schoolAdminAuthService.resetPassword(
@@ -86,6 +90,20 @@ export class SchoolAdminController {
     @Query() query: QueryString,
   ) {
     return this.schoolAdminService.findAllStudents(admin.school.id, query);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('students/for-class-assignment')
+  @Roles(Role.SchoolAdmin)
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
+  findStudentsForClassAssignment(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: QueryString,
+  ) {
+    return this.schoolAdminService.findStudentsForClassAssignment(
+      admin.school.id,
+      query,
+    );
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -170,6 +188,34 @@ export class SchoolAdminController {
     @Body() body: { archive: boolean },
   ) {
     return this.schoolAdminService.archiveUser(id, body.archive);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('teachers/:id/assignments')
+  @Roles(Role.SchoolAdmin)
+  async getTeacherAssignments(
+    @Param('id') teacherId: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.schoolAdminService.getTeacherAssignments(
+      teacherId,
+      admin.school.id,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('teachers/:id/suspend')
+  @Roles(Role.SchoolAdmin)
+  async suspendTeacher(
+    @Param('id') teacherId: string,
+    @CurrentUser() admin: SchoolAdmin,
+    @Body() body: { suspend: boolean },
+  ) {
+    return this.schoolAdminService.suspendTeacher(
+      teacherId,
+      body.suspend,
+      admin.school.id,
+    );
   }
 
   @UseGuards(

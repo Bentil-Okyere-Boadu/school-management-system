@@ -5,6 +5,7 @@ import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
 import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import InputField from "@/components/InputField";
 import { GradingSystemTable } from "./GradingSystemTable";
+import { GradingPercentagesSection } from "./GradingPercentagesSection";
 import SchoolCard from "@/components/common/SchoolCard";
 import { Dialog } from "@/components/common/Dialog";
 import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
@@ -320,6 +321,10 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
 
       <div className="mt-8">
         <GradingSystemTable />
+      </div>
+
+      <div className="mt-8">
+        <GradingPercentagesSection schoolData={schoolData} />
       </div>
 
       <div className="mt-8">

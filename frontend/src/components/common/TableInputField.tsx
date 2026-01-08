@@ -19,10 +19,12 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
       isTransulent = false,
       rightButton,
       required,
+      disabled,
       ...props
     },
     ref
   ) => {
+    const isDisabled = disabled || isTransulent;
     return (
       <div>
         <label className="mb-1.5 text-xs text-zinc-600 block">
@@ -33,10 +35,11 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
           <input
             ref={ref}
             type={type}
-            disabled={isTransulent}
+            disabled={isDisabled}
             {...props}
             className={`px-3 py-2.5 h-10 rounded border-gray-300 border-[0.1px] text-zinc-800 w-full 
               ${isPasswordField ? "text-2xl font-bold" : "text-base"}
+              ${isDisabled ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
               ${isTransulent ? "bg-[#8787871A] bg-opacity-10 !border-none outline-none" : ""}
               ${rightButton ? "pr-26" : ""}
             `}

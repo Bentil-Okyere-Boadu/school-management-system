@@ -5,9 +5,11 @@ import { SanitizeResponseInterceptor } from './common/interceptors/sanitize-resp
 import { Role } from './role/role.entity';
 import { EventCategory } from './planner/entities/event-category.entity';
 import { School } from './school/school.entity';
+import { GradingSystem } from './grading-system/grading-system.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 
 async function seedRoles(app: INestApplication) {
   const logger = new Logger('Seeder');
@@ -79,25 +81,104 @@ async function seedDefaultEventCategories(app: INestApplication) {
   }
 }
 
+async function seedDefaultGradingSystems(app: INestApplication) {
+  const logger = new Logger('GradingSystemSeeder');
+  const gradingSystemRepository = app.get(
+    getRepositoryToken(GradingSystem),
+  ) as Repository<GradingSystem>;
+  const schoolRepository = app.get(
+    getRepositoryToken(School),
+  ) as Repository<School>;
+
+  const defaultGrades = [
+    { grade: 'A', minRange: 80, maxRange: 100 },
+    { grade: 'B', minRange: 70, maxRange: 79 },
+    { grade: 'C', minRange: 60, maxRange: 69 },
+    { grade: 'D', minRange: 50, maxRange: 59 },
+    { grade: 'E', minRange: 45, maxRange: 49 },
+    { grade: 'F', minRange: 0, maxRange: 44 },
+  ];
+
+  // Get all schools
+  const schools = await schoolRepository.find();
+
+  for (const school of schools) {
+    // Set default grading percentages if not set
+    if (
+      school.classScorePercentage === null ||
+      school.classScorePercentage === undefined
+    ) {
+      school.classScorePercentage = 30;
+    }
+    if (
+      school.examScorePercentage === null ||
+      school.examScorePercentage === undefined
+    ) {
+      school.examScorePercentage = 70;
+    }
+    await schoolRepository.save(school);
+
+    // Check if school already has grading systems
+    const existingGrades = await gradingSystemRepository.find({
+      where: { school: { id: school.id } },
+    });
+
+    // Only seed if school has no grading systems
+    if (existingGrades.length === 0) {
+      for (const gradeData of defaultGrades) {
+        const gradingSystem = gradingSystemRepository.create({
+          ...gradeData,
+          school,
+        });
+        await gradingSystemRepository.save(gradingSystem);
+      }
+      logger.log(`Seeded default grading system for school: ${school.name}`);
+    }
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api/v1');
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
+
+  // Configure Helmet for secure HTTP headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   // CORS configuration - get from environment variable
   // Supports comma-separated multiple origins: "https://domain1.com,https://domain2.com"
   const frontendUrl = configService.get<string>('FRONTEND_URL', '');
   const allowedOrigins = frontendUrl
     .split(',')
-    .map(url => url.trim())
+    .map((url) => url.trim())
     .filter(Boolean)
-    .map(url => {
+    .map((url) => {
       // Normalize URLs: remove trailing slashes for consistent comparison
       return url.replace(/\/+$/, '');
     });
-  
-  logger.log(`CORS: Allowed origins configured: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'NONE (allowing all in development)'}`);
-  
+
+  logger.log(
+    `CORS: Allowed origins configured: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'NONE (allowing all in development)'}`,
+  );
+
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, curl)
@@ -110,19 +191,23 @@ async function bootstrap() {
 
       if (allowedOrigins.length === 0) {
         // If no origins configured, allow all (development only)
-        logger.warn('CORS: No FRONTEND_URL configured - allowing all origins (development mode)');
+        logger.warn(
+          'CORS: No FRONTEND_URL configured - allowing all origins (development mode)',
+        );
         callback(null, true);
       } else if (allowedOrigins.includes(normalizedOrigin)) {
         callback(null, true);
       } else {
-        logger.warn(`CORS: Origin "${normalizedOrigin}" not allowed. Allowed: ${allowedOrigins.join(', ')}`);
+        logger.warn(
+          `CORS: Origin "${normalizedOrigin}" not allowed. Allowed: ${allowedOrigins.join(', ')}`,
+        );
         callback(null, false);
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposedHeaders: ['Authorization'],
-    preflightContinue: false, 
+    preflightContinue: false,
     optionsSuccessStatus: 204,
   });
   app.useGlobalPipes(
@@ -137,6 +222,7 @@ async function bootstrap() {
 
   await seedRoles(app);
   await seedDefaultEventCategories(app);
+  await seedDefaultGradingSystems(app);
 
   await app.listen(process.env.PORT ?? 5000);
 }

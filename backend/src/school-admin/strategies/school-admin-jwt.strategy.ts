@@ -33,7 +33,7 @@ export class SchoolAdminJwtStrategy extends PassportStrategy(
       where: { id: payload.sub },
     });
 
-    if (!schoolAdmin) {
+    if (!schoolAdmin || schoolAdmin.isSuspended) {
       return null;
     }
 

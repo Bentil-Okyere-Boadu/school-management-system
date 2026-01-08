@@ -184,7 +184,7 @@ export class AdmissionService {
         admission.applicationId,
       );
     }
-    
+
     // Send SMS notification if phone number is available
     if (admission.studentPhone) {
       try {
@@ -206,16 +206,7 @@ export class AdmissionService {
       relations: ['guardians', 'forClass'],
     });
   }
-  getAdmissionUrlForAdmin(admin: SchoolAdmin): { admissionUrl: string } {
-    if (!admin.school?.id) {
-      throw new NotFoundException('School not found for this admin');
-    }
-    const baseUrl =
-      process.env.ADMISSION_BASE_URL ?? 'https://your-frontend.com/admissions';
-    return {
-      admissionUrl: `${baseUrl}?schoolId=${admin.school.id}`,
-    };
-  }
+
   async findAllNamesBySchool(
     schoolId: string,
   ): Promise<{ id: string; name: string }[]> {
@@ -344,7 +335,7 @@ export class AdmissionService {
       interviewDate,
       interviewTime,
     );
-    
+
     // Send SMS notification if phone number is available
     if (admission.studentPhone) {
       try {
@@ -363,7 +354,7 @@ export class AdmissionService {
         );
       }
     }
-    
+
     admission.status = AdmissionStatus.INTERVIEW_PENDING;
     await this.admissionRepository.save(admission);
 

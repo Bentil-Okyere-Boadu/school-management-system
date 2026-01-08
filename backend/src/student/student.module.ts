@@ -31,6 +31,7 @@ import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calen
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { AssignmentSubmission } from './entities/assignment-submission.entity';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
+import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { Assignment } from 'src/teacher/entities/assignment.entity';
       AcademicCalendar,
       AssignmentSubmission,
       Assignment,
+      RefreshToken,
     ]),
     EmailModule,
     JwtModule.registerAsync({

@@ -4,6 +4,9 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { TeacherAuthService } from '../teacher.auth.service';
 import { Teacher } from '../teacher.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 
 interface JwtPayload {
   email: string;
@@ -19,6 +22,8 @@ export class TeacherJwtStrategy extends PassportStrategy(
   constructor(
     private configService: ConfigService,
     private teacherAuthService: TeacherAuthService,
+    @InjectRepository(SchoolAdmin)
+    private schoolAdminRepository: Repository<SchoolAdmin>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -32,9 +37,21 @@ export class TeacherJwtStrategy extends PassportStrategy(
       return null;
     }
     const teacher = await this.teacherAuthService.findByEmailOrTeacherId(payload.email);
-    if (!teacher) {
+    if (!teacher || teacher.isSuspended) {
       return null;
     }
+
+    // Check if any school admin for this school is suspended
+    // If yes, logout all students and teachers of that school
+    if (teacher.school?.id) {
+      const hasSuspendedAdmin = await this.schoolAdminRepository.findOne({
+        where: { school: { id: teacher.school.id }, isSuspended: true },
+      });
+      if (hasSuspendedAdmin) {
+        return null; // Logout teacher
+      }
+    }
+
     return {
       id: teacher.id,
       email: teacher.email,

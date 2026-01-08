@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import InputField  from "@/components/InputField";
-import { Select, MultiSelect, Checkbox, Button } from "@mantine/core";
+import { Select, MultiSelect, Checkbox, Button, Badge } from "@mantine/core";
 import { PlannerEvent, EventCategory, ClassLevel, VisibilityScope, CreatePlannerEventPayload, ErrorResponse } from "@/@types";
 import { useCreatePlannerEvent, useUpdatePlannerEvent, useGetAllSubjects } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
@@ -245,6 +245,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
     { value: VisibilityScope.SCHOOL_WIDE, label: "School Wide" },
     { value: VisibilityScope.CLASS_LEVEL, label: "Specific Classes" },
     { value: VisibilityScope.SUBJECT, label: "Specific Subjects" },
+    { value: VisibilityScope.TEACHERS, label: "Teachers Only" },
   ];
 
   return (
@@ -258,6 +259,25 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
       dialogWidth="w-[700px] max-w-[701px]"
     >
       <div className="my-3 flex flex-col gap-4">
+        {event && (event?.createdByAdminId || event?.createdByTeacherId) && (
+          <div className="flex items-center gap-2">
+            {event.createdByAdminId && (
+              <Badge variant="light" color="blue" size="sm">
+                Created by Admin
+              </Badge>
+            )}
+            {event.createdByTeacherId && event.createdByTeacher && (
+              <Badge variant="light" color="green" size="sm">
+                Created by Teacher ({event.createdByTeacher.firstName} {event.createdByTeacher.lastName})
+              </Badge>
+            )}
+            {event.createdByTeacherId && !event.createdByTeacher && (
+              <Badge variant="light" color="green" size="sm">
+                Created by Teacher
+              </Badge>
+            )}
+          </div>
+        )}
         <InputField
           className="!py-0"
           label="Event Title"
@@ -551,21 +571,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
             </div>
           )}
           
-          <input
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="file-upload"
-          />
-          <label
-            htmlFor="file-upload"
-            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            <IconPaperclip size={16} />
-            <span>Select Files</span>
-          </label>
+
           {selectedFiles.length > 0 && (
             <div className="mt-2 space-y-1">
               {selectedFiles.map((file, index) => (
@@ -583,6 +589,21 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
               ))}
             </div>
           )}
+          <input
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+            onChange={handleFileSelect}
+            className="hidden"
+            id="file-upload"
+          />
+          <label
+            htmlFor="file-upload"
+            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 mt-1"
+          >
+            <IconPaperclip size={16} />
+            <span>Select Files</span>
+          </label>
         </div>
       </div>
     </Dialog>

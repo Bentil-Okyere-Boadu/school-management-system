@@ -23,6 +23,7 @@ export enum VisibilityScope {
   SCHOOL_WIDE = 'school_wide',
   CLASS_LEVEL = 'class_level',
   SUBJECT = 'subject',
+  TEACHERS = 'teachers',
 }
 
 @Entity()
@@ -95,7 +96,10 @@ export class Event {
   @JoinTable({
     name: 'event_subject_catalogs',
     joinColumn: { name: 'event_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'subject_catalog_id', referencedColumnName: 'id' },
+    inverseJoinColumn: {
+      name: 'subject_catalog_id',
+      referencedColumnName: 'id',
+    },
   })
   targetSubjects: SubjectCatalog[];
 
