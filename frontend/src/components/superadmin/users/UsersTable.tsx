@@ -236,7 +236,7 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                 </ul>
               </div>
               <p className="text-sm text-gray-700">
-                This action restricts the school admin's access and may affect ongoing activities across the entire school. 
+                This action restricts the school admin&apos;s access and may affect ongoing activities across the entire school. 
                 Suspended school admins will not be able to perform any administrative actions.
               </p>
               <p className="text-sm font-medium text-gray-900 mt-2">
