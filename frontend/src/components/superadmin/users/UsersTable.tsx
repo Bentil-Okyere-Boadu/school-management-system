@@ -8,7 +8,7 @@ import {
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import { useArchiveUser, useResendAdminInvitation } from "@/hooks/super-admin";
+import { useResendAdminInvitation, useSuspendSchoolAdmin } from "@/hooks/super-admin";
 import { toast } from "react-toastify";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { ErrorResponse } from "@/@types";
@@ -27,6 +27,7 @@ interface User {
     label: string;
   }
   isArchived?: boolean;
+  isSuspended?: boolean;
     profile: {
     avatarUrl?: string;
   }
@@ -41,11 +42,11 @@ interface UserTableProps {
 
 export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableProps) => {
 
-  const [isConfirmArchiveDialogOpen, setIsConfirmArchiveDialogOpen] = useState(false);
+  const [isConfirmSuspendDialogOpen, setIsConfirmSuspendDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User>({} as User);
 
-  const onArchiveUserMenuItemClick = (user: User) => {
-    setIsConfirmArchiveDialogOpen(true)
+  const onSuspendUserMenuItemClick = (user: User) => {
+    setIsConfirmSuspendDialogOpen(true);
     setSelectedUser(user);
   } 
 
@@ -62,19 +63,25 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
     });
   } 
 
-  const { mutate: archiveMutate, isPending } = useArchiveUser({ id: selectedUser.id, archiveState: !selectedUser.isArchived });
   const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id})
+  const isSuspended = selectedUser.isSuspended ?? false;
+  const { mutate: suspendMutate, isPending: isSuspending } = useSuspendSchoolAdmin({
+    id: selectedUser.id,
+    suspendState: !isSuspended,
+  });
 
-  const handleArchiveUser = () => {
-    archiveMutate(null as unknown as void, {
+
+  const handleSuspendSchoolAdmin = () => {
+    suspendMutate(undefined, {
       onSuccess: () => {
-        toast.success('Archived successfully.');
-        setIsConfirmArchiveDialogOpen(false);
+        toast.success(isSuspended ? 'School admin unsuspended successfully.' : 'School admin suspended successfully.');
+        setIsConfirmSuspendDialogOpen(false);
         refetch();
       },
       onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-      }
+        const errorMessage = (error as ErrorResponse).response?.data?.message || 'Failed to suspend school admin';
+        toast.error(errorMessage);
+      },
     });
   } 
  
@@ -185,9 +192,9 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                               Resend Invitation
                             </Menu.Item>
                             <Menu.Item 
-                              onClick={() => onArchiveUserMenuItemClick(user)} 
+                              onClick={() => onSuspendUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>
-                              {user.isArchived ? 'Unarchive User' : 'Archive User'}
+                              {user.isSuspended ? 'Unsuspend School Admin' : 'Suspend School Admin'}
                             </Menu.Item>
                           </Menu.Dropdown>
                         </Menu>
@@ -202,25 +209,44 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
       </section>
 
 
-      {/* Confirm Archive Dialog */}
+      {/* Confirm Suspend Dialog */}
       <Dialog 
-        isOpen={isConfirmArchiveDialogOpen}
-        busy={isPending}
-        dialogTitle={selectedUser.isArchived ? "Confirm Unarchive" : "Confirm Archive"}
-        saveButtonText={selectedUser.isArchived ? "Unarchive User" : "Archive User"}
-        onClose={() => setIsConfirmArchiveDialogOpen(false)} 
-        onSave={() =>handleArchiveUser()}
+        isOpen={isConfirmSuspendDialogOpen}
+        busy={isSuspending}
+        dialogTitle={isSuspended ? "Confirm Unsuspend School Admin" : "Confirm Suspend School Admin"}
+        saveButtonText={isSuspended ? "Unsuspend School Admin" : "Suspend School Admin"}
+        onClose={() => setIsConfirmSuspendDialogOpen(false)} 
+        onSave={() => handleSuspendSchoolAdmin()}
       >
         <div className="my-3 flex flex-col gap-4">
-          <p>
-            {selectedUser.isArchived ? 
-              'Are you sure you want to unarchive this user? Their account will be activated, and their data will be restored.'
-              :
-              'Are you sure you want to archive this user? Their account will be deactivated, but their data will be kept.'
-            }
-          </p>
+          {isSuspended ? (
+            <p>
+              Are you sure you want to unsuspend this school admin? They will regain access to their account and all users of their school will be able to log in again.
+            </p>
+          ) : (
+            <>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm font-medium text-yellow-800 mb-2">
+                  ⚠️ This action will have significant consequences:
+                </p>
+                <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                  <li>The school admin will not be able to log in</li>
+                  <li>All students and teachers of this school will be automatically logged out</li>
+                  <li>They will need to wait until the admin is unsuspended to log back in</li>
+                </ul>
+              </div>
+              <p className="text-sm text-gray-700">
+                This action restricts the school admin&apos;s access and may affect ongoing activities across the entire school. 
+                Suspended school admins will not be able to perform any administrative actions.
+              </p>
+              <p className="text-sm font-medium text-gray-900 mt-2">
+                Are you sure you want to proceed?
+              </p>
+            </>
+          )}
         </div>
       </Dialog>
+
     </>
   );
 }

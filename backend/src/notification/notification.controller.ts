@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -21,8 +22,11 @@ export class NotificationController {
   }
 
   @Get('school/:id')
-  findAllForSchoolAdmin(@Param('id') schoolId: string) {
-    return this.notificationService.findAllForSchool(schoolId);
+  findAllForSchoolAdmin(
+    @Param('id') schoolId: string,
+    @Query('search') search?: string,
+  ) {
+    return this.notificationService.findAllForSchool(schoolId, search);
   }
 
   @Patch(':id')

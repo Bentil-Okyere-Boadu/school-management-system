@@ -35,7 +35,18 @@ export class SchoolAdminAuthService {
     if (!isPasswordValid) {
       return null;
     }
+
+    if (schoolAdmin.isSuspended) {
+      return null;
+    }
+
     return schoolAdmin;
+  }
+
+  async findByEmail(email: string): Promise<SchoolAdmin | null> {
+    return this.schoolAdminRepository.findOne({
+      where: { email },
+    });
   }
 
   login(schoolAdmin: SchoolAdmin) {
