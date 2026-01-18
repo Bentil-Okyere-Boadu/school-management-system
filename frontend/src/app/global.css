@@ -1,4 +1,49 @@
+/* For WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 4px;  /* Width of the scrollbar */
+  height: 4px; /* Height for horizontal scrollbar */
+}
+
+/* Track (background) */
+::-webkit-scrollbar-track {
+  background: #888; 
+  border-radius: 5px;
+}
+
+/* Handle (thumb) */
+::-webkit-scrollbar-thumb {
+  background: #AB58E7;
+  border-radius: 5px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #D1D6FA;
+}
+
 .authBg {
-    background: #D1D6FA;
-    background: linear-gradient(90deg, rgba(209, 214, 250, 1) 0%, rgba(250, 210, 209, 1) 43%, rgba(216, 208, 251, 1) 98%);
+  background: #D1D6FA;
+  background: linear-gradient(90deg, rgba(209, 214, 250, 1) 0%, rgba(250, 210, 209, 1) 43%, rgba(216, 208, 251, 1) 98%);
+}
+
+.fullPageSpinner {
+  width: 100%;
+  height: 70vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dialogOpacity {
+  background-color: rgba(225, 225, 225, 0.8);
+}
+
+ol li::marker {
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+  background-color: blue;
+  padding: 1rem;
+  border-radius: 50%;
+  font-weight: bold;
+  border: 2px solid blue;
 }

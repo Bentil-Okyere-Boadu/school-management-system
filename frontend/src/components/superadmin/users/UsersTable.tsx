@@ -1,0 +1,253 @@
+"use client";
+import React, { useState } from "react";
+import Badge from "../../common/Badge";
+import { Menu } from '@mantine/core';
+import {
+  IconDots,
+  IconSend2,
+  IconSquareArrowDownFilled,
+} from '@tabler/icons-react';
+import { Dialog } from "@/components/common/Dialog";
+import { useResendAdminInvitation, useSuspendSchoolAdmin } from "@/hooks/super-admin";
+import { toast } from "react-toastify";
+import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
+import { ErrorResponse } from "@/@types";
+import Image from "next/image";
+import { HashLoader } from "react-spinners";
+
+interface User {
+  id: string;
+  name?: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  status: "active" | "inactive" | "pending";
+  role: {
+    name: string;
+    label: string;
+  }
+  isArchived?: boolean;
+  isSuspended?: boolean;
+    profile: {
+    avatarUrl?: string;
+  }
+}
+
+interface UserTableProps {
+  users: User[];
+  refetch: () => void;
+  onClearFilterClick?: () => void;
+  busy?: boolean;
+}
+
+export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableProps) => {
+
+  const [isConfirmSuspendDialogOpen, setIsConfirmSuspendDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User>({} as User);
+
+  const onSuspendUserMenuItemClick = (user: User) => {
+    setIsConfirmSuspendDialogOpen(true);
+    setSelectedUser(user);
+  } 
+
+  const onResendInvitationMenuItemClick = (user: User) => {
+    setSelectedUser(user);
+
+    resendInvitationMutate(null as unknown as void, {
+      onSuccess: () => {
+        toast.success('Resend invitation successful.');
+      },
+      onError: (error: unknown) => {
+        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+      }
+    });
+  } 
+
+  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id})
+  const isSuspended = selectedUser.isSuspended ?? false;
+  const { mutate: suspendMutate, isPending: isSuspending } = useSuspendSchoolAdmin({
+    id: selectedUser.id,
+    suspendState: !isSuspended,
+  });
+
+
+  const handleSuspendSchoolAdmin = () => {
+    suspendMutate(undefined, {
+      onSuccess: () => {
+        toast.success(isSuspended ? 'School admin unsuspended successfully.' : 'School admin suspended successfully.');
+        setIsConfirmSuspendDialogOpen(false);
+        refetch();
+      },
+      onError: (error: unknown) => {
+        const errorMessage = (error as ErrorResponse).response?.data?.message || 'Failed to suspend school admin';
+        toast.error(errorMessage);
+      },
+    });
+  } 
+ 
+  return (
+    <>
+      <section className="bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse min-w-[500px]">
+            <caption className="sr-only">
+              Users and their roles, status, and permissions
+            </caption>
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-60 max-w-[340px]">
+                  <div>Name</div>
+                </th>
+                <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
+                  <div>Role</div>
+                </th>
+                <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[138px]">
+                  <div>Status</div>
+                </th>
+                <th onClick={onClearFilterClick} className="pr-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-right max-md:px-5 underline cursor-pointer"> Clear all filters</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                if (busy) {
+                  return (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className="relative py-16">
+                          <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10">
+                            <HashLoader color="#AB58E7" size={40} />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                if (users?.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                          <p className="text-lg font-medium">No users found</p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            Once users are added, they will appear in this table.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return users?.map((user: User) => (
+                  <tr key={user.id}>
+                    <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <div className="flex flex-1 items-center">
+                        {user?.profile?.avatarUrl ? (
+                          <Image
+                            width={40}
+                            height={40}
+                            alt="User Avatar"
+                            src={user?.profile?.avatarUrl}
+                            className="mr-2.5 w-10 h-10 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="mr-2.5 w-10 h-10 text-base text-violet-500 bg-purple-50 rounded-full flex items-center justify-center">
+                            {getInitials(user.firstName, user.lastName)}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-base text-zinc-800">
+                            {user.firstName} {user.lastName}
+                          </span>
+                          <span className="text-sm text-neutral-500">{user.email}</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                      {user.role.label}
+                    </td>
+
+                    <td className="px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <div className="flex items-center justity-start">
+                        <Badge
+                          text={capitalizeFirstLetter(user.status)}
+                          showDot={true}
+                          variant={user.status}
+                        />
+                      </div>
+                    </td>
+
+                    <td className="border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]">
+                      <div className="flex items-center justify-end pr-6">
+                        <Menu shadow="md" width={200}>
+                          <Menu.Target>
+                            <IconDots className="cursor-pointer" />
+                          </Menu.Target>
+                          <Menu.Dropdown className="!-ml-8 !-mt-2">
+                            <Menu.Item 
+                              onClick={() => onResendInvitationMenuItemClick(user)} 
+                              disabled={user.status !== 'pending'}
+                              leftSection={<IconSend2 size={18} color="#AB58E7" />}>
+                              Resend Invitation
+                            </Menu.Item>
+                            <Menu.Item 
+                              onClick={() => onSuspendUserMenuItemClick(user)} 
+                              leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>
+                              {user.isSuspended ? 'Unsuspend School Admin' : 'Suspend School Admin'}
+                            </Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
+                      </div>
+                    </td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+
+      {/* Confirm Suspend Dialog */}
+      <Dialog 
+        isOpen={isConfirmSuspendDialogOpen}
+        busy={isSuspending}
+        dialogTitle={isSuspended ? "Confirm Unsuspend School Admin" : "Confirm Suspend School Admin"}
+        saveButtonText={isSuspended ? "Unsuspend School Admin" : "Suspend School Admin"}
+        onClose={() => setIsConfirmSuspendDialogOpen(false)} 
+        onSave={() => handleSuspendSchoolAdmin()}
+      >
+        <div className="my-3 flex flex-col gap-4">
+          {isSuspended ? (
+            <p>
+              Are you sure you want to unsuspend this school admin? They will regain access to their account and all users of their school will be able to log in again.
+            </p>
+          ) : (
+            <>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm font-medium text-yellow-800 mb-2">
+                  ⚠️ This action will have significant consequences:
+                </p>
+                <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                  <li>The school admin will not be able to log in</li>
+                  <li>All students and teachers of this school will be automatically logged out</li>
+                  <li>They will need to wait until the admin is unsuspended to log back in</li>
+                </ul>
+              </div>
+              <p className="text-sm text-gray-700">
+                This action restricts the school admin&apos;s access and may affect ongoing activities across the entire school. 
+                Suspended school admins will not be able to perform any administrative actions.
+              </p>
+              <p className="text-sm font-medium text-gray-900 mt-2">
+                Are you sure you want to proceed?
+              </p>
+            </>
+          )}
+        </div>
+      </Dialog>
+
+    </>
+  );
+}
+

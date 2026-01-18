@@ -1,0 +1,100 @@
+import { Parent } from 'src/parent/parent.entity';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { School } from 'src/school/school.entity';
+import { Student } from 'src/student/student.entity';
+import { SuperAdmin } from 'src/super-admin/super-admin.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  JoinColumn,
+  VirtualColumn,
+} from 'typeorm';
+
+@Entity()
+export class Profile {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ nullable: true })
+  avatarPath?: string;
+
+  @Column({ nullable: true })
+  mediaType?: string;
+
+  @VirtualColumn({
+    query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
+  })
+  avatarUrl?: string;
+
+  @Column({ nullable: true })
+  firstName?: string;
+
+  @Column({ nullable: true })
+  lastName?: string;
+
+  @Column({ nullable: true })
+  otherName?: string;
+
+  @Column({ nullable: true })
+  email?: string;
+
+  @Column({ nullable: true })
+  address?: string;
+
+  @Column({ nullable: true })
+  DateOfBirth?: string;
+
+  @Column({ nullable: true })
+  PlaceOfBirth?: string;
+
+  @Column({ nullable: true })
+  BoxAddress?: string;
+
+  @Column({ nullable: true })
+  streetAddress?: string;
+
+  @Column({ nullable: true })
+  phoneContact?: string;
+
+  @Column({ nullable: true })
+  optionalPhoneContact?: string;
+
+  @Column({ nullable: true })
+  optionalPhoneContactTwo?: string;
+
+  @OneToOne(() => SchoolAdmin, (admin) => admin.profile, { onDelete: 'CASCADE' })
+  @JoinColumn()
+  schoolAdmin: SchoolAdmin;
+
+  @OneToOne(() => Student, (student) => student.profile, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  student: Student;
+
+  @OneToOne(() => Teacher, (teacher) => teacher.profile, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  teacher: Teacher;
+
+  @OneToOne(() => Parent, (parent) => parent.profile, { onDelete: 'CASCADE' })
+  @JoinColumn()
+  parent: Parent;
+
+  @OneToOne(() => SuperAdmin, (admin) => admin.profile, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  superAdmin: SuperAdmin;
+
+  @OneToOne(() => School, {
+    eager: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  school: School;
+}
