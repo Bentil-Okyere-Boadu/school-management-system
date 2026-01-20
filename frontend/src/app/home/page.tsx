@@ -220,15 +220,6 @@ const items = FAQs.map((item, i) => (
                 <ul className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10">
                   <li>
                     <Link
-                      href="/auth/login"
-                      className="block px-4 py-2 hover:bg-gray-100"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      Super Admin
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
                       href="/auth/admin/login"
                       className="block px-4 py-2 hover:bg-gray-100"
                       onClick={() => setDropdownOpen(false)}
@@ -305,7 +296,7 @@ const items = FAQs.map((item, i) => (
                 </button>
                 {dropdownOpen && (
                   <ul className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10 text-gray-700">
-                    <li>
+                    {/* <li>
                       <Link
                         href="/auth/login"
                         className="block px-4 py-2 hover:bg-gray-100"
@@ -313,7 +304,7 @@ const items = FAQs.map((item, i) => (
                       >
                         Super Admin
                       </Link>
-                    </li>
+                    </li> */}
                     <li>
                       <Link
                         href="/auth/admin/login"
@@ -542,12 +533,12 @@ const items = FAQs.map((item, i) => (
             rights reserved.
           </div>
           <div className="flex gap-4 mt-2 md:mt-0">
-            <Link href="/privacy-policy" className="hover:underline">
+            {/* <Link href="/privacy-policy" className="hover:underline">
               Privacy Policy
             </Link>
             <Link href="/terms-of-service" className="hover:underline">
               Terms of Service
-            </Link>
+            </Link> */}
           </div>
         </div>
       </footer>
