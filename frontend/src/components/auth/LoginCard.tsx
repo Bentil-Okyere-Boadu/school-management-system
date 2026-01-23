@@ -60,7 +60,7 @@ const LoginCard: React.FC = () => {
       </p>
 
       <InputField
-        label={user === Roles.TEACHER || user === Roles.STUDENT ? "ID or Email" : "Email"}
+        label={user === Roles.TEACHER || user === Roles.STUDENT ? "ID" : "Email"}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         type="email"

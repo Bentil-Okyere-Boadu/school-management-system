@@ -89,8 +89,8 @@ export function handleLoginRedirectAndToken(
     return;
   }
 
-  // Store access token (15 minutes expiry)
-  const accessTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+  // Store access token (1 hour expiry)
+  const accessTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
   Cookies.set(cookieName, data.data.access_token, {
     expires: accessTokenExpiry,
   });
