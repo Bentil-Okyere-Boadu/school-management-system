@@ -25,6 +25,8 @@ import { ClassLevelResultApproval } from 'src/class-level/class-level-result-app
 import { isSchoolAdminOrClassTeacher } from '../common/utils/authUtil';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/notification.entity';
+import { Assignment } from '../teacher/entities/assignment.entity';
+import { AssignmentSubmission } from '../student/entities/assignment-submission.entity';
 
 @Injectable()
 export class SubjectService {
@@ -585,6 +587,90 @@ export class SubjectService {
     return results;
   }
 
+  private async calculateAggregatedAssignmentScores(
+    classLevelId: string,
+    subjectCatalogId: string,
+    academicTermId: string,
+    studentIds: string[],
+    classScoreMax: number,
+  ): Promise<Map<string, number>> {
+    const manager = this.studentGradeRepository.manager;
+    const assignmentRepository = manager.getRepository(Assignment);
+    const submissionRepository = manager.getRepository(AssignmentSubmission);
+
+    const academicTerm = await this.academicTermRepository.findOne({
+      where: { id: academicTermId },
+    });
+
+    if (!academicTerm) {
+      return new Map();
+    }
+
+    const termStartDate = new Date(academicTerm.startDate);
+    const termEndDate = new Date(academicTerm.endDate);
+    termEndDate.setHours(23, 59, 59, 999);
+
+    const allAssignments = await assignmentRepository.find({
+      where: {
+        classLevel: { id: classLevelId },
+        state: 'published',
+        topic: {
+          subjectCatalog: { id: subjectCatalogId },
+        },
+      },
+      relations: ['topic', 'topic.subjectCatalog'],
+    });
+
+    const termAssignments = allAssignments.filter((assignment) => {
+      const dueDate = new Date(assignment.dueDate);
+      return dueDate >= termStartDate && dueDate <= termEndDate;
+    });
+
+    const aggregatedScoresMap = new Map<string, number>();
+
+    if (termAssignments.length === 0) {
+      return aggregatedScoresMap;
+    }
+
+    const assignmentIds = termAssignments.map((a) => a.id);
+    const allSubmissions = await submissionRepository.find({
+      where: {
+        assignment: { id: In(assignmentIds) },
+        student: { id: In(studentIds) },
+      },
+      relations: ['assignment', 'student'],
+    });
+
+    studentIds.forEach((studentId) => {
+      const studentSubmissions = allSubmissions.filter(
+        (s) => s.student.id === studentId,
+      );
+
+      let totalScore = 0;
+      let totalMaxScore = 0;
+      let hasGradedAssignments = false;
+
+      termAssignments.forEach((assignment) => {
+        totalMaxScore += assignment.maxScore;
+        const submission = studentSubmissions.find(
+          (s) => s.assignment.id === assignment.id,
+        );
+        if (submission && submission.score !== null) {
+          totalScore += submission.score;
+          hasGradedAssignments = true;
+        }
+      });
+
+      if (hasGradedAssignments && totalMaxScore > 0) {
+        const averagePercentage = (totalScore / totalMaxScore) * 100;
+        const classScore = (averagePercentage / 100) * classScoreMax;
+        aggregatedScoresMap.set(studentId, Math.round(classScore * 100) / 100);
+      }
+    });
+
+    return aggregatedScoresMap;
+  }
+
   async getStudentsForGrading(
     classLevelId: string,
     subjectId: string,
@@ -608,7 +694,7 @@ export class SubjectService {
     }
     const subject = await this.subjectRepository.findOne({
       where: { id: subjectId },
-      relations: ['subjectCatalog'],
+      relations: ['subjectCatalog', 'school'],
     });
     if (!subject) throw new NotFoundException('Subject not found');
 
@@ -637,6 +723,17 @@ export class SubjectService {
         academicTerm: { id: academicTermId },
       },
     });
+
+    const classScoreMax = subject.school?.classScorePercentage || 30;
+    const studentIds = classLevel.students.map((s) => s.id);
+    const aggregatedScoresMap = await this.calculateAggregatedAssignmentScores(
+      classLevelId,
+      subject.subjectCatalog.id,
+      academicTermId,
+      studentIds,
+      classScoreMax,
+    );
+
     return {
       metadata: {
         subject: {
@@ -662,6 +759,7 @@ export class SubjectService {
       },
       students: classLevel.students.map((student) => {
         const existingGrade = gradeMap.get(student.id);
+        const aggregatedScore = aggregatedScoresMap.get(student.id);
         return {
           id: student.id,
           firstName: student.firstName,
@@ -670,8 +768,8 @@ export class SubjectService {
           isArchived: student.isArchived,
           archivedAt: student.isArchived ? student.updatedAt : null,
           scores: {
-            classScore: existingGrade?.classScore || 0, // 30%
-            examScore: existingGrade?.examScore || 0, // 70%
+            classScore: existingGrade?.classScore || aggregatedScore || 0,
+            examScore: existingGrade?.examScore || 0,
             totalScore: existingGrade?.totalScore || 0,
             grade: existingGrade?.grade || '',
           },
