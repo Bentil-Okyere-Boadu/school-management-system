@@ -108,7 +108,6 @@ const StudentPlannerPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-neutral-800">Planner</h1>
       </div>
 
       <div className="flex flex-col items-start">

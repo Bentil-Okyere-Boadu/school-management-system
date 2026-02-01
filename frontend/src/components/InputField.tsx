@@ -29,8 +29,9 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
     const isPassword = isPasswordField || type === "password";
     const inputType = isPassword ? (showPassword ? "text" : "password") : type;
     
-    // Ensure value is always a string to prevent uncontrolled/controlled warning
-    const normalizedValue = value ?? "";
+    // Only normalize and set value if it's explicitly provided
+    // If not provided, let React Hook Form or native input handle it
+    const inputProps = value !== undefined ? { value: value ?? "" } : {};
 
     return (
       <div className="mb-4">
@@ -43,7 +44,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
             ref={ref}
             type={inputType}
             disabled={isTransulent}
-            value={normalizedValue}
+            {...inputProps}  // Conditionally apply value only if provided
             {...props}
             className={`px-3 py-2.5 h-10 rounded border-solid border-[0.5px] border-zinc-500 text-zinc-800 w-full
               ${isPassword ? "text-2xl font-bold" : "text-base"}

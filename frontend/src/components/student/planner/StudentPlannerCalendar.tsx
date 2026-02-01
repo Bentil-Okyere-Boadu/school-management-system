@@ -6,6 +6,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { EventInput, EventClickArg, DatesSetArg, EventContentArg } from "@fullcalendar/core";
 import { PlannerEvent } from "@/@types";
+import { Button } from "@mantine/core";
+import { IconPrinter } from "@tabler/icons-react";
 
 const DEFAULT_CATEGORY_COLOR = "#10b981";
 
@@ -81,8 +83,21 @@ export const StudentPlannerCalendar: React.FC<StudentPlannerCalendarProps> = ({
     );
   }, []);
 
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
   return (
-    <div className="planner-calendar-container [&_.fc]:font-sans">
+    <div id="planner-print-container" className="planner-calendar-container [&_.fc]:font-sans">
+      <div className="flex justify-end mb-4 print:hidden">
+        <Button
+          leftSection={<IconPrinter size={16} />}
+          onClick={handlePrint}
+          variant="light"
+        >
+          Print Planner
+        </Button>
+      </div>
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"

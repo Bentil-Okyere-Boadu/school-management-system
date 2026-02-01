@@ -24,7 +24,7 @@ const ResetReqEmailContent = ({firstName}: ResetEmailProps) => {
           <p>Hi {firstName},</p>
           <br />
           <p>
-            We received a request to reset your password for your SMS account.
+            We received a request to reset the password for your account.
             Simply click the button below to set up a new password:
           </p>
         </section>
@@ -37,8 +37,8 @@ const ResetReqEmailContent = ({firstName}: ResetEmailProps) => {
             please ignore this email, and your password will remain unchanged.
           </p>
           <br />
-          <p>Best,</p>
-          <p>SMS Team</p>
+          <p>Best regards,</p>
+          <p>GoEdtech Team</p>
         </section>
       </article>
     );
