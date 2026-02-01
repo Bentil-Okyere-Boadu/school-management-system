@@ -82,7 +82,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: user.email,
-        subject: 'Invitation to School Management System',
+        subject: 'Invitation to GoEdtech Management System',
         html: this.getEmailTemplate(EmailTemplate.INVITATION, {
           name: user.firstName + ' ' + user.lastName,
           invitationLink,
@@ -112,7 +112,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: student.email,
-        subject: 'Your Student Account for School Management System',
+        subject: 'Your Student account has been created.',
         html: this.getEmailTemplate(EmailTemplate.STUDENT_INVITATION, {
           name: student.firstName + ' ' + student.lastName,
           studentId,
@@ -153,7 +153,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: user.email,
-        subject: 'Your Teacher Account for School Management System',
+        subject: 'Your Teacher Account has been created',
         html: this.getEmailTemplate(EmailTemplate.TEACHER_INVITATION, {
           name: user.firstName + ' ' + user.lastName,
           teacherId,
@@ -187,7 +187,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: user.email,
-        subject: 'Registration Confirmed - School Management System',
+        subject: 'Registration Confirmed',
         html: this.getEmailTemplate(EmailTemplate.REGISTRATION_CONFIRMATION, {
           name: user.firstName + ' ' + user.lastName,
           loginLink: `${this.frontendUrl}/auth/admin/login`,
@@ -220,7 +220,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: email,
-        subject: 'Password Reset - School Management System',
+        subject: 'Password Reset',
         html: this.getEmailTemplate(EmailTemplate.PASSWORD_RESET, {
           resetLink,
         }),
@@ -352,7 +352,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.fromEmail,
         to: user.email,
-        subject: 'Your PIN Has Been Reset - School Management System',
+        subject: 'Your PIN Has Been Reset',
         html: this.getEmailTemplate(EmailTemplate.TEACHER_PIN_RESET, {
           name: user.firstName + ' ' + user.lastName,
           pin,
