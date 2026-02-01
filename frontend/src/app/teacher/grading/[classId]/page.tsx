@@ -7,7 +7,7 @@ import CustomButton from '@/components/Button';
 import { SearchBar } from '@/components/common/SearchBar';
 import { Pagination } from '@/components/common/Pagination';
 import TableInputField from '@/components/common/TableInputField';
-import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses, usePostStudentGrades,  } from '@/hooks/teacher';
+import { useGetCalendars, useGetStudentsForGrading, useGetSubjectClasses, usePostStudentGrades, useTeacherGetMe } from '@/hooks/teacher';
 import { ErrorResponse, PostGradesPayload } from '@/@types';
 import { toast } from 'react-toastify';
 import { HashLoader } from 'react-spinners';
@@ -58,6 +58,7 @@ const ClassGrading = () => {
 
 
   const { classSubjects } = useGetSubjectClasses();
+  const { me } = useTeacherGetMe();
 
   const handleSelectChange = (
     event: React.ChangeEvent<HTMLSelectElement>,
@@ -293,10 +294,10 @@ const ClassGrading = () => {
                     <div>ID</div>
                   </th>
                   <th className="px-2 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[200px]">
-                    <div>Class Score(30%)</div>
+                    <div>Class Score({me?.school?.classScorePercentage || 30}%)</div>
                   </th>
                   <th className="px-2 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[100px]">
-                    <div>Exams Score(70%)</div>
+                    <div>Exams Score({me?.school?.examScorePercentage || 70}%)</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[100px]">
                     <div>Total Score(100%)</div>

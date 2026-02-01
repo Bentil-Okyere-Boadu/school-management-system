@@ -1,4 +1,4 @@
-import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query"
+import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
 import { School, SuperAdminDashStats, User } from "@/@types";
 
@@ -90,6 +90,28 @@ export const useArchiveUser = ({id, archiveState}: {id: string, archiveState: bo
         }
     })
 }
+
+export const useSuspendSchoolAdmin = ({
+    id,
+    suspendState,
+}: {
+    id: string;
+    suspendState: boolean;
+}) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => {
+            return customAPI.put(`/super-admin/admin/${id}/suspend`, {
+                suspend: suspendState,
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["allAdminUsers"] });
+            queryClient.invalidateQueries({ queryKey: ["superAdminDasbhoard"] });
+        },
+    });
+};
 
 export const useGetAllSchools = (page=1,search: string = "", status: string = "", role: string = "", limit?: number ) => {
     const { data, isLoading, refetch } = useQuery({

@@ -57,6 +57,12 @@ export class School {
   @Column({ nullable: true, unique: true })
   schoolCode: string;
 
+  @Column({ type: 'float', default: 30 })
+  classScorePercentage: number;
+
+  @Column({ type: 'float', default: 70 })
+  examScorePercentage: number;
+
   @OneToMany(() => SchoolAdmin, (admin) => admin.school, {
     onDelete: 'CASCADE',
   })
