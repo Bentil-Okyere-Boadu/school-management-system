@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'school-management-system-sms-storage.s3.us-east-1.amazonaws.com',
+        hostname: `${process.env.NEXT_PUBLIC_AWS_BUCKET_URL}`,
       },
     ],
   },
@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
   rewrites: async () => [
     {
       source: "/api/v1/:path*",
-      destination: "https://sms-backend-9gyh.onrender.com/api/v1/:path*", // Replace with your backend URL
+      destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
     }
   ]
 };

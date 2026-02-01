@@ -56,11 +56,11 @@ const LoginCard: React.FC = () => {
     <div className="relative px-10 py-12 rounded-3xl border border-white border-solid shadow-sm bg-zinc-100 w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
       <h1 className="mb-3.5 text-2xl font-bold text-neutral-800">Log in</h1>
       <p className="mb-10 text-xs text-zinc-600">
-        Enter your SMS account details
+        Enter your account details
       </p>
 
       <InputField
-        label={user === Roles.TEACHER || user === Roles.STUDENT ? "ID or Email" : "Email"}
+        label={user === Roles.TEACHER || user === Roles.STUDENT ? "ID" : "Email"}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         type="email"

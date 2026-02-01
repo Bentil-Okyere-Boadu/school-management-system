@@ -219,3 +219,193 @@ body {
 .planner-calendar-container .fc-scroller::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Print styles for planner */
+@media print {
+  /* Hide all elements by default, then show only what we need */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the planner container and all its children */
+  #planner-print-container,
+  #planner-print-container *,
+  #admin-planner-print-container,
+  #admin-planner-print-container * {
+    visibility: visible;
+  }
+
+  /* Style the planner container */
+  #planner-print-container,
+  #admin-planner-print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0.3cm !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the print button */
+  #planner-print-container > div:first-child,
+  #admin-planner-print-container > div:first-child {
+    display: none !important;
+  }
+
+  /* Ensure parent containers don't interfere */
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Scale calendar to fit page */
+  .planner-calendar-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+    overflow: visible !important;
+  }
+
+  /* Ensure FullCalendar scales properly */
+  .planner-calendar-container .fc {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 0.8em !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure the calendar table fits all columns */
+  .planner-calendar-container .fc-dayGridMonth-view .fc-daygrid-body,
+  .planner-calendar-container .fc-dayGridMonth-view .fc-col-header,
+  .planner-calendar-container .fc-dayGridMonth-view .fc-scrollgrid,
+  .planner-calendar-container .fc-dayGridMonth-view .fc-scrollgrid-sync-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  /* Ensure all day columns are visible and equal width */
+  .planner-calendar-container .fc-dayGridMonth-view .fc-col-header-cell,
+  .planner-calendar-container .fc-dayGridMonth-view .fc-daygrid-day {
+    width: calc(100% / 7) !important;
+    min-width: 0 !important;
+    max-width: calc(100% / 7) !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure table cells don't have fixed widths that break layout */
+  .planner-calendar-container .fc-dayGridMonth-view .fc-col-header-cell,
+  .planner-calendar-container .fc-dayGridMonth-view .fc-daygrid-day {
+    box-sizing: border-box !important;
+  }
+
+  /* Scale down header toolbar */
+  .planner-calendar-container .fc-header-toolbar {
+    margin-bottom: 0.75em !important;
+    padding: 0.5em !important;
+  }
+
+  .planner-calendar-container .fc-toolbar-title {
+    font-size: 1rem !important;
+  }
+
+  .planner-calendar-container .fc-button {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Scale down calendar grid */
+  .planner-calendar-container .fc-daygrid-day {
+    min-height: 70px !important;
+  }
+
+  .planner-calendar-container .fc-daygrid-day-frame {
+    min-height: 70px !important;
+  }
+
+  .planner-calendar-container .fc-timeGridWeek-view .fc-timegrid-slot {
+    height: 2rem !important;
+  }
+
+  /* Scale down event text */
+  .planner-calendar-container .fc-event {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-size: 0.75em !important;
+    padding: 0.25rem !important;
+  }
+
+  .planner-calendar-container .fc-event-title {
+    font-size: 0.75em !important;
+  }
+
+  .planner-calendar-container .fc-event-time {
+    font-size: 0.7em !important;
+  }
+
+  /* Make sure colors print */
+  .planner-calendar-container .fc-event * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page setup - use landscape for better fit */
+  @page {
+    margin: 0.3cm;
+    size: A4 landscape;
+  }
+
+  /* Ensure body has minimal margins */
+  body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  /* Hide scrollbars */
+  html, body {
+    overflow: visible !important;
+    height: auto;
+  }
+
+  /* Scale calendar content to fit */
+  .planner-calendar-container .fc-view-harness {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .planner-calendar-container .fc-scroller {
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+  }
+
+  /* Ensure no horizontal overflow */
+  .planner-calendar-container .fc-scrollgrid {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Make sure table cells don't overflow */
+  .planner-calendar-container .fc-daygrid-day-frame {
+    overflow: visible !important;
+  }
+
+  /* Reduce padding on day cells to fit all columns */
+  .planner-calendar-container .fc-daygrid-day-top {
+    padding: 0.25rem !important;
+  }
+
+  .planner-calendar-container .fc-daygrid-day-number {
+    padding: 0.25rem !important;
+    font-size: 0.75em !important;
+  }
+}

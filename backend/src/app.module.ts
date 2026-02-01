@@ -62,7 +62,7 @@ import { APP_GUARD } from '@nestjs/core';
       // ssl: {
       //   rejectUnauthorized : false,
       // },
-      logging: false,
+      logging: true,
     }),
     CommonModule,
     RoleModule,

@@ -729,7 +729,7 @@ export class SubjectService {
     const aggregatedScoresMap = await this.calculateAggregatedAssignmentScores(
       classLevelId,
       subject.subjectCatalog.id,
-      academicTermId,
+      academicTermId as string,
       studentIds,
       classScoreMax,
     );
