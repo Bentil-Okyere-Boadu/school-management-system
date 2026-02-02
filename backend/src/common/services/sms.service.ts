@@ -417,7 +417,7 @@ export class SmsService {
   ): string {
     switch (template) {
       case SmsTemplate.INVITATION:
-        return `Hi ${data.name}, you have been invited to join our School Management System. Please check your email for registration details.`;
+        return `Hi ${data.name}, you have been invited to join GoEdtech Management System. Please check your email for registration details.`;
 
       case SmsTemplate.REGISTRATION_CONFIRMATION:
         return `Hi ${data.name}, your registration has been confirmed! You can now log in to your account.`;

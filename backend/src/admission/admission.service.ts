@@ -182,6 +182,7 @@ export class AdmissionService {
         `${admission.studentFirstName} ${admission.studentLastName}`,
         school.name,
         admission.applicationId,
+        school.email,
       );
     }
 
@@ -334,6 +335,7 @@ export class AdmissionService {
       applicationId,
       interviewDate,
       interviewTime,
+      admission.school.email,
     );
 
     // Send SMS notification if phone number is available
@@ -380,6 +382,7 @@ export class AdmissionService {
     if (admission.studentEmail) {
       const studentName = `${admission.studentFirstName} ${admission.studentLastName}`;
       const schoolName = admission.school?.name || 'School';
+      const schoolEmail = admission.school?.email;
 
       setImmediate(() => {
         void (async () => {
@@ -391,6 +394,7 @@ export class AdmissionService {
                   studentName,
                   schoolName,
                   applicationId,
+                  schoolEmail,
                 );
                 await this.createStudentFromAdmission(admission);
                 break;
@@ -401,6 +405,7 @@ export class AdmissionService {
                   studentName,
                   schoolName,
                   applicationId,
+                  schoolEmail,
                 );
                 break;
 
@@ -410,6 +415,7 @@ export class AdmissionService {
                   studentName,
                   schoolName,
                   applicationId,
+                  schoolEmail,
                 );
                 break;
 
@@ -419,6 +425,7 @@ export class AdmissionService {
                   studentName,
                   schoolName,
                   applicationId,
+                  schoolEmail,
                 );
                 break;
             }

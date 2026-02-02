@@ -10,7 +10,7 @@ import AcaPlanIcon from "@/images/AcaPlan.svg";
 import StudentManIcon from "@/images/SdntMngmt.svg";
 import SecComIcon from "@/images/SecComp.svg";
 import AnalytIcon from "@/images/AnaRep.svg";
-import Logo from "@/images/logo.svg";
+import Logo from "@/images/Goedtech-logo(1).png";
 import backgroundImage from "@/images/background.png";
 import { StaticImport } from "next/dist/shared/lib/get-img-props";
 import { Group, Text, Accordion, List, ThemeIcon } from '@mantine/core';
@@ -158,17 +158,16 @@ const items = FAQs.map((item, i) => (
   return (
     <main className="w-full min-h-screen flex flex-col bg-white">
       {/* Navigation */}
-      <nav className="w-full bg-gradient-to-br from-[#B860F5] to-[#7B11F9] shadow sticky top-0 z-20">
+      <nav className="w-full bg-white shadow sticky top-0 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Image src={Logo} alt="Logo" width={40} height={40} />
-            <span className="font-bold text-lg text-white">GoEdtech</span>
+            <Image src={Logo} alt="Logo" width={180} height={160} />
           </div>
-          <ul className="hidden md:flex items-center gap-8 font-medium text-white">
+          <ul className="hidden md:flex items-center gap-8 font-medium text-purple-600">
             <li className="">
               <button
                 onClick={() => scrollToSection(homeRef)}
-                className="hover:text-purple-800 transition hover:underline cursor-pointer"
+                className="text-purple-600 hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 Home
               </button>
@@ -176,7 +175,7 @@ const items = FAQs.map((item, i) => (
             <li className="cursor-pointer">
               <button
                 onClick={() => scrollToSection(aboutRef)}
-                className="hover:text-purple-800 transition hover:underline cursor-pointer"
+                className="text-purple-600 hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 About Us
               </button>
@@ -184,7 +183,7 @@ const items = FAQs.map((item, i) => (
             <li className="cursor-pointer">
               <button
                 onClick={() => scrollToSection(featuresRef)}
-                className="hover:text-purple-800 transition hover:underline cursor-pointer"
+                className="text-purple-600 hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 Why Choose Us
               </button>
@@ -192,7 +191,7 @@ const items = FAQs.map((item, i) => (
             <li className="cursor-pointer">
               <button
                 onClick={() => scrollToSection(contactRef)}
-                className="hover:text-purple-800 transition hover:underline cursor-pointer"
+                className="text-purple-600 hover:text-purple-800 transition hover:underline cursor-pointer"
               >
                 Contact
               </button>
@@ -200,7 +199,7 @@ const items = FAQs.map((item, i) => (
           </ul>
           {/* Hamburger for mobile/tablet */}
           <button
-            className="md:hidden text-white focus:outline-none"
+            className="md:hidden text-purple-600 focus:outline-none"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open sidebar"
           >
@@ -212,7 +211,7 @@ const items = FAQs.map((item, i) => (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen((open) => !open)}
-                className="bg-white text-purple-500 px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
+                className="bg-purple-500 text-white px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
               >
                 Login
               </button>
@@ -268,14 +267,13 @@ const items = FAQs.map((item, i) => (
             className="absolute inset-0 bg-black opacity-40"
             onClick={() => setSidebarOpen(false)}
           />
-          <aside className="fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-[#B860F5] to-[#7B11F9] text-white flex flex-col py-8 px-6 z-50">
+          <aside className="fixed left-0 top-0 h-full w-64 bg-white text-purple-600 flex flex-col py-8 px-6 z-50">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
-                <Image src={Logo} alt="Logo" width={36} height={36} />
-                <span className="font-bold text-lg">GoEdtech</span>
+                <Image src={Logo} alt="Logo" width={150} height={160} />
               </div>
               <button
-                className="text-white"
+                className="text-purple-600"
                 onClick={() => setSidebarOpen(false)}
                 aria-label="Close sidebar"
               >
@@ -299,7 +297,7 @@ const items = FAQs.map((item, i) => (
               <div className="relative w-full" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen((open) => !open)}
-                  className="w-full bg-white text-purple-500 px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
+                  className="w-full bg-purple-500 text-white px-6 py-3 rounded shadow font-medium hover:bg-purple-800 hover:text-white transition"
                 >
                   Login
                 </button>

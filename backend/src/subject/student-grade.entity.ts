@@ -35,7 +35,11 @@ export class StudentGrade {
   @ManyToOne(() => AcademicCalendar, { eager: true, onDelete: 'CASCADE' })
   academicCalendar: AcademicCalendar;
 
-  @ManyToOne(() => Teacher, { eager: true, nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Teacher, {
+    eager: true,
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   teacher: Teacher;
 
   @Column('float')
@@ -47,6 +51,7 @@ export class StudentGrade {
   @Column('float')
   totalScore: number;
 
+  @Column({ type: 'varchar', nullable: true })
   grade: string;
 
   @CreateDateColumn()
