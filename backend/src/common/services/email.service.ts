@@ -313,7 +313,7 @@ export class EmailService {
     name: string,
     schoolName: string,
     applicationId: string,
-    schoolEmail: string,
+    schoolEmail?: string,
   ): Promise<void> {
     try {
       await this.transporter.sendMail({
@@ -775,7 +775,7 @@ export class EmailService {
     name: string,
     schoolName: string,
     applicationId: string,
-    schoolEmail: string,
+    schoolEmail?: string,
   ): Promise<void> {
     try {
       await this.transporter.sendMail({
