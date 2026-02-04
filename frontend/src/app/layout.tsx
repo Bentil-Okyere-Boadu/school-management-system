@@ -6,7 +6,7 @@ import '@mantine/core/styles.css';
 import '@mantine/charts/styles.css';
 import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from '@mantine/core';
 import { mantineOverrides } from "./mantineTheme";
-import Logo from "@/images/Goedtech-logo(1).png";
+import Logo from "@/images/logo.png";
 
 const roboto = {
   variable: "--font-roboto",
