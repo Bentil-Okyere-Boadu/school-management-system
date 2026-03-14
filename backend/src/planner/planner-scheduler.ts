@@ -40,7 +40,7 @@ export class PlannerScheduler {
     private readonly smsService: SmsService,
   ) {}
 
-  @Cron(process.env.EVENT_REMINDER_CRON ?? '0 * * * * *')
+  @Cron(process.env.EVENT_REMINDER_CRON ?? '0 */5 * * * *')
   async checkEventReminders() {
     if (this.running) return;
     this.running = true;

@@ -23,6 +23,7 @@ export class NotificationService {
     name: string,
     schoolName: string,
     applicationId: string,
+    schoolEmail: string,
   ): Promise<void> {
     const promises: Promise<any>[] = [];
 
@@ -35,6 +36,7 @@ export class NotificationService {
             name,
             schoolName,
             applicationId,
+            schoolEmail,
           )
           .catch((error) => {
             this.logger.error(
@@ -136,6 +138,7 @@ export class NotificationService {
     name: string,
     schoolName: string,
     applicationId: string,
+    schoolEmail: string,
   ): Promise<void> {
     const promises: Promise<any>[] = [];
 
@@ -165,6 +168,7 @@ export class NotificationService {
               name,
               schoolName,
               applicationId,
+              schoolEmail,
             );
             break;
           case 'Interview Completed':
@@ -333,4 +337,4 @@ export class NotificationService {
 
     await Promise.allSettled(promises);
   }
-} 
+}
