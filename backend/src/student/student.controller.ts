@@ -13,6 +13,7 @@ import {
   UploadedFile,
   Query,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 
@@ -35,6 +36,7 @@ import { AttendanceService } from 'src/attendance/attendance.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
 
+@ApiTags('Student')
 @Controller('student')
 export class StudentController {
   constructor(

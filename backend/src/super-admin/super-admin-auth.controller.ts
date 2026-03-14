@@ -1,10 +1,12 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { SuperAdminAuthService } from './super-admin-auth.service';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { SuperAdminLocalAuthGuard } from './guards/super-admin-local-auth.guard';
 import { SuperAdmin } from './super-admin.entity';
 
+@ApiTags('Super Admin')
 @Controller('super-admin/auth')
 export class SuperAdminAuthController {
   constructor(private readonly superAdminAuthService: SuperAdminAuthService) {}
