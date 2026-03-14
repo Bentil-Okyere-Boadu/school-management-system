@@ -13,6 +13,7 @@ import {
   Delete,
   UploadedFile,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { TeacherAuthService } from './teacher.auth.service';
@@ -43,6 +44,7 @@ import { UpdateTeacherTopicDto } from './dto/update-teacher-topic.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { GradeSubmissionDto } from './dto/grade-submission.dto';
 
+@ApiTags('Teacher')
 @Controller('teacher')
 export class TeacherController {
   constructor(

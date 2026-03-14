@@ -1,15 +1,18 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateTeacherTopicDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   name: string;
 
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   description?: string;
 
-  // subject = SubjectCatalog
+  @ApiProperty({ description: 'Subject catalog UUID' })
   @IsUUID()
   @IsNotEmpty()
   subjectCatalogId: string;

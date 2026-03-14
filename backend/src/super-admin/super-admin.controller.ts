@@ -7,6 +7,7 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SuperAdminService } from './super-admin.service';
 import { SuperAdmin } from './super-admin.entity';
 import { SuperAdminJwtAuthGuard } from './guards/super-admin-jwt-auth.guard';
@@ -18,6 +19,7 @@ import { QueryString } from 'src/common/api-features/api-features';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
+@ApiTags('Super Admin')
 @Controller('super-admin')
 export class SuperAdminController {
   constructor(private readonly superAdminService: SuperAdminService) {}

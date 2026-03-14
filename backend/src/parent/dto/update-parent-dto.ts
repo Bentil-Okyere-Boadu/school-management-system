@@ -1,48 +1,53 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
   IsEmail,
-  MinLength,
   MaxLength,
   Matches,
 } from 'class-validator';
 
 export class UpdateParentDto {
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'First name must be a string' })
+  @IsString()
   firstName?: string;
 
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'Last name must be a string' })
+  @IsString()
   lastName?: string;
 
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'Occupation must be a string' })
-  @MaxLength(100, { message: 'Occupation must not exceed 100 characters' })
+  @IsString()
+  @MaxLength(100)
   occupation?: string;
 
+  @ApiPropertyOptional({ example: 'parent@example.com' })
   @IsOptional()
-  @IsEmail({}, { message: 'Email must be a valid email address' })
+  @IsEmail()
   email?: string;
 
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'Address must be a string' })
-  @MaxLength(500, { message: 'Address must not exceed 500 characters' })
+  @IsString()
+  @MaxLength(500)
   address?: string;
 
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'Phone must be a string' })
+  @IsString()
   @Matches(
     /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/,
-    {
-      message: 'Phone number must be a valid phone number format',
-    },
+    { message: 'Phone number must be a valid phone number format' },
   )
-  @MaxLength(20, { message: 'Phone number must not exceed 20 characters' })
+  @MaxLength(20)
   phone?: string;
 
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'Relationship must be a string' })
-  @MaxLength(50, { message: 'Relationship must not exceed 50 characters' })
+  @IsString()
+  @MaxLength(50)
   relationship?: string;
 }

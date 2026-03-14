@@ -12,6 +12,7 @@ import {
   Patch,
   Delete,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
@@ -37,6 +38,7 @@ import {
   AttendanceService,
 } from 'src/attendance/attendance.service';
 
+@ApiTags('School Admin')
 @Controller('school-admin')
 @UseInterceptors(SanitizeResponseInterceptor)
 export class SchoolAdminController {

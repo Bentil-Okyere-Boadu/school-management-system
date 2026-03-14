@@ -1,25 +1,31 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class UpdateClassLevelDto {
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'Class name must be text if provided.' })
+  @IsString()
   name?: string;
 
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString({ message: 'Description must be text if provided.' })
+  @IsString()
   description?: string;
 
+  @ApiPropertyOptional({ description: 'Class teacher UUID' })
   @IsOptional()
-  @IsUUID('4', { message: 'Class teacher must field must not be empty.' })
+  @IsUUID('4')
   classTeacherId?: string;
 
+  @ApiPropertyOptional({ type: [String], format: 'uuid' })
   @IsOptional()
-  @IsArray({ message: 'Teachers must be provided as a list of IDs.' })
-  @IsUUID('4', { each: true, message: 'Each teacher ID must be valid.' })
+  @IsArray()
+  @IsUUID('4', { each: true })
   teacherIds?: string[];
 
+  @ApiPropertyOptional({ type: [String], format: 'uuid' })
   @IsOptional()
-  @IsArray({ message: 'Students must be provided as a list of IDs.' })
-  @IsUUID('4', { each: true, message: 'Each student ID must be valid.' })
+  @IsArray()
+  @IsUUID('4', { each: true })
   studentIds?: string[];
 }
