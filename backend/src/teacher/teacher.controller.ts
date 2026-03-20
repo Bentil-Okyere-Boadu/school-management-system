@@ -43,6 +43,10 @@ import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateTeacherTopicDto } from './dto/update-teacher-topic.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { GradeSubmissionDto } from './dto/grade-submission.dto';
+import { CurriculumService } from 'src/curriculum/curriculum.service';
+import { CreateSubtopicDto } from 'src/curriculum/dto/create-subtopic.dto';
+import { UpdateSubtopicDto } from 'src/curriculum/dto/update-subtopic.dto';
+import { CreateCurriculumTopicNoteDto } from 'src/curriculum/dto/create-curriculum-topic-note.dto';
 
 @ApiTags('Teacher')
 @Controller('teacher')
@@ -54,6 +58,7 @@ export class TeacherController {
     private readonly attendanceService: AttendanceService,
     private readonly schoolAdminService: SchoolAdminService,
     private readonly academicCalendarService: AcademicCalendarService,
+    private readonly curriculumService: CurriculumService,
   ) {}
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -277,6 +282,134 @@ export class TeacherController {
   @Roles(Role.Teacher)
   deleteTopic(@CurrentUser() teacher: Teacher, @Param('id') topicId: string) {
     return this.TeacherService.deleteTeacherTopic(teacher, topicId);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('topics/:topicId/subtopics')
+  @Roles(Role.Teacher)
+  getSubtopicsForTopic(
+    @CurrentUser() teacher: Teacher,
+    @Param('topicId') topicId: string,
+  ) {
+    return this.curriculumService.findSubtopicsByTopicAsTeacher(
+      topicId,
+      teacher.id,
+      teacher.school.id,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('topics/:topicId/subtopics')
+  @Roles(Role.Teacher)
+  createSubtopic(
+    @CurrentUser() teacher: Teacher,
+    @Param('topicId') topicId: string,
+    @Body() dto: CreateSubtopicDto,
+  ) {
+    const teacherIdentifier = `Teacher - ${teacher.id}`;
+    return this.curriculumService.createSubtopicAsTeacher(
+      topicId,
+      dto,
+      teacher.id,
+      teacherIdentifier,
+      teacher.school.id,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('subtopics/:id')
+  @Roles(Role.Teacher)
+  updateSubtopic(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') id: string,
+    @Body() dto: UpdateSubtopicDto,
+  ) {
+    const teacherIdentifier = `Teacher - ${teacher.id}`;
+    return this.curriculumService.updateSubtopicAsTeacher(
+      id,
+      dto,
+      teacherIdentifier,
+      teacher.school.id,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('subtopics/:id')
+  @Roles(Role.Teacher)
+  deleteSubtopic(@CurrentUser() teacher: Teacher, @Param('id') id: string) {
+    const teacherIdentifier = `Teacher - ${teacher.id}`;
+    return this.curriculumService.removeSubtopicAsTeacher(
+      id,
+      teacherIdentifier,
+      teacher.school.id,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('subtopics/:subtopicId/complete')
+  @Roles(Role.Teacher)
+  markSubtopicComplete(
+    @CurrentUser() teacher: Teacher,
+    @Param('subtopicId') subtopicId: string,
+    @Body('subjectId') subjectId: string,
+    @Body('academicTermId') academicTermId?: string,
+  ) {
+    return this.curriculumService.markSubtopicComplete(
+      subtopicId,
+      subjectId,
+      teacher.id,
+      teacher.school.id,
+      academicTermId,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('subtopics/:subtopicId/complete')
+  @Roles(Role.Teacher)
+  unmarkSubtopicComplete(
+    @CurrentUser() teacher: Teacher,
+    @Param('subtopicId') subtopicId: string,
+    @Query('subjectId') subjectId: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.curriculumService.unmarkSubtopicComplete(
+      subtopicId,
+      subjectId,
+      teacher.id,
+      teacher.school.id,
+      academicTermId,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('topics/:topicId/notes')
+  @Roles(Role.Teacher)
+  getNotesForTopic(
+    @CurrentUser() teacher: Teacher,
+    @Param('topicId') topicId: string,
+    @Query('subjectId') subjectId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.curriculumService.getNotesForTopic(
+      topicId,
+      teacher.school.id,
+      subjectId,
+      academicTermId,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('notes/reply')
+  @Roles(Role.Teacher)
+  replyToNote(
+    @CurrentUser() teacher: Teacher,
+    @Body() dto: CreateCurriculumTopicNoteDto,
+  ) {
+    return this.curriculumService.createNoteReplyAsTeacher(
+      dto,
+      teacher.id,
+      teacher.school.id,
+    );
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)

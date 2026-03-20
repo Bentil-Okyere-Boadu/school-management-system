@@ -29,7 +29,9 @@ import { QueryString } from 'src/common/api-features/api-features';
 import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
 import { ClassLevelResultNotApprovedGuard } from 'src/auth/guards/classLevelResultNotApproved.guard';
 import { Role } from 'src/auth/enums/role.enum';
-
+/*
+Subject = a teaching assignment: one teacher + one SubjectCatalog + one or more ClassLevels (e.g. “Mr. Kofi teaches Mathematics to Grade 8”
+*/
 @Controller('subject')
 export class SubjectController {
   constructor(

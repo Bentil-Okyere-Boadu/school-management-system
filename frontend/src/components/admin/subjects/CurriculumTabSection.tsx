@@ -135,12 +135,12 @@ export const CurriculumTabSection: React.FC = () => {
       name,
       description,
       subjectCatalogIds: selectedSubjectIds,
-      academicTermId: selectedTermId,
+      ...(selectedTermId ? { academicTermId: selectedTermId } : {}),
       isActive: true,
     };
 
-    if (!name || !selectedTermId || selectedSubjectIds.length === 0) {
-      toast.error("Name, academic term and at least one subject are required.");
+    if (!name || selectedSubjectIds.length === 0) {
+      toast.error("Name and at least one subject are required.");
       return;
     }
 
@@ -156,7 +156,6 @@ export const CurriculumTabSection: React.FC = () => {
         },
       });
     } else {
-      // require term on create
       createMutation(payload as CurriculumPayload, {
         onSuccess: () => {
           toast.success("Successfully created curriculum.");
@@ -297,11 +296,12 @@ export const CurriculumTabSection: React.FC = () => {
             />
             <Select
               label="Academic Term"
-              placeholder="Pick term (select academic calendar first)"
+              placeholder="Optional — reusable for all terms if empty"
               data={termOptions}
               value={selectedTermId}
-              onChange={(e) => setSelectedTermId(e as string)}
+              onChange={(e) => setSelectedTermId((e as string) ?? "")}
               searchable
+              clearable
             />
           </div>
         </div>

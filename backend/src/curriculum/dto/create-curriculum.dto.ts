@@ -32,8 +32,11 @@ export class CreateCurriculumDto {
   @IsUUID('4', { each: true })
   subjectCatalogIds: string[];
 
-  @ApiProperty({ description: 'Academic term UUID' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({
+    description:
+      'Academic term UUID — omit for a reusable (term-agnostic) curriculum; subtopic progress stays per term via completions',
+  })
+  @IsOptional()
   @IsUUID()
-  academicTermId: string;
+  academicTermId?: string;
 }

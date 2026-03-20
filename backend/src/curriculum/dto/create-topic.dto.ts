@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsInt,
   Min,
+  IsDateString,
 } from 'class-validator';
 
 export class CreateTopicDto {
@@ -24,6 +25,16 @@ export class CreateTopicDto {
   @IsInt()
   @Min(0)
   order?: number;
+
+  @ApiPropertyOptional({ description: 'Planned start date (ISO date)' })
+  @IsOptional()
+  @IsDateString()
+  plannedStartDate?: string;
+
+  @ApiPropertyOptional({ description: 'Planned end date (ISO date)' })
+  @IsOptional()
+  @IsDateString()
+  plannedEndDate?: string;
 
   @ApiProperty({ description: 'Subject catalog UUID' })
   @IsNotEmpty()

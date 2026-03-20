@@ -7,7 +7,11 @@ export class CreateSubjectDto {
   @IsUUID()
   subjectCatalogId: string;
 
-  @ApiProperty({ type: [String], format: 'uuid', description: 'Class level UUIDs' })
+  @ApiProperty({
+    type: [String],
+    format: 'uuid',
+    description: 'Class level UUIDs',
+  })
   @IsNotEmpty()
   @IsUUID('4', { each: true })
   classLevelIds: string[];
