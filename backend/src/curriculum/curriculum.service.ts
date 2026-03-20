@@ -1050,6 +1050,263 @@ export class CurriculumService {
     };
   }
 
+  async getTeacherProgressDashboard(
+    teacherId: string,
+    schoolId: string,
+    filters: {
+      academicTermId: string;
+      subjectId?: string;
+      classLevelId?: string;
+    },
+  ) {
+    if (!filters.academicTermId) {
+      throw new BadRequestException('academicTermId is required');
+    }
+    const academicTerm = await this.assertAcademicTermInSchool(
+      filters.academicTermId,
+      schoolId,
+    );
+
+    const assignedSubjects = await this.subjectRepository.find({
+      where: { teacher: { id: teacherId }, school: { id: schoolId } },
+      relations: ['subjectCatalog', 'classLevels'],
+      order: { createdAt: 'ASC' },
+    });
+
+    if (assignedSubjects.length === 0) {
+      return this.buildTeacherProgressEmptyResponse(academicTerm.id);
+    }
+
+    const selectedSubject = this.resolveTeacherDashboardSubjectSelection(
+      assignedSubjects,
+      filters.subjectId,
+      filters.classLevelId,
+    );
+    if (!selectedSubject) {
+      return this.buildTeacherProgressEmptyResponse(
+        academicTerm.id,
+        filters.classLevelId ?? null,
+      );
+    }
+
+    const selectedClassLevelId =
+      filters.classLevelId ?? selectedSubject.classLevels?.[0]?.id ?? null;
+
+    const topicCards = await this.buildTeacherProgressTopicCards(
+      selectedSubject,
+      academicTerm,
+    );
+    const overall = this.computeTeacherProgressOverall(topicCards);
+
+    return {
+      selection: {
+        academicTermId: academicTerm.id,
+        subjectId: selectedSubject.id,
+        classLevelId: selectedClassLevelId,
+      },
+      overall,
+      topics: topicCards,
+    };
+  }
+
+  /** Empty dashboard: clients load subject/class options from other teacher endpoints. */
+  private buildTeacherProgressEmptyResponse(
+    academicTermId: string,
+    classLevelId: string | null = null,
+  ) {
+    return {
+      selection: {
+        academicTermId,
+        subjectId: null as string | null,
+        classLevelId,
+      },
+      overall: {
+        totalTopics: 0,
+        completedTopics: 0,
+        pendingTopics: 0,
+        avgProgress: 0,
+        completedLabel: '0 of 0 topics completed',
+      },
+      topics: [] as any[],
+    };
+  }
+
+  private resolveTeacherDashboardSubjectSelection(
+    assignedSubjects: Subject[],
+    subjectId?: string,
+    classLevelId?: string,
+  ) {
+    const requestedSubject = subjectId
+      ? assignedSubjects.find((s) => s.id === subjectId)
+      : null;
+    if (subjectId && !requestedSubject) {
+      throw new ForbiddenException(
+        'subjectId does not belong to this teacher in your school',
+      );
+    }
+    const subjectsAfterClassFilter = classLevelId
+      ? assignedSubjects.filter((s) =>
+          (s.classLevels || []).some((cl) => cl.id === classLevelId),
+        )
+      : assignedSubjects;
+    const selectedSubject =
+      requestedSubject ?? subjectsAfterClassFilter[0] ?? null;
+    if (
+      selectedSubject &&
+      classLevelId &&
+      !(selectedSubject.classLevels || []).some((cl) => cl.id === classLevelId)
+    ) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to the selected teacher subject',
+      );
+    }
+    return selectedSubject;
+  }
+
+  private async buildTeacherProgressTopicCards(
+    selectedSubject: Subject,
+    academicTerm: AcademicTerm,
+  ) {
+    const topics = await this.topicRepository.find({
+      where: { subjectCatalog: { id: selectedSubject.subjectCatalog.id } },
+      relations: ['subtopics'],
+      order: { order: 'ASC', createdAt: 'ASC' },
+    });
+
+    const allSubtopicIds = topics.flatMap((t) =>
+      (t.subtopics || []).map((s) => s.id),
+    );
+    const completions =
+      allSubtopicIds.length > 0
+        ? await this.subtopicCompletionRepository.find({
+            where: {
+              subject: { id: selectedSubject.id },
+              academicTerm: { id: academicTerm.id },
+              subtopic: { id: In(allSubtopicIds) },
+            },
+            relations: ['subtopic'],
+          })
+        : [];
+    const completionBySubtopicId = new Map(
+      completions.map((c) => [c.subtopic.id, c]),
+    );
+
+    const topicCards: any[] = [];
+    for (const topic of topics) {
+      const subtopics = [...(topic.subtopics || [])].sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+      );
+      const completedCount = subtopics.filter((s) =>
+        completionBySubtopicId.has(s.id),
+      ).length;
+      const totalSubtopics = subtopics.length;
+      const progressPercent =
+        totalSubtopics === 0
+          ? 0
+          : Math.round((completedCount / totalSubtopics) * 100);
+      const status: 'pending' | 'completed' =
+        progressPercent >= 100 ? 'completed' : 'pending';
+      const weekLabel = this.computeWeekLabel(
+        topic.plannedStartDate,
+        academicTerm,
+      );
+      const notesCount = await this.getTeacherTopicNotesCount(
+        topic.id,
+        selectedSubject.id,
+        academicTerm.id,
+      );
+
+      topicCards.push({
+        topicId: topic.id,
+        name: topic.name,
+        description: topic.description ?? null,
+        plannedStartDate: topic.plannedStartDate
+          ? topic.plannedStartDate.toISOString().split('T')[0]
+          : null,
+        plannedEndDate: topic.plannedEndDate
+          ? topic.plannedEndDate.toISOString().split('T')[0]
+          : null,
+        progressPercent,
+        status,
+        weekLabel,
+        subtopicCounts: { total: totalSubtopics, completed: completedCount },
+        notesCount,
+        subtopics: subtopics.map((s) => {
+          const completion = completionBySubtopicId.get(s.id);
+          return {
+            id: s.id,
+            name: s.name,
+            completed: Boolean(completion),
+            completedAt: completion
+              ? completion.completedAt.toISOString().split('T')[0]
+              : null,
+          };
+        }),
+      });
+    }
+    return topicCards;
+  }
+
+  private computeWeekLabel(
+    plannedStartDate: Date | null,
+    academicTerm: AcademicTerm,
+  ): string | null {
+    if (!plannedStartDate || !academicTerm.startDate) return null;
+    const start = new Date(plannedStartDate);
+    const termStart = new Date(academicTerm.startDate);
+    const daysFromTermStart = Math.floor(
+      (start.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const weekNumber = Math.max(1, Math.floor(daysFromTermStart / 7) + 1);
+    return `W${weekNumber}`;
+  }
+
+  private async getTeacherTopicNotesCount(
+    topicId: string,
+    subjectId: string,
+    academicTermId: string,
+  ): Promise<number> {
+    return this.curriculumTopicNoteRepository
+      .createQueryBuilder('note')
+      .where('note.topic.id = :topicId', { topicId })
+      .andWhere('note.parent IS NULL')
+      .andWhere('(note.subject.id = :subjectId OR note.subject.id IS NULL)', {
+        subjectId,
+      })
+      .andWhere(
+        '(note.academicTerm.id = :academicTermId OR note.academicTerm.id IS NULL)',
+        { academicTermId },
+      )
+      .getCount();
+  }
+
+  private computeTeacherProgressOverall(
+    topicCards: Array<{
+      progressPercent: number;
+      status: 'pending' | 'completed';
+    }>,
+  ) {
+    const totalTopics = topicCards.length;
+    const completedTopics = topicCards.filter(
+      (t) => t.status === 'completed',
+    ).length;
+    const pendingTopics = totalTopics - completedTopics;
+    const avgProgress =
+      totalTopics === 0
+        ? 0
+        : Math.round(
+            topicCards.reduce((acc, t) => acc + t.progressPercent, 0) /
+              totalTopics,
+          );
+    return {
+      totalTopics,
+      completedTopics,
+      pendingTopics,
+      avgProgress,
+      completedLabel: `${completedTopics} of ${totalTopics} topics completed`,
+    };
+  }
+
   // Topic detail for a given subject: topic + subtopics with completion state
   async getTopicDetail(
     topicId: string,
@@ -1083,8 +1340,7 @@ export class CurriculumService {
       );
     }
 
-    const resolvedTermId =
-      academicTermId ?? topic.curriculum?.academicTerm?.id;
+    const resolvedTermId = academicTermId ?? topic.curriculum?.academicTerm?.id;
     if (!resolvedTermId) {
       throw new BadRequestException(
         'academicTermId is required when the topic has no curriculum academic term',
@@ -1160,7 +1416,11 @@ export class CurriculumService {
             id: teacher.id,
             firstName: teacher.firstName,
             lastName: teacher.lastName,
-            name: [teacher.firstName, teacher.lastName].filter(Boolean).join(' ').trim() || teacher.email,
+            name:
+              [teacher.firstName, teacher.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim() || teacher.email,
           }
         : null;
 
