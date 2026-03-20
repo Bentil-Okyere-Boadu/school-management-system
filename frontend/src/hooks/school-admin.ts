@@ -30,6 +30,12 @@ import {
   ApproveClassResultsPayload,
   CurriculumItem,
   CurriculumPayload,
+  CurriculumProgressDashboardData,
+  CurriculumTopicDetailData,
+  CurriculumTopicNote,
+  CreateCurriculumTopicNotePayload,
+  CreateSubtopicPayload,
+  UpdateSubtopicPayload,
   Topic,
   TopicPayload,
   AdminAssignment,
@@ -616,6 +622,170 @@ export const useEditCurriculumById = () => {
     mutationFn: (payload: Partial<CurriculumPayload> & { id: string }) => {
       const { id, ...rest } = payload;
       return customAPI.patch(`/curriculum/${id}`, rest);
+    },
+  });
+};
+
+export type CurriculumProgressDashboardFilters = {
+  curriculumId?: string;
+  subjectCatalogId?: string;
+  classLevelId?: string;
+  teacherId?: string;
+  academicTermId?: string;
+};
+
+export const useGetCurriculumProgressDashboard = (
+  filters: CurriculumProgressDashboardFilters
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["curriculumProgressDashboard", filters],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filters.curriculumId)
+        params.set("curriculumId", filters.curriculumId);
+      if (filters.subjectCatalogId)
+        params.set("subjectCatalogId", filters.subjectCatalogId);
+      if (filters.classLevelId)
+        params.set("classLevelId", filters.classLevelId);
+      if (filters.teacherId) params.set("teacherId", filters.teacherId);
+      if (filters.academicTermId)
+        params.set("academicTermId", filters.academicTermId);
+      const qs = params.toString();
+      return customAPI.get(
+        `/curriculum/progress-dashboard${qs ? `?${qs}` : ""}`
+      );
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const dashboard = data?.data as CurriculumProgressDashboardData | undefined;
+
+  return { dashboard, isLoading, refetch };
+};
+
+export const useGetCurriculumTopicDetail = (
+  topicId: string,
+  subjectId: string,
+  academicTermId?: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch, error } = useQuery({
+    queryKey: ["curriculumTopicDetail", topicId, subjectId, academicTermId],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("subjectId", subjectId);
+      if (academicTermId) params.set("academicTermId", academicTermId);
+      return customAPI.get(
+        `/curriculum/topics/${topicId}/detail?${params.toString()}`
+      );
+    },
+    enabled:
+      (options?.enabled ?? true) && Boolean(topicId && subjectId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const detail = (data as { data?: CurriculumTopicDetailData } | undefined)
+    ?.data;
+
+  return { detail, isLoading, refetch, error };
+};
+
+export const useGetCurriculumTopicNotes = (
+  topicId: string,
+  subjectId?: string,
+  academicTermId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["curriculumTopicNotes", topicId, subjectId, academicTermId],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (subjectId) params.set("subjectId", subjectId);
+      if (academicTermId) params.set("academicTermId", academicTermId);
+      const qs = params.toString();
+      return customAPI.get(
+        `/curriculum/topics/${topicId}/notes${qs ? `?${qs}` : ""}`
+      );
+    },
+    enabled: Boolean(topicId),
+    refetchOnWindowFocus: true,
+  });
+
+  const notes =
+    (data as { data?: CurriculumTopicNote[] } | undefined)?.data ?? [];
+
+  return { notes, isLoading, refetch };
+};
+
+export const useCreateCurriculumTopicNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateCurriculumTopicNotePayload) =>
+      customAPI.post("/curriculum/notes", payload),
+    onSuccess: (_, v) => {
+      queryClient.invalidateQueries({
+        queryKey: ["curriculumTopicNotes", v.topicId],
+      });
+    },
+  });
+};
+
+/** DELETE /curriculum/notes/:id */
+export const useDeleteCurriculumTopicNote = (topicId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (noteId: string) =>
+      customAPI.delete(`/curriculum/notes/${noteId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["curriculumTopicNotes", topicId],
+      });
+    },
+  });
+};
+
+export const useCreateSubtopic = (topicId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateSubtopicPayload) =>
+      customAPI.post(`/curriculum/topics/${topicId}/subtopics`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["curriculumTopicDetail", topicId],
+      });
+    },
+  });
+};
+
+/** PATCH /curriculum/subtopics/:id — pass subtopic id at call time */
+export const useUpdateSubtopic = (topicId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UpdateSubtopicPayload;
+    }) => customAPI.patch(`/curriculum/subtopics/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["curriculumTopicDetail", topicId],
+      });
+    },
+  });
+};
+
+/** DELETE /curriculum/subtopics/:id */
+export const useDeleteSubtopic = (topicId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (subtopicId: string) =>
+      customAPI.delete(`/curriculum/subtopics/${subtopicId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["curriculumTopicDetail", topicId],
+      });
     },
   });
 };

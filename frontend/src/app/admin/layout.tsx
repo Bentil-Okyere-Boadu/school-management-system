@@ -81,7 +81,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
       setIsOverviewPage(true);
-    } else if (pathname === "/admin/subjects") {
+    } else if (pathname === "/admin/subjects" || 
+      pathname.startsWith("/admin/subjects/curriculum") || 
+      pathname.startsWith("/admin/subjects/topics")) {
       setActiveMenuItem("Subjects");
       setIsOverviewPage(true);
     } else if (pathname === "/admin/assignments" || pathname.startsWith("/admin/assignments/")) {
@@ -120,9 +122,6 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname.startsWith("/admin/notifications/")) {
       setActiveMenuItem("Notifications");
       setIsOverviewPage(false);
-    } else if (pathname.startsWith("/admin/subjects/curriculum")) {
-      setActiveMenuItem("Subjects");
-      setIsOverviewPage(true);
     }
     
     // Default

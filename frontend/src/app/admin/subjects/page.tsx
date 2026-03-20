@@ -6,6 +6,7 @@ import Subjects from "@/components/admin/subjects/Subjects";
 import SubjectAssignment from "@/components/admin/subjects/SubjectAssignment";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CurriculumTabSection } from "@/components/admin/subjects/CurriculumTabSection";
+import { CurriculumProgressTabSection } from "@/components/admin/subjects/CurriculumProgressTabSection";
 import { TopicsTabSection } from "@/components/admin/subjects/TopicsTabSection";
 
 const SubjectsPage = () => {
@@ -18,6 +19,7 @@ const SubjectsPage = () => {
     { tabLabel: "Subjects", tabKey: "subjects" },
     { tabLabel: "Subjects Assignment", tabKey: "assign-subjects" },
     { tabLabel: "Curriculum", tabKey: "curriculum" },
+    { tabLabel: "Curriculum Progress", tabKey: "curriculum-progress" },
     { tabLabel: "Topics", tabKey: "topics" },
   ];
 
@@ -55,6 +57,11 @@ const SubjectsPage = () => {
             <CurriculumTabSection/>
         </div>
         )}
+      {activeTabKey === "curriculum-progress" && (
+        <div>
+          <CurriculumProgressTabSection />
+        </div>
+      )}
       {activeTabKey === "topics" && (
         <div>
             <TopicsTabSection/>

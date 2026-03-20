@@ -730,6 +730,109 @@ export interface CurriculumItem {
   isActive: boolean;
   subjectCatalogIds?: string[];
   subjectCatalogs: SubjectCatalog[];
+  academicTerm?: {
+    id: string;
+    name?: string;
+    termName?: string;
+    academicCalendar?: { id: string; name: string };
+  };
+}
+
+export interface CurriculumProgressDashboardTeacher {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+}
+
+export interface CurriculumProgressDashboardSummary {
+  totalTopics: number;
+  completed: number;
+  pending: number;
+  avgProgress: number;
+}
+
+export interface CurriculumProgressDashboardRow {
+  subjectId: string;
+  teacher: CurriculumProgressDashboardTeacher;
+  classLevels: Array<{ id: string; name: string }>;
+  subjectCatalog: { id: string; name: string };
+  topicId: string;
+  topicName: string;
+  topicDescription?: string;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  progressPercent: number;
+  status: "pending" | "completed";
+  dateCompleted: string | null;
+}
+
+export interface CurriculumProgressDashboardData {
+  summary: CurriculumProgressDashboardSummary;
+  rows: CurriculumProgressDashboardRow[];
+}
+
+export interface CurriculumTopicDetailSubtopic {
+  id: string;
+  name: string;
+  description?: string | null;
+  completed: boolean;
+  completedAt: string | null;
+}
+
+export interface CreateSubtopicPayload {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateSubtopicPayload {
+  name?: string;
+  description?: string;
+}
+
+export interface CurriculumTopicDetailData {
+  topic: {
+    id: string;
+    name: string;
+    description?: string | null;
+    plannedStartDate: string | null;
+    plannedEndDate: string | null;
+    progressPercent: number;
+    status: "pending" | "completed";
+    dateCompleted: string | null;
+    weekDuration: number | null;
+    weekNumber: number | null;
+    weekLabel: string | null;
+  };
+  subject: {
+    id: string;
+    subjectCatalog: { id: string; name: string };
+    teacher: {
+      id: string;
+      firstName?: string;
+      lastName?: string;
+      name?: string;
+    } | null;
+    classLevels: Array<{ id: string; name: string }>;
+  };
+  academicTerm: { id: string; termName: string };
+  subtopics: CurriculumTopicDetailSubtopic[];
+}
+
+export interface CurriculumTopicNote {
+  id: string;
+  content: string;
+  createdAt: string;
+  authorRole?: string;
+  replies?: CurriculumTopicNote[];
+}
+
+export interface CreateCurriculumTopicNotePayload {
+  topicId: string;
+  content: string;
+  subjectId?: string;
+  parentId?: string;
+  academicTermId?: string;
 }
 
 export interface SubjectCatalog {
