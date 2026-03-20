@@ -8,7 +8,7 @@ import {
   IconCalendar,
   IconCircleCheck,
   IconEdit,
-  IconMessage,
+  IconFlag,
   IconPlus,
   IconSend,
   IconTrash,
@@ -31,6 +31,10 @@ import type {
   CurriculumTopicDetailData,
   CurriculumTopicDetailSubtopic,
 } from "@/@types";
+import {
+  CurriculumTopicNoteThread,
+  countTopicNotesInTree,
+} from "@/components/curriculum/CurriculumTopicNoteThread";
 
 function topicStatusPresentation(topic: CurriculumTopicDetailData["topic"]): {
   label: string;
@@ -77,7 +81,7 @@ export default function CurriculumTopicDetailPage() {
     subjectId,
     academicTermId
   );
-  const { notes, isLoading: notesLoading } = useGetCurriculumTopicNotes(
+  const { notes } = useGetCurriculumTopicNotes(
     topicId,
     subjectId,
     academicTermId
@@ -106,6 +110,7 @@ export default function CurriculumTopicDetailPage() {
 
   const topic = detail?.topic;
   const subject = detail?.subject;
+  const academicTerm = detail?.academicTerm;
   const subtopics = detail?.subtopics ?? [];
 
   const teacherName = useMemo(() => {
@@ -130,6 +135,11 @@ export default function CurriculumTopicDetailPage() {
 
   const completedSubCount = subtopics.filter((s) => s.completed).length;
   const totalSubCount = subtopics.length;
+
+  const noteMessageCount = useMemo(
+    () => countTopicNotesInTree(notes),
+    [notes]
+  );
 
   const onSendNote = () => {
     const content = noteDraft.trim();
@@ -295,6 +305,14 @@ export default function CurriculumTopicDetailPage() {
                 {breadcrumb ? (
                   <p className="text-sm text-gray-500 mt-2">{breadcrumb}</p>
                 ) : null}
+                {academicTerm?.termName ? (
+                  <p className="text-sm text-gray-600 mt-1">
+                    <span className="font-medium text-gray-700">
+                      Academic term:{" "}
+                    </span>
+                    {academicTerm.termName}
+                  </p>
+                ) : null}
                 {topic.description ? (
                   <p className="text-gray-600 mt-1 max-w-3xl leading-relaxed">
                     {topic.description}
@@ -367,12 +385,18 @@ export default function CurriculumTopicDetailPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Schedule
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">
+                    Academic term
+                  </p>
+                  <p className="text-gray-900 font-medium">
+                    {academicTerm?.termName ?? "—"}
+                  </p>
+                </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">Week</p>
-                  <p className="text-gray-900 font-medium">
-                    {topic.weekLabel ?? "—"}
-                  </p>
+                  <p className="text-gray-900 font-medium">{topic.weekLabel ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">
@@ -472,57 +496,26 @@ export default function CurriculumTopicDetailPage() {
             {/* Notes */}
             <section className="bg-white rounded-xl border border-gray-200/90 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-                <IconMessage
-                  size={22}
-                  className="text-gray-400"
-                  stroke={1.5}
-                />
+                <IconFlag size={18} stroke={1.5} className="text-gray-500" />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Notes ({notes.length})
+                  Notes ({noteMessageCount})
                 </h2>
               </div>
 
-              <div className="px-6 py-4 min-h-[120px]">
-                {notesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <HashLoader color="#AB58E7" size={28} />
-                  </div>
-                ) : notes.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">
-                    No notes yet.
-                  </p>
-                ) : (
-                  <ul className="space-y-4">
+              <div className="px-6 bg-gray-50/40">
+                  <ul className="space-y-3">
                     {notes.map((n) => (
-                      <li
+                      <CurriculumTopicNoteThread
                         key={n.id}
-                        className="text-sm border-b border-gray-100 last:border-0 pb-4 last:pb-0 group"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-gray-800 whitespace-pre-wrap">
-                              {n.content}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {formatNoteDate(n.createdAt)}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteNoteId(n.id)}
-                            className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 shrink-0 opacity-70 group-hover:opacity-100"
-                            aria-label="Delete note"
-                          >
-                            <IconTrash size={18} stroke={1.5} />
-                          </button>
-                        </div>
-                      </li>
+                        note={n}
+                        formatDate={formatNoteDate}
+                        onDeleteRootNote={(id) => setDeleteNoteId(id)}
+                      />
                     ))}
                   </ul>
-                )}
               </div>
 
-              <div className="px-6 py-4 bg-gray-50/80 border-t border-gray-100">
+              <div className="flex items-end px-6 py-4 bg-gray-50/80 border-t border-gray-100">
                 <textarea
                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300 min-h-[100px] resize-y bg-white"
                   placeholder="Add a note..."
@@ -530,7 +523,7 @@ export default function CurriculumTopicDetailPage() {
                   onChange={(e) => setNoteDraft(e.target.value)}
                   disabled={noteSending}
                 />
-                <div className="flex justify-end mt-3">
+                <div className="ml-2">
                   <CustomButton
                     text="Send"
                     loading={noteSending}

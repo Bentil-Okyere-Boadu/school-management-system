@@ -780,6 +780,11 @@ export interface CurriculumTopicDetailSubtopic {
   completedAt: string | null;
 }
 
+export interface Subtopic {
+  name: string;
+  description?: string;
+}
+
 export interface CreateSubtopicPayload {
   name: string;
   description?: string;
@@ -833,6 +838,44 @@ export interface CreateCurriculumTopicNotePayload {
   subjectId?: string;
   parentId?: string;
   academicTermId?: string;
+}
+
+/** GET /teacher/curriculum/progress */
+export interface TeacherProgressSubtopicRow {
+  id: string;
+  name: string;
+  completed: boolean;
+  completedAt: string | null;
+}
+
+export interface TeacherProgressTopicCard {
+  topicId: string;
+  name: string;
+  description: string | null;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  progressPercent: number;
+  status: "pending" | "completed";
+  weekLabel: string | null;
+  subtopicCounts: { total: number; completed: number };
+  notesCount: number;
+  subtopics: TeacherProgressSubtopicRow[];
+}
+
+export interface TeacherCurriculumProgressDashboard {
+  selection: {
+    academicTermId: string;
+    subjectId: string | null;
+    classLevelId: string | null;
+  };
+  overall: {
+    totalTopics: number;
+    completedTopics: number;
+    pendingTopics: number;
+    avgProgress: number;
+    completedLabel: string;
+  };
+  topics: TeacherProgressTopicCard[];
 }
 
 export interface SubjectCatalog {
