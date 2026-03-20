@@ -43,6 +43,14 @@ export class AuthService {
     return this.jwtService.sign(payload, options);
   }
 
+  private getAccessTokenExpiresIn(): string {
+    return this.configService.get<string>('JWT_EXPIRES') || '15m';
+  }
+
+  generateAccessToken(payload: { [key: string]: any }): string {
+    return this.generateToken(payload, this.getAccessTokenExpiresIn());
+  }
+
   async generateRefreshToken(
     userId: string,
     userType: 'school_admin' | 'teacher' | 'student' | 'super_admin',
@@ -132,7 +140,7 @@ export class AuthService {
       userType = 'super_admin';
     }
 
-    const accessToken = this.generateToken(payload, '15m');
+    const accessToken = this.generateAccessToken(payload);
     const refreshToken = await this.generateRefreshToken(entity.id, userType);
 
     return {

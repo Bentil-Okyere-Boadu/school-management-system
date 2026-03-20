@@ -102,7 +102,7 @@ export class AuthController {
       role: user.role?.name,
     };
 
-    const accessToken = this.authService.generateToken(payload, '15m');
+    const accessToken = this.authService.generateAccessToken(payload);
 
     this.logger.log(
       `Token refreshed for user ${user.id} (${refreshToken.userType})`,
