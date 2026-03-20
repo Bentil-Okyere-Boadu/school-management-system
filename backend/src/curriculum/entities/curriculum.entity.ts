@@ -52,11 +52,12 @@ export class Curriculum {
   })
   school: School;
 
+  /** Optional: curricula can be term-agnostic; progress is scoped by term on subtopic completions. */
   @ManyToOne(() => AcademicTerm, {
-    nullable: false,
+    nullable: true,
     onDelete: 'CASCADE',
   })
-  academicTerm: AcademicTerm;
+  academicTerm: AcademicTerm | null;
 
   @OneToMany(() => Topic, (topic) => topic.curriculum, {
     cascade: true,

@@ -3,11 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { SubjectCatalog } from '../../subject/subject-catalog.entity';
 import { Curriculum } from './curriculum.entity';
+import { Subtopic } from './subtopic.entity';
 
 @Entity()
 export class Topic {
@@ -23,6 +25,12 @@ export class Topic {
   @Column({ type: 'int', default: 0 })
   order: number; // For ordering topics within a subject catalog
 
+  @Column({ type: 'date', nullable: true })
+  plannedStartDate: Date | null;
+
+  @Column({ type: 'date', nullable: true })
+  plannedEndDate: Date | null;
+
   @ManyToOne(() => SubjectCatalog, (subjectCatalog) => subjectCatalog.topics, {
     nullable: false,
     onDelete: 'CASCADE',
@@ -34,6 +42,9 @@ export class Topic {
     onDelete: 'CASCADE',
   })
   curriculum: Curriculum;
+
+  @OneToMany(() => Subtopic, (subtopic) => subtopic.topic, { cascade: true })
+  subtopics: Subtopic[];
 
   @CreateDateColumn()
   createdAt: Date;

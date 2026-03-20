@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -368,6 +368,106 @@ export const useDeleteTeacherTopic = () => {
     return useMutation({
         mutationFn: (topicId: string) =>
             customAPI.delete(`/teacher/topics/${topicId}`),
+    });
+};
+
+export const useGetSubtopicsForTopic = (topicId: string | undefined, enabled = true) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherSubtopics', topicId],
+        queryFn: () => customAPI.get(`/teacher/topics/${topicId}/subtopics`),
+        enabled: Boolean(topicId) && enabled,
+        refetchOnWindowFocus: true,
+    });
+    const subtopics = (data?.data as Subtopic[]) ?? [];
+    return { subtopics, isLoading, refetch };
+};
+
+export const useCreateTeacherSubtopic = () => {
+    return useMutation({
+        mutationFn: ({ topicId, payload }: { topicId: string; payload: CreateSubtopicPayload }) =>
+            customAPI.post(`/teacher/topics/${topicId}/subtopics`, {
+                name: payload.name,
+                description: payload.description,
+            }),
+    });
+};
+
+export const useUpdateTeacherSubtopic = () => {
+    return useMutation({
+        mutationFn: ({ id, payload }: { id: string; payload: UpdateSubtopicPayload }) =>
+            customAPI.patch(`/teacher/subtopics/${id}`, payload),
+    });
+};
+
+export const useDeleteTeacherSubtopic = () => {
+    return useMutation({
+        mutationFn: (id: string) => customAPI.delete(`/teacher/subtopics/${id}`),
+    });
+};
+
+export const useMarkSubtopicComplete = () => {
+    return useMutation({
+        mutationFn: ({
+            subtopicId,
+            subjectId,
+            academicTermId,
+        }: {
+            subtopicId: string;
+            subjectId: string;
+            academicTermId?: string;
+        }) =>
+            customAPI.post(`/teacher/subtopics/${subtopicId}/complete`, {
+                subjectId,
+                ...(academicTermId ? { academicTermId } : {}),
+            }),
+    });
+};
+
+export const useUnmarkSubtopicComplete = () => {
+    return useMutation({
+        mutationFn: ({
+            subtopicId,
+            subjectId,
+            academicTermId,
+        }: {
+            subtopicId: string;
+            subjectId: string;
+            academicTermId?: string;
+        }) => {
+            const params = new URLSearchParams({ subjectId });
+            if (academicTermId) params.set('academicTermId', academicTermId);
+            return customAPI.delete(
+                `/teacher/subtopics/${subtopicId}/complete?${params.toString()}`,
+            );
+        },
+    });
+};
+
+export const useGetTeacherTopicNotes = (
+    topicId: string | undefined,
+    options?: { subjectId?: string; academicTermId?: string; enabled?: boolean },
+) => {
+    const { subjectId, academicTermId, enabled = true } = options ?? {};
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherTopicNotes', topicId, subjectId, academicTermId],
+        queryFn: () => {
+            const params = new URLSearchParams();
+            if (subjectId) params.set('subjectId', subjectId);
+            if (academicTermId) params.set('academicTermId', academicTermId);
+            const q = params.toString() ? `?${params.toString()}` : '';
+            return customAPI.get(`/teacher/topics/${topicId}/notes${q}`);
+        },
+        enabled: Boolean(topicId) && enabled,
+        refetchOnWindowFocus: true,
+    });
+    const notes = (data?.data as CurriculumTopicNote[]) ?? [];
+    return { notes, isLoading, refetch };
+};
+
+export const useReplyToCurriculumNote = () => {
+    return useMutation({
+        mutationFn: (payload: CreateCurriculumTopicNotePayload) =>
+            customAPI.post('/teacher/notes/reply', payload),
     });
 };
 

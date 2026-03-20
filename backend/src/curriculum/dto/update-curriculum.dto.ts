@@ -1,34 +1,22 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType, OmitType } from '@nestjs/mapped-types';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateCurriculumDto } from './create-curriculum.dto';
 import {
   IsOptional,
-  IsString,
-  IsBoolean,
   IsUUID,
-  IsArray,
-  ArrayMinSize,
+  ValidateIf,
 } from 'class-validator';
 
-export class UpdateCurriculumDto extends PartialType(CreateCurriculumDto) {
+export class UpdateCurriculumDto extends PartialType(
+  OmitType(CreateCurriculumDto, ['academicTermId'] as const),
+) {
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Academic term UUID, or null to unlink (term-agnostic curriculum)',
+  })
   @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
-
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsUUID('4', { each: true })
-  subjectCatalogIds?: string[];
-
-  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
   @IsUUID()
-  academicTermId?: string;
+  academicTermId?: string | null;
 }
