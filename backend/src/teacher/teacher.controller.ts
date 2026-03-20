@@ -257,6 +257,26 @@ export class TeacherController {
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('curriculum/progress')
+  @Roles(Role.Teacher)
+  getCurriculumProgress(
+    @CurrentUser() teacher: Teacher,
+    @Query('academicTermId') academicTermId: string,
+    @Query('subjectId') subjectId?: string,
+    @Query('classLevelId') classLevelId?: string,
+  ) {
+    return this.curriculumService.getTeacherProgressDashboard(
+      teacher.id,
+      teacher.school.id,
+      {
+        academicTermId,
+        subjectId,
+        classLevelId,
+      },
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('topics')
   @Roles(Role.Teacher)
   createTopic(
