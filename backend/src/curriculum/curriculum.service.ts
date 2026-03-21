@@ -26,6 +26,14 @@ import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { QueryString } from '../common/api-features/api-features';
 import { APIFeatures } from '../common/api-features/api-features';
 
+const TOPIC_READ_RELATIONS = [
+  'subjectCatalog',
+  'subjectCatalog.school',
+  'curriculum',
+  'curriculum.academicTerm',
+  'curriculum.academicTerm.academicCalendar',
+] as const;
+
 @Injectable()
 export class CurriculumService {
   constructor(
@@ -65,6 +73,16 @@ export class CurriculumService {
       );
     }
     return term;
+  }
+
+  /** Serializes DB dates (Date or string) to YYYY-MM-DD for API responses. */
+  private formatDateOnly(
+    value: Date | string | null | undefined,
+  ): string | null {
+    if (value == null) return null;
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
   }
 
   async create(createCurriculumDto: CreateCurriculumDto, admin: SchoolAdmin) {
@@ -440,7 +458,12 @@ export class CurriculumService {
       curriculum,
     });
 
-    return await this.topicRepository.save(topic);
+    const saved = await this.topicRepository.save(topic);
+    const reloaded = await this.findOneTopicEntityOrThrow(
+      saved.id,
+      admin.school.id,
+    );
+    return this.enrichTopicResponse(reloaded);
   }
 
   async findAllTopics(schoolId: string, query?: QueryString) {
@@ -583,15 +606,17 @@ export class CurriculumService {
   }
 
   async findOneTopic(topicId: string, schoolId: string) {
+    const topic = await this.findOneTopicEntityOrThrow(topicId, schoolId);
+    return this.enrichTopicResponse(topic);
+  }
+
+  private async findOneTopicEntityOrThrow(
+    topicId: string,
+    schoolId: string,
+  ): Promise<Topic> {
     const topic = await this.topicRepository.findOne({
       where: { id: topicId },
-      relations: [
-        'subjectCatalog',
-        'subjectCatalog.school',
-        'curriculum',
-        'curriculum.academicTerm',
-        'curriculum.academicTerm.academicCalendar',
-      ],
+      relations: [...TOPIC_READ_RELATIONS],
     });
 
     if (!topic) {
@@ -603,6 +628,53 @@ export class CurriculumService {
     }
 
     return topic;
+  }
+
+  /**
+   * Same rules as getTopicDetail nested topic: duration from plan span; week index from plan start vs term start.
+   */
+  private deriveTopicWeekFields(
+    topic: Pick<Topic, 'plannedStartDate' | 'plannedEndDate'>,
+    academicTerm: AcademicTerm | null | undefined,
+  ): {
+    weekDuration: number | null;
+    weekNumber: number | null;
+    weekLabel: string | null;
+  } {
+    let weekDuration: number | null = null;
+    let weekNumber: number | null = null;
+    let weekLabel: string | null = null;
+
+    if (topic.plannedStartDate && topic.plannedEndDate) {
+      const start = new Date(topic.plannedStartDate);
+      const end = new Date(topic.plannedEndDate);
+      const diffMs = end.getTime() - start.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      weekDuration = Math.max(1, Math.ceil(diffDays / 7));
+      const termForWeek = academicTerm;
+      if (termForWeek?.startDate) {
+        const termStart = new Date(termForWeek.startDate);
+        const daysFromTermStart = Math.floor(
+          (start.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        weekNumber = Math.max(1, Math.floor(daysFromTermStart / 7) + 1);
+        weekLabel = `Week ${weekNumber}`;
+      }
+    }
+
+    return { weekDuration, weekNumber, weekLabel };
+  }
+
+  private enrichTopicResponse(topic: Topic): Topic & {
+    weekDuration: number | null;
+    weekNumber: number | null;
+    weekLabel: string | null;
+  } {
+    const { weekDuration, weekNumber, weekLabel } = this.deriveTopicWeekFields(
+      topic,
+      topic.curriculum?.academicTerm,
+    );
+    return { ...topic, weekDuration, weekNumber, weekLabel };
   }
 
   async updateTopic(
@@ -699,7 +771,12 @@ export class CurriculumService {
         : null;
     }
 
-    return await this.topicRepository.save(topic);
+    const saved = await this.topicRepository.save(topic);
+    const reloaded = await this.findOneTopicEntityOrThrow(
+      saved.id,
+      admin.school.id,
+    );
+    return this.enrichTopicResponse(reloaded);
   }
 
   async removeTopic(topicId: string, admin: SchoolAdmin) {
@@ -941,9 +1018,7 @@ export class CurriculumService {
               order: { completedAt: 'DESC' },
             });
           if (lastCompletion) {
-            dateCompleted = lastCompletion.completedAt
-              .toISOString()
-              .split('T')[0];
+            dateCompleted = this.formatDateOnly(lastCompletion.completedAt);
           }
         }
 
@@ -951,12 +1026,8 @@ export class CurriculumService {
           topicId: topic.id,
           name: topic.name,
           description: topic.description ?? undefined,
-          plannedStartDate: topic.plannedStartDate
-            ? topic.plannedStartDate.toISOString().split('T')[0]
-            : null,
-          plannedEndDate: topic.plannedEndDate
-            ? topic.plannedEndDate.toISOString().split('T')[0]
-            : null,
+          plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
+          plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
           progressPercent,
           status,
           dateCompleted,
@@ -1220,12 +1291,8 @@ export class CurriculumService {
         topicId: topic.id,
         name: topic.name,
         description: topic.description ?? null,
-        plannedStartDate: topic.plannedStartDate
-          ? topic.plannedStartDate.toISOString().split('T')[0]
-          : null,
-        plannedEndDate: topic.plannedEndDate
-          ? topic.plannedEndDate.toISOString().split('T')[0]
-          : null,
+        plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
+        plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
         progressPercent,
         status,
         weekLabel,
@@ -1238,7 +1305,7 @@ export class CurriculumService {
             name: s.name,
             completed: Boolean(completion),
             completedAt: completion
-              ? completion.completedAt.toISOString().split('T')[0]
+              ? this.formatDateOnly(completion.completedAt)
               : null,
           };
         }),
@@ -1374,7 +1441,7 @@ export class CurriculumService {
       const latest = completions.reduce((a, b) =>
         a.completedAt > b.completedAt ? a : b,
       );
-      dateCompleted = latest.completedAt.toISOString().split('T')[0];
+      dateCompleted = this.formatDateOnly(latest.completedAt);
     }
 
     const subtopicsWithCompletion = (topic.subtopics || []).map((st) => {
@@ -1384,30 +1451,14 @@ export class CurriculumService {
         name: st.name,
         description: st.description,
         completed: !!comp,
-        completedAt: comp ? comp.completedAt.toISOString().split('T')[0] : null,
+        completedAt: comp ? this.formatDateOnly(comp.completedAt) : null,
       };
     });
 
-    // Derive week duration and week label from planned dates
-    let weekDuration: number | null = null;
-    let weekNumber: number | null = null;
-    let weekLabel: string | null = null;
-    if (topic.plannedStartDate && topic.plannedEndDate) {
-      const start = new Date(topic.plannedStartDate);
-      const end = new Date(topic.plannedEndDate);
-      const diffMs = end.getTime() - start.getTime();
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      weekDuration = Math.max(1, Math.ceil(diffDays / 7));
-      const termForWeek = academicTermEntity;
-      if (termForWeek?.startDate) {
-        const termStart = new Date(termForWeek.startDate);
-        const daysFromTermStart = Math.floor(
-          (start.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24),
-        );
-        weekNumber = Math.max(1, Math.floor(daysFromTermStart / 7) + 1);
-        weekLabel = `Week ${weekNumber}`;
-      }
-    }
+    const { weekDuration, weekNumber, weekLabel } = this.deriveTopicWeekFields(
+      topic,
+      academicTermEntity,
+    );
 
     const teacher = subject.teacher;
     const teacherDisplay =
@@ -1429,12 +1480,8 @@ export class CurriculumService {
         id: topic.id,
         name: topic.name,
         description: topic.description,
-        plannedStartDate: topic.plannedStartDate
-          ? topic.plannedStartDate.toISOString().split('T')[0]
-          : null,
-        plannedEndDate: topic.plannedEndDate
-          ? topic.plannedEndDate.toISOString().split('T')[0]
-          : null,
+        plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
+        plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
         progressPercent,
         status,
         dateCompleted,
