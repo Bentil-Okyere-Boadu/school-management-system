@@ -46,7 +46,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     },
     {
       icon: SubjectIcon,
-      label: "Subjects"
+      label: "Curriculum",
     },
     {
       icon: AssignmentIcon,
@@ -81,8 +81,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
       setIsOverviewPage(true);
-    } else if (pathname === "/admin/subjects") {
-      setActiveMenuItem("Subjects");
+    } else if (pathname === "/admin/subjects" || 
+      pathname.startsWith("/admin/subjects/curriculum") || 
+      pathname.startsWith("/admin/subjects/topics")) {
+      setActiveMenuItem("Curriculum");
       setIsOverviewPage(true);
     } else if (pathname === "/admin/assignments" || pathname.startsWith("/admin/assignments/")) {
       setActiveMenuItem("Assignments");
@@ -120,9 +122,6 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname.startsWith("/admin/notifications/")) {
       setActiveMenuItem("Notifications");
       setIsOverviewPage(false);
-    } else if (pathname.startsWith("/admin/subjects/curriculum")) {
-      setActiveMenuItem("Subjects");
-      setIsOverviewPage(true);
     }
     
     // Default
@@ -154,7 +153,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       case "Settings":
         router.push("/admin/settings");
         break;
-      case "Subjects":
+      case "Curriculum":
         router.push("/admin/subjects");
         break;
       case "Assignments":

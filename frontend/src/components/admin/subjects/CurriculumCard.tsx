@@ -50,7 +50,7 @@ export const CurriculumCard: React.FC<CurriculumCardProps> = ({
         </div>
       )}
 
-      <div className="flex-1">
+      <div className="flex-1 pb-4">
         <div className="flex justify-between items-start">
           <h2 className="text-lg font-semibold text-gray-900">{curriculumData?.name}</h2>
           {showEditAndDelete && (

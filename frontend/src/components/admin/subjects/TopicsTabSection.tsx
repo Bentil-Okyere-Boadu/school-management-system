@@ -5,7 +5,13 @@ import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { Menu, Select } from "@mantine/core";
 import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
-import { CurriculumItem, ErrorResponse, SubjectCatalog, Topic } from "@/@types";
+import {
+  CurriculumItem,
+  ErrorResponse,
+  SubjectCatalog,
+  Topic,
+  TopicPayload,
+} from "@/@types";
 import {
   useCreateTopic,
   useDeleteTopic,
@@ -17,6 +23,12 @@ import {
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
 
+function toDateInputValue(iso: string | null | undefined): string {
+  if (iso == null || iso === "") return "";
+  const s = String(iso).trim();
+  return s.length >= 10 ? s.slice(0, 10) : "";
+}
+
 export const TopicsTabSection: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -25,12 +37,23 @@ export const TopicsTabSection: React.FC = () => {
   // Dialog selection state (moved here)
   const [dialogCurriculumId, setDialogCurriculumId] = useState<string>("");
   const [dialogSubjectId, setDialogSubjectId] = useState<string>("");
-  const [topic, setTopic] = useState<Partial<Topic & { subjectCatalogId: string; curriculumId: string }>>({
+  const [topic, setTopic] = useState<
+    Partial<
+      Topic & {
+        subjectCatalogId: string;
+        curriculumId: string;
+        plannedStartDate: string;
+        plannedEndDate: string;
+      }
+    >
+  >({
     id: "",
     name: "",
     description: "",
     subjectCatalogId: "",
     curriculumId: "",
+    plannedStartDate: "",
+    plannedEndDate: "",
   });
 
   // Data sources
@@ -72,6 +95,8 @@ export const TopicsTabSection: React.FC = () => {
       description: "",
       subjectCatalogId: "",
       curriculumId: "",
+      plannedStartDate: "",
+      plannedEndDate: "",
     });
     setDialogCurriculumId("");
     setDialogSubjectId("");
@@ -86,6 +111,8 @@ export const TopicsTabSection: React.FC = () => {
       description: row.description,
       subjectCatalogId: row.subjectCatalog?.id,
       curriculumId: row.curriculum?.id,
+      plannedStartDate: toDateInputValue(row.plannedStartDate),
+      plannedEndDate: toDateInputValue(row.plannedEndDate),
     });
 
     // Preselect curriculum and subject
@@ -113,11 +140,22 @@ export const TopicsTabSection: React.FC = () => {
       toast.error("Name, curriculum and subject are required.");
       return;
     }
-    const payload = {
+    const start = topic.plannedStartDate?.trim() ?? "";
+    const end = topic.plannedEndDate?.trim() ?? "";
+    const payload: TopicPayload = {
       name: topic.name,
-      description: topic.description as string,
+      description: (topic.description as string) || undefined,
       subjectCatalogId: dialogSubjectId,
       curriculumId: dialogCurriculumId,
+      ...(isCreate
+        ? {
+            ...(start ? { plannedStartDate: start } : {}),
+            ...(end ? { plannedEndDate: end } : {}),
+          }
+        : {
+            plannedStartDate: start || null,
+            plannedEndDate: end || null,
+          }),
     };
     if (isCreate) {
       createTopic(payload, {
@@ -168,17 +206,20 @@ export const TopicsTabSection: React.FC = () => {
             <table className="w-full border-collapse min-w-[500px]">
               <thead>
                 <tr className="bg-blue-50">
-                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
-                    <div>Name</div>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-[200px]">
+                    <div>Topic</div>
                   </th>
-                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
-                    <div>Description</div>
-                  </th>
-                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                     <div>Curriculum</div>
                   </th>
-                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                     <div>Subject</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 whitespace-nowrap">
+                    <div>Planned start</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 whitespace-nowrap">
+                    <div>Planned end</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[50px]"></th>
                 </tr>
@@ -188,7 +229,7 @@ export const TopicsTabSection: React.FC = () => {
                   if (isLoading) {
                     return (
                       <tr>
-                        <td colSpan={8}>
+                        <td colSpan={6}>
                           <div className="relative py-20 bg-white">
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                               <HashLoader color="#AB58E7" size={40} />
@@ -202,7 +243,7 @@ export const TopicsTabSection: React.FC = () => {
                   if (!topics?.length) {
                     return (
                       <tr>
-                        <td colSpan={8}>
+                        <td colSpan={6}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No topics added</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -221,19 +262,31 @@ export const TopicsTabSection: React.FC = () => {
                   };
                   return topics.map((row: TopicRow) => (
                     <tr key={row.id}>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                        <div>{row.name}</div>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 align-top">
+                        <div className="min-w-0 max-w-md">
+                          <div className="font-semibold text-gray-900">
+                            {row.name}
+                          </div>
+                          {row.description ? (
+                            <div className="text-sm text-gray-500 mt-0.5 line-clamp-3">
+                              {row.description}
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                        <div>{row.description}</div>
-                      </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 align-top">
                         <div>{row?.curriculum?.name ?? row?.subjectCatalog?.curriculum?.name ?? "-"}</div>
                       </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 align-top">
                         <div>{row?.subjectCatalog?.name ?? row?.subject?.name ?? "-"}</div>
                       </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 whitespace-nowrap text-sm text-gray-800 align-top">
+                        {row.plannedStartDate}
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 whitespace-nowrap text-sm text-gray-800 align-top">
+                        {row.plannedEndDate}
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 align-top">
                         <div className="flex items-center justify-end pr-6">
                           <Menu shadow="md" width={200}>
                             <Menu.Target>
@@ -309,6 +362,32 @@ export const TopicsTabSection: React.FC = () => {
               onChange={(v) => setDialogSubjectId(v as string)}
               searchable
               disabled={!dialogCurriculumId}
+            />
+          </div>
+          <div className="grid md:grid-cols-2 gap-4 mt-5">
+            <InputField
+              className="!py-0"
+              type="date"
+              label="Planned start"
+              value={topic.plannedStartDate ?? ""}
+              onChange={(e) =>
+                setTopic((p) => ({
+                  ...p,
+                  plannedStartDate: e.target.value,
+                }))
+              }
+            />
+            <InputField
+              className="!py-0"
+              type="date"
+              label="Planned end"
+              value={topic.plannedEndDate ?? ""}
+              onChange={(e) =>
+                setTopic((p) => ({
+                  ...p,
+                  plannedEndDate: e.target.value,
+                }))
+              }
             />
           </div>
         </form>

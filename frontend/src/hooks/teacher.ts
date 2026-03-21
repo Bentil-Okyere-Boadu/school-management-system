@@ -1,4 +1,4 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -350,16 +350,49 @@ export const useGetTeacherTopics = (search: string = "") => {
     return { teacherTopics, isLoading, refetch }
 }
 
+export type TeacherCurriculumProgressFilters = {
+    academicTermId: string;
+    subjectId?: string;
+    classLevelId?: string;
+};
+
+export const useGetTeacherCurriculumProgress = (
+    filters: TeacherCurriculumProgressFilters | null
+) => {
+    const { data, isLoading, refetch, error } = useQuery({
+        queryKey: ["teacherCurriculumProgress", filters],
+        queryFn: () => {
+            const params = new URLSearchParams();
+            params.set("academicTermId", filters!.academicTermId);
+            if (filters!.subjectId) params.set("subjectId", filters!.subjectId);
+            if (filters!.classLevelId) {
+                params.set("classLevelId", filters!.classLevelId);
+            }
+            return customAPI.get(
+                `/teacher/curriculum/progress?${params.toString()}`
+            );
+        },
+        enabled: Boolean(filters?.academicTermId),
+        refetchOnWindowFocus: true,
+        refetchOnMount: "always",
+    });
+
+    const dashboard = (data as { data?: TeacherCurriculumProgressDashboard })
+        ?.data;
+
+    return { dashboard, isLoading, refetch, error };
+};
+
 export const useCreateTeacherTopic = () => {
     return useMutation({
-        mutationFn: (payload: { name: string; description: string; subjectCatalogId: string }) =>
+        mutationFn: (payload: TeacherTopicPayload) =>
             customAPI.post('/teacher/topics', payload),
     });
 };
 
 export const useUpdateTeacherTopic = (topicId: string) => {
     return useMutation({
-        mutationFn: (payload: { name: string; description: string; subjectCatalogId: string }) =>
+        mutationFn: (payload: Partial<TeacherTopicPayload>) =>
             customAPI.patch(`/teacher/topics/${topicId}`, payload),
     });
 };

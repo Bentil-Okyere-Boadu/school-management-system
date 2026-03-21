@@ -730,6 +730,152 @@ export interface CurriculumItem {
   isActive: boolean;
   subjectCatalogIds?: string[];
   subjectCatalogs: SubjectCatalog[];
+  academicTerm?: {
+    id: string;
+    name?: string;
+    termName?: string;
+    academicCalendar?: { id: string; name: string };
+  };
+}
+
+export interface CurriculumProgressDashboardTeacher {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+}
+
+export interface CurriculumProgressDashboardSummary {
+  totalTopics: number;
+  completed: number;
+  pending: number;
+  avgProgress: number;
+}
+
+export interface CurriculumProgressDashboardRow {
+  subjectId: string;
+  teacher: CurriculumProgressDashboardTeacher;
+  classLevels: Array<{ id: string; name: string }>;
+  subjectCatalog: { id: string; name: string };
+  topicId: string;
+  topicName: string;
+  topicDescription?: string;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  progressPercent: number;
+  status: "pending" | "completed";
+  dateCompleted: string | null;
+}
+
+export interface CurriculumProgressDashboardData {
+  summary: CurriculumProgressDashboardSummary;
+  rows: CurriculumProgressDashboardRow[];
+}
+
+export interface CurriculumTopicDetailSubtopic {
+  id: string;
+  name: string;
+  description?: string | null;
+  completed: boolean;
+  completedAt: string | null;
+}
+
+export interface Subtopic {
+  name: string;
+  description?: string;
+}
+
+export interface CreateSubtopicPayload {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateSubtopicPayload {
+  name?: string;
+  description?: string;
+}
+
+export interface CurriculumTopicDetailData {
+  topic: {
+    id: string;
+    name: string;
+    description?: string | null;
+    plannedStartDate: string | null;
+    plannedEndDate: string | null;
+    progressPercent: number;
+    status: "pending" | "completed";
+    dateCompleted: string | null;
+    weekDuration: number | null;
+    weekNumber: number | null;
+    weekLabel: string | null;
+  };
+  subject: {
+    id: string;
+    subjectCatalog: { id: string; name: string };
+    teacher: {
+      id: string;
+      firstName?: string;
+      lastName?: string;
+      name?: string;
+    } | null;
+    classLevels: Array<{ id: string; name: string }>;
+  };
+  academicTerm: { id: string; termName: string };
+  subtopics: CurriculumTopicDetailSubtopic[];
+}
+
+export interface CurriculumTopicNote {
+  id: string;
+  content: string;
+  createdAt: string;
+  authorRole?: string;
+  replies?: CurriculumTopicNote[];
+}
+
+export interface CreateCurriculumTopicNotePayload {
+  topicId: string;
+  content: string;
+  subjectId?: string;
+  parentId?: string;
+  academicTermId?: string;
+}
+
+/** GET /teacher/curriculum/progress */
+export interface TeacherProgressSubtopicRow {
+  id: string;
+  name: string;
+  completed: boolean;
+  completedAt: string | null;
+}
+
+export interface TeacherProgressTopicCard {
+  topicId: string;
+  name: string;
+  description: string | null;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  progressPercent: number;
+  status: "pending" | "completed";
+  weekLabel: string | null;
+  subtopicCounts: { total: number; completed: number };
+  notesCount: number;
+  subtopics: TeacherProgressSubtopicRow[];
+}
+
+export interface TeacherCurriculumProgressDashboard {
+  selection: {
+    academicTermId: string;
+    subjectId: string | null;
+    classLevelId: string | null;
+  };
+  overall: {
+    totalTopics: number;
+    completedTopics: number;
+    pendingTopics: number;
+    avgProgress: number;
+    completedLabel: string;
+  };
+  topics: TeacherProgressTopicCard[];
 }
 
 export interface SubjectCatalog {
@@ -743,6 +889,8 @@ export interface Topic {
   id: string;
   name: string;
   description?: string;
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
   subjectCatalog?: SubjectCatalog;
   curriculum?: CurriculumItem;
 }
@@ -752,6 +900,18 @@ export interface TopicPayload {
   description?: string;
   subjectCatalogId: string;
   curriculumId: string;
+  /** ISO date string (YYYY-MM-DD). Use `null` on PATCH to clear. */
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
+}
+
+/** POST /teacher/topics, PATCH /teacher/topics/:id */
+export interface TeacherTopicPayload {
+  name: string;
+  description?: string;
+  subjectCatalogId: string;
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
 }
 
 export enum VisibilityScope {
