@@ -286,6 +286,10 @@ export class TeacherService {
     const topic = topicRepository.create({
       name: dto.name,
       description: dto.description,
+      plannedStartDate: dto.plannedStartDate
+        ? new Date(dto.plannedStartDate)
+        : null,
+      plannedEndDate: dto.plannedEndDate ? new Date(dto.plannedEndDate) : null,
       subjectCatalog,
       curriculum: activeOrFirstCurriculum,
       createdBy: `Teacher - ${createdByName || teacher.email}`,
@@ -581,6 +585,17 @@ export class TeacherService {
 
     if (dto.name !== undefined) topic.name = dto.name;
     if (dto.description !== undefined) topic.description = dto.description;
+
+    if (dto.plannedStartDate !== undefined) {
+      topic.plannedStartDate = dto.plannedStartDate
+        ? new Date(dto.plannedStartDate)
+        : null;
+    }
+    if (dto.plannedEndDate !== undefined) {
+      topic.plannedEndDate = dto.plannedEndDate
+        ? new Date(dto.plannedEndDate)
+        : null;
+    }
 
     if (
       dto.subjectCatalogId &&
@@ -1318,7 +1333,9 @@ export class TeacherService {
       .select('classLevel.id', 'id')
       .getRawMany<{ id: string }>();
     const classTeacherIds = classesAsClassTeacher.map((cl) => cl.id);
-    const uniqueClassLevelIds = [...new Set([...assignedClassIds, ...classTeacherIds])];
+    const uniqueClassLevelIds = [
+      ...new Set([...assignedClassIds, ...classTeacherIds]),
+    ];
 
     if (uniqueClassLevelIds.length === 0) {
       const page = parseInt(queryString.page ?? '1', 10);

@@ -60,8 +60,9 @@ function topicStatusLabel(topic: TeacherProgressTopicCard): {
     };
   }
   return {
-    label: "To Do",
-    className: "text-gray-700 bg-gray-100 border border-gray-200",
+    label: "Pending",
+    className:
+      "text-[#cd3500] bg-[#ffedd4] border border-[#fdba74]",
   };
 }
 
@@ -155,9 +156,21 @@ export const CurriculumProgressTabSection: React.FC = () => {
   }, [classSubjects]);
 
   const classOptions = useMemo(() => {
-    if (!subjectId) return [];
+    const rows = classSubjects as ClassSubjectInfo[] | undefined;
+    if (!subjectId) {
+      const map = new Map<string, string>();
+      rows?.forEach((cs) => {
+        if (!map.has(cs.classLevel.id)) {
+          map.set(cs.classLevel.id, cs.classLevel.name);
+        }
+      });
+      return Array.from(map.entries()).map(([value, label]) => ({
+        value,
+        label,
+      }));
+    }
     return (
-      (classSubjects as ClassSubjectInfo[] | undefined)
+      rows
         ?.filter((cs) => cs.subjects?.some((s) => s.id === subjectId))
         .map((cs) => ({
           value: cs.classLevel.id,
@@ -165,6 +178,16 @@ export const CurriculumProgressTabSection: React.FC = () => {
         })) ?? []
     );
   }, [classSubjects, subjectId]);
+
+  const subjectSelectData = useMemo(
+    () => [{ value: "", label: "All subjects" }, ...subjectOptions],
+    [subjectOptions]
+  );
+
+  const classSelectData = useMemo(
+    () => [{ value: "", label: "All classes" }, ...classOptions],
+    [classOptions]
+  );
 
   useEffect(() => {
     if (!calendarId && calendars?.length) {
@@ -187,20 +210,9 @@ export const CurriculumProgressTabSection: React.FC = () => {
   }, [calendars, calendarId]);
 
   useEffect(() => {
-    if (!subjectId && subjectOptions.length > 0) {
-      setSubjectId(subjectOptions[0].value);
-    }
-  }, [subjectOptions, subjectId]);
-
-  useEffect(() => {
-    if (!classLevelId && classOptions.length > 0) {
-      setClassLevelId(classOptions[0].value);
-    } else if (
-      classLevelId &&
-      classOptions.length > 0 &&
-      !classOptions.some((o) => o.value === classLevelId)
-    ) {
-      setClassLevelId(classOptions[0].value);
+    if (!classLevelId) return;
+    if (!classOptions.some((o) => o.value === classLevelId)) {
+      setClassLevelId("");
     }
   }, [classOptions, classLevelId]);
 
@@ -395,23 +407,23 @@ export const CurriculumProgressTabSection: React.FC = () => {
           <Select
             label="Subject"
             placeholder="Subject"
-            data={subjectOptions}
-            value={subjectId || null}
+            data={subjectSelectData}
+            value={subjectId}
             onChange={(v) => {
               setSubjectId((v as string) ?? "");
               setClassLevelId("");
             }}
             searchable
-            disabled={filtersBusy || !subjectOptions.length}
+            disabled={filtersBusy}
           />
           <Select
             label="Class level"
             placeholder="Class"
-            data={classOptions}
-            value={classLevelId || null}
+            data={classSelectData}
+            value={classLevelId}
             onChange={(v) => setClassLevelId((v) ?? "")}
             searchable
-            disabled={!subjectId || !classOptions.length}
+            disabled={filtersBusy}
           />
         </div>
       </div>

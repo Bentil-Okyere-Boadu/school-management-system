@@ -889,6 +889,8 @@ export interface Topic {
   id: string;
   name: string;
   description?: string;
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
   subjectCatalog?: SubjectCatalog;
   curriculum?: CurriculumItem;
 }
@@ -898,6 +900,18 @@ export interface TopicPayload {
   description?: string;
   subjectCatalogId: string;
   curriculumId: string;
+  /** ISO date string (YYYY-MM-DD). Use `null` on PATCH to clear. */
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
+}
+
+/** POST /teacher/topics, PATCH /teacher/topics/:id */
+export interface TeacherTopicPayload {
+  name: string;
+  description?: string;
+  subjectCatalogId: string;
+  plannedStartDate?: string | null;
+  plannedEndDate?: string | null;
 }
 
 export enum VisibilityScope {

@@ -20,6 +20,7 @@ import {
   useCreateSubtopic,
   useDeleteCurriculumTopicNote,
   useDeleteSubtopic,
+  useEditTopic,
   useGetCurriculumTopicDetail,
   useGetCurriculumTopicNotes,
   useUpdateSubtopic,
@@ -53,8 +54,9 @@ function topicStatusPresentation(topic: CurriculumTopicDetailData["topic"]): {
     };
   }
   return {
-    label: "To Do",
-    className: "text-gray-700 bg-gray-100 border border-gray-200",
+    label: "Pending",
+    className:
+      "text-[#cd3500] bg-[#ffedd4] border border-[#fdba74]",
   };
 }
 
@@ -69,6 +71,12 @@ function formatNoteDate(iso: string): string {
   }
 }
 
+function toDateInputValue(iso: string | null | undefined): string {
+  if (iso == null || iso === "") return "";
+  const s = String(iso).trim();
+  return s.length >= 10 ? s.slice(0, 10) : "";
+}
+
 export default function CurriculumTopicDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -76,7 +84,7 @@ export default function CurriculumTopicDetailPage() {
   const subjectId = searchParams.get("subjectId") ?? "";
   const academicTermId = searchParams.get("academicTermId") ?? undefined;
 
-  const { detail, isLoading, error } = useGetCurriculumTopicDetail(
+  const { detail, isLoading, error, refetch } = useGetCurriculumTopicDetail(
     topicId,
     subjectId,
     academicTermId
@@ -96,6 +104,9 @@ export default function CurriculumTopicDetailPage() {
   const [newSubtopicDescription, setNewSubtopicDescription] = useState("");
   const [deleteSubtopicId, setDeleteSubtopicId] = useState<string | null>(null);
   const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [scheduleStart, setScheduleStart] = useState("");
+  const [scheduleEnd, setScheduleEnd] = useState("");
 
   const { mutate: sendNote, isPending: noteSending } =
     useCreateCurriculumTopicNote();
@@ -107,6 +118,8 @@ export default function CurriculumTopicDetailPage() {
     useUpdateSubtopic(topicId);
   const { mutate: deleteSubtopic, isPending: deletingSubtopic } =
     useDeleteSubtopic(topicId);
+  const { mutate: editTopic, isPending: savingSchedule } =
+    useEditTopic(topicId);
 
   const topic = detail?.topic;
   const subject = detail?.subject;
@@ -173,6 +186,44 @@ export default function CurriculumTopicDetailPage() {
       },
       onError: () => toast.error("Could not delete note."),
     });
+  };
+
+  const openScheduleDialog = () => {
+    if (!topic) return;
+    setScheduleStart(toDateInputValue(topic.plannedStartDate));
+    setScheduleEnd(toDateInputValue(topic.plannedEndDate));
+    setScheduleDialogOpen(true);
+  };
+
+  const onSaveSchedule = () => {
+    const start = scheduleStart.trim();
+    const end = scheduleEnd.trim();
+    if ((start && !end) || (!start && end)) {
+      toast.error("Enter both start and end, or clear both to remove dates.");
+      return;
+    }
+    if (start && end) {
+      const s = new Date(`${start}T12:00:00`);
+      const e = new Date(`${end}T12:00:00`);
+      if (s > e) {
+        toast.error("Start date cannot be after end date.");
+        return;
+      }
+    }
+    editTopic(
+      {
+        plannedStartDate: start || null,
+        plannedEndDate: end || null,
+      },
+      {
+        onSuccess: () => {
+          setScheduleDialogOpen(false);
+          refetch();
+          toast.success("Schedule updated.");
+        },
+        onError: () => toast.error("Could not update schedule."),
+      }
+    );
   };
 
   const closeSubtopicDialog = () => {
@@ -382,9 +433,17 @@ export default function CurriculumTopicDetailPage() {
 
             {/* Schedule */}
             <section className="bg-white rounded-xl border border-gray-200/90 shadow-sm p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Schedule
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Schedule
+                </h2>
+                <CustomButton
+                  variant="outline"
+                  text="Edit planned dates"
+                  icon={<IconCalendar size={18} />}
+                  onClick={openScheduleDialog}
+                />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">
@@ -588,6 +647,36 @@ export default function CurriculumTopicDetailPage() {
         <p className="text-sm text-gray-600 mt-1">
           Remove this note permanently?
         </p>
+      </Dialog>
+
+      <Dialog
+        isOpen={scheduleDialogOpen}
+        onClose={() => setScheduleDialogOpen(false)}
+        onSave={onSaveSchedule}
+        dialogTitle="Planned dates"
+        saveButtonText="Save"
+        busy={savingSchedule}
+      >
+        <p className="text-sm text-gray-600 my-4">
+          Set both dates for a planned window, or clear both to remove them.
+          Start must be on or before end.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4 mt-5">
+          <InputField
+            className="!py-0 flex-1"
+            type="date"
+            label="Planned start"
+            value={scheduleStart}
+            onChange={(e) => setScheduleStart(e.target.value)}
+          />
+          <InputField
+            className="!py-0 flex-1"
+            type="date"
+            label="Planned end"
+            value={scheduleEnd}
+            onChange={(e) => setScheduleEnd(e.target.value)}
+          />
+        </div>
       </Dialog>
     </div>
   );

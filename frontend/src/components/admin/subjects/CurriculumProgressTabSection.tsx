@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Select } from "@mantine/core";
 import { IconEye } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
@@ -8,13 +8,13 @@ import { HashLoader } from "react-spinners";
 import type { CurriculumProgressDashboardRow } from "@/@types";
 import { CurriculumItem, User } from "@/@types";
 import {
-  // useGetCalendars,
+  useGetCalendars,
   useGetClassLevels,
   useGetCurricula,
   useGetCurriculumById,
   useGetCurriculumProgressDashboard,
   useGetSchoolUsers,
-  // useGetTerms,
+  useGetTerms,
 } from "@/hooks/school-admin";
 
 function teacherDisplayName(
@@ -43,15 +43,24 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const [subjectCatalogId, setSubjectCatalogId] = useState("");
   const [classLevelId, setClassLevelId] = useState("");
   const [teacherId, setTeacherId] = useState("");
-  // const [selectedCalendarId, setSelectedCalendarId] = useState("");
+  const [selectedCalendarId, setSelectedCalendarId] = useState("");
   const [academicTermId, setAcademicTermId] = useState("");
 
   const { curricula } = useGetCurricula();
+  const didPresetCurriculum = useRef(false);
   const { curriculum, isLoading: curriculumLoading } =
     useGetCurriculumById(curriculumId);
+
+  useEffect(() => {
+    if (didPresetCurriculum.current) return;
+    const first = curricula?.[0];
+    if (!first?.id) return;
+    didPresetCurriculum.current = true;
+    setCurriculumId(String(first.id));
+  }, [curricula]);
   const { classLevels } = useGetClassLevels();
-  // const { calendars } = useGetCalendars();
-  // const { terms } = useGetTerms(selectedCalendarId || "");
+  const { calendars } = useGetCalendars();
+  const { terms } = useGetTerms(selectedCalendarId || "");
   const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     1,
     "",
@@ -67,19 +76,19 @@ export const CurriculumProgressTabSection: React.FC = () => {
 
   useEffect(() => {
     if (!curriculumId) {
-      // setSelectedCalendarId("");
+      setSelectedCalendarId("");
       setAcademicTermId("");
       return;
     }
     const c = curriculum as CurriculumItem;
-    // const calId = c?.academicTerm?.academicCalendar?.id ?? "";
+    const calId = c?.academicTerm?.academicCalendar?.id ?? "";
     const termId = c?.academicTerm?.id ?? "";
-    // setSelectedCalendarId(calId || "");
+    setSelectedCalendarId(calId || "");
     setAcademicTermId(termId || "");
   }, [
     curriculumId,
     curriculum?.academicTerm?.id,
-    // curriculum?.academicTerm?.academicCalendar?.id,
+    curriculum?.academicTerm?.academicCalendar?.id,
   ]);
 
   const curriculumOptions =
@@ -115,17 +124,17 @@ export const CurriculumProgressTabSection: React.FC = () => {
     })) ?? []),
   ];
 
-  // const calendarOptions =
-  //   calendars?.map((cal) => ({
-  //     value: String(cal.id),
-  //     label: String(cal.name),
-  //   })) ?? [];
+  const calendarOptions =
+    calendars?.map((cal) => ({
+      value: String(cal.id),
+      label: String(cal.name),
+    })) ?? [];
 
-  // const termOptions =
-  //   terms?.map((t) => ({
-  //     value: String(t.id),
-  //     label: String(t.name ?? t.termName ?? ""),
-  //   })) ?? [];
+  const termOptions =
+    terms?.map((t) => ({
+      value: String(t.id),
+      label: String(t.name ?? t.termName ?? ""),
+    })) ?? [];
 
   const filters = useMemo(
     () => ({
@@ -236,8 +245,6 @@ export const CurriculumProgressTabSection: React.FC = () => {
             searchable
             clearable
           />
-        </div>
-        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <Select
             label="Academic Calendar"
             placeholder="Pick calendar"
@@ -260,7 +267,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
             clearable
             disabled={!selectedCalendarId}
           />
-        </div> */}
+        </div>
       </div>
 
       <section className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -272,8 +279,8 @@ export const CurriculumProgressTabSection: React.FC = () => {
                   "Topic",
                   "Subject",
                   "Teacher",
-                  "Start",
-                  "End",
+                  "Start Date",
+                  "End Date",
                   "Progress",
                   "Status",
                   "Completed",
@@ -327,21 +334,35 @@ export const CurriculumProgressTabSection: React.FC = () => {
                       ? "text-green-800 bg-green-100"
                       : ui === "in_progress"
                         ? "text-blue-800 bg-blue-100"
-                        : "text-gray-700 bg-gray-100";
+                        : "text-[#cd3500] bg-[#ffedd4]";
                   const statusLabel =
                     ui === "completed"
                       ? "Completed"
                       : ui === "in_progress"
                         ? "In Progress"
-                        : "To Do";
+                        : "Pending";
                   const barColor =
                     row.progressPercent >= 100
                       ? "bg-green-500"
                       : row.progressPercent > 0
                         ? "bg-purple-500"
                         : "bg-gray-200";
+                  const rowClickable = Boolean(row.subjectId && row.topicId);
                   return (
-                    <tr key={`${row.subjectId}-${row.topicId}`}>
+                    <tr
+                      key={`${row.subjectId}-${row.topicId}`}
+                      onClick={() => {
+                        if (!rowClickable) return;
+                        onViewTopicDetail(row);
+                      }}
+                      tabIndex={rowClickable ? 0 : -1}
+                      aria-disabled={!rowClickable}
+                      className={
+                        rowClickable
+                          ? "cursor-pointer hover:bg-purple-50/60 focus-visible:outline-purple-400 transition-colors"
+                          : "opacity-60 cursor-not-allowed"
+                      }
+                    >
                       <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5 align-top">
                         <div className="font-semibold text-gray-900">
                           {row.topicName}
@@ -379,7 +400,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
+                      <td className="px-2 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-2">
                         <span
                           className={`inline-flex text-xs font-medium px-2.5 py-0.5 rounded-full ${statusClass}`}
                         >
@@ -390,15 +411,12 @@ export const CurriculumProgressTabSection: React.FC = () => {
                         {row.dateCompleted ?? "—"}
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
-                        <button
-                          type="button"
-                          disabled={!row.subjectId || !row.topicId}
-                          onClick={() => onViewTopicDetail(row)}
-                          className="p-1.5 rounded-md text-purple-700 hover:bg-purple-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                          aria-label="View topic detail"
+                        <span
+                          className="inline-flex p-1.5 rounded-md text-purple-700 pointer-events-none"
+                          aria-hidden
                         >
                           <IconEye size={20} />
-                        </button>
+                        </span>
                       </td>
                     </tr>
                   );

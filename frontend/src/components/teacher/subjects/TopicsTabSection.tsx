@@ -4,12 +4,18 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
-import { Topic, ErrorResponse } from "@/@types";
+import { Topic, ErrorResponse, TeacherTopicPayload } from "@/@types";
 import { useGetTeacherTopics, useGetTeacherSubjects, useCreateTeacherTopic, useUpdateTeacherTopic, useDeleteTeacherTopic } from "@/hooks/teacher";
 import { HashLoader } from "react-spinners";
 import { Select, Menu } from "@mantine/core";
 import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
 import { toast } from "react-toastify";
+
+function toDateInputValue(iso: string | null | undefined): string {
+  if (iso == null || iso === "") return "";
+  const s = String(iso).trim();
+  return s.length >= 10 ? s.slice(0, 10) : "";
+}
 
 
 export const TopicsTabSection: React.FC = () => {
@@ -17,11 +23,15 @@ export const TopicsTabSection: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
-  const [topic, setTopic] = useState<Partial<Topic & { subjectCatalogId: string }>>({
+  const [topic, setTopic] = useState<
+    Partial<Topic & { subjectCatalogId: string; plannedStartDate: string; plannedEndDate: string }>
+  >({
     id: "",
     name: "",
     description: "",
     subjectCatalogId: "",
+    plannedStartDate: "",
+    plannedEndDate: "",
   });
 
   const { teacherTopics: topics, isLoading, refetch } = useGetTeacherTopics(searchQuery);
@@ -43,6 +53,8 @@ export const TopicsTabSection: React.FC = () => {
       name: "",
       description: "",
       subjectCatalogId: "",
+      plannedStartDate: "",
+      plannedEndDate: "",
     });
     setIsDialogOpen(true);
   };
@@ -54,6 +66,8 @@ export const TopicsTabSection: React.FC = () => {
       name: row.name,
       description: row.description,
       subjectCatalogId: row.subjectCatalog?.id || "",
+      plannedStartDate: toDateInputValue(row.plannedStartDate),
+      plannedEndDate: toDateInputValue(row.plannedEndDate),
     });
     setIsDialogOpen(true);
   };
@@ -67,14 +81,25 @@ export const TopicsTabSection: React.FC = () => {
   };
 
   const saveTopic = () => {
-    const payload = {
+    const start = topic.plannedStartDate?.trim() ?? "";
+    const end = topic.plannedEndDate?.trim() ?? "";
+    const base: TeacherTopicPayload = {
       name: topic.name || "",
-      description: topic.description || "",
+      description: (topic.description as string),
       subjectCatalogId: topic.subjectCatalogId || "",
+      ...(isCreate
+        ? {
+            ...(start ? { plannedStartDate: start } : {}),
+            ...(end ? { plannedEndDate: end } : {}),
+          }
+        : {
+            plannedStartDate: start || null,
+            plannedEndDate: end || null,
+          }),
     };
 
     if (isCreate) {
-      createTopic(payload, {
+      createTopic(base, {
         onSuccess: () => {
           toast.success("Topic created successfully");
           setIsDialogOpen(false);
@@ -85,7 +110,7 @@ export const TopicsTabSection: React.FC = () => {
         },
       });
     } else {
-      updateTopic(payload, {
+      updateTopic(base, {
         onSuccess: () => {
           toast.success("Topic updated successfully");
           setIsDialogOpen(false);
@@ -145,6 +170,12 @@ export const TopicsTabSection: React.FC = () => {
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-center max-md:px-5 max-w-[150px]">
                     <div>Subject</div>
                   </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 whitespace-nowrap">
+                    <div>Planned start</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 whitespace-nowrap">
+                    <div>Planned end</div>
+                  </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-center max-md:px-5 max-w-[120px]">
                     <div>Created By</div>
                   </th>
@@ -156,7 +187,7 @@ export const TopicsTabSection: React.FC = () => {
                   if (isLoading) {
                     return (
                       <tr>
-                        <td colSpan={5}>
+                        <td colSpan={7}>
                           <div className="relative py-20 bg-white">
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                               <HashLoader color="#AB58E7" size={40} />
@@ -170,7 +201,7 @@ export const TopicsTabSection: React.FC = () => {
                   if (!topics?.length) {
                     return (
                       <tr>
-                        <td colSpan={5}>
+                        <td colSpan={7}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No topics assigned</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -200,6 +231,12 @@ export const TopicsTabSection: React.FC = () => {
                         <div className="flex items-center justify-center">
                           {row.subjectCatalog?.name}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 whitespace-nowrap text-sm text-gray-800">
+                        {row.plannedStartDate}
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 whitespace-nowrap text-sm text-gray-800">
+                        {row.plannedEndDate}
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex items-center justify-center">
@@ -277,6 +314,32 @@ export const TopicsTabSection: React.FC = () => {
             onChange={(v) => setTopic((p) => ({ ...p, subjectCatalogId: v || "" }))}
             searchable
           />
+          <div className="grid md:grid-cols-2 gap-4 mt-5">
+            <InputField
+              className="!py-0"
+              type="date"
+              label="Planned start"
+              value={topic.plannedStartDate ?? ""}
+              onChange={(e) =>
+                setTopic((p) => ({
+                  ...p,
+                  plannedStartDate: e.target.value,
+                }))
+              }
+            />
+            <InputField
+              className="!py-0"
+              type="date"
+              label="Planned end"
+              value={topic.plannedEndDate ?? ""}
+              onChange={(e) =>
+                setTopic((p) => ({
+                  ...p,
+                  plannedEndDate: e.target.value,
+                }))
+              }
+            />
+          </div>
         </form>
       </Dialog>
 
