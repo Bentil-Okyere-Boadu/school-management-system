@@ -656,6 +656,7 @@ export const useGetCurriculumProgressDashboard = (
       );
     },
     refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 
   const dashboard = data?.data as CurriculumProgressDashboardData | undefined;

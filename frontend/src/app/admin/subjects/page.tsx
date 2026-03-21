@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { TabListItem } from "../admissions/page";
 import TabBar from "@/components/common/TabBar";
 import Subjects from "@/components/admin/subjects/Subjects";
@@ -14,6 +14,11 @@ const SubjectsPage = () => {
   const router = useRouter();
   const tabFromUrl = searchParams.get("tab");
   const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || "subjects");
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t) setActiveTabKey(t);
+  }, [searchParams]);
 
   const defaultNavItems: TabListItem[] = [
     { tabLabel: "Subjects", tabKey: "subjects" },

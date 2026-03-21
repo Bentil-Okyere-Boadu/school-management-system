@@ -77,12 +77,21 @@ function toDateInputValue(iso: string | null | undefined): string {
   return s.length >= 10 ? s.slice(0, 10) : "";
 }
 
+function sanitizeReturnPath(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/admin/subjects")) return null;
+  if (raw.includes("//") || raw.includes("://")) return null;
+  return raw;
+}
+
 export default function CurriculumTopicDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const topicId = (params.topicId as string) ?? "";
   const subjectId = searchParams.get("subjectId") ?? "";
   const academicTermId = searchParams.get("academicTermId") ?? undefined;
+  const backHref =
+    sanitizeReturnPath(searchParams.get("returnPath")) ??
+    "/admin/subjects?tab=curriculum-progress";
 
   const { detail, isLoading, error, refetch } = useGetCurriculumTopicDetail(
     topicId,
@@ -300,7 +309,7 @@ export default function CurriculumTopicDetailPage() {
       <div className="min-h-screen bg-[#f4f6f8] px-0.5 py-6">
         <div className="max-w-5xl mx-auto">
           <Link
-            href="/admin/subjects?tab=curriculum-progress"
+            href={backHref}
             className="text-sm text-purple-700 hover:text-purple-800 underline inline-flex items-center gap-1 mb-4"
           >
             <IconArrowLeft size={16} /> Back
@@ -326,7 +335,7 @@ export default function CurriculumTopicDetailPage() {
     <div className="min-h-screen bg-[#f4f6f8] pb-16">
       <div className="px-0.5">
         <Link
-          href="/admin/subjects?tab=curriculum-progress"
+          href={backHref}
           className="text-bold text-purple-700 inline-flex items-center gap-1.5 mb-1"
         >
           <IconArrowLeft size={18} stroke={1.5} />

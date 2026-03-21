@@ -374,6 +374,7 @@ export const useGetTeacherCurriculumProgress = (
         },
         enabled: Boolean(filters?.academicTermId),
         refetchOnWindowFocus: true,
+        refetchOnMount: "always",
     });
 
     const dashboard = (data as { data?: TeacherCurriculumProgressDashboard })

@@ -1,21 +1,30 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Select } from "@mantine/core";
 import { IconEye } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { HashLoader } from "react-spinners";
 import type { CurriculumProgressDashboardRow } from "@/@types";
-import { CurriculumItem, User } from "@/@types";
+import { User } from "@/@types";
 import {
+  useGetAllSubjects,
   useGetCalendars,
   useGetClassLevels,
   useGetCurricula,
-  useGetCurriculumById,
   useGetCurriculumProgressDashboard,
   useGetSchoolUsers,
   useGetTerms,
 } from "@/hooks/school-admin";
+
+const CP = {
+  curriculum: "cpCurriculum",
+  subject: "cpSubject",
+  classLevel: "cpClass",
+  teacher: "cpTeacher",
+  cal: "cpCal",
+  term: "cpTerm",
+} as const;
 
 function teacherDisplayName(
   teacher: CurriculumProgressDashboardRow["teacher"]
@@ -39,25 +48,31 @@ function rowUiStatus(row: CurriculumProgressDashboardRow): RowUiStatus {
 
 export const CurriculumProgressTabSection: React.FC = () => {
   const router = useRouter();
-  const [curriculumId, setCurriculumId] = useState("");
-  const [subjectCatalogId, setSubjectCatalogId] = useState("");
-  const [classLevelId, setClassLevelId] = useState("");
-  const [teacherId, setTeacherId] = useState("");
-  const [selectedCalendarId, setSelectedCalendarId] = useState("");
-  const [academicTermId, setAcademicTermId] = useState("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [curriculumId, setCurriculumId] = useState(
+    () => searchParams.get(CP.curriculum) ?? ""
+  );
+  const [subjectCatalogId, setSubjectCatalogId] = useState(
+    () => searchParams.get(CP.subject) ?? ""
+  );
+  const [classLevelId, setClassLevelId] = useState(
+    () => searchParams.get(CP.classLevel) ?? ""
+  );
+  const [teacherId, setTeacherId] = useState(
+    () => searchParams.get(CP.teacher) ?? ""
+  );
+  const [selectedCalendarId, setSelectedCalendarId] = useState(
+    () => searchParams.get(CP.cal) ?? ""
+  );
+  const [academicTermId, setAcademicTermId] = useState(
+    () => searchParams.get(CP.term) ?? ""
+  );
 
   const { curricula } = useGetCurricula();
-  const didPresetCurriculum = useRef(false);
-  const { curriculum, isLoading: curriculumLoading } =
-    useGetCurriculumById(curriculumId);
-
-  useEffect(() => {
-    if (didPresetCurriculum.current) return;
-    const first = curricula?.[0];
-    if (!first?.id) return;
-    didPresetCurriculum.current = true;
-    setCurriculumId(String(first.id));
-  }, [curricula]);
+  const { subjects: allSubjectCatalogs, isLoading: subjectCatalogsLoading } =
+    useGetAllSubjects();
   const { classLevels } = useGetClassLevels();
   const { calendars } = useGetCalendars();
   const { terms } = useGetTerms(selectedCalendarId || "");
@@ -71,24 +86,90 @@ export const CurriculumProgressTabSection: React.FC = () => {
   );
 
   useEffect(() => {
-    setSubjectCatalogId("");
-  }, [curriculumId]);
+    setCurriculumId(searchParams.get(CP.curriculum) ?? "");
+    setSubjectCatalogId(searchParams.get(CP.subject) ?? "");
+    setClassLevelId(searchParams.get(CP.classLevel) ?? "");
+    setTeacherId(searchParams.get(CP.teacher) ?? "");
+    setSelectedCalendarId(searchParams.get(CP.cal) ?? "");
+    setAcademicTermId(searchParams.get(CP.term) ?? "");
+  }, [searchParams]);
+
+  const replaceProgressUrl = useCallback(
+    (next: {
+      curriculumId: string;
+      subjectCatalogId: string;
+      classLevelId: string;
+      teacherId: string;
+      selectedCalendarId: string;
+      academicTermId: string;
+    }) => {
+      const p = new URLSearchParams(searchParams.toString());
+      p.set("tab", "curriculum-progress");
+      const setOrDel = (key: string, val: string) => {
+        if (val) p.set(key, val);
+        else p.delete(key);
+      };
+      setOrDel(CP.curriculum, next.curriculumId);
+      setOrDel(CP.subject, next.subjectCatalogId);
+      setOrDel(CP.classLevel, next.classLevelId);
+      setOrDel(CP.teacher, next.teacherId);
+      setOrDel(CP.cal, next.selectedCalendarId);
+      setOrDel(CP.term, next.academicTermId);
+      router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   useEffect(() => {
-    if (!curriculumId) {
-      setSelectedCalendarId("");
-      setAcademicTermId("");
-      return;
+    if (!selectedCalendarId && calendars?.length) {
+      const firstId = String(calendars[0].id);
+      setSelectedCalendarId(firstId);
+      replaceProgressUrl({
+        curriculumId,
+        subjectCatalogId,
+        classLevelId,
+        teacherId,
+        selectedCalendarId: firstId,
+        academicTermId,
+      });
     }
-    const c = curriculum as CurriculumItem;
-    const calId = c?.academicTerm?.academicCalendar?.id ?? "";
-    const termId = c?.academicTerm?.id ?? "";
-    setSelectedCalendarId(calId || "");
-    setAcademicTermId(termId || "");
   }, [
+    calendars,
+    selectedCalendarId,
     curriculumId,
-    curriculum?.academicTerm?.id,
-    curriculum?.academicTerm?.academicCalendar?.id,
+    subjectCatalogId,
+    classLevelId,
+    teacherId,
+    academicTermId,
+    replaceProgressUrl,
+  ]);
+
+  useEffect(() => {
+    if (!selectedCalendarId || !terms?.length) return;
+    const validIds = new Set(terms.map((t) => String(t.id)));
+    const next =
+      academicTermId && validIds.has(academicTermId)
+        ? academicTermId
+        : String(terms[0].id);
+    if (next === academicTermId) return;
+    setAcademicTermId(next);
+    replaceProgressUrl({
+      curriculumId,
+      subjectCatalogId,
+      classLevelId,
+      teacherId,
+      selectedCalendarId,
+      academicTermId: next,
+    });
+  }, [
+    terms,
+    selectedCalendarId,
+    academicTermId,
+    curriculumId,
+    subjectCatalogId,
+    classLevelId,
+    teacherId,
+    replaceProgressUrl,
   ]);
 
   const curriculumOptions =
@@ -98,15 +179,44 @@ export const CurriculumProgressTabSection: React.FC = () => {
     })) ?? [];
 
   const subjectOptions = useMemo(() => {
-    const fromCurriculum = (curriculum as CurriculumItem)?.subjectCatalogs ?? [];
+    const list = allSubjectCatalogs ?? [];
     return [
       { value: "", label: "All Subjects" },
-      ...fromCurriculum.map((s) => ({
+      ...list.map((s) => ({
         value: String(s.id),
         label: String(s.name),
       })),
     ];
-  }, [curriculum]);
+  }, [allSubjectCatalogs]);
+
+  useEffect(() => {
+    if (subjectCatalogsLoading || !subjectCatalogId || !allSubjectCatalogs?.length)
+      return;
+    const ok = allSubjectCatalogs.some(
+      (s) => String(s.id) === subjectCatalogId
+    );
+    if (!ok) {
+      setSubjectCatalogId("");
+      replaceProgressUrl({
+        curriculumId,
+        subjectCatalogId: "",
+        classLevelId,
+        teacherId,
+        selectedCalendarId,
+        academicTermId,
+      });
+    }
+  }, [
+    subjectCatalogsLoading,
+    allSubjectCatalogs,
+    subjectCatalogId,
+    curriculumId,
+    classLevelId,
+    teacherId,
+    selectedCalendarId,
+    academicTermId,
+    replaceProgressUrl,
+  ]);
 
   const classLevelOptions = [
     { value: "", label: "All Class Levels" },
@@ -167,15 +277,57 @@ export const CurriculumProgressTabSection: React.FC = () => {
     return { total, completed, inProgress, avgProgress: summary?.avgProgress ?? avg };
   }, [rows, summary?.avgProgress]);
 
+  const buildProgressListUrl = () => {
+    const p = new URLSearchParams();
+    p.set("tab", "curriculum-progress");
+    if (curriculumId) p.set(CP.curriculum, curriculumId);
+    if (subjectCatalogId) p.set(CP.subject, subjectCatalogId);
+    if (classLevelId) p.set(CP.classLevel, classLevelId);
+    if (teacherId) p.set(CP.teacher, teacherId);
+    if (selectedCalendarId) p.set(CP.cal, selectedCalendarId);
+    if (academicTermId) p.set(CP.term, academicTermId);
+    return `${pathname}?${p.toString()}`;
+  };
+
   const onViewTopicDetail = (row: CurriculumProgressDashboardRow) => {
     const params = new URLSearchParams();
     params.set("subjectId", row.subjectId);
     if (academicTermId) params.set("academicTermId", academicTermId);
     const cur = curricula?.find((c) => String(c.id) === curriculumId);
     if (cur?.name) params.set("curriculumName", cur.name);
+    params.set("returnPath", buildProgressListUrl());
     router.push(
       `/admin/subjects/topics/${row.topicId}/detail?${params.toString()}`
     );
+  };
+
+  const patch = (partial: Partial<{
+    curriculumId: string;
+    subjectCatalogId: string;
+    classLevelId: string;
+    teacherId: string;
+    selectedCalendarId: string;
+    academicTermId: string;
+  }>) => {
+    const next = {
+      curriculumId,
+      subjectCatalogId,
+      classLevelId,
+      teacherId,
+      selectedCalendarId,
+      academicTermId,
+      ...partial,
+    };
+    if (partial.curriculumId !== undefined) setCurriculumId(partial.curriculumId);
+    if (partial.subjectCatalogId !== undefined)
+      setSubjectCatalogId(partial.subjectCatalogId);
+    if (partial.classLevelId !== undefined) setClassLevelId(partial.classLevelId);
+    if (partial.teacherId !== undefined) setTeacherId(partial.teacherId);
+    if (partial.selectedCalendarId !== undefined)
+      setSelectedCalendarId(partial.selectedCalendarId);
+    if (partial.academicTermId !== undefined)
+      setAcademicTermId(partial.academicTermId);
+    replaceProgressUrl(next);
   };
 
   return (
@@ -214,7 +366,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
             placeholder="Select curriculum"
             data={curriculumOptions}
             value={curriculumId || null}
-            onChange={(v) => setCurriculumId((v as string) ?? "")}
+            onChange={(v) => patch({ curriculumId: (v as string) ?? "" })}
             searchable
             clearable
           />
@@ -223,16 +375,18 @@ export const CurriculumProgressTabSection: React.FC = () => {
             placeholder="All Subjects"
             data={subjectOptions}
             value={subjectCatalogId}
-            onChange={(v) => setSubjectCatalogId((v as string) ?? "")}
+            onChange={(v) =>
+              patch({ subjectCatalogId: (v as string) ?? "" })
+            }
             searchable
-            disabled={!curriculumId || curriculumLoading}
+            disabled={subjectCatalogsLoading}
           />
           <Select
             label="Class Level"
             placeholder="All Class Levels"
             data={classLevelOptions}
             value={classLevelId}
-            onChange={(v) => setClassLevelId((v as string) ?? "")}
+            onChange={(v) => patch({ classLevelId: (v as string) ?? "" })}
             searchable
             clearable
           />
@@ -241,7 +395,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
             placeholder="All Teachers"
             data={teacherOptions}
             value={teacherId}
-            onChange={(v) => setTeacherId((v as string) ?? "")}
+            onChange={(v) => patch({ teacherId: (v as string) ?? "" })}
             searchable
             clearable
           />
@@ -251,18 +405,22 @@ export const CurriculumProgressTabSection: React.FC = () => {
             data={calendarOptions}
             value={selectedCalendarId || null}
             onChange={(v) => {
-              setSelectedCalendarId((v as string) ?? "");
-              setAcademicTermId("");
+              const next = (v as string) ?? "";
+              patch({
+                selectedCalendarId: next,
+                academicTermId: "",
+              });
             }}
             searchable
-            clearable
           />
           <Select
             label="Academic Term"
             placeholder="Optional — progress uses curriculum term if empty"
             data={termOptions}
             value={academicTermId || null}
-            onChange={(v) => setAcademicTermId((v as string) ?? "")}
+            onChange={(v) =>
+              patch({ academicTermId: (v as string) ?? "" })
+            }
             searchable
             clearable
             disabled={!selectedCalendarId}
