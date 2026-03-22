@@ -7,7 +7,7 @@ import { SearchBar } from '@/components/common/SearchBar';
 import InputField from '@/components/InputField';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
 import { ErrorResponse, ClassLevel, User } from "@/@types";
-import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetCalendars, useGetClassLevels, useGetMe, useGetSchoolUsers, useGetStudentsForClassAssignment } from "@/hooks/school-admin";
+import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetCalendars, useGetClassLevels, useGetSchoolUsers, useGetStudentsForClassAssignment } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { Badge, Combobox, Select } from '@mantine/core';
 import { useDebouncer } from '@/hooks/generalHooks';
@@ -38,12 +38,10 @@ const ClassesPage = () => {
   const { mutate: approveResults, mutateAsync: approveResultsAsync, isPending: approveResultPending } = useAdminApproveClassResults();
 
   const { calendars } = useGetCalendars();
-  const { me: schoolAdminMe } = useGetMe();
   const sortedTerms = useMemo(
     () => getSortedSchoolTerms(calendars),
     [calendars]
   );
-  const schoolName = schoolAdminMe?.school?.name;
 
   useEffect(() => {
     if (sortedTerms.length === 0) return;
