@@ -668,7 +668,9 @@ export interface Reminder {
 
 export interface ApproveClassResultsPayload {
   classLevelId: string;
-  forceApprove: boolean;
+  action?: "approve" | "unapprove";
+  forceApprove?: boolean;
+  academicTermId?: string;
 }
 
 export interface MissingGradesResponse {

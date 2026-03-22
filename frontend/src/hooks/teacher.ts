@@ -16,25 +16,33 @@ export const useTeacherGetMe = () => {
     return { me, isPending, refetch }
 }
 
-export const useGetTeacherClasses = (search: string = "") => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['teacherClasses', { search }],
-        queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
-            }
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+export const useGetTeacherClasses = (
+  search: string = "",
+  academicTermId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["teacherClasses", { search, academicTermId }],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+      if (search) {
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
+      }
+      if (academicTermId) {
+        queryBuilder.push(
+          `academicTermId=${encodeURIComponent(academicTermId)}`
+        );
+      }
+      const qs = queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
 
-            return customAPI.get(`/teacher/my-classes?${params}`);
-        },
-        refetchOnWindowFocus: true
-    })
+      return customAPI.get(`/teacher/my-classes${qs}`);
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const classLevels = data?.data as ClassLevel[] || [] ;
+  const classLevels = (data?.data as ClassLevel[]) || [];
 
-    return { classLevels, isLoading, refetch }
-}
+  return { classLevels, isLoading, refetch };
+};
 
 export const useGetTeacherSubjectClasses = (search: string = "") => {
     const { data, isLoading, refetch } = useQuery({
@@ -604,11 +612,49 @@ export const useGetStudentsForGrading = (
   return { studentsForGrading, isLoading, refetch };
 };
 
+export type TeacherClassResultsApprovalStatus = {
+  isApproved: boolean;
+  approvedAt?: string | null;
+  schoolAdminApproved: boolean;
+  schoolAdminApprovedAt?: string | null;
+  term: string;
+  termId: string;
+};
+
+export const useGetTeacherClassResultsApprovalStatus = (
+  classLevelId: string | undefined,
+  academicTermId: string | undefined
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["teacherClassApprovalStatus", classLevelId, academicTermId],
+    queryFn: () => {
+      const q = academicTermId
+        ? `?academicTermId=${encodeURIComponent(academicTermId)}`
+        : "";
+      return customAPI.get(
+        `/subject/class-results-approval-status/${classLevelId}${q}`
+      );
+    },
+    enabled: Boolean(classLevelId && academicTermId),
+    refetchOnWindowFocus: true,
+  });
+
+  const status = data?.data as TeacherClassResultsApprovalStatus | undefined;
+
+  return { status, isLoading, refetch };
+};
 
 export const usePostStudentGrades = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: PostGradesPayload) =>
       customAPI.post(`/subject/submit-grades`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studentsForGrading"] });
+      queryClient.invalidateQueries({
+        queryKey: ["teacherClassApprovalStatus"],
+      });
+    },
   });
 };
 
@@ -653,9 +699,16 @@ export const useSubmitStudentTermRemarks = (studentId: string, termId: string) =
 };
 
 export const useApproveClassResults = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: ApproveClassResultsPayload) =>
       customAPI.post(`/subject/toggle-class-results-approval`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherClasses"] });
+      queryClient.invalidateQueries({
+        queryKey: ["teacherClassApprovalStatus"],
+      });
+    },
   });
 };
 

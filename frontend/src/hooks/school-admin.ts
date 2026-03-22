@@ -509,17 +509,25 @@ export const useEditTerm = (id: string) => {
 /**
  * CLASS LEVELS CRUD
  */
-export const useGetClassLevels = (search: string = "") => {
+export const useGetClassLevels = (
+  search: string = "",
+  academicTermId?: string
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["myClassLevels", { search }],
+    queryKey: ["myClassLevels", { search, academicTermId }],
     queryFn: () => {
-      const queryBuilder = [];
+      const queryBuilder: string[] = [];
       if (search) {
-        queryBuilder.push(`search=${search}`);
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
       }
-      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+      if (academicTermId) {
+        queryBuilder.push(
+          `academicTermId=${encodeURIComponent(academicTermId)}`
+        );
+      }
+      const qs = queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
 
-      return customAPI.get(`/class-level?${params}`);
+      return customAPI.get(`/class-level${qs}`);
     },
     refetchOnWindowFocus: true,
   });
@@ -1502,8 +1510,8 @@ export const useAdminApproveClassResults = () => {
       );
     },
     onSuccess: () => {
-      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["teacherClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["myClassLevels"] });
     },
   });
 };
