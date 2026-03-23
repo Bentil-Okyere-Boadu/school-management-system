@@ -130,7 +130,7 @@ export const AttendanceSummaryTabSection: React.FC<AttendanceSummaryTabSectionPr
       </section>
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
 
-      <div className="flex gap-3 my-6">
+      <div className="flex flex-wrap gap-3 my-6">
         <div className="flex items-center">
           <label>Select date range:</label>
         </div>

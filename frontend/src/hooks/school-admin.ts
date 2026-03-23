@@ -1437,9 +1437,13 @@ export const useGetNotifications = (
 };
 
 export const useMarkNotificationAsRead = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => {
       return customAPI.patch(`/notifications/${id}/markAsRead`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 };
