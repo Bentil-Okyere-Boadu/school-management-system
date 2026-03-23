@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog } from "@/components/common/Dialog";
+import { Pagination } from "@/components/common/Pagination";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { Menu, Select } from "@mantine/core";
@@ -22,6 +23,9 @@ import {
 } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
+import { useQueryClient } from "@tanstack/react-query";
+
+const TOPICS_PAGE_SIZE = 10;
 
 function toDateInputValue(iso: string | null | undefined): string {
   if (iso == null || iso === "") return "";
@@ -30,6 +34,8 @@ function toDateInputValue(iso: string | null | undefined): string {
 }
 
 export const TopicsTabSection: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
@@ -64,14 +70,38 @@ export const TopicsTabSection: React.FC = () => {
       label: String(c.name),
     })) ?? [];
 
-  const { curriculum } = useGetCurriculumById(dialogCurriculumId);
+  const { curriculum, isLoading: curriculumDetailLoading } =
+    useGetCurriculumById(dialogCurriculumId);
+
+  const termDateBounds = useMemo(() => {
+    const t = curriculum?.academicTerm;
+    const min =
+      t?.startDate != null ? toDateInputValue(t.startDate) : "";
+    const max = t?.endDate != null ? toDateInputValue(t.endDate) : "";
+    if (!min || !max) {
+      return {
+        min: undefined as string | undefined,
+        max: undefined as string | undefined,
+      };
+    }
+    return { min, max };
+  }, [curriculum?.academicTerm]);
+
   const subjectOptions =
     (curriculum?.subjectCatalogs || [])?.map((s: SubjectCatalog) => ({
       value: String(s.id),
       label: String(s.name),
     })) ?? [];
 
-  const { topics, isLoading, refetch } = useGetTopics();
+  const { topics, isLoading, refetch, paginationValues } = useGetTopics(
+    "",
+    currentPage,
+    TOPICS_PAGE_SIZE
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   useEffect(() => {
     if (!dialogCurriculumId || !subjectOptions.length) {
@@ -142,6 +172,23 @@ export const TopicsTabSection: React.FC = () => {
     }
     const start = topic.plannedStartDate?.trim() ?? "";
     const end = topic.plannedEndDate?.trim() ?? "";
+    if ((start && !end) || (!start && end)) {
+      toast.error("Enter both start and end, or clear both to remove dates.");
+      return;
+    }
+    if (start && end) {
+      const s = new Date(`${start}T12:00:00`);
+      const e = new Date(`${end}T12:00:00`);
+      if (s > e) {
+        toast.error("Start date cannot be after end date.");
+        return;
+      }
+      const { min, max } = termDateBounds;
+      if (min && max && (start < min || start > max || end < min || end > max)) {
+        toast.error("Planned dates must fall within the curriculum’s academic term.");
+        return;
+      }
+    }
     const payload: TopicPayload = {
       name: topic.name,
       description: (topic.description as string) || undefined,
@@ -162,7 +209,8 @@ export const TopicsTabSection: React.FC = () => {
         onSuccess: () => {
           toast.success("Topic created successfully");
           setIsDialogOpen(false);
-          refetch();
+          setCurrentPage(1);
+          void queryClient.invalidateQueries({ queryKey: ["curriculumTopics"] });
         },
         onError: (error: unknown) => {
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -316,6 +364,12 @@ export const TopicsTabSection: React.FC = () => {
             </table>
           </div>
         </section>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={paginationValues?.totalPages ?? 1}
+          onPageChange={handlePageChange}
+        />
       </div>
 
       <Dialog
@@ -364,31 +418,53 @@ export const TopicsTabSection: React.FC = () => {
               disabled={!dialogCurriculumId}
             />
           </div>
-          <div className="grid md:grid-cols-2 gap-4 mt-5">
-            <InputField
-              className="!py-0"
-              type="date"
-              label="Planned start"
-              value={topic.plannedStartDate ?? ""}
-              onChange={(e) =>
-                setTopic((p) => ({
-                  ...p,
-                  plannedStartDate: e.target.value,
-                }))
-              }
-            />
-            <InputField
-              className="!py-0"
-              type="date"
-              label="Planned end"
-              value={topic.plannedEndDate ?? ""}
-              onChange={(e) =>
-                setTopic((p) => ({
-                  ...p,
-                  plannedEndDate: e.target.value,
-                }))
-              }
-            />
+          <div className="mt-5">
+            {termDateBounds.min && termDateBounds.max ? (
+              <p className="text-sm text-gray-600 mb-3">
+                Planned dates must fall between{" "}
+                <span className="font-medium text-gray-800">{termDateBounds.min}</span>{" "}and{" "}
+                <span className="font-medium text-gray-800">{termDateBounds.max}</span>{" "}
+                (this curriculum&apos;s term).
+              </p>
+            ) : !curriculumDetailLoading &&
+              dialogCurriculumId &&
+              curriculum?.id &&
+              !curriculum?.academicTerm ? (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3">
+                This curriculum has no academic term linked. Add a term to the
+                curriculum to constrain planned dates, or leave dates empty.
+              </p>
+            ) : null}
+            <div className="grid md:grid-cols-2 gap-4">
+              <InputField
+                className="!py-0"
+                type="date"
+                label="Planned start"
+                value={topic.plannedStartDate ?? ""}
+                min={termDateBounds.min}
+                max={termDateBounds.max}
+                onChange={(e) =>
+                  setTopic((p) => ({
+                    ...p,
+                    plannedStartDate: e.target.value,
+                  }))
+                }
+              />
+              <InputField
+                className="!py-0"
+                type="date"
+                label="Planned end"
+                value={topic.plannedEndDate ?? ""}
+                min={termDateBounds.min}
+                max={termDateBounds.max}
+                onChange={(e) =>
+                  setTopic((p) => ({
+                    ...p,
+                    plannedEndDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
           </div>
         </form>
       </Dialog>

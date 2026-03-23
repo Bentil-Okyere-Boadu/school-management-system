@@ -1504,6 +1504,8 @@ export class CurriculumService {
       academicTerm: {
         id: academicTermEntity.id,
         termName: academicTermEntity.termName,
+        startDate: this.formatDateOnly(academicTermEntity.startDate),
+        endDate: this.formatDateOnly(academicTermEntity.endDate),
       },
       subtopics: subtopicsWithCompletion,
     };

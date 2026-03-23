@@ -734,6 +734,9 @@ export interface CurriculumItem {
     id: string;
     name?: string;
     termName?: string;
+    /** YYYY-MM-DD — term window for planned topic dates */
+    startDate?: string | null;
+    endDate?: string | null;
     academicCalendar?: { id: string; name: string };
   };
 }
@@ -820,7 +823,13 @@ export interface CurriculumTopicDetailData {
     } | null;
     classLevels: Array<{ id: string; name: string }>;
   };
-  academicTerm: { id: string; termName: string };
+  academicTerm: {
+    id: string;
+    termName: string;
+    /** YYYY-MM-DD — bounds for planned topic dates (from API) */
+    startDate?: string | null;
+    endDate?: string | null;
+  };
   subtopics: CurriculumTopicDetailSubtopic[];
 }
 

@@ -556,24 +556,46 @@ export const useEditClassLevel = (id: string) => {
 /**
  * CURRICULUM CRUD
  */
-export const useGetCurricula = (search: string = "") => {
+export const useGetCurricula = (
+  search: string = "",
+  page: number = 1,
+  limit: number = 100
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["curricula", { search }],
+    queryKey: ["curricula", { search, page, limit }],
     queryFn: () => {
       const queryBuilder = [];
       if (search) {
-        queryBuilder.push(`search=${search}`);
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
       }
-      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+      queryBuilder.push(`page=${page}`);
+      queryBuilder.push(`limit=${limit}`);
+      const params = queryBuilder.join("&");
 
       return customAPI.get(`/curriculum?${params}`);
     },
     refetchOnWindowFocus: true,
   });
 
-  const curricula = (data?.data?.data as CurriculumItem[]) || [];
+  const resData = data?.data;
 
-  return { curricula, isLoading, refetch };
+  const curricula = resData?.data ?? [];
+  const total = resData?.total ?? 0;
+  const resolvedLimit = resData?.limit ?? limit;
+  const totalPages =
+    total === 0 ? 1 : Math.max(1, Math.ceil(total / resolvedLimit));
+
+  return {
+    curricula,
+    isLoading,
+    refetch,
+    paginationValues: {
+      totalPages,
+      total,
+      page: resData?.page ?? page,
+      limit: resolvedLimit,
+    },
+  };
 };
 
 export const useCreateCurriculum = () => {
@@ -794,19 +816,46 @@ export const useDeleteSubtopic = (topicId: string) => {
 /**
  * TOPICS CRUD
  */
-export const useGetTopics = () => {
+export const useGetTopics = (
+  search: string = "",
+  page: number = 1,
+  limit: number = 20
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["curriculumTopics"],
+    queryKey: ["curriculumTopics", { search, page, limit }],
     queryFn: () => {
-      return customAPI.get(`/curriculum/topics`);
+      const queryBuilder = [];
+      if (search) {
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
+      }
+      queryBuilder.push(`page=${page}`);
+      queryBuilder.push(`limit=${limit}`);
+      const params = queryBuilder.join("&");
+      return customAPI.get(`/curriculum/topics?${params}`);
     },
     enabled: true,
     refetchOnWindowFocus: true,
   });
 
-  const topics = (data?.data?.data as Topic[]) || [];
+  const resData = data?.data;
 
-  return { topics, isLoading, refetch };
+  const topics = resData?.data ?? [];
+  const total = resData?.total ?? 0;
+  const resolvedLimit = resData?.limit ?? limit;
+  const totalPages =
+    total === 0 ? 1 : Math.max(1, Math.ceil(total / resolvedLimit));
+
+  return {
+    topics,
+    isLoading,
+    refetch,
+    paginationValues: {
+      totalPages,
+      total,
+      page: resData?.page ?? page,
+      limit: resolvedLimit,
+    },
+  };
 };
 
 export const useCreateTopic = () => {

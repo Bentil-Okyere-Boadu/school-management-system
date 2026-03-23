@@ -135,6 +135,14 @@ export default function CurriculumTopicDetailPage() {
   const academicTerm = detail?.academicTerm;
   const subtopics = detail?.subtopics ?? [];
 
+  const termDateBounds = useMemo(() => {
+    const t = academicTerm;
+    const min = t?.startDate != null ? toDateInputValue(t.startDate) : "";
+    const max = t?.endDate != null ? toDateInputValue(t.endDate) : "";
+    if (!min || !max) return { min: undefined as string | undefined, max: undefined as string | undefined };
+    return { min, max };
+  }, [academicTerm]);
+
   const teacherName = useMemo(() => {
     if (!subject?.teacher) return "—";
     const t = subject.teacher;
@@ -216,6 +224,11 @@ export default function CurriculumTopicDetailPage() {
       const e = new Date(`${end}T12:00:00`);
       if (s > e) {
         toast.error("Start date cannot be after end date.");
+        return;
+      }
+      const { min, max } = termDateBounds;
+      if (min && max && (start < min || start > max || end < min || end > max)) {
+        toast.error("Planned dates must fall within the academic term.");
         return;
       }
     }
@@ -669,6 +682,15 @@ export default function CurriculumTopicDetailPage() {
         <p className="text-sm text-gray-600 my-4">
           Set both dates for a planned window, or clear both to remove them.
           Start must be on or before end.
+          {termDateBounds.min && termDateBounds.max ? (
+            <>
+              {" "}
+              Dates must be between{" "}
+              <span className="font-medium text-gray-800">{termDateBounds.min}</span>{" "}and{" "} 
+              <span className="font-medium text-gray-800">{termDateBounds.max}</span>{" "}
+              (this term).
+            </>
+          ) : null}
         </p>
         <div className="grid md:grid-cols-2 gap-4 mt-5">
           <InputField
@@ -676,6 +698,8 @@ export default function CurriculumTopicDetailPage() {
             type="date"
             label="Planned start"
             value={scheduleStart}
+            min={termDateBounds.min}
+            max={termDateBounds.max}
             onChange={(e) => setScheduleStart(e.target.value)}
           />
           <InputField
@@ -683,6 +707,8 @@ export default function CurriculumTopicDetailPage() {
             type="date"
             label="Planned end"
             value={scheduleEnd}
+            min={termDateBounds.min}
+            max={termDateBounds.max}
             onChange={(e) => setScheduleEnd(e.target.value)}
           />
         </div>
