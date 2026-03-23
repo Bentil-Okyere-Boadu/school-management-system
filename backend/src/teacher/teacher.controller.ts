@@ -372,6 +372,7 @@ export class TeacherController {
     @CurrentUser() teacher: Teacher,
     @Param('subtopicId') subtopicId: string,
     @Body('subjectId') subjectId: string,
+    @Body('classLevelId') classLevelId: string,
     @Body('academicTermId') academicTermId?: string,
   ) {
     return this.curriculumService.markSubtopicComplete(
@@ -379,6 +380,7 @@ export class TeacherController {
       subjectId,
       teacher.id,
       teacher.school.id,
+      classLevelId,
       academicTermId,
     );
   }
@@ -390,6 +392,7 @@ export class TeacherController {
     @CurrentUser() teacher: Teacher,
     @Param('subtopicId') subtopicId: string,
     @Query('subjectId') subjectId: string,
+    @Query('classLevelId') classLevelId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
     return this.curriculumService.unmarkSubtopicComplete(
@@ -397,6 +400,7 @@ export class TeacherController {
       subjectId,
       teacher.id,
       teacher.school.id,
+      classLevelId,
       academicTermId,
     );
   }

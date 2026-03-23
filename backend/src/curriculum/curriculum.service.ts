@@ -916,7 +916,7 @@ export class CurriculumService {
     const curriculumId = filters?.curriculumId;
     const academicTermId = filters?.academicTermId;
 
-    const rows: Array<{
+    const flatRows: Array<{
       subjectId: string;
       teacher: {
         id: string;
@@ -924,18 +924,16 @@ export class CurriculumService {
         lastName?: string;
         name?: string;
       };
-      classLevels: Array<{ id: string; name: string }>;
+      classLevel: { id: string; name: string };
       subjectCatalog: { id: string; name: string };
-      topics: Array<{
-        topicId: string;
-        name: string;
-        description?: string;
-        plannedStartDate: string | null;
-        plannedEndDate: string | null;
-        progressPercent: number;
-        status: 'pending' | 'completed';
-        dateCompleted: string | null;
-      }>;
+      topicId: string;
+      topicName: string;
+      topicDescription?: string;
+      plannedStartDate: string | null;
+      plannedEndDate: string | null;
+      progressPercent: number;
+      status: 'pending' | 'completed';
+      dateCompleted: string | null;
     }> = [];
 
     for (const subject of subjects) {
@@ -966,134 +964,90 @@ export class CurriculumService {
         topicIds = topicsForCatalog.map((t) => t.id);
       }
 
-      const topicsWithProgress: Array<{
-        topicId: string;
-        name: string;
-        description?: string;
-        plannedStartDate: string | null;
-        plannedEndDate: string | null;
-        progressPercent: number;
-        status: 'pending' | 'completed';
-        dateCompleted: string | null;
-      }> = [];
-
-      for (const topicId of topicIds) {
-        const topic = await this.topicRepository.findOne({
-          where: { id: topicId },
-          relations: ['subtopics', 'curriculum', 'curriculum.academicTerm'],
-        });
-        if (!topic) continue;
-        const totalSubtopics = topic.subtopics?.length ?? 0;
-        const termIdForProgress =
-          academicTermId ?? topic.curriculum?.academicTerm?.id;
-        const completionWhereBase = {
-          subtopic: { topic: { id: topicId } },
-          subject: { id: subject.id },
-        };
-        const completedCount = termIdForProgress
-          ? await this.subtopicCompletionRepository.count({
-              where: {
-                ...completionWhereBase,
-                academicTerm: { id: termIdForProgress },
-              },
-            })
-          : 0;
-        const progressPercent =
-          totalSubtopics === 0
-            ? 0
-            : Math.round((completedCount / totalSubtopics) * 100);
-        // Default status is pending; only completed when 100%
-        const status: 'pending' | 'completed' =
-          progressPercent < 100 ? 'pending' : 'completed';
-
-        let dateCompleted: string | null = null;
-        if (completedCount > 0 && termIdForProgress) {
-          const lastCompletion =
-            await this.subtopicCompletionRepository.findOne({
-              where: {
-                subject: { id: subject.id },
-                subtopic: { topic: { id: topicId } },
-                academicTerm: { id: termIdForProgress },
-              },
-              order: { completedAt: 'DESC' },
-            });
-          if (lastCompletion) {
-            dateCompleted = this.formatDateOnly(lastCompletion.completedAt);
-          }
-        }
-
-        topicsWithProgress.push({
-          topicId: topic.id,
-          name: topic.name,
-          description: topic.description ?? undefined,
-          plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
-          plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
-          progressPercent,
-          status,
-          dateCompleted,
-        });
-      }
+      const subjectClassLevels = subject.classLevels || [];
+      const classLevelsForRows = filters?.classLevelId
+        ? subjectClassLevels.filter((cl) => cl.id === filters.classLevelId)
+        : subjectClassLevels;
 
       const teacher = subject.teacher;
-      rows.push({
-        subjectId: subject.id,
-        teacher: teacher
-          ? {
-              id: teacher.id,
-              firstName: (teacher as any).firstName,
-              lastName: (teacher as any).lastName,
-              name:
-                (teacher as any).name ??
-                `${(teacher as any).firstName ?? ''} ${(teacher as any).lastName ?? ''}`.trim(),
-            }
-          : { id: '', firstName: '', lastName: '', name: 'Unassigned' },
-        classLevels: (subject.classLevels || []).map((cl) => ({
-          id: cl.id,
-          name: cl.name,
-        })),
-        subjectCatalog: {
-          id: subject.subjectCatalog.id,
-          name: subject.subjectCatalog.name,
-        },
-        topics: topicsWithProgress,
-      });
-    }
+      const teacherRow = teacher
+        ? {
+            id: teacher.id,
+            firstName: (teacher as any).firstName,
+            lastName: (teacher as any).lastName,
+            name:
+              (teacher as any).name ??
+              `${(teacher as any).firstName ?? ''} ${(teacher as any).lastName ?? ''}`.trim(),
+          }
+        : { id: '', firstName: '', lastName: '', name: 'Unassigned' };
 
-    const flatRows: Array<{
-      subjectId: string;
-      teacher: {
-        id: string;
-        firstName?: string;
-        lastName?: string;
-        name?: string;
+      const subjectCatalogRow = {
+        id: subject.subjectCatalog.id,
+        name: subject.subjectCatalog.name,
       };
-      classLevels: Array<{ id: string; name: string }>;
-      subjectCatalog: { id: string; name: string };
-      topicId: string;
-      topicName: string;
-      topicDescription?: string;
-      plannedStartDate: string | null;
-      plannedEndDate: string | null;
-      progressPercent: number;
-      status: 'pending' | 'completed';
-      dateCompleted: string | null;
-    }> = [];
-    for (const row of rows) {
-      for (const t of row.topics) {
-        flatRows.push({
-          subjectId: row.subjectId,
-          teacher: row.teacher,
-          classLevels: row.classLevels,
-          subjectCatalog: row.subjectCatalog,
-          topicId: t.topicId,
-          topicName: t.name,
-          topicDescription: t.description,
-          plannedStartDate: t.plannedStartDate,
-          plannedEndDate: t.plannedEndDate,
-          progressPercent: t.progressPercent,
-          status: t.status,
-          dateCompleted: t.dateCompleted,
-        });
+
+      for (const classLevel of classLevelsForRows) {
+        for (const topicId of topicIds) {
+          const topic = await this.topicRepository.findOne({
+            where: { id: topicId },
+            relations: ['subtopics', 'curriculum', 'curriculum.academicTerm'],
+          });
+          if (!topic) continue;
+          const totalSubtopics = topic.subtopics?.length ?? 0;
+          const termIdForProgress =
+            academicTermId ?? topic.curriculum?.academicTerm?.id;
+          const completionWhereBase = {
+            subtopic: { topic: { id: topicId } },
+            subject: { id: subject.id },
+            classLevel: { id: classLevel.id },
+          };
+          const completedCount = termIdForProgress
+            ? await this.subtopicCompletionRepository.count({
+                where: {
+                  ...completionWhereBase,
+                  academicTerm: { id: termIdForProgress },
+                },
+              })
+            : 0;
+          const progressPercent =
+            totalSubtopics === 0
+              ? 0
+              : Math.round((completedCount / totalSubtopics) * 100);
+          const status: 'pending' | 'completed' =
+            progressPercent < 100 ? 'pending' : 'completed';
+
+          let dateCompleted: string | null = null;
+          if (completedCount > 0 && termIdForProgress) {
+            const lastCompletion =
+              await this.subtopicCompletionRepository.findOne({
+                where: {
+                  subject: { id: subject.id },
+                  subtopic: { topic: { id: topicId } },
+                  academicTerm: { id: termIdForProgress },
+                  classLevel: { id: classLevel.id },
+                },
+                order: { completedAt: 'DESC' },
+              });
+            if (lastCompletion) {
+              dateCompleted = this.formatDateOnly(lastCompletion.completedAt);
+            }
+          }
+
+          flatRows.push({
+            subjectId: subject.id,
+            teacher: teacherRow,
+            classLevel: { id: classLevel.id, name: classLevel.name },
+            subjectCatalog: subjectCatalogRow,
+            topicId: topic.id,
+            topicName: topic.name,
+            topicDescription: topic.description ?? undefined,
+            plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
+            plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
+            progressPercent,
+            status,
+            dateCompleted,
+          });
+        }
       }
     }
 
@@ -1148,32 +1102,79 @@ export class CurriculumService {
       return this.buildTeacherProgressEmptyResponse(academicTerm.id);
     }
 
-    const selectedSubject = this.resolveTeacherDashboardSubjectSelection(
-      assignedSubjects,
-      filters.subjectId,
-      filters.classLevelId,
-    );
-    if (!selectedSubject) {
+    const requestedSubject = filters.subjectId
+      ? assignedSubjects.find((s) => s.id === filters.subjectId)
+      : null;
+    if (filters.subjectId && !requestedSubject) {
+      throw new ForbiddenException(
+        'subjectId does not belong to this teacher in your school',
+      );
+    }
+    const subjectsAfterClassFilter = filters.classLevelId
+      ? assignedSubjects.filter((s) =>
+          (s.classLevels || []).some((cl) => cl.id === filters.classLevelId),
+        )
+      : assignedSubjects;
+    if (
+      requestedSubject &&
+      filters.classLevelId &&
+      !(requestedSubject.classLevels || []).some(
+        (cl) => cl.id === filters.classLevelId,
+      )
+    ) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to the selected teacher subject',
+      );
+    }
+
+    const subjectsForCards = requestedSubject
+      ? [requestedSubject]
+      : subjectsAfterClassFilter;
+
+    if (subjectsForCards.length === 0) {
       return this.buildTeacherProgressEmptyResponse(
         academicTerm.id,
         filters.classLevelId ?? null,
       );
     }
 
-    const selectedClassLevelId =
-      filters.classLevelId ?? selectedSubject.classLevels?.[0]?.id ?? null;
-
-    const topicCards = await this.buildTeacherProgressTopicCards(
-      selectedSubject,
-      academicTerm,
-    );
+    const topicCards: any[] = [];
+    for (const subject of subjectsForCards) {
+      if (filters.classLevelId) {
+        const cards = await this.buildTeacherProgressTopicCards(
+          subject,
+          academicTerm,
+          filters.classLevelId,
+        );
+        topicCards.push(...cards);
+      } else {
+        const levels = subject.classLevels || [];
+        if (levels.length === 0) {
+          const cards = await this.buildTeacherProgressTopicCards(
+            subject,
+            academicTerm,
+            null,
+          );
+          topicCards.push(...cards);
+        } else {
+          for (const cl of levels) {
+            const cards = await this.buildTeacherProgressTopicCards(
+              subject,
+              academicTerm,
+              cl.id,
+            );
+            topicCards.push(...cards);
+          }
+        }
+      }
+    }
     const overall = this.computeTeacherProgressOverall(topicCards);
 
     return {
       selection: {
         academicTermId: academicTerm.id,
-        subjectId: selectedSubject.id,
-        classLevelId: selectedClassLevelId,
+        subjectId: requestedSubject?.id ?? null,
+        classLevelId: filters.classLevelId ?? null,
       },
       overall,
       topics: topicCards,
@@ -1202,41 +1203,10 @@ export class CurriculumService {
     };
   }
 
-  private resolveTeacherDashboardSubjectSelection(
-    assignedSubjects: Subject[],
-    subjectId?: string,
-    classLevelId?: string,
-  ) {
-    const requestedSubject = subjectId
-      ? assignedSubjects.find((s) => s.id === subjectId)
-      : null;
-    if (subjectId && !requestedSubject) {
-      throw new ForbiddenException(
-        'subjectId does not belong to this teacher in your school',
-      );
-    }
-    const subjectsAfterClassFilter = classLevelId
-      ? assignedSubjects.filter((s) =>
-          (s.classLevels || []).some((cl) => cl.id === classLevelId),
-        )
-      : assignedSubjects;
-    const selectedSubject =
-      requestedSubject ?? subjectsAfterClassFilter[0] ?? null;
-    if (
-      selectedSubject &&
-      classLevelId &&
-      !(selectedSubject.classLevels || []).some((cl) => cl.id === classLevelId)
-    ) {
-      throw new BadRequestException(
-        'classLevelId is not assigned to the selected teacher subject',
-      );
-    }
-    return selectedSubject;
-  }
-
   private async buildTeacherProgressTopicCards(
     selectedSubject: Subject,
     academicTerm: AcademicTerm,
+    classLevelId: string | null,
   ) {
     const topics = await this.topicRepository.find({
       where: { subjectCatalog: { id: selectedSubject.subjectCatalog.id } },
@@ -1248,12 +1218,13 @@ export class CurriculumService {
       (t.subtopics || []).map((s) => s.id),
     );
     const completions =
-      allSubtopicIds.length > 0
+      allSubtopicIds.length > 0 && classLevelId
         ? await this.subtopicCompletionRepository.find({
             where: {
               subject: { id: selectedSubject.id },
               academicTerm: { id: academicTerm.id },
               subtopic: { id: In(allSubtopicIds) },
+              classLevel: { id: classLevelId },
             },
             relations: ['subtopic'],
           })
@@ -1261,6 +1232,11 @@ export class CurriculumService {
     const completionBySubtopicId = new Map(
       completions.map((c) => [c.subtopic.id, c]),
     );
+
+    const classLevelName = classLevelId
+      ? (selectedSubject.classLevels || []).find((cl) => cl.id === classLevelId)
+          ?.name ?? null
+      : null;
 
     const topicCards: any[] = [];
     for (const topic of topics) {
@@ -1288,6 +1264,9 @@ export class CurriculumService {
       );
 
       topicCards.push({
+        subjectId: selectedSubject.id,
+        classLevelId,
+        classLevelName,
         topicId: topic.id,
         name: topic.name,
         description: topic.description ?? null,
@@ -1379,6 +1358,7 @@ export class CurriculumService {
     topicId: string,
     subjectId: string,
     schoolId: string,
+    classLevelId: string,
     academicTermId?: string,
   ) {
     const topic = await this.topicRepository.findOne({
@@ -1407,6 +1387,15 @@ export class CurriculumService {
       );
     }
 
+    const activeClassLevel = (subject.classLevels || []).find(
+      (cl) => cl.id === classLevelId,
+    );
+    if (!activeClassLevel) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to this subject',
+      );
+    }
+
     const resolvedTermId = academicTermId ?? topic.curriculum?.academicTerm?.id;
     if (!resolvedTermId) {
       throw new BadRequestException(
@@ -1424,6 +1413,7 @@ export class CurriculumService {
         subject: { id: subjectId },
         subtopic: { topic: { id: topicId } },
         academicTerm: { id: resolvedTermId },
+        classLevel: { id: classLevelId },
       },
       relations: ['subtopic'],
     });
@@ -1500,6 +1490,10 @@ export class CurriculumService {
           id: cl.id,
           name: cl.name,
         })),
+        activeClassLevel: {
+          id: activeClassLevel.id,
+          name: activeClassLevel.name,
+        },
       },
       academicTerm: {
         id: academicTermEntity.id,
@@ -1732,8 +1726,12 @@ export class CurriculumService {
     subjectId: string,
     teacherId: string,
     schoolId: string,
+    classLevelId: string,
     academicTermId?: string,
   ) {
+    if (!classLevelId) {
+      throw new BadRequestException('classLevelId is required');
+    }
     const subtopic = await this.subtopicRepository.findOne({
       where: { id: subtopicId },
       relations: [
@@ -1750,7 +1748,7 @@ export class CurriculumService {
     }
     const subject = await this.subjectRepository.findOne({
       where: { id: subjectId, school: { id: schoolId } },
-      relations: ['teacher', 'subjectCatalog'],
+      relations: ['teacher', 'subjectCatalog', 'classLevels'],
     });
     if (!subject) throw new NotFoundException('Subject not found');
     if (subject.teacher?.id !== teacherId) {
@@ -1761,6 +1759,14 @@ export class CurriculumService {
     if (subject.subjectCatalog.id !== subtopic.topic.subjectCatalog.id) {
       throw new BadRequestException(
         'Subject does not match topic subject catalog',
+      );
+    }
+    const classLevel = (subject.classLevels || []).find(
+      (cl) => cl.id === classLevelId,
+    );
+    if (!classLevel) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to this subject',
       );
     }
     const resolvedTermId =
@@ -1779,6 +1785,7 @@ export class CurriculumService {
         subtopic: { id: subtopicId },
         subject: { id: subjectId },
         academicTerm: { id: academicTerm.id },
+        classLevel: { id: classLevelId },
       },
     });
     if (existing) return existing;
@@ -1786,6 +1793,7 @@ export class CurriculumService {
       subtopic,
       subject,
       academicTerm,
+      classLevel,
       completedBy: teacherId,
     });
     return await this.subtopicCompletionRepository.save(completion);
@@ -1796,15 +1804,27 @@ export class CurriculumService {
     subjectId: string,
     teacherId: string,
     schoolId: string,
+    classLevelId: string,
     academicTermId?: string,
   ) {
+    if (!classLevelId) {
+      throw new BadRequestException('classLevelId is required');
+    }
     const subject = await this.subjectRepository.findOne({
       where: { id: subjectId, school: { id: schoolId } },
-      relations: ['teacher'],
+      relations: ['teacher', 'classLevels'],
     });
     if (!subject) throw new NotFoundException('Subject not found');
     if (subject.teacher?.id !== teacherId) {
       throw new ForbiddenException('You can only unmark for your own subjects');
+    }
+    const classLevelOk = (subject.classLevels || []).some(
+      (cl) => cl.id === classLevelId,
+    );
+    if (!classLevelOk) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to this subject',
+      );
     }
     const subtopic = await this.subtopicRepository.findOne({
       where: { id: subtopicId },
@@ -1824,6 +1844,7 @@ export class CurriculumService {
         subtopic: { id: subtopicId },
         subject: { id: subjectId },
         academicTerm: { id: resolvedTermId },
+        classLevel: { id: classLevelId },
       },
     });
     if (!completion) throw new NotFoundException('Completion record not found');

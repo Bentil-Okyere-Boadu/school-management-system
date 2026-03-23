@@ -292,6 +292,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const onViewTopicDetail = (row: CurriculumProgressDashboardRow) => {
     const params = new URLSearchParams();
     params.set("subjectId", row.subjectId);
+    params.set("classLevelId", row.classLevel.id);
     if (academicTermId) params.set("academicTermId", academicTermId);
     const cur = curricula?.find((c) => String(c.id) === curriculumId);
     if (cur?.name) params.set("curriculumName", cur.name);
@@ -436,6 +437,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
                 {[
                   "Topic",
                   "Subject",
+                  "Class",
                   "Teacher",
                   "Start Date",
                   "End Date",
@@ -458,7 +460,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
                 if (isLoading) {
                   return (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <div className="relative py-20 bg-white">
                           <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                             <HashLoader color="#AB58E7" size={40} />
@@ -472,7 +474,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
                 if (!rows.length) {
                   return (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                           <p className="text-lg font-medium">No progress data</p>
                           <p className="text-sm text-gray-400 mt-1">
@@ -505,10 +507,12 @@ export const CurriculumProgressTabSection: React.FC = () => {
                       : row.progressPercent > 0
                         ? "bg-purple-500"
                         : "bg-gray-200";
-                  const rowClickable = Boolean(row.subjectId && row.topicId);
+                  const rowClickable = Boolean(
+                    row.subjectId && row.topicId && row.classLevel?.id
+                  );
                   return (
                     <tr
-                      key={`${row.subjectId}-${row.topicId}`}
+                      key={`${row.subjectId}-${row.topicId}-${row.classLevel.id}`}
                       onClick={() => {
                         if (!rowClickable) return;
                         onViewTopicDetail(row);
@@ -533,6 +537,9 @@ export const CurriculumProgressTabSection: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
                         {row.subjectCatalog.name}
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
+                        {row.classLevel.name}
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
                         {teacherDisplayName(row.teacher)}

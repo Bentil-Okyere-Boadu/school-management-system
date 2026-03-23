@@ -689,21 +689,29 @@ export const useGetCurriculumProgressDashboard = (
 export const useGetCurriculumTopicDetail = (
   topicId: string,
   subjectId: string,
+  classLevelId: string,
   academicTermId?: string,
   options?: UseQueryOptions
 ) => {
   const { data, isLoading, refetch, error } = useQuery({
-    queryKey: ["curriculumTopicDetail", topicId, subjectId, academicTermId],
+    queryKey: [
+      "curriculumTopicDetail",
+      topicId,
+      subjectId,
+      classLevelId,
+      academicTermId,
+    ],
     queryFn: () => {
       const params = new URLSearchParams();
       params.set("subjectId", subjectId);
+      params.set("classLevelId", classLevelId);
       if (academicTermId) params.set("academicTermId", academicTermId);
       return customAPI.get(
         `/curriculum/topics/${topicId}/detail?${params.toString()}`
       );
     },
     enabled:
-      (options?.enabled ?? true) && Boolean(topicId && subjectId),
+      (options?.enabled ?? true) && Boolean(topicId && subjectId && classLevelId),
     refetchOnWindowFocus: true,
     ...options,
   });

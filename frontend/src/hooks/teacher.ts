@@ -443,14 +443,17 @@ export const useMarkSubtopicComplete = () => {
         mutationFn: ({
             subtopicId,
             subjectId,
+            classLevelId,
             academicTermId,
         }: {
             subtopicId: string;
             subjectId: string;
+            classLevelId: string;
             academicTermId?: string;
         }) =>
             customAPI.post(`/teacher/subtopics/${subtopicId}/complete`, {
                 subjectId,
+                classLevelId,
                 ...(academicTermId ? { academicTermId } : {}),
             }),
     });
@@ -461,13 +464,15 @@ export const useUnmarkSubtopicComplete = () => {
         mutationFn: ({
             subtopicId,
             subjectId,
+            classLevelId,
             academicTermId,
         }: {
             subtopicId: string;
             subjectId: string;
+            classLevelId: string;
             academicTermId?: string;
         }) => {
-            const params = new URLSearchParams({ subjectId });
+            const params = new URLSearchParams({ subjectId, classLevelId });
             if (academicTermId) params.set('academicTermId', academicTermId);
             return customAPI.delete(
                 `/teacher/subtopics/${subtopicId}/complete?${params.toString()}`,

@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { CurriculumService } from './curriculum.service';
 import { CreateCurriculumDto } from './dto/create-curriculum.dto';
@@ -79,12 +80,17 @@ export class CurriculumController {
     @CurrentUser() admin: SchoolAdmin,
     @Param('topicId') topicId: string,
     @Query('subjectId') subjectId: string,
+    @Query('classLevelId') classLevelId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
+    if (!classLevelId) {
+      throw new BadRequestException('classLevelId query parameter is required');
+    }
     return this.curriculumService.getTopicDetail(
       topicId,
       subjectId,
       admin.school.id,
+      classLevelId,
       academicTermId,
     );
   }

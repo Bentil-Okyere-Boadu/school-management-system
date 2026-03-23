@@ -758,7 +758,7 @@ export interface CurriculumProgressDashboardSummary {
 export interface CurriculumProgressDashboardRow {
   subjectId: string;
   teacher: CurriculumProgressDashboardTeacher;
-  classLevels: Array<{ id: string; name: string }>;
+  classLevel: { id: string; name: string };
   subjectCatalog: { id: string; name: string };
   topicId: string;
   topicName: string;
@@ -822,6 +822,7 @@ export interface CurriculumTopicDetailData {
       name?: string;
     } | null;
     classLevels: Array<{ id: string; name: string }>;
+    activeClassLevel: { id: string; name: string };
   };
   academicTerm: {
     id: string;
@@ -858,6 +859,10 @@ export interface TeacherProgressSubtopicRow {
 }
 
 export interface TeacherProgressTopicCard {
+  subjectId: string;
+  classLevelId: string | null;
+  /** Present when classLevelId is set; helps distinguish duplicate topic rows in “All classes”. */
+  classLevelName?: string | null;
   topicId: string;
   name: string;
   description: string | null;

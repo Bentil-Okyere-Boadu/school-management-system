@@ -228,19 +228,21 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const { dashboard, isLoading: progressLoading } =
     useGetTeacherCurriculumProgress(progressFilters);
 
-  const toggleTopic = (topicId: string) => {
+  const toggleTopic = (topicKey: string) => {
     setExpandedTopicIds((prev) => {
       const next = new Set(prev);
-      if (next.has(topicId)) next.delete(topicId);
-      else next.add(topicId);
+      if (next.has(topicKey)) next.delete(topicKey);
+      else next.add(topicKey);
       return next;
     });
   };
 
   const selectionSubjectId = dashboard?.selection?.subjectId ?? subjectId;
+  const selectionClassLevelId =
+    (dashboard?.selection?.classLevelId ?? classLevelId) || null;
 
-  const onAddSubtopic = (topicId: string) => {
-    const name = (subtopicDraftByTopic[topicId] ?? "").trim();
+  const onAddSubtopic = (topicId: string, draftKey: string) => {
+    const name = (subtopicDraftByTopic[draftKey] ?? "").trim();
     if (!name) {
       toast.warn("Enter a subtopic name.");
       return;
@@ -249,7 +251,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
       { topicId, payload: { name } },
       {
         onSuccess: () => {
-          setSubtopicDraftByTopic((p) => ({ ...p, [topicId]: "" }));
+          setSubtopicDraftByTopic((p) => ({ ...p, [draftKey]: "" }));
           invalidateProgress();
           toast.success("Subtopic added.");
         },
@@ -297,17 +299,28 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const toggleSubtopicComplete = (
     subtopicId: string,
     completed: boolean,
-    termId: string
+    termId: string,
+    topicSubjectId?: string,
+    topicClassLevelId?: string | null
   ) => {
-    if (!selectionSubjectId) {
+    const subjectForAction = topicSubjectId ?? selectionSubjectId ?? undefined;
+    const classLevelForAction =
+      topicClassLevelId ?? selectionClassLevelId ?? undefined;
+
+    if (!subjectForAction) {
       toast.error("Missing subject context.");
+      return;
+    }
+    if (!classLevelForAction) {
+      toast.error("Select a class level to record progress for that class.");
       return;
     }
     if (completed) {
       unmarkComplete(
         {
           subtopicId,
-          subjectId: selectionSubjectId,
+          subjectId: subjectForAction,
+          classLevelId: classLevelForAction,
           academicTermId: termId,
         },
         {
@@ -322,7 +335,8 @@ export const CurriculumProgressTabSection: React.FC = () => {
       markComplete(
         {
           subtopicId,
-          subjectId: selectionSubjectId,
+          subjectId: subjectForAction,
+          classLevelId: classLevelForAction,
           academicTermId: termId,
         },
         {
@@ -336,13 +350,18 @@ export const CurriculumProgressTabSection: React.FC = () => {
     }
   };
 
-  const onSendNote = (topicId: string, parentId: string) => {
-    const content = (noteDraftByTopic[topicId] ?? "").trim();
+  const onSendNote = (
+    topicId: string,
+    topicSubjectId: string | undefined,
+    draftKey: string,
+    parentId: string
+  ) => {
+    const content = (noteDraftByTopic[draftKey] ?? "").trim();
     if (!content) {
       toast.warn("Write a message first.");
       return;
     }
-    if (!selectionSubjectId || !academicTermId) {
+    if (!topicSubjectId || !academicTermId) {
       toast.error("Missing subject or term.");
       return;
     }
@@ -354,13 +373,13 @@ export const CurriculumProgressTabSection: React.FC = () => {
       {
         topicId,
         content,
-        subjectId: selectionSubjectId,
+        subjectId: topicSubjectId,
         parentId,
         academicTermId,
       },
       {
         onSuccess: () => {
-          setNoteDraftByTopic((p) => ({ ...p, [topicId]: "" }));
+          setNoteDraftByTopic((p) => ({ ...p, [draftKey]: "" }));
           queryClient.invalidateQueries({
             queryKey: ["teacherTopicNotes", topicId],
           });
@@ -467,22 +486,26 @@ export const CurriculumProgressTabSection: React.FC = () => {
                 No curriculum topics for this selection.
               </div>
             ) : (
-              topics.map((topic) => (
+              topics.map((topic) => {
+                const topicKey = `${topic.subjectId}:${topic.classLevelId ?? "none"}:${topic.topicId}`;
+                return (
                 <TopicAccordionRow
-                  key={topic.topicId}
+                  key={topicKey}
                   topic={topic}
-                  expanded={expandedTopicIds.has(topic.topicId)}
-                  onToggle={() => toggleTopic(topic.topicId)}
+                  expanded={expandedTopicIds.has(topicKey)}
+                  onToggle={() => toggleTopic(topicKey)}
                   academicTermId={academicTermId}
                   selectionSubjectId={selectionSubjectId}
-                  subtopicDraft={subtopicDraftByTopic[topic.topicId] ?? ""}
+                  selectionClassLevelId={selectionClassLevelId}
+                  showClassLevelChip={!classLevelId}
+                  subtopicDraft={subtopicDraftByTopic[topicKey] ?? ""}
                   onSubtopicDraftChange={(v) =>
                     setSubtopicDraftByTopic((p) => ({
                       ...p,
-                      [topic.topicId]: v,
+                      [topicKey]: v,
                     }))
                   }
-                  onAddSubtopic={() => onAddSubtopic(topic.topicId)}
+                  onAddSubtopic={() => onAddSubtopic(topic.topicId, topicKey)}
                   creatingSub={creatingSub}
                   onEditSubtopic={(st) =>
                     setEditSubtopic({
@@ -494,17 +517,30 @@ export const CurriculumProgressTabSection: React.FC = () => {
                   }
                   onDeleteSubtopic={(id) => setDeleteSubtopicId(id)}
                   toggleSubtopicComplete={(sid, done) =>
-                    toggleSubtopicComplete(sid, done, academicTermId)
+                    toggleSubtopicComplete(
+                      sid,
+                      done,
+                      academicTermId,
+                      topic.subjectId,
+                      topic.classLevelId
+                    )
                   }
                   toggling={marking || unmarking}
-                  noteDraft={noteDraftByTopic[topic.topicId] ?? ""}
+                  noteDraft={noteDraftByTopic[topicKey] ?? ""}
                   onNoteDraftChange={(v) =>
-                    setNoteDraftByTopic((p) => ({ ...p, [topic.topicId]: v }))
+                    setNoteDraftByTopic((p) => ({ ...p, [topicKey]: v }))
                   }
-                  onSendNote={(parentId) => onSendNote(topic.topicId, parentId)}
+                  onSendNote={(parentId) =>
+                    onSendNote(
+                      topic.topicId,
+                      topic.subjectId,
+                      topicKey,
+                      parentId
+                    )
+                  }
                   replying={replying}
                 />
-              ))
+              )})
             )}
           </div>
         </>
@@ -564,6 +600,8 @@ type TopicAccordionRowProps = {
   onToggle: () => void;
   academicTermId: string;
   selectionSubjectId: string | undefined;
+  selectionClassLevelId: string | null;
+  showClassLevelChip?: boolean;
   subtopicDraft: string;
   onSubtopicDraftChange: (v: string) => void;
   onAddSubtopic: () => void;
@@ -584,6 +622,8 @@ function TopicAccordionRow({
   onToggle,
   academicTermId,
   selectionSubjectId,
+  selectionClassLevelId,
+  showClassLevelChip = false,
   subtopicDraft,
   onSubtopicDraftChange,
   onAddSubtopic,
@@ -601,9 +641,9 @@ function TopicAccordionRow({
   const { notes, isLoading: notesLoading } = useGetTeacherTopicNotes(
     expanded ? topic.topicId : undefined,
     {
-      subjectId: selectionSubjectId,
+      subjectId: topic.subjectId || selectionSubjectId,
       academicTermId,
-      enabled: expanded && Boolean(selectionSubjectId),
+      enabled: expanded && Boolean(topic.subjectId || selectionSubjectId),
     }
   );
 
@@ -616,7 +656,13 @@ function TopicAccordionRow({
     [notes]
   );
   const replyLocked =
-    notesLoading || !replyParentId || !selectionSubjectId || !academicTermId;
+    notesLoading ||
+    !replyParentId ||
+    !(topic.subjectId || selectionSubjectId) ||
+    !academicTermId;
+  const completionLocked =
+    !(topic.subjectId || selectionSubjectId) ||
+    !(topic.classLevelId || selectionClassLevelId);
 
   const pct = topic.progressPercent;
 
@@ -633,6 +679,11 @@ function TopicAccordionRow({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 gap-y-1">
             <span className="font-semibold text-gray-900">{topic.name}</span>
+            {showClassLevelChip && topic.classLevelName ? (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                {topic.classLevelName}
+              </span>
+            ) : null}
             <span
               className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.className}`}
             >
@@ -688,7 +739,7 @@ function TopicAccordionRow({
                 >
                   <button
                     type="button"
-                    disabled={toggling || !selectionSubjectId}
+                    disabled={toggling || completionLocked}
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleSubtopicComplete(st.id, st.completed);
