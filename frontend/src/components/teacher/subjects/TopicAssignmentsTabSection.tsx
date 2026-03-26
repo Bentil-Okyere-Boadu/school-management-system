@@ -4,24 +4,30 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
-import { SearchBar } from "@/components/common/SearchBar";
 import { Menu, Select, Switch } from "@mantine/core";
 import { IconDots, IconEdit, IconTrashFilled, IconClipboardCheck } from "@tabler/icons-react";
 import { Topic, Assignment, ErrorResponse } from "@/@types";
 import { AttachmentIcon } from "@/utils/icons";
 import FileUploadArea from "@/components/common/FileUploadArea";
-import { useGetTeacherTopics, useGetTeacherAssignments, useCreateTeacherAssignment, useUpdateTeacherAssignment, useDeleteTeacherAssignment, useGetTeacherSubjectClasses } from "@/hooks/teacher";
+import { useGetTeacherTopics, useGetTeacherAssignments, useCreateTeacherAssignment, useUpdateTeacherAssignment, useDeleteTeacherAssignment, useGetTeacherSubjectClasses, useTeacherAcademicTermSelection } from "@/hooks/teacher";
+import { TeacherTermSelect } from "@/components/teacher/subjects/TeacherTermSelect";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
 
 
 export const TopicAssignmentsTabSection: React.FC = () => {
   const router = useRouter();
+  const {
+    calendars,
+    calendarsLoading,
+    sortedTerms,
+    academicTermId,
+    setAcademicTermId,
+  } = useTeacherAcademicTermSelection();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-
   const [assignment, setAssignment] = useState<Partial<Assignment> & { classLevelId?: string }>({
     id: "",
     title: "",
@@ -36,9 +42,10 @@ export const TopicAssignmentsTabSection: React.FC = () => {
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const { teacherTopics: topics } = useGetTeacherTopics("");
+  const { teacherTopics: topics } = useGetTeacherTopics("", academicTermId);
   const { classSubjects } = useGetTeacherSubjectClasses("");
-  const { teacherAssignments: assignments, isLoading, refetch } = useGetTeacherAssignments(searchQuery);
+  const { teacherAssignments: assignments, isLoading, refetch } =
+    useGetTeacherAssignments("");
   const { mutate: createAssignment, isPending: creating } = useCreateTeacherAssignment();
   const { mutate: updateAssignment, isPending: updating } = useUpdateTeacherAssignment(assignment?.id || "");
   const { mutate: deleteAssignment, isPending: deleting } = useDeleteTeacherAssignment();
@@ -169,10 +176,6 @@ export const TopicAssignmentsTabSection: React.FC = () => {
     });
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -200,18 +203,16 @@ export const TopicAssignmentsTabSection: React.FC = () => {
     <>
       <div className="pb-8">
 
-        <div className="w-full flex justify-between mb-4">
-          {false  ? (        
-            <SearchBar
-              placeholder="Search assignments..."
-              onSearch={handleSearch}
-              className="w-full max-w-md"
-            />
-          ) : (
-            <div></div>
-          )}
-          <CustomButton text="Create Assignment" onClick={onOpenCreate} />
-        </div>
+        <TeacherTermSelect
+          calendars={calendars ?? []}
+          calendarsLoading={calendarsLoading}
+          sortedTerms={sortedTerms}
+          academicTermId={academicTermId}
+          setAcademicTermId={setAcademicTermId}
+          actions={
+            <CustomButton text="Create Assignment" onClick={onOpenCreate} />
+          }
+        />
 
         <section className="bg-white mt-2">
           <div className="overflow-x-auto">
@@ -247,6 +248,36 @@ export const TopicAssignmentsTabSection: React.FC = () => {
               </thead>
               <tbody>
                 {(() => {
+                  if (!calendarsLoading && !sortedTerms.length) {
+                    return (
+                      <tr>
+                        <td colSpan={9}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">No academic terms</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Your school has no terms in its calendars yet.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  if (!academicTermId) {
+                    return (
+                      <tr>
+                        <td colSpan={9}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">Select a term</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Choose an academic term above to filter topic choices.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
                   if (isLoading) {
                     return (
                       <tr>

@@ -252,8 +252,11 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-topics')
   @Roles(Role.Teacher)
-  getMyTopics(@CurrentUser() teacher: Teacher) {
-    return this.TeacherService.getMyTopics(teacher.id);
+  getMyTopics(
+    @CurrentUser() teacher: Teacher,
+    @Query('academicTermId') academicTermId: string,
+  ) {
+    return this.TeacherService.getMyTopics(teacher.id, academicTermId);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)

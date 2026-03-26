@@ -522,7 +522,7 @@ export interface Assignment {
   dueDate: string;
   maxScore: number;
   status: "published" | "draft";
-  submissions:  number;
+  submissions: number;
   isPublished: boolean;
   assignmentType?: "online" | "offline";
   termAggregatedScore?: number;
@@ -542,7 +542,7 @@ export interface StudentAssignment {
   teacher: string;
   dueDate: string;
   submittedDate?: string;
-  submittedAt?:string;
+  submittedAt?: string;
   score?: number;
   maxScore?: number;
   status: "pending" | "submitted" | "graded";
@@ -696,10 +696,10 @@ export interface CurriculumPayload {
   academicTermId: string;
 }
 
-export interface SubjectOption  { 
-  value: string; 
-  label: string 
-};
+export interface SubjectOption {
+  value: string;
+  label: string;
+}
 
 export interface CurriculumRecord {
   id: string;
@@ -708,9 +708,9 @@ export interface CurriculumRecord {
   isActive: boolean;
   subjectCatalogIds?: string[];
   subjectCatalogs?: Array<{ id: string; name: string }>;
-  academicTerm?: { 
-    id: string; 
-    name?: string; 
+  academicTerm?: {
+    id: string;
+    name?: string;
     termName?: string;
     academicCalendar?: {
       id: string;
@@ -721,7 +721,7 @@ export interface CurriculumRecord {
     id: string;
     name: string;
   };
-};
+}
 
 export interface CurriculumItem {
   id: string;
@@ -907,6 +907,14 @@ export interface Topic {
   plannedEndDate?: string | null;
   subjectCatalog?: SubjectCatalog;
   curriculum?: CurriculumItem;
+  academicTermId?: string;
+  academicTerm?: {
+    id: string;
+    termName?: string;
+    name?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+  };
 }
 
 export interface TopicPayload {
@@ -914,6 +922,7 @@ export interface TopicPayload {
   description?: string;
   subjectCatalogId: string;
   curriculumId: string;
+  academicTermId: string;
   /** ISO date string (YYYY-MM-DD). Use `null` on PATCH to clear. */
   plannedStartDate?: string | null;
   plannedEndDate?: string | null;
@@ -924,15 +933,17 @@ export interface TeacherTopicPayload {
   name: string;
   description?: string;
   subjectCatalogId: string;
+  /** Required on POST; omitted on PATCH if unchanged */
+  academicTermId?: string;
   plannedStartDate?: string | null;
   plannedEndDate?: string | null;
 }
 
 export enum VisibilityScope {
-  SCHOOL_WIDE = 'school_wide',
-  CLASS_LEVEL = 'class_level',
-  SUBJECT = 'subject',
-  TEACHERS = 'teachers',
+  SCHOOL_WIDE = "school_wide",
+  CLASS_LEVEL = "class_level",
+  SUBJECT = "subject",
+  TEACHERS = "teachers",
 }
 
 export interface EventCategory {
@@ -958,7 +969,7 @@ export interface EventReminder {
   id: string;
   reminderTime: string;
   sent: boolean;
-  notificationType: 'email' | 'sms' | 'both';
+  notificationType: "email" | "sms" | "both";
   createdAt: string;
 }
 
@@ -1009,7 +1020,7 @@ export interface CreatePlannerEventPayload {
   targetSubjectIds?: string[];
   reminders?: Array<{
     reminderTime: string;
-    notificationType?: 'email' | 'sms' | 'both';
+    notificationType?: "email" | "sms" | "both";
   }>;
   files?: File[];
   sendNotifications?: boolean;

@@ -11,6 +11,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { seedSubtopicCompletionClassLevels } from './curriculum/subtopic-completion-class-level.backfill';
+import { seedTopicAcademicTerms } from './curriculum/topic-academic-term.backfill';
 
 async function seedRoles(app: INestApplication) {
   const logger = new Logger('Seeder');
@@ -225,6 +226,7 @@ async function bootstrap() {
   await seedDefaultEventCategories(app);
   await seedDefaultGradingSystems(app);
   await seedSubtopicCompletionClassLevels(app);
+  await seedTopicAcademicTerms(app);
 
   await app.listen(process.env.PORT ?? 5000);
 }

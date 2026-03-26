@@ -827,21 +827,28 @@ export const useDeleteSubtopic = (topicId: string) => {
 export const useGetTopics = (
   search: string = "",
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  academicTermId?: string,
+  queryEnabled: boolean = true
 ) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["curriculumTopics", { search, page, limit }],
+    queryKey: ["curriculumTopics", { search, page, limit, academicTermId }],
     queryFn: () => {
       const queryBuilder = [];
       if (search) {
         queryBuilder.push(`search=${encodeURIComponent(search)}`);
+      }
+      if (academicTermId) {
+        queryBuilder.push(
+          `academicTermId=${encodeURIComponent(academicTermId)}`
+        );
       }
       queryBuilder.push(`page=${page}`);
       queryBuilder.push(`limit=${limit}`);
       const params = queryBuilder.join("&");
       return customAPI.get(`/curriculum/topics?${params}`);
     },
-    enabled: true,
+    enabled: queryEnabled,
     refetchOnWindowFocus: true,
   });
 
@@ -890,12 +897,18 @@ export const useDeleteTopic = () => {
   });
 };
 
-export const useGetSubjectTopics = (subjectCatalogId?: string) => {
+export const useGetSubjectTopics = (
+  subjectCatalogId?: string,
+  academicTermId?: string,
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["subjectCatalogTopics", subjectCatalogId],
+    queryKey: ["subjectCatalogTopics", subjectCatalogId, academicTermId],
     queryFn: () => {
+      const qs = academicTermId
+        ? `?academicTermId=${encodeURIComponent(academicTermId)}`
+        : "";
       return customAPI.get(
-        `/curriculum/subject-catalogs/${subjectCatalogId}/topics`
+        `/curriculum/subject-catalogs/${subjectCatalogId}/topics${qs}`
       );
     },
     enabled: Boolean(subjectCatalogId),

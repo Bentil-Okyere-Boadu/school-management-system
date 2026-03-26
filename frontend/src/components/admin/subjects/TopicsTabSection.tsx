@@ -1,10 +1,12 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import { Pagination } from "@/components/common/Pagination";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { Menu, Select } from "@mantine/core";
+import { TermFilterCard } from "@/components/common/TermFilterCard";
+import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
 import {
   CurriculumItem,
@@ -17,6 +19,7 @@ import {
   useCreateTopic,
   useDeleteTopic,
   useEditTopic,
+  useGetCalendars,
   useGetCurricula,
   useGetCurriculumById,
   useGetTopics,
@@ -93,15 +96,43 @@ export const TopicsTabSection: React.FC = () => {
       label: String(s.name),
     })) ?? [];
 
+  const { calendars, isLoading: calendarsLoading } = useGetCalendars();
+  const [listTermFilterId, setListTermFilterId] = useState("");
+
+  const sortedTerms = useMemo(
+    () => getSortedSchoolTerms(calendars),
+    [calendars],
+  );
+
+  useLayoutEffect(() => {
+    if (sortedTerms.length === 0) {
+      setListTermFilterId("");
+      return;
+    }
+    setListTermFilterId((prev) => {
+      if (prev && sortedTerms.some((t) => t.id === prev)) return prev;
+      return sortedTerms[0].id;
+    });
+  }, [sortedTerms]);
+
+  const topicsQueryEnabled =
+    sortedTerms.length === 0 || Boolean(listTermFilterId);
+
   const { topics, isLoading, refetch, paginationValues } = useGetTopics(
     "",
     currentPage,
-    TOPICS_PAGE_SIZE
+    TOPICS_PAGE_SIZE,
+    listTermFilterId || undefined,
+    topicsQueryEnabled,
   );
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [listTermFilterId]);
 
   useEffect(() => {
     if (!dialogCurriculumId || !subjectOptions.length) {
@@ -170,6 +201,13 @@ export const TopicsTabSection: React.FC = () => {
       toast.error("Name, curriculum and subject are required.");
       return;
     }
+    const termId = curriculum?.academicTerm?.id;
+    if (!termId) {
+      toast.error(
+        "This curriculum has no academic term. Link a term to the curriculum before adding topics."
+      );
+      return;
+    }
     const start = topic.plannedStartDate?.trim() ?? "";
     const end = topic.plannedEndDate?.trim() ?? "";
     if ((start && !end) || (!start && end)) {
@@ -194,6 +232,7 @@ export const TopicsTabSection: React.FC = () => {
       description: (topic.description as string) || undefined,
       subjectCatalogId: dialogSubjectId,
       curriculumId: dialogCurriculumId,
+      academicTermId: termId,
       ...(isCreate
         ? {
             ...(start ? { plannedStartDate: start } : {}),
@@ -247,7 +286,16 @@ export const TopicsTabSection: React.FC = () => {
     <>
       <div className="pb-8">
 
-        <div className="flex justify-end mb-4"><CustomButton text="Create Topic" onClick={onOpenCreate} /></div>
+        <TermFilterCard
+          calendars={calendars ?? []}
+          calendarsLoading={calendarsLoading}
+          sortedTerms={sortedTerms}
+          value={listTermFilterId}
+          onChange={setListTermFilterId}
+          actions={
+            <CustomButton text="Create Topic" onClick={onOpenCreate} />
+          }
+        />
 
         <section className="bg-white mt-2">
           <div className="overflow-x-auto">

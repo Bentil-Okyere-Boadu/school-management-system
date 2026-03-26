@@ -163,10 +163,12 @@ export class CurriculumController {
   findAllTopicsBySubjectCatalog(
     @Param('subjectCatalogId') subjectCatalogId: string,
     @CurrentUser() admin: SchoolAdmin,
+    @Query('academicTermId') academicTermId?: string,
   ) {
     return this.curriculumService.findAllTopicsBySubjectCatalog(
       subjectCatalogId,
       admin.school.id,
+      academicTermId,
     );
   }
 
