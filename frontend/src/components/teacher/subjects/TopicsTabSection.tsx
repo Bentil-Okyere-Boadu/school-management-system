@@ -1,11 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import { SearchBar } from "@/components/common/SearchBar";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { Topic, ErrorResponse, TeacherTopicPayload } from "@/@types";
-import { useGetTeacherTopics, useGetTeacherSubjects, useCreateTeacherTopic, useUpdateTeacherTopic, useDeleteTeacherTopic } from "@/hooks/teacher";
+import { useGetTeacherTopics, useGetTeacherSubjects, useCreateTeacherTopic, useUpdateTeacherTopic, useDeleteTeacherTopic, useTeacherAcademicTermSelection } from "@/hooks/teacher";
+import { TeacherTermSelect } from "@/components/teacher/subjects/TeacherTermSelect";
 import { HashLoader } from "react-spinners";
 import { Select, Menu } from "@mantine/core";
 import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
@@ -19,7 +19,14 @@ function toDateInputValue(iso: string | null | undefined): string {
 
 
 export const TopicsTabSection: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    calendars,
+    calendarsLoading,
+    sortedTerms,
+    academicTermId,
+    setAcademicTermId,
+  } = useTeacherAcademicTermSelection();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
@@ -34,7 +41,10 @@ export const TopicsTabSection: React.FC = () => {
     plannedEndDate: "",
   });
 
-  const { teacherTopics: topics, isLoading, refetch } = useGetTeacherTopics(searchQuery);
+  const { teacherTopics: topics, isLoading, refetch } = useGetTeacherTopics(
+    "",
+    academicTermId,
+  );
   const { teacherSubjects } = useGetTeacherSubjects("");
   const { mutate: createTopic, isPending: creating } = useCreateTeacherTopic();
   const { mutate: updateTopic, isPending: updating } = useUpdateTeacherTopic(topic?.id || "");
@@ -83,10 +93,17 @@ export const TopicsTabSection: React.FC = () => {
   const saveTopic = () => {
     const start = topic.plannedStartDate?.trim() ?? "";
     const end = topic.plannedEndDate?.trim() ?? "";
+    if (isCreate && !academicTermId) {
+      toast.error("Select an academic term before creating a topic.");
+      return;
+    }
     const base: TeacherTopicPayload = {
       name: topic.name || "",
       description: (topic.description as string),
       subjectCatalogId: topic.subjectCatalogId || "",
+      ...(isCreate && academicTermId
+        ? { academicTermId }
+        : {}),
       ...(isCreate
         ? {
             ...(start ? { plannedStartDate: start } : {}),
@@ -136,25 +153,19 @@ export const TopicsTabSection: React.FC = () => {
     });
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
   return (
     <div className="pb-8">
 
-      <div className="w-full flex justify-between mb-4">
-        {false  ? (        
-          <SearchBar
-            placeholder="Search topics..."
-            onSearch={handleSearch}
-            className="w-full max-w-md"
-          />
-        ) : (
-          <div></div>
-        )}
-        <CustomButton text="Create Topic" onClick={onOpenCreate} />
-      </div>
+      <TeacherTermSelect
+        calendars={calendars ?? []}
+        calendarsLoading={calendarsLoading}
+        sortedTerms={sortedTerms}
+        academicTermId={academicTermId}
+        setAcademicTermId={setAcademicTermId}
+        actions={
+          <CustomButton text="Create Topic" onClick={onOpenCreate} />
+        }
+      />
 
       <section className="bg-white mt-2">
         <div className="overflow-x-auto">
@@ -184,6 +195,36 @@ export const TopicsTabSection: React.FC = () => {
               </thead>
               <tbody>
                 {(() => {
+                  if (!calendarsLoading && !sortedTerms.length) {
+                    return (
+                      <tr>
+                        <td colSpan={7}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">No academic terms</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Your school has no terms in its calendars yet.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  if (!academicTermId) {
+                    return (
+                      <tr>
+                        <td colSpan={7}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">Select a term</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Choose an academic term above to load topics.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
                   if (isLoading) {
                     return (
                       <tr>

@@ -252,8 +252,11 @@ export class TeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-topics')
   @Roles(Role.Teacher)
-  getMyTopics(@CurrentUser() teacher: Teacher) {
-    return this.TeacherService.getMyTopics(teacher.id);
+  getMyTopics(
+    @CurrentUser() teacher: Teacher,
+    @Query('academicTermId') academicTermId: string,
+  ) {
+    return this.TeacherService.getMyTopics(teacher.id, academicTermId);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -372,6 +375,7 @@ export class TeacherController {
     @CurrentUser() teacher: Teacher,
     @Param('subtopicId') subtopicId: string,
     @Body('subjectId') subjectId: string,
+    @Body('classLevelId') classLevelId: string,
     @Body('academicTermId') academicTermId?: string,
   ) {
     return this.curriculumService.markSubtopicComplete(
@@ -379,6 +383,7 @@ export class TeacherController {
       subjectId,
       teacher.id,
       teacher.school.id,
+      classLevelId,
       academicTermId,
     );
   }
@@ -390,6 +395,7 @@ export class TeacherController {
     @CurrentUser() teacher: Teacher,
     @Param('subtopicId') subtopicId: string,
     @Query('subjectId') subjectId: string,
+    @Query('classLevelId') classLevelId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
     return this.curriculumService.unmarkSubtopicComplete(
@@ -397,6 +403,7 @@ export class TeacherController {
       subjectId,
       teacher.id,
       teacher.school.id,
+      classLevelId,
       academicTermId,
     );
   }

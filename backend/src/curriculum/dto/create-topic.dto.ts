@@ -45,4 +45,11 @@ export class CreateTopicDto {
   @IsNotEmpty()
   @IsUUID()
   curriculumId: string;
+
+  @ApiProperty({
+    description: 'Academic term UUID (must belong to the school)',
+  })
+  @IsNotEmpty()
+  @IsUUID()
+  academicTermId: string;
 }

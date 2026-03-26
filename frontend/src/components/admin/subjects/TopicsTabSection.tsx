@@ -1,9 +1,12 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { Dialog } from "@/components/common/Dialog";
+import { Pagination } from "@/components/common/Pagination";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { Menu, Select } from "@mantine/core";
+import { TermFilterCard } from "@/components/common/TermFilterCard";
+import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
 import {
   CurriculumItem,
@@ -16,12 +19,16 @@ import {
   useCreateTopic,
   useDeleteTopic,
   useEditTopic,
+  useGetCalendars,
   useGetCurricula,
   useGetCurriculumById,
   useGetTopics,
 } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
+import { useQueryClient } from "@tanstack/react-query";
+
+const TOPICS_PAGE_SIZE = 10;
 
 function toDateInputValue(iso: string | null | undefined): string {
   if (iso == null || iso === "") return "";
@@ -30,6 +37,8 @@ function toDateInputValue(iso: string | null | undefined): string {
 }
 
 export const TopicsTabSection: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
@@ -64,14 +73,66 @@ export const TopicsTabSection: React.FC = () => {
       label: String(c.name),
     })) ?? [];
 
-  const { curriculum } = useGetCurriculumById(dialogCurriculumId);
+  const { curriculum, isLoading: curriculumDetailLoading } =
+    useGetCurriculumById(dialogCurriculumId);
+
+  const termDateBounds = useMemo(() => {
+    const t = curriculum?.academicTerm;
+    const min =
+      t?.startDate != null ? toDateInputValue(t.startDate) : "";
+    const max = t?.endDate != null ? toDateInputValue(t.endDate) : "";
+    if (!min || !max) {
+      return {
+        min: undefined as string | undefined,
+        max: undefined as string | undefined,
+      };
+    }
+    return { min, max };
+  }, [curriculum?.academicTerm]);
+
   const subjectOptions =
     (curriculum?.subjectCatalogs || [])?.map((s: SubjectCatalog) => ({
       value: String(s.id),
       label: String(s.name),
     })) ?? [];
 
-  const { topics, isLoading, refetch } = useGetTopics();
+  const { calendars, isLoading: calendarsLoading } = useGetCalendars();
+  const [listTermFilterId, setListTermFilterId] = useState("");
+
+  const sortedTerms = useMemo(
+    () => getSortedSchoolTerms(calendars),
+    [calendars],
+  );
+
+  useLayoutEffect(() => {
+    if (sortedTerms.length === 0) {
+      setListTermFilterId("");
+      return;
+    }
+    setListTermFilterId((prev) => {
+      if (prev && sortedTerms.some((t) => t.id === prev)) return prev;
+      return sortedTerms[0].id;
+    });
+  }, [sortedTerms]);
+
+  const topicsQueryEnabled =
+    sortedTerms.length === 0 || Boolean(listTermFilterId);
+
+  const { topics, isLoading, refetch, paginationValues } = useGetTopics(
+    "",
+    currentPage,
+    TOPICS_PAGE_SIZE,
+    listTermFilterId || undefined,
+    topicsQueryEnabled,
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [listTermFilterId]);
 
   useEffect(() => {
     if (!dialogCurriculumId || !subjectOptions.length) {
@@ -140,13 +201,38 @@ export const TopicsTabSection: React.FC = () => {
       toast.error("Name, curriculum and subject are required.");
       return;
     }
+    const termId = curriculum?.academicTerm?.id;
+    if (!termId) {
+      toast.error(
+        "This curriculum has no academic term. Link a term to the curriculum before adding topics."
+      );
+      return;
+    }
     const start = topic.plannedStartDate?.trim() ?? "";
     const end = topic.plannedEndDate?.trim() ?? "";
+    if ((start && !end) || (!start && end)) {
+      toast.error("Enter both start and end, or clear both to remove dates.");
+      return;
+    }
+    if (start && end) {
+      const s = new Date(`${start}T12:00:00`);
+      const e = new Date(`${end}T12:00:00`);
+      if (s > e) {
+        toast.error("Start date cannot be after end date.");
+        return;
+      }
+      const { min, max } = termDateBounds;
+      if (min && max && (start < min || start > max || end < min || end > max)) {
+        toast.error("Planned dates must fall within the curriculum’s academic term.");
+        return;
+      }
+    }
     const payload: TopicPayload = {
       name: topic.name,
       description: (topic.description as string) || undefined,
       subjectCatalogId: dialogSubjectId,
       curriculumId: dialogCurriculumId,
+      academicTermId: termId,
       ...(isCreate
         ? {
             ...(start ? { plannedStartDate: start } : {}),
@@ -162,7 +248,8 @@ export const TopicsTabSection: React.FC = () => {
         onSuccess: () => {
           toast.success("Topic created successfully");
           setIsDialogOpen(false);
-          refetch();
+          setCurrentPage(1);
+          void queryClient.invalidateQueries({ queryKey: ["curriculumTopics"] });
         },
         onError: (error: unknown) => {
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -199,7 +286,16 @@ export const TopicsTabSection: React.FC = () => {
     <>
       <div className="pb-8">
 
-        <div className="flex justify-end mb-4"><CustomButton text="Create Topic" onClick={onOpenCreate} /></div>
+        <TermFilterCard
+          calendars={calendars ?? []}
+          calendarsLoading={calendarsLoading}
+          sortedTerms={sortedTerms}
+          value={listTermFilterId}
+          onChange={setListTermFilterId}
+          actions={
+            <CustomButton text="Create Topic" onClick={onOpenCreate} />
+          }
+        />
 
         <section className="bg-white mt-2">
           <div className="overflow-x-auto">
@@ -316,6 +412,12 @@ export const TopicsTabSection: React.FC = () => {
             </table>
           </div>
         </section>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={paginationValues?.totalPages ?? 1}
+          onPageChange={handlePageChange}
+        />
       </div>
 
       <Dialog
@@ -364,31 +466,53 @@ export const TopicsTabSection: React.FC = () => {
               disabled={!dialogCurriculumId}
             />
           </div>
-          <div className="grid md:grid-cols-2 gap-4 mt-5">
-            <InputField
-              className="!py-0"
-              type="date"
-              label="Planned start"
-              value={topic.plannedStartDate ?? ""}
-              onChange={(e) =>
-                setTopic((p) => ({
-                  ...p,
-                  plannedStartDate: e.target.value,
-                }))
-              }
-            />
-            <InputField
-              className="!py-0"
-              type="date"
-              label="Planned end"
-              value={topic.plannedEndDate ?? ""}
-              onChange={(e) =>
-                setTopic((p) => ({
-                  ...p,
-                  plannedEndDate: e.target.value,
-                }))
-              }
-            />
+          <div className="mt-5">
+            {termDateBounds.min && termDateBounds.max ? (
+              <p className="text-sm text-gray-600 mb-3">
+                Planned dates must fall between{" "}
+                <span className="font-medium text-gray-800">{termDateBounds.min}</span>{" "}and{" "}
+                <span className="font-medium text-gray-800">{termDateBounds.max}</span>{" "}
+                (this curriculum&apos;s term).
+              </p>
+            ) : !curriculumDetailLoading &&
+              dialogCurriculumId &&
+              curriculum?.id &&
+              !curriculum?.academicTerm ? (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3">
+                This curriculum has no academic term linked. Add a term to the
+                curriculum to constrain planned dates, or leave dates empty.
+              </p>
+            ) : null}
+            <div className="grid md:grid-cols-2 gap-4">
+              <InputField
+                className="!py-0"
+                type="date"
+                label="Planned start"
+                value={topic.plannedStartDate ?? ""}
+                min={termDateBounds.min}
+                max={termDateBounds.max}
+                onChange={(e) =>
+                  setTopic((p) => ({
+                    ...p,
+                    plannedStartDate: e.target.value,
+                  }))
+                }
+              />
+              <InputField
+                className="!py-0"
+                type="date"
+                label="Planned end"
+                value={topic.plannedEndDate ?? ""}
+                min={termDateBounds.min}
+                max={termDateBounds.max}
+                onChange={(e) =>
+                  setTopic((p) => ({
+                    ...p,
+                    plannedEndDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
           </div>
         </form>
       </Dialog>

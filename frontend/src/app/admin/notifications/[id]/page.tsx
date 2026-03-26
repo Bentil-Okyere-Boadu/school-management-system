@@ -5,7 +5,6 @@ import TabBar from "@/components/common/TabBar";
 import { TabListItem } from "@/components/common/TabItem";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { useGetMe, useGetNotifications, useMarkNotificationAsRead } from "@/hooks/school-admin";
-import { useQueryClient } from "@tanstack/react-query";
 import NotificationIcon from "@/components/common/NotificationIcon";
 import { NotificationSettings } from "@/components/admin/notifications/NotificationSettings";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
@@ -37,18 +36,13 @@ const NotificationsPage: React.FC = () => {
   const { notifications } = useGetNotifications(schoolId);
   const { mutate: markAsRead } = useMarkNotificationAsRead();
 
-  const queryClient = useQueryClient();
-
   const handleReadNotification = (id: string) => {
     markAsRead(id, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      },
       onError: (err) => {
         console.error("Error marking notification as read:", err);
-      }
+      },
     });
-  }
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);

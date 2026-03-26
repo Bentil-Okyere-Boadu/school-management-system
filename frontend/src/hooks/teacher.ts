@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useState } from "react";
 import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
+import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 
 export const useTeacherGetMe = () => {
     const { data, isPending, refetch} = useQuery({
@@ -290,6 +292,40 @@ export const useGetCalendars = () => {
   return { studentCalendars, isLoading, refetch }
 }
 
+/**
+ * Single-term selection for teacher topic lists: flattened sorted terms,
+ * defaulting to the latest term when the set changes.
+ */
+export const useTeacherAcademicTermSelection = () => {
+  const { studentCalendars: calendars, isLoading: calendarsLoading } =
+    useGetCalendars();
+  const [academicTermId, setAcademicTermId] = useState("");
+
+  const sortedTerms = useMemo(
+    () => getSortedSchoolTerms(calendars),
+    [calendars],
+  );
+
+  useEffect(() => {
+    if (sortedTerms.length === 0) return;
+    setAcademicTermId((prev) => {
+      if (prev && sortedTerms.some((t) => t.id === prev)) return prev;
+      return sortedTerms[0].id;
+    });
+  }, [sortedTerms]);
+
+  const latestTermId = sortedTerms[0]?.id;
+
+  return {
+    calendars,
+    calendarsLoading,
+    sortedTerms,
+    academicTermId,
+    setAcademicTermId,
+    latestTermId,
+  };
+};
+
 export const useGetSubjectClasses = (search: string = "") => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['subjectClasses', { search }],
@@ -330,18 +366,27 @@ export const useGetTeacherSubjects = (search: string = "") => {
     return { teacherSubjects, isLoading, refetch }
 }
 
-export const useGetTeacherTopics = (search: string = "") => {
+export const useGetTeacherTopics = (
+  search: string = "",
+  academicTermId?: string,
+) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['teacherTopics', { search }],
+        queryKey: ['teacherTopics', { search, academicTermId }],
         queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
+            const queryBuilder: string[] = [];
+            if (search) {
+                queryBuilder.push(`search=${encodeURIComponent(search)}`);
             }
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+            if (academicTermId) {
+                queryBuilder.push(
+                    `academicTermId=${encodeURIComponent(academicTermId)}`,
+                );
+            }
+            const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
 
             return customAPI.get(`/teacher/my-topics?${params}`);
         },
+        enabled: Boolean(academicTermId?.trim()),
         refetchOnWindowFocus: true
     })
 
@@ -443,14 +488,17 @@ export const useMarkSubtopicComplete = () => {
         mutationFn: ({
             subtopicId,
             subjectId,
+            classLevelId,
             academicTermId,
         }: {
             subtopicId: string;
             subjectId: string;
+            classLevelId: string;
             academicTermId?: string;
         }) =>
             customAPI.post(`/teacher/subtopics/${subtopicId}/complete`, {
                 subjectId,
+                classLevelId,
                 ...(academicTermId ? { academicTermId } : {}),
             }),
     });
@@ -461,13 +509,15 @@ export const useUnmarkSubtopicComplete = () => {
         mutationFn: ({
             subtopicId,
             subjectId,
+            classLevelId,
             academicTermId,
         }: {
             subtopicId: string;
             subjectId: string;
+            classLevelId: string;
             academicTermId?: string;
         }) => {
-            const params = new URLSearchParams({ subjectId });
+            const params = new URLSearchParams({ subjectId, classLevelId });
             if (academicTermId) params.set('academicTermId', academicTermId);
             return customAPI.delete(
                 `/teacher/subtopics/${subtopicId}/complete?${params.toString()}`,
