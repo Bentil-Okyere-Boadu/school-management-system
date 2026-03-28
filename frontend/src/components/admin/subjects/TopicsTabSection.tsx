@@ -1,12 +1,18 @@
 "use client";
-import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { Dialog } from "@/components/common/Dialog";
 import { Pagination } from "@/components/common/Pagination";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { Badge, Checkbox, Combobox, Menu, Select } from "@mantine/core";
 import { TermFilterCard } from "@/components/common/TermFilterCard";
-import { getSortedSchoolTerms } from "@/utils/schoolTerms";
+import { buildTermSelectData, getSortedSchoolTerms } from "@/utils/schoolTerms";
 import {
   IconCopy,
   IconDots,
@@ -14,11 +20,9 @@ import {
   IconTrashFilled,
 } from "@tabler/icons-react";
 import {
-  Calendar,
   CurriculumItem,
   ErrorResponse,
   SubjectCatalog,
-  Term,
   Topic,
   TopicPayload,
 } from "@/@types";
@@ -38,16 +42,6 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const TOPICS_PAGE_SIZE = 10;
 const DUPLICATE_MODAL_TOPIC_LIMIT = 1000;
-
-function buildTermSelectData(calendars: Calendar[], sortedTerms: Term[]) {
-  return sortedTerms.map((t) => {
-    const cal = calendars.find((c) =>
-      c.terms?.some((term) => term.id === t.id),
-    );
-    const label = cal ? `${t.termName} — ${cal.name}` : t.termName;
-    return { value: t.id, label };
-  });
-}
 
 function toDateInputValue(iso: string | null | undefined): string {
   if (iso == null || iso === "") return "";
@@ -72,6 +66,8 @@ export const TopicsTabSection: React.FC = () => {
   // Dialog selection state (moved here)
   const [dialogCurriculumId, setDialogCurriculumId] = useState<string>("");
   const [dialogSubjectId, setDialogSubjectId] = useState<string>("");
+  const [dialogAcademicTermId, setDialogAcademicTermId] = useState("");
+  const lastSyncedDialogCurriculumRef = useRef<string | null>(null);
   const [topic, setTopic] = useState<
     Partial<
       Topic & {
@@ -102,20 +98,6 @@ export const TopicsTabSection: React.FC = () => {
   const { curriculum, isLoading: curriculumDetailLoading } =
     useGetCurriculumById(dialogCurriculumId);
 
-  const termDateBounds = useMemo(() => {
-    const t = curriculum?.academicTerm;
-    const min =
-      t?.startDate != null ? toDateInputValue(t.startDate) : "";
-    const max = t?.endDate != null ? toDateInputValue(t.endDate) : "";
-    if (!min || !max) {
-      return {
-        min: undefined as string | undefined,
-        max: undefined as string | undefined,
-      };
-    }
-    return { min, max };
-  }, [curriculum?.academicTerm]);
-
   const subjectOptions =
     (curriculum?.subjectCatalogs || [])?.map((s: SubjectCatalog) => ({
       value: String(s.id),
@@ -131,6 +113,20 @@ export const TopicsTabSection: React.FC = () => {
   );
 
   const latestTermId = sortedTerms[0]?.id;
+
+  const termDateBounds = useMemo(() => {
+    const t = sortedTerms.find((x) => x.id === dialogAcademicTermId);
+    const min =
+      t?.startDate != null ? toDateInputValue(t.startDate) : "";
+    const max = t?.endDate != null ? toDateInputValue(t.endDate) : "";
+    if (!min || !max) {
+      return {
+        min: undefined as string | undefined,
+        max: undefined as string | undefined,
+      };
+    }
+    return { min, max };
+  }, [dialogAcademicTermId, sortedTerms]);
 
   const duplicateTermSelectData = useMemo(
     () => buildTermSelectData(calendars ?? [], sortedTerms),
@@ -201,6 +197,25 @@ export const TopicsTabSection: React.FC = () => {
     }
   }, [dialogCurriculumId, subjectOptions]);
 
+  useEffect(() => {
+    if (!dialogCurriculumId) {
+      lastSyncedDialogCurriculumRef.current = null;
+      return;
+    }
+    if (!isCreate || curriculumDetailLoading) return;
+    if (lastSyncedDialogCurriculumRef.current === dialogCurriculumId) return;
+    lastSyncedDialogCurriculumRef.current = dialogCurriculumId;
+    const linked = curriculum?.academicTerm?.id;
+    if (linked && sortedTerms.some((t) => t.id === linked)) {
+      setDialogAcademicTermId(linked);
+    }
+  }, [
+    isCreate,
+    dialogCurriculumId,
+    curriculumDetailLoading,
+    curriculum?.academicTerm?.id,
+    sortedTerms,
+  ]);
 
   const onOpenCreate = () => {
     setIsCreate(true);
@@ -215,6 +230,11 @@ export const TopicsTabSection: React.FC = () => {
     });
     setDialogCurriculumId("");
     setDialogSubjectId("");
+    setDialogAcademicTermId(
+      listTermFilterId && sortedTerms.some((t) => t.id === listTermFilterId)
+        ? listTermFilterId
+        : sortedTerms[0]?.id ?? "",
+    );
     setIsDialogOpen(true);
   };
 
@@ -235,6 +255,9 @@ export const TopicsTabSection: React.FC = () => {
     const subjectId = row.subjectCatalog?.id;
     setDialogCurriculumId(curriculumId || "");
     setDialogSubjectId(subjectId || "");
+    setDialogAcademicTermId(
+      row.academicTerm?.id ?? row.academicTermId ?? "",
+    );
     setIsDialogOpen(true);
   };
 
@@ -346,11 +369,12 @@ export const TopicsTabSection: React.FC = () => {
       toast.error("Name, curriculum and subject are required.");
       return;
     }
-    const termId = curriculum?.academicTerm?.id;
-    if (!termId) {
-      toast.error(
-        "This curriculum has no academic term. Link a term to the curriculum before adding topics."
-      );
+    if (!dialogAcademicTermId) {
+      toast.error("Select an academic term.");
+      return;
+    }
+    if (!sortedTerms.some((t) => t.id === dialogAcademicTermId)) {
+      toast.error("Invalid academic term.");
       return;
     }
     const start = topic.plannedStartDate?.trim() ?? "";
@@ -368,7 +392,7 @@ export const TopicsTabSection: React.FC = () => {
       }
       const { min, max } = termDateBounds;
       if (min && max && (start < min || start > max || end < min || end > max)) {
-        toast.error("Planned dates must fall within the curriculum’s academic term.");
+        toast.error("Planned dates must fall within the selected academic term.");
         return;
       }
     }
@@ -377,7 +401,7 @@ export const TopicsTabSection: React.FC = () => {
       description: (topic.description as string) || undefined,
       subjectCatalogId: dialogSubjectId,
       curriculumId: dialogCurriculumId,
-      academicTermId: termId,
+      academicTermId: dialogAcademicTermId,
       ...(isCreate
         ? {
             ...(start ? { plannedStartDate: start } : {}),
@@ -619,21 +643,40 @@ export const TopicsTabSection: React.FC = () => {
               disabled={!dialogCurriculumId}
             />
           </div>
+          <Select
+            className="mt-4"
+            label="Academic term"
+            placeholder={
+              calendarsLoading
+                ? "Loading terms…"
+                : sortedTerms.length === 0
+                  ? "No terms configured"
+                  : "Select term"
+            }
+            data={duplicateTermSelectData}
+            value={dialogAcademicTermId}
+            onChange={(v) => setDialogAcademicTermId(v ?? "")}
+            searchable
+            disabled={calendarsLoading || sortedTerms.length === 0}
+            rightSection={termSelectRightSection(dialogAcademicTermId)}
+            rightSectionWidth={
+              latestTermId && dialogAcademicTermId === latestTermId
+                ? 118
+                : undefined
+            }
+          />
           <div className="mt-5">
             {termDateBounds.min && termDateBounds.max ? (
               <p className="text-sm text-gray-600 mb-3">
                 Planned dates must fall between{" "}
                 <span className="font-medium text-gray-800">{termDateBounds.min}</span>{" "}and{" "}
                 <span className="font-medium text-gray-800">{termDateBounds.max}</span>{" "}
-                (this curriculum&apos;s term).
+                (selected term).
               </p>
-            ) : !curriculumDetailLoading &&
-              dialogCurriculumId &&
-              curriculum?.id &&
-              !curriculum?.academicTerm ? (
-              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3">
-                This curriculum has no academic term linked. Add a term to the
-                curriculum to constrain planned dates, or leave dates empty.
+            ) : dialogAcademicTermId ? (
+              <p className="text-sm text-gray-600 mb-3">
+                This term has no start/end dates on the calendar — planned dates are
+                optional and not range-checked.
               </p>
             ) : null}
             <div className="grid md:grid-cols-2 gap-4">

@@ -1,13 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { Topic, ErrorResponse, TeacherTopicPayload } from "@/@types";
 import { useGetTeacherTopics, useGetTeacherSubjects, useCreateTeacherTopic, useUpdateTeacherTopic, useDeleteTeacherTopic, useTeacherAcademicTermSelection } from "@/hooks/teacher";
 import { TeacherTermSelect } from "@/components/teacher/subjects/TeacherTermSelect";
+import { buildTermSelectData } from "@/utils/schoolTerms";
 import { HashLoader } from "react-spinners";
-import { Select, Menu } from "@mantine/core";
+import { Badge, Combobox, Select, Menu } from "@mantine/core";
 import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 
@@ -27,6 +28,29 @@ export const TopicsTabSection: React.FC = () => {
     setAcademicTermId,
   } = useTeacherAcademicTermSelection();
 
+  const latestTermId = sortedTerms[0]?.id;
+
+  const teacherTermSelectData = useMemo(
+    () => buildTermSelectData(calendars ?? [], sortedTerms),
+    [calendars, sortedTerms],
+  );
+
+  const termSelectRightSection = (termId: string) => (
+    <div className="flex items-center justify-end gap-1.5 pr-0.5">
+      {latestTermId && termId === latestTermId ? (
+        <Badge
+          variant="light"
+          size="xs"
+          className="shrink-0 font-semibold"
+          style={{ backgroundColor: "#F3E8FF", color: "#6B21A8" }}
+        >
+          Latest
+        </Badge>
+      ) : null}
+      <Combobox.Chevron size="sm" />
+    </div>
+  );
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
@@ -40,6 +64,7 @@ export const TopicsTabSection: React.FC = () => {
     plannedStartDate: "",
     plannedEndDate: "",
   });
+  const [dialogAcademicTermId, setDialogAcademicTermId] = useState("");
 
   const { teacherTopics: topics, isLoading, refetch } = useGetTeacherTopics(
     "",
@@ -66,6 +91,11 @@ export const TopicsTabSection: React.FC = () => {
       plannedStartDate: "",
       plannedEndDate: "",
     });
+    setDialogAcademicTermId(
+      academicTermId && sortedTerms.some((t) => t.id === academicTermId)
+        ? academicTermId
+        : sortedTerms[0]?.id ?? "",
+    );
     setIsDialogOpen(true);
   };
 
@@ -79,6 +109,9 @@ export const TopicsTabSection: React.FC = () => {
       plannedStartDate: toDateInputValue(row.plannedStartDate),
       plannedEndDate: toDateInputValue(row.plannedEndDate),
     });
+    setDialogAcademicTermId(
+      row.academicTerm?.id ?? row.academicTermId ?? academicTermId ?? "",
+    );
     setIsDialogOpen(true);
   };
 
@@ -93,16 +126,23 @@ export const TopicsTabSection: React.FC = () => {
   const saveTopic = () => {
     const start = topic.plannedStartDate?.trim() ?? "";
     const end = topic.plannedEndDate?.trim() ?? "";
-    if (isCreate && !academicTermId) {
-      toast.error("Select an academic term before creating a topic.");
+    if (isCreate && !dialogAcademicTermId) {
+      toast.error("Select an academic term for this topic.");
+      return;
+    }
+    if (
+      isCreate &&
+      !sortedTerms.some((t) => t.id === dialogAcademicTermId)
+    ) {
+      toast.error("Invalid academic term.");
       return;
     }
     const base: TeacherTopicPayload = {
       name: topic.name || "",
       description: (topic.description as string),
       subjectCatalogId: topic.subjectCatalogId || "",
-      ...(isCreate && academicTermId
-        ? { academicTermId }
+      ...(isCreate && dialogAcademicTermId
+        ? { academicTermId: dialogAcademicTermId }
         : {}),
       ...(isCreate
         ? {
@@ -345,6 +385,35 @@ export const TopicsTabSection: React.FC = () => {
             placeholder="Introduction to algebraic expressions"
             onChange={(e) => setTopic((p) => ({ ...p, description: e.target.value }))}
             value={topic.description || ""}
+          />
+          <Select
+            className="mt-4"
+            label="Academic term"
+            placeholder={
+              calendarsLoading
+                ? "Loading terms…"
+                : sortedTerms.length === 0
+                  ? "No terms configured"
+                  : "Select term"
+            }
+            data={teacherTermSelectData}
+            value={dialogAcademicTermId}
+            onChange={(v) => setDialogAcademicTermId(v ?? "")}
+            searchable
+            disabled={
+              !isCreate || calendarsLoading || sortedTerms.length === 0
+            }
+            description={
+              isCreate
+                ? undefined
+                : "Term cannot be changed when editing a topic."
+            }
+            rightSection={termSelectRightSection(dialogAcademicTermId)}
+            rightSectionWidth={
+              latestTermId && dialogAcademicTermId === latestTermId
+                ? 118
+                : undefined
+            }
           />
           <Select
             label="Subject"

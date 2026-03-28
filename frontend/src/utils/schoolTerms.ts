@@ -44,3 +44,17 @@ export function findCalendarIdForTerm(
   }
   return "";
 }
+
+/** Options for term selects: `Term name — Calendar name` when a calendar is found. */
+export function buildTermSelectData(
+  calendars: Calendar[],
+  sortedTerms: Term[],
+): { value: string; label: string }[] {
+  return sortedTerms.map((t) => {
+    const cal = calendars.find((c) =>
+      c.terms?.some((term) => term.id === t.id),
+    );
+    const label = cal ? `${t.termName} — ${cal.name}` : t.termName;
+    return { value: t.id, label };
+  });
+}
