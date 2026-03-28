@@ -4,14 +4,21 @@ import { Dialog } from "@/components/common/Dialog";
 import { Pagination } from "@/components/common/Pagination";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
-import { Menu, Select } from "@mantine/core";
+import { Badge, Checkbox, Combobox, Menu, Select } from "@mantine/core";
 import { TermFilterCard } from "@/components/common/TermFilterCard";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
-import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
 import {
+  IconCopy,
+  IconDots,
+  IconEdit,
+  IconTrashFilled,
+} from "@tabler/icons-react";
+import {
+  Calendar,
   CurriculumItem,
   ErrorResponse,
   SubjectCatalog,
+  Term,
   Topic,
   TopicPayload,
 } from "@/@types";
@@ -23,12 +30,24 @@ import {
   useGetCurricula,
   useGetCurriculumById,
   useGetTopics,
+  useDuplicateTopicsToTerm,
 } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
 import { useQueryClient } from "@tanstack/react-query";
 
 const TOPICS_PAGE_SIZE = 10;
+const DUPLICATE_MODAL_TOPIC_LIMIT = 1000;
+
+function buildTermSelectData(calendars: Calendar[], sortedTerms: Term[]) {
+  return sortedTerms.map((t) => {
+    const cal = calendars.find((c) =>
+      c.terms?.some((term) => term.id === t.id),
+    );
+    const label = cal ? `${t.termName} — ${cal.name}` : t.termName;
+    return { value: t.id, label };
+  });
+}
 
 function toDateInputValue(iso: string | null | undefined): string {
   if (iso == null || iso === "") return "";
@@ -41,6 +60,13 @@ export const TopicsTabSection: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [dupSourceTermId, setDupSourceTermId] = useState("");
+  const [dupTargetTermId, setDupTargetTermId] = useState("");
+  const [dupSelectedIds, setDupSelectedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [dupEntireSourceTerm, setDupEntireSourceTerm] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
 
   // Dialog selection state (moved here)
@@ -104,6 +130,28 @@ export const TopicsTabSection: React.FC = () => {
     [calendars],
   );
 
+  const latestTermId = sortedTerms[0]?.id;
+
+  const duplicateTermSelectData = useMemo(
+    () => buildTermSelectData(calendars ?? [], sortedTerms),
+    [calendars, sortedTerms],
+  );
+
+  const duplicateModalTopicsEnabled =
+    isDuplicateModalOpen && Boolean(dupSourceTermId);
+
+  const {
+    topics: dupModalTopics,
+    isLoading: dupModalTopicsLoading,
+    paginationValues: dupModalPagination,
+  } = useGetTopics(
+    "",
+    1,
+    DUPLICATE_MODAL_TOPIC_LIMIT,
+    dupSourceTermId || undefined,
+    duplicateModalTopicsEnabled,
+  );
+
   useLayoutEffect(() => {
     if (sortedTerms.length === 0) {
       setListTermFilterId("");
@@ -133,6 +181,12 @@ export const TopicsTabSection: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [listTermFilterId]);
+
+  useEffect(() => {
+    if (!isDuplicateModalOpen) return;
+    setDupSelectedIds(new Set());
+    setDupEntireSourceTerm(false);
+  }, [isDuplicateModalOpen, dupSourceTermId]);
 
   useEffect(() => {
     if (!dialogCurriculumId || !subjectOptions.length) {
@@ -195,6 +249,97 @@ export const TopicsTabSection: React.FC = () => {
   const { mutate: createTopic, isPending: creating } = useCreateTopic();
   const { mutate: editTopic, isPending: editing } = useEditTopic(topic?.id || "");
   const { mutate: deleteTopic, isPending: deleting } = useDeleteTopic();
+  const { mutate: duplicateTopicsToTerm, isPending: duplicatingTopics } =
+    useDuplicateTopicsToTerm();
+
+  const onOpenDuplicateModal = () => {
+    const source = listTermFilterId || sortedTerms[0]?.id || "";
+    const target =
+      sortedTerms.find((t) => t.id !== source)?.id ?? "";
+    setDupSourceTermId(source);
+    setDupTargetTermId(target);
+    setDupSelectedIds(new Set());
+    setDupEntireSourceTerm(false);
+    setIsDuplicateModalOpen(true);
+  };
+
+  const dupModalTotal = dupModalPagination?.total ?? 0;
+  const dupTruncated =
+    dupModalTotal > (dupModalTopics?.length ?? 0);
+
+  const duplicateSaveButtonText = dupEntireSourceTerm
+    ? "Duplicate all topics"
+    : `Duplicate ${dupSelectedIds.size} topic${dupSelectedIds.size !== 1 ? "s" : ""}`;
+
+  const duplicateSaveDisabled =
+    !dupSourceTermId ||
+    !dupTargetTermId ||
+    dupSourceTermId === dupTargetTermId ||
+    (dupModalTopicsLoading && Boolean(dupSourceTermId)) ||
+    (!dupEntireSourceTerm && dupSelectedIds.size === 0) ||
+    (dupEntireSourceTerm &&
+      !dupModalTopicsLoading &&
+      dupModalTotal === 0);
+
+  const termSelectRightSection = (termId: string) => (
+    <div className="flex items-center justify-end gap-1.5 pr-0.5">
+      {latestTermId && termId === latestTermId ? (
+        <Badge
+          variant="light"
+          size="xs"
+          className="shrink-0 font-semibold"
+          style={{ backgroundColor: "#F3E8FF", color: "#6B21A8" }}
+        >
+          Latest
+        </Badge>
+      ) : null}
+      <Combobox.Chevron size="sm" />
+    </div>
+  );
+
+  const submitDuplicateTopics = () => {
+    if (!dupSourceTermId || !dupTargetTermId) {
+      toast.error("Select both source and target terms.");
+      return;
+    }
+    if (dupSourceTermId === dupTargetTermId) {
+      toast.error("Source and target term must be different.");
+      return;
+    }
+    if (!dupEntireSourceTerm && dupSelectedIds.size === 0) {
+      toast.error("Select at least one topic, or use Select all.");
+      return;
+    }
+    const payload = dupEntireSourceTerm
+      ? {
+          sourceAcademicTermId: dupSourceTermId,
+          targetAcademicTermId: dupTargetTermId,
+          duplicateAllFromSource: true as const,
+        }
+      : {
+          sourceAcademicTermId: dupSourceTermId,
+          targetAcademicTermId: dupTargetTermId,
+          topicIds: Array.from(dupSelectedIds),
+        };
+    duplicateTopicsToTerm(payload, {
+      onSuccess: () => {
+        toast.success(
+          dupEntireSourceTerm
+            ? "All topics duplicated to the target term"
+            : "Selected topics duplicated to the target term",
+        );
+        setIsDuplicateModalOpen(false);
+        setListTermFilterId(dupTargetTermId);
+        setCurrentPage(1);
+      },
+      onError: (error: unknown) => {
+        const msg = (error as ErrorResponse)?.response?.data?.message;
+        toast.error(
+          msg != null ? String(msg) : "Could not duplicate topics.",
+        );
+      },
+    });
+  };
 
   const saveTopic = () => {
     if (!topic.name || !dialogCurriculumId || !dialogSubjectId) {
@@ -293,7 +438,15 @@ export const TopicsTabSection: React.FC = () => {
           value={listTermFilterId}
           onChange={setListTermFilterId}
           actions={
-            <CustomButton text="Create Topic" onClick={onOpenCreate} />
+            <>
+              <CustomButton
+                text="Duplicate Topics"
+                variant="outline"
+                icon={<IconCopy size={18} />}
+                onClick={onOpenDuplicateModal}
+              />
+              <CustomButton text="Create Topic" onClick={onOpenCreate} />
+            </>
           }
         />
 
@@ -529,6 +682,158 @@ export const TopicsTabSection: React.FC = () => {
           <p>
             Are you sure you want to delete this topic? The topic will be removed permanently.
           </p>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={isDuplicateModalOpen}
+        busy={duplicatingTopics}
+        dialogTitle="Duplicate Topics to Another Term"
+        saveButtonText={duplicateSaveButtonText}
+        saveDisabled={duplicateSaveDisabled}
+        onClose={() => setIsDuplicateModalOpen(false)}
+        onSave={submitDuplicateTopics}
+        dialogWidth="w-[min(640px,calc(100vw-2rem))] max-w-[640px]"
+      >
+        <div className="mt-3 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Select
+              label="Source term"
+              placeholder="Select source term"
+              data={duplicateTermSelectData}
+              value={dupSourceTermId}
+              onChange={(v) => {
+                const next = v ?? "";
+                setDupSourceTermId(next);
+                setDupTargetTermId((prev) =>
+                  prev === next
+                    ? sortedTerms.find((t) => t.id !== next)?.id ?? ""
+                    : prev,
+                );
+              }}
+              searchable
+              disabled={calendarsLoading || sortedTerms.length === 0}
+              rightSection={termSelectRightSection(dupSourceTermId)}
+              rightSectionWidth={
+                latestTermId && dupSourceTermId === latestTermId
+                  ? 118
+                  : undefined
+              }
+            />
+            <Select
+              label="Target term"
+              placeholder="Select target term"
+              data={duplicateTermSelectData}
+              value={dupTargetTermId}
+              onChange={(v) => setDupTargetTermId(v ?? "")}
+              searchable
+              disabled={calendarsLoading || sortedTerms.length === 0}
+              rightSection={termSelectRightSection(dupTargetTermId)}
+              rightSectionWidth={
+                latestTermId && dupTargetTermId === latestTermId
+                  ? 118
+                  : undefined
+              }
+            />
+          </div>
+
+          {!dupSourceTermId ? (
+            <p className="text-sm text-gray-500">
+              Select a source term to load topics.
+            </p>
+          ) : dupModalTopicsLoading ? (
+            <div className="flex justify-center py-10">
+              <HashLoader color="#AB58E7" size={36} />
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium text-gray-800">
+                  Select topics to duplicate (
+                  {dupEntireSourceTerm ? dupModalTotal : dupSelectedIds.size}/
+                  {dupModalTotal || dupModalTopics.length})
+                </span>
+                <button
+                  type="button"
+                  className="text-sm text-purple-600 hover:text-purple-800 font-medium cursor-pointer"
+                  onClick={() => {
+                    setDupEntireSourceTerm(true);
+                    setDupSelectedIds(
+                      new Set(
+                        dupModalTopics.map((t: Topic) => t.id),
+                      ),
+                    );
+                  }}
+                  disabled={!dupModalTopics.length}
+                >
+                  Select all
+                </button>
+              </div>
+              {dupTruncated ? (
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  Showing the first {dupModalTopics.length} of {dupModalTotal}{" "}
+                  topics. Use <strong>Select all</strong> to duplicate the
+                  entire source term (including topics not listed here).
+                </p>
+              ) : null}
+              {!dupModalTopics.length ? (
+                <p className="text-sm text-gray-500 py-4 text-center">
+                  No topics in this term.
+                </p>
+              ) : (
+                <ul className="border border-gray-200 rounded-lg max-h-[min(320px,50vh)] overflow-y-auto divide-y divide-gray-100">
+                  {dupModalTopics.map((row: Topic) => {
+                    type Row = Topic & {
+                      subjectCatalog?: { name?: string };
+                      curriculum?: { name?: string };
+                    };
+                    const r = row as Row;
+                    const curriculumName =
+                      r.curriculum?.name ?? "—";
+                    const subjectName = r.subjectCatalog?.name ?? "—";
+                    const checked =
+                      dupEntireSourceTerm || dupSelectedIds.has(r.id);
+                    return (
+                      <li
+                        key={r.id}
+                        className="flex items-start gap-3 px-3 py-2.5 hover:bg-gray-50"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onChange={() => {
+                            if (dupEntireSourceTerm) {
+                              setDupEntireSourceTerm(false);
+                              const all = new Set<string>(
+                                dupModalTopics.map((t: Topic) => t.id),
+                              );
+                              all.delete(r.id);
+                              setDupSelectedIds(all);
+                              return;
+                            }
+                            setDupSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(r.id)) next.delete(r.id);
+                              else next.add(r.id);
+                              return next;
+                            });
+                          }}
+                          classNames={{ root: "pt-0.5" }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-gray-900">
+                            {r.name}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {curriculumName} · {subjectName}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </>
+          )}
         </div>
       </Dialog>
     </>

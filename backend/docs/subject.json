@@ -1,0 +1,399 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Subject",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/subject": {
+      "post": {
+        "operationId": "SubjectController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/{id}": {
+      "patch": {
+        "operationId": "SubjectController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      },
+      "delete": {
+        "operationId": "SubjectController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/toggle-class-results-approval": {
+      "post": {
+        "operationId": "SubjectController_toggleClassResultsApproval",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/class-results-approval-status/{classLevelId}": {
+      "get": {
+        "operationId": "SubjectController_getClassResultsApprovalStatus",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/toggle-class-results-approval": {
+      "post": {
+        "operationId": "SubjectController_toggleSchoolAdminApproval",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/class-results-approval-status/{classLevelId}": {
+      "get": {
+        "operationId": "SubjectController_getSchoolAdminClassResultsApprovalStatus",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/all-class-results-approval-status": {
+      "get": {
+        "operationId": "SubjectController_getAllClassResultsApprovalStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/my-classes": {
+      "get": {
+        "operationId": "SubjectController_getMyClasses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/students/{studentId}/results/{academicCalendarId}": {
+      "get": {
+        "operationId": "SubjectController_getStudentResults",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicCalendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/students/term-results/{studentId}": {
+      "get": {
+        "operationId": "SubjectController_getStudentResultsByTerm",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicCalendarId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/students/{studentId}/terms/{termId}/remarks": {
+      "post": {
+        "operationId": "SubjectController_submitTermRemarks",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/students/results/{academicCalendarId}": {
+      "get": {
+        "operationId": "SubjectController_getMyResult",
+        "parameters": [
+          {
+            "name": "academicCalendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/students-for-grading": {
+      "get": {
+        "operationId": "SubjectController_getStudentsForGrading",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicCalendarId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/submit-grades": {
+      "post": {
+        "operationId": "SubjectController_submitGrades",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateSubjectDto": {
+        "type": "object",
+        "properties": {
+          "subjectCatalogId": {
+            "type": "string",
+            "description": "Subject catalog UUID"
+          },
+          "classLevelIds": {
+            "description": "Class level UUIDs",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "teacherId": {
+            "type": "string",
+            "description": "Teacher UUID"
+          }
+        },
+        "required": ["subjectCatalogId", "classLevelIds", "teacherId"]
+      },
+      "UpdateSubjectDto": {
+        "type": "object",
+        "properties": {
+          "subjectCatalogId": {
+            "type": "string",
+            "description": "Subject catalog UUID"
+          },
+          "classLevelIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "teacherId": {
+            "type": "string",
+            "description": "Teacher UUID"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

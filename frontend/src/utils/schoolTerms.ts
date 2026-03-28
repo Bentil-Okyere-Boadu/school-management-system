@@ -30,3 +30,17 @@ export function getSortedSchoolTerms(
     return 0;
   });
 }
+
+/** Calendar id that contains the given term, or empty string. */
+export function findCalendarIdForTerm(
+  calendars: Calendar[] | undefined | null,
+  termId: string,
+): string {
+  if (!termId || !calendars?.length) return "";
+  for (const cal of calendars) {
+    if (cal.terms?.some((t) => String(t.id) === String(termId))) {
+      return String(cal.id);
+    }
+  }
+  return "";
+}

@@ -14,6 +14,9 @@ interface JwtPayload {
   sub: string;
 }
 
+/** JWT user shape: entity fields plus schoolId for tenant resolution */
+type TeacherJwtUser = Partial<Teacher> & { schoolId?: string };
+
 @Injectable()
 export class TeacherJwtStrategy extends PassportStrategy(
   Strategy,
@@ -32,11 +35,13 @@ export class TeacherJwtStrategy extends PassportStrategy(
     });
   }
 
-  async validate(payload: JwtPayload): Promise<Partial<Teacher> | null> {
+  async validate(payload: JwtPayload): Promise<TeacherJwtUser | null> {
     if (payload.role !== 'teacher') {
       return null;
     }
-    const teacher = await this.teacherAuthService.findByEmailOrTeacherId(payload.email);
+    const teacher = await this.teacherAuthService.findByEmailOrTeacherId(
+      payload.email,
+    );
     if (!teacher || teacher.isSuspended) {
       return null;
     }
@@ -61,6 +66,7 @@ export class TeacherJwtStrategy extends PassportStrategy(
       role: teacher.role,
       teacherId: teacher.teacherId,
       school: teacher.school,
+      schoolId: teacher.school?.id,
     };
   }
-} 
+}

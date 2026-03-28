@@ -1,0 +1,203 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Profiles",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/profiles/school-admin/{id}/avatar": {
+      "post": {
+        "operationId": "ProfileController_uploadSchoolAdminAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      },
+      "delete": {
+        "operationId": "ProfileController_removeSchoolAdminAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      }
+    },
+    "/api/v1/profiles/super-admin/{id}/avatar": {
+      "post": {
+        "operationId": "ProfileController_uploadSuperAdminAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      },
+      "delete": {
+        "operationId": "ProfileController_removeSuperAdminAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      }
+    },
+    "/api/v1/profiles/student/{id}/avatar": {
+      "post": {
+        "operationId": "ProfileController_uploadStudentAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      },
+      "delete": {
+        "operationId": "ProfileController_removeStudentAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      }
+    },
+    "/api/v1/profiles/teacher/{id}/avatar": {
+      "post": {
+        "operationId": "ProfileController_uploadTeacherAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      },
+      "delete": {
+        "operationId": "ProfileController_removeTeacherAvatar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      }
+    },
+    "/api/v1/profiles/{id}": {
+      "get": {
+        "operationId": "ProfileController_getProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Profile"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "profiles"
+    }
+  ]
+}

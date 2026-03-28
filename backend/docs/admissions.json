@@ -1,0 +1,259 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Admissions",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/admissions": {
+      "post": {
+        "operationId": "AdmissionController_createAdmission",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Admission"]
+      }
+    },
+    "/api/v1/admissions/class-levels/{schoolId}": {
+      "get": {
+        "operationId": "AdmissionController_getClassLevelsBySchool",
+        "parameters": [
+          {
+            "name": "schoolId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Admission"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateAdmissionDto": {
+        "type": "object",
+        "properties": {
+          "schoolId": {
+            "type": "string",
+            "description": "School UUID"
+          },
+          "studentFirstName": {
+            "type": "string"
+          },
+          "studentLastName": {
+            "type": "string"
+          },
+          "studentOtherNames": {
+            "type": "string"
+          },
+          "studentEmail": {
+            "type": "string"
+          },
+          "studentDOB": {
+            "type": "string"
+          },
+          "studentPlaceOfBirth": {
+            "type": "string"
+          },
+          "studentGender": {
+            "type": "string"
+          },
+          "studentNationality": {
+            "type": "string"
+          },
+          "studentReligion": {
+            "type": "string"
+          },
+          "studentLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "studentStreetAddress": {
+            "type": "string"
+          },
+          "studentBoxAddress": {
+            "type": "string"
+          },
+          "studentPhone": {
+            "type": "string"
+          },
+          "studentOtherPhone": {
+            "type": "string"
+          },
+          "studentOtherPhoneOptional": {
+            "type": "string"
+          },
+          "studentHeadshotPath": {
+            "type": "string"
+          },
+          "studentHeadshotMediaType": {
+            "type": "string"
+          },
+          "studentBirthCertPath": {
+            "type": "string"
+          },
+          "studentBirthCertMediaType": {
+            "type": "string"
+          },
+          "academicYear": {
+            "type": "string"
+          },
+          "forClassId": {
+            "type": "string"
+          },
+          "guardians": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardianDto"
+            }
+          },
+          "homePrimaryLanguage": {
+            "type": "string"
+          },
+          "homeOtherLanguage": {
+            "type": "string"
+          },
+          "hasPreviousSchool": {
+            "type": "boolean",
+            "default": false
+          },
+          "previousSchoolName": {
+            "type": "string"
+          },
+          "previousSchoolUrl": {
+            "type": "string"
+          },
+          "previousSchoolStreetAddress": {
+            "type": "string"
+          },
+          "previousSchoolCity": {
+            "type": "string"
+          },
+          "previousSchoolResults": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "previousSchoolState": {
+            "type": "string"
+          },
+          "previousSchoolCountry": {
+            "type": "string"
+          },
+          "previousSchoolBoxAddress": {
+            "type": "string"
+          },
+          "previousSchoolPhone": {
+            "type": "string"
+          },
+          "previousSchoolAttendedFrom": {
+            "type": "string"
+          },
+          "previousSchoolAttendedTo": {
+            "type": "string"
+          },
+          "previousSchoolGradeClass": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schoolId",
+          "studentFirstName",
+          "studentLastName",
+          "guardians"
+        ]
+      },
+      "GuardianDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "dob": {
+            "type": "string"
+          },
+          "nationality": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "streetAddress": {
+            "type": "string"
+          },
+          "boxAddress": {
+            "type": "string"
+          },
+          "guardianPhone": {
+            "type": "string"
+          },
+          "guardianOtherPhone": {
+            "type": "string"
+          },
+          "guardianOtherPhoneOptional": {
+            "type": "string"
+          },
+          "headshotPath": {
+            "type": "string"
+          },
+          "headshotMediaType": {
+            "type": "string"
+          }
+        },
+        "required": ["firstName", "lastName"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "admissions"
+    }
+  ]
+}

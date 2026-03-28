@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { Curriculum } from './entities/curriculum.entity';
 import { Topic } from './entities/topic.entity';
 import { Subtopic } from './entities/subtopic.entity';
@@ -19,6 +19,7 @@ import { UpdateTopicDto } from './dto/update-topic.dto';
 import { CreateSubtopicDto } from './dto/create-subtopic.dto';
 import { UpdateSubtopicDto } from './dto/update-subtopic.dto';
 import { CreateCurriculumTopicNoteDto } from './dto/create-curriculum-topic-note.dto';
+import { DuplicateTopicsToTermDto } from './dto/duplicate-topics-to-term.dto';
 import { SubjectCatalog } from '../subject/subject-catalog.entity';
 import { School } from '../school/school.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
@@ -75,6 +76,26 @@ export class CurriculumService {
       );
     }
     return term;
+  }
+
+  /**
+   * Curriculum that links this subject catalog and term (same school), if any.
+   * Mirrors teacher topic creation resolution.
+   */
+  private async findCurriculumForSubjectCatalogAndTerm(
+    manager: EntityManager,
+    schoolId: string,
+    subjectCatalogId: string,
+    academicTermId: string,
+  ): Promise<Curriculum | null> {
+    return manager
+      .createQueryBuilder(Curriculum, 'c')
+      .innerJoin('c.subjectCatalogs', 'sc')
+      .innerJoin('c.school', 'sch')
+      .where('sch.id = :schoolId', { schoolId })
+      .andWhere('c.academicTermId = :termId', { termId: academicTermId })
+      .andWhere('sc.id = :scId', { scId: subjectCatalogId })
+      .getOne();
   }
 
   /** Prefer explicit request term, then topic.academicTerm, then curriculum-linked term. */
@@ -485,6 +506,186 @@ export class CurriculumService {
       admin.school.id,
     );
     return this.enrichTopicResponse(reloaded);
+  }
+
+  async duplicateTopicsToTerm(
+    dto: DuplicateTopicsToTermDto,
+    admin: SchoolAdmin,
+  ): Promise<{
+    createdCount: number;
+    data: ReturnType<CurriculumService['enrichTopicResponse']>[];
+  }> {
+    const schoolId = admin.school.id;
+    if (dto.sourceAcademicTermId === dto.targetAcademicTermId) {
+      throw new BadRequestException(
+        'Source and target academic terms must be different',
+      );
+    }
+    if (dto.duplicateAllFromSource === true && dto.topicIds?.length) {
+      throw new BadRequestException(
+        'Do not pass topicIds when duplicateAllFromSource is true',
+      );
+    }
+
+    await this.assertAcademicTermInSchool(dto.sourceAcademicTermId, schoolId);
+    await this.assertAcademicTermInSchool(dto.targetAcademicTermId, schoolId);
+
+    const uniqueTopicIds =
+      dto.duplicateAllFromSource === true
+        ? undefined
+        : dto.topicIds
+          ? [...new Set(dto.topicIds)]
+          : undefined;
+
+    if (
+      dto.duplicateAllFromSource !== true &&
+      (!uniqueTopicIds || uniqueTopicIds.length === 0)
+    ) {
+      throw new BadRequestException(
+        'Provide topicIds or set duplicateAllFromSource to true',
+      );
+    }
+
+    const createdIds = await this.topicRepository.manager.transaction(
+      async (manager) => {
+        const topicRepo = manager.getRepository(Topic);
+        const subtopicRepo = manager.getRepository(Subtopic);
+
+        let sources: Topic[];
+
+        if (dto.duplicateAllFromSource === true) {
+          const orderedStubTopics = await topicRepo
+            .createQueryBuilder('topic')
+            .innerJoin('topic.subjectCatalog', 'subjectCatalog')
+            .innerJoin('subjectCatalog.school', 'school')
+            .leftJoin('topic.curriculum', 'curriculum')
+            .leftJoin('curriculum.academicTerm', 'curriculumTerm')
+            .leftJoin('topic.academicTerm', 'topicTerm')
+            .where('school.id = :schoolId', { schoolId })
+            .andWhere(
+              new Brackets((qb) => {
+                qb.where('topicTerm.id = :sourceTermId', {
+                  sourceTermId: dto.sourceAcademicTermId,
+                }).orWhere(
+                  '(topic.academic_term_id IS NULL AND curriculumTerm.id = :sourceTermId)',
+                  { sourceTermId: dto.sourceAcademicTermId },
+                );
+              }),
+            )
+            .orderBy('topic.order', 'ASC')
+            .addOrderBy('topic.createdAt', 'ASC')
+            .getMany();
+
+          const ids = orderedStubTopics.map((t) => t.id);
+
+          sources = ids.length
+            ? await topicRepo.find({
+                where: { id: In(ids) },
+                relations: [
+                  'subjectCatalog',
+                  'subjectCatalog.school',
+                  'curriculum',
+                  'curriculum.academicTerm',
+                  'academicTerm',
+                  'subtopics',
+                ],
+              })
+            : [];
+          const idOrder = new Map<string, number>(ids.map((id, i) => [id, i]));
+          sources.sort(
+            (a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0),
+          );
+        } else {
+          sources = await topicRepo.find({
+            where: { id: In(uniqueTopicIds!) },
+            relations: [
+              'subjectCatalog',
+              'subjectCatalog.school',
+              'curriculum',
+              'curriculum.academicTerm',
+              'academicTerm',
+              'subtopics',
+            ],
+          });
+          if (sources.length !== uniqueTopicIds!.length) {
+            throw new NotFoundException('One or more topics were not found');
+          }
+          for (const t of sources) {
+            if (t.subjectCatalog.school.id !== schoolId) {
+              throw new ForbiddenException(
+                'Topic does not belong to your school',
+              );
+            }
+            const effective = this.resolveTopicAcademicTermId(t);
+            if (effective !== dto.sourceAcademicTermId) {
+              throw new BadRequestException(
+                'One or more topics do not belong to the source term',
+              );
+            }
+          }
+        }
+
+        const out: string[] = [];
+        for (const src of sources) {
+          const matchedCurriculum =
+            await this.findCurriculumForSubjectCatalogAndTerm(
+              manager,
+              schoolId,
+              src.subjectCatalog.id,
+              dto.targetAcademicTermId,
+            );
+          const subtopicsOrdered = [...(src.subtopics ?? [])].sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+          const newTopic = topicRepo.create({
+            name: src.name,
+            description: src.description,
+            order: src.order,
+            plannedStartDate: null,
+            plannedEndDate: null,
+            subjectCatalog: src.subjectCatalog,
+            curriculum: matchedCurriculum,
+            academicTerm: { id: dto.targetAcademicTermId } as AcademicTerm,
+            createdBy: 'admin',
+            subtopics: subtopicsOrdered.map((s) =>
+              subtopicRepo.create({
+                name: s.name,
+                description: s.description,
+                createdBy: 'admin',
+              }),
+            ),
+          });
+          const saved = await topicRepo.save(newTopic);
+          out.push(saved.id);
+        }
+        return out;
+      },
+    );
+
+    if (createdIds.length === 0) {
+      return { data: [], createdCount: 0 };
+    }
+
+    const reloaded = await this.topicRepository.find({
+      where: { id: In(createdIds) },
+      relations: [...TOPIC_READ_RELATIONS],
+    });
+    const idOrder = new Map<string, number>(createdIds.map((id, i) => [id, i]));
+    reloaded.sort(
+      (a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0),
+    );
+
+    for (const t of reloaded) {
+      if (t.subjectCatalog.school.id !== schoolId) {
+        throw new ForbiddenException('Topic does not belong to your school');
+      }
+    }
+
+    return {
+      createdCount: reloaded.length,
+      data: reloaded.map((t) => this.enrichTopicResponse(t)),
+    };
   }
 
   async findAllTopics(schoolId: string, query?: QueryString) {

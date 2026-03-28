@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Select } from "@mantine/core";
 import {
   IconCalendar,
@@ -40,8 +46,10 @@ import {
   type TeacherCurriculumProgressFilters,
 } from "@/hooks/teacher";
 import { Dialog } from "@/components/common/Dialog";
+import { TermFilterCard } from "@/components/common/TermFilterCard";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
+import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 
 function topicStatusLabel(topic: TeacherProgressTopicCard): {
   label: string;
@@ -91,7 +99,6 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const { classSubjects, isLoading: classesLoading } =
     useGetTeacherSubjectClasses("");
 
-  const [calendarId, setCalendarId] = useState("");
   const [academicTermId, setAcademicTermId] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [classLevelId, setClassLevelId] = useState("");
@@ -132,15 +139,21 @@ export const CurriculumProgressTabSection: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ["teacherCurriculumProgress"] });
   }, [queryClient]);
 
-  const termOptions = useMemo(() => {
-    const cal = calendars?.find((c) => c.id === calendarId);
-    return (
-      cal?.terms?.map((t) => ({
-        value: t.id,
-        label: t.name ?? t.termName ?? "",
-      })) ?? []
-    );
-  }, [calendars, calendarId]);
+  const sortedTerms = useMemo(
+    () => getSortedSchoolTerms(calendars),
+    [calendars],
+  );
+
+  useLayoutEffect(() => {
+    if (sortedTerms.length === 0) {
+      setAcademicTermId("");
+      return;
+    }
+    setAcademicTermId((prev) => {
+      if (prev && sortedTerms.some((t) => t.id === prev)) return prev;
+      return sortedTerms[0].id;
+    });
+  }, [sortedTerms]);
 
   const subjectOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -188,26 +201,6 @@ export const CurriculumProgressTabSection: React.FC = () => {
     () => [{ value: "", label: "All classes" }, ...classOptions],
     [classOptions]
   );
-
-  useEffect(() => {
-    if (!calendarId && calendars?.length) {
-      setCalendarId(calendars[0].id);
-    }
-  }, [calendars, calendarId]);
-
-  useEffect(() => {
-    if (!calendarId || !calendars?.length) return;
-    const cal = calendars.find((c) => c.id === calendarId);
-    const terms = cal?.terms ?? [];
-    const firstTermId = terms[0]?.id;
-    if (!firstTermId) return;
-
-    setAcademicTermId((prev) => {
-      const validIds = new Set(terms.map((t) => t.id));
-      if (!prev || !validIds.has(prev)) return firstTermId;
-      return prev;
-    });
-  }, [calendars, calendarId]);
 
   useEffect(() => {
     if (!classLevelId) return;
@@ -399,29 +392,14 @@ export const CurriculumProgressTabSection: React.FC = () => {
   return (
     <div className="pb-8 space-y-6">
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Select
-            label="Academic calendar"
-            placeholder="Select calendar"
-            data={
-              calendars?.map((c) => ({ value: c.id, label: c.name })) ?? []
-            }
-            value={calendarId || null}
-            onChange={(v) => {
-              setCalendarId((v) ?? "");
-              setAcademicTermId("");
-            }}
-            searchable
-            disabled={filtersBusy}
-          />
-          <Select
-            label="Term"
-            placeholder="Select term"
-            data={termOptions}
-            value={academicTermId || null}
-            onChange={(v) => setAcademicTermId((v) ?? "")}
-            searchable
-            disabled={!calendarId || filtersBusy}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+          <TermFilterCard
+            fitFilterGrid
+            calendars={calendars ?? []}
+            calendarsLoading={calendarsLoading}
+            sortedTerms={sortedTerms}
+            value={academicTermId}
+            onChange={(id) => setAcademicTermId(id ?? "")}
           />
           <Select
             label="Subject"

@@ -1,0 +1,332 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Super Admin",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/super-admin/admins": {
+      "get": {
+        "operationId": "SuperAdminController_findAllAdminUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/admins/schools": {
+      "get": {
+        "operationId": "SuperAdminController_findAllSchool",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/admin/{id}": {
+      "get": {
+        "operationId": "SuperAdminController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/admins/archived": {
+      "get": {
+        "operationId": "SuperAdminController_findAllArchivedUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/admin/{id}/archive": {
+      "put": {
+        "operationId": "SuperAdminController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/admin/{id}/suspend": {
+      "put": {
+        "operationId": "SuperAdminController_suspendSchoolAdmin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/profile/me": {
+      "put": {
+        "operationId": "SuperAdminController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/me": {
+      "get": {
+        "operationId": "SuperAdminController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/dashboard/schools-performance": {
+      "get": {
+        "operationId": "SuperAdminController_getSchoolsPerformance",
+        "parameters": [
+          {
+            "name": "topThreshold",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lowThreshold",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/auth/login": {
+      "post": {
+        "operationId": "SuperAdminAuthController_login",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/auth/signup": {
+      "post": {
+        "operationId": "SuperAdminAuthController_signup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSuperAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/auth/forgot-password": {
+      "post": {
+        "operationId": "SuperAdminAuthController_forgotPassword",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/auth/reset-password": {
+      "post": {
+        "operationId": "SuperAdminAuthController_resetPassword",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "otherName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "phoneContact": {
+            "type": "string"
+          },
+          "PlaceOfBirth": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female"]
+          },
+          "DateOfBirth": {
+            "type": "string"
+          },
+          "BoxAddress": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "streetAddress": {
+            "type": "string"
+          },
+          "optionalPhoneContact": {
+            "type": "string"
+          },
+          "optionalPhoneContactTwo": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateSuperAdminDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@school.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": ["firstName", "lastName", "email", "password"]
+      }
+    }
+  },
+  "tags": []
+}
