@@ -1,35 +1,33 @@
 "use client";
 
 import StudentsTable from "@/components/teacher/students/StudentsTable";
-import { CustomSelectTag } from "@/components/common/CustomSelectTag";
-import FilterButton from "@/components/common/FilterButton";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useDebouncer } from "@/hooks/generalHooks";
 import { useGetStudents } from "@/hooks/teacher";
-import React, { useState } from "react";
+import { Select } from "@mantine/core";
+import React, { useEffect, useState } from "react";
+
+/** Teacher list excludes archived students server-side; filter matches active/pending only. */
+const TEACHER_STUDENT_STATUS_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "pending", label: "Pending" },
+];
 
 const Students = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
-
-  const statusOptions = [
-    { value: "", label: "Status" },
-    { value: "active", label: "Active" },
-    { value: "pending", label: "Pending" },
-  ];
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
   };
 
-  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = event.target.value;
-    setSelectedStatus(selectedValue);
-  };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatus]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -46,25 +44,21 @@ const Students = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
+      <div className="flex flex-wrap items-end gap-4 w-full mb-5 px-0.5">
         <SearchBar
           onSearch={handleSearch}
           className="w-[366px] max-md:w-full"
         />
-      </div>
-      <div className="flex flex-col items-end mb-4 px-1">
-        <FilterButton
-          onClick={() => setShowFilterOptions(!showFilterOptions)}
+        <Select
+          label="Account status"
+          placeholder="All statuses"
+          data={TEACHER_STUDENT_STATUS_OPTIONS}
+          value={selectedStatus}
+          onChange={(v) => setSelectedStatus(v ?? "")}
+          searchable={false}
+          className="w-[min(220px,100%)] min-w-[180px]"
+          comboboxProps={{ withinPortal: true }}
         />
-        {showFilterOptions && (
-          <div className="flex gap-3 mt-3">
-            <CustomSelectTag
-              value={selectedStatus}
-              options={statusOptions}
-              onOptionItemClick={handleStatusChange}
-            />
-          </div>
-        )}
       </div>
       <StudentsTable students={studentsData} busy={isLoading} />
       <Pagination
