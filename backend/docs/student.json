@@ -1,0 +1,418 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Student",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/student/login": {
+      "post": {
+        "operationId": "StudentController_login",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/forgot-password": {
+      "post": {
+        "operationId": "StudentController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotStudentPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/profile/me": {
+      "put": {
+        "operationId": "StudentController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/{id}/parents": {
+      "get": {
+        "operationId": "StudentController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      },
+      "patch": {
+        "operationId": "StudentController_updateParent",
+        "parameters": [
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      },
+      "delete": {
+        "operationId": "StudentController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/{studentId}/parents": {
+      "post": {
+        "operationId": "StudentController_createParent",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateParentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/me": {
+      "get": {
+        "operationId": "StudentController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/classes/{classLevelId}/calendars/{calendarId}/attendance/grouped": {
+      "get": {
+        "operationId": "StudentController_getMyAttendanceGroupedByTermAndMonth",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "calendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/calendars": {
+      "get": {
+        "operationId": "StudentController_getAllAcademicCalendars",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/assignments": {
+      "get": {
+        "operationId": "StudentController_getMyAssignments",
+        "parameters": [
+          {
+            "name": "pending",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "submitted",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "graded",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/assignments/{id}/submit": {
+      "post": {
+        "operationId": "StudentController_submitAssignment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ForgotStudentPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "student@school.com"
+          }
+        },
+        "required": ["email"]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "otherName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "phoneContact": {
+            "type": "string"
+          },
+          "PlaceOfBirth": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female"]
+          },
+          "DateOfBirth": {
+            "type": "string"
+          },
+          "BoxAddress": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "streetAddress": {
+            "type": "string"
+          },
+          "optionalPhoneContact": {
+            "type": "string"
+          },
+          "optionalPhoneContactTwo": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateParentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "parent@example.com"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateParentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "parent@example.com"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        },
+        "required": ["firstName", "lastName", "email"]
+      },
+      "SubmitAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

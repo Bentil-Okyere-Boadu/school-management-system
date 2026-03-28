@@ -1,0 +1,275 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Invitations",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/invitations/admin": {
+      "post": {
+        "operationId": "InvitationController_inviteAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    },
+    "/api/v1/invitations/admin/resend/{userId}": {
+      "post": {
+        "operationId": "InvitationController_resendAdminInvitation",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    },
+    "/api/v1/invitations/student": {
+      "post": {
+        "operationId": "InvitationController_inviteStudent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    },
+    "/api/v1/invitations/teacher": {
+      "post": {
+        "operationId": "InvitationController_inviteTeacher",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteTeacherDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    },
+    "/api/v1/invitations/student/resend/{userId}": {
+      "post": {
+        "operationId": "InvitationController_resendStudentInvitation",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    },
+    "/api/v1/invitations/teacher/resend/{userId}": {
+      "post": {
+        "operationId": "InvitationController_resendTeacherInvitation",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    },
+    "/api/v1/invitations/complete-registration": {
+      "post": {
+        "operationId": "InvitationController_completeRegistration",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteRegistrationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    },
+    "/api/v1/invitations/forgot-pin": {
+      "post": {
+        "operationId": "InvitationController_forgotPin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Invitation"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "InviteUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@school.com"
+          },
+          "roleId": {
+            "type": "string",
+            "description": "Role UUID"
+          }
+        },
+        "required": ["firstName", "lastName", "email", "roleId"]
+      },
+      "InviteStudentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "student@school.com"
+          }
+        },
+        "required": ["firstName", "lastName", "email"]
+      },
+      "InviteTeacherDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "teacher@school.com"
+          }
+        },
+        "required": ["firstName", "lastName", "email"]
+      },
+      "CompleteRegistrationDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Registration token from invitation email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": ["token", "password"]
+      },
+      "ForgotPinDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@school.com"
+          }
+        },
+        "required": ["email"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "invitations"
+    }
+  ]
+}

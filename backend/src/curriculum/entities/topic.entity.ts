@@ -6,8 +6,10 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { SubjectCatalog } from '../../subject/subject-catalog.entity';
+import { AcademicTerm } from '../../academic-calendar/entitites/academic-term.entity';
 import { Curriculum } from './curriculum.entity';
 import { Subtopic } from './subtopic.entity';
 
@@ -41,7 +43,12 @@ export class Topic {
     nullable: true,
     onDelete: 'CASCADE',
   })
-  curriculum: Curriculum;
+  curriculum: Curriculum | null;
+
+  /** Source of truth for which term this topic belongs to; backfilled from curriculum.academicTerm when possible. */
+  @ManyToOne(() => AcademicTerm, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'academic_term_id' })
+  academicTerm: AcademicTerm | null;
 
   @OneToMany(() => Subtopic, (subtopic) => subtopic.topic, { cascade: true })
   subtopics: Subtopic[];

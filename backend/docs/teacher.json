@@ -1,0 +1,1119 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Teacher",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/teacher/login": {
+      "post": {
+        "operationId": "TeacherController_login",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/students": {
+      "get": {
+        "operationId": "TeacherController_findAllStudents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/users/{id}": {
+      "get": {
+        "operationId": "TeacherController_getUserById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/my-classes": {
+      "get": {
+        "operationId": "TeacherController_getMyClasses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{id}/name": {
+      "get": {
+        "operationId": "TeacherController_getClassLevelName",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{classLevelId}/students/{studentId}/attendance": {
+      "get": {
+        "operationId": "TeacherController_getStudentAttendance",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{classLevelId}/attendance": {
+      "get": {
+        "operationId": "TeacherController_getClassAttendance",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      },
+      "post": {
+        "operationId": "TeacherController_markAttendance",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/me/is-class-teacher": {
+      "get": {
+        "operationId": "TeacherController_checkIsClassTeacher",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/{classLevelId}/summary": {
+      "get": {
+        "operationId": "TeacherController_getClassAttendanceSummary",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/calendars": {
+      "get": {
+        "operationId": "TeacherController_getAllAcademicCalendars",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{classLevelId}/students/{studentId}/calendars/{calendarId}/attendance/grouped": {
+      "get": {
+        "operationId": "TeacherController_getStudentAttendanceGroupedByTermAndMonth",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "calendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/forgot-password": {
+      "post": {
+        "operationId": "TeacherController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotTeacherPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/profile/me": {
+      "put": {
+        "operationId": "TeacherController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/me": {
+      "get": {
+        "operationId": "TeacherController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/my-subject": {
+      "get": {
+        "operationId": "TeacherController_getMySubject",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/my-topics": {
+      "get": {
+        "operationId": "TeacherController_getMyTopics",
+        "parameters": [
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/curriculum/progress": {
+      "get": {
+        "operationId": "TeacherController_getCurriculumProgress",
+        "parameters": [
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/topics": {
+      "post": {
+        "operationId": "TeacherController_createTopic",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeacherTopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/topics/{id}": {
+      "patch": {
+        "operationId": "TeacherController_updateTopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeacherTopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      },
+      "delete": {
+        "operationId": "TeacherController_deleteTopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/topics/{topicId}/subtopics": {
+      "get": {
+        "operationId": "TeacherController_getSubtopicsForTopic",
+        "parameters": [
+          {
+            "name": "topicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      },
+      "post": {
+        "operationId": "TeacherController_createSubtopic",
+        "parameters": [
+          {
+            "name": "topicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubtopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/subtopics/{id}": {
+      "patch": {
+        "operationId": "TeacherController_updateSubtopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubtopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      },
+      "delete": {
+        "operationId": "TeacherController_deleteSubtopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/subtopics/{subtopicId}/complete": {
+      "post": {
+        "operationId": "TeacherController_markSubtopicComplete",
+        "parameters": [
+          {
+            "name": "subtopicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      },
+      "delete": {
+        "operationId": "TeacherController_unmarkSubtopicComplete",
+        "parameters": [
+          {
+            "name": "subtopicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/topics/{topicId}/notes": {
+      "get": {
+        "operationId": "TeacherController_getNotesForTopic",
+        "parameters": [
+          {
+            "name": "topicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notes/reply": {
+      "post": {
+        "operationId": "TeacherController_replyToNote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCurriculumTopicNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/assignments": {
+      "post": {
+        "operationId": "TeacherController_createAssignment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      },
+      "get": {
+        "operationId": "TeacherController_getMyAssignments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/assignments/{id}": {
+      "patch": {
+        "operationId": "TeacherController_updateAssignment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      },
+      "delete": {
+        "operationId": "TeacherController_deleteAssignment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/assignments/{id}/students": {
+      "get": {
+        "operationId": "TeacherController_getAssignmentStudents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pending",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "submitted",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/assignments/{id}/submissions/{studentId}": {
+      "get": {
+        "operationId": "TeacherController_getStudentSubmission",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/assignments/{id}/submissions/{studentId}/grade": {
+      "patch": {
+        "operationId": "TeacherController_gradeSubmission",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ForgotTeacherPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "teacher@school.com"
+          }
+        },
+        "required": ["email"]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "otherName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "phoneContact": {
+            "type": "string"
+          },
+          "PlaceOfBirth": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female"]
+          },
+          "DateOfBirth": {
+            "type": "string"
+          },
+          "BoxAddress": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "streetAddress": {
+            "type": "string"
+          },
+          "optionalPhoneContact": {
+            "type": "string"
+          },
+          "optionalPhoneContactTwo": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateTeacherTopicDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "plannedStartDate": {
+            "type": "string"
+          },
+          "plannedEndDate": {
+            "type": "string"
+          },
+          "subjectCatalogId": {
+            "type": "string",
+            "description": "Subject catalog UUID"
+          },
+          "academicTermId": {
+            "type": "string",
+            "description": "Academic term UUID (must belong to the school)"
+          }
+        },
+        "required": ["name", "subjectCatalogId", "academicTermId"]
+      },
+      "UpdateTeacherTopicDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "plannedStartDate": {
+            "type": "string"
+          },
+          "plannedEndDate": {
+            "type": "string"
+          },
+          "subjectCatalogId": {
+            "type": "string",
+            "description": "Subject catalog UUID"
+          }
+        }
+      },
+      "CreateSubtopicDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["name"]
+      },
+      "UpdateSubtopicDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateCurriculumTopicNoteDto": {
+        "type": "object",
+        "properties": {
+          "topicId": {
+            "type": "string",
+            "description": "Topic UUID"
+          },
+          "subjectId": {
+            "type": "string",
+            "description": "Subject UUID - omit for school-wide note"
+          },
+          "content": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Parent note UUID for replies"
+          },
+          "academicTermId": {
+            "type": "string",
+            "description": "Academic term UUID — scopes the note to a term (recommended when topics are reused across terms)"
+          }
+        },
+        "required": ["topicId", "content"]
+      },
+      "CreateAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "topicId": {
+            "type": "string",
+            "description": "Topic UUID"
+          },
+          "classLevelId": {
+            "type": "string",
+            "description": "Class level UUID"
+          },
+          "title": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string",
+            "example": "2025-12-31T23:59:59.000Z",
+            "description": "Due date (ISO 8601)"
+          },
+          "maxScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "state": {
+            "type": "string",
+            "enum": ["draft", "published"]
+          },
+          "assignmentType": {
+            "type": "string",
+            "enum": ["online", "offline"]
+          }
+        },
+        "required": [
+          "topicId",
+          "classLevelId",
+          "title",
+          "dueDate",
+          "maxScore",
+          "state"
+        ]
+      },
+      "UpdateAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string",
+            "example": "2025-12-31T23:59:59.000Z"
+          },
+          "maxScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "state": {
+            "type": "string",
+            "enum": ["draft", "published"]
+          },
+          "assignmentType": {
+            "type": "string",
+            "enum": ["online", "offline"]
+          }
+        }
+      },
+      "GradeSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["graded", "returned"]
+          }
+        },
+        "required": ["score"]
+      }
+    }
+  },
+  "tags": []
+}

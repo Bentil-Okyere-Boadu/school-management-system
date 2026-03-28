@@ -88,6 +88,7 @@ export default function CurriculumTopicDetailPage() {
   const searchParams = useSearchParams();
   const topicId = (params.topicId as string) ?? "";
   const subjectId = searchParams.get("subjectId") ?? "";
+  const classLevelId = searchParams.get("classLevelId") ?? "";
   const academicTermId = searchParams.get("academicTermId") ?? undefined;
   const backHref =
     sanitizeReturnPath(searchParams.get("returnPath")) ??
@@ -96,6 +97,7 @@ export default function CurriculumTopicDetailPage() {
   const { detail, isLoading, error, refetch } = useGetCurriculumTopicDetail(
     topicId,
     subjectId,
+    classLevelId,
     academicTermId
   );
   const { notes } = useGetCurriculumTopicNotes(
@@ -135,6 +137,14 @@ export default function CurriculumTopicDetailPage() {
   const academicTerm = detail?.academicTerm;
   const subtopics = detail?.subtopics ?? [];
 
+  const termDateBounds = useMemo(() => {
+    const t = academicTerm;
+    const min = t?.startDate != null ? toDateInputValue(t.startDate) : "";
+    const max = t?.endDate != null ? toDateInputValue(t.endDate) : "";
+    if (!min || !max) return { min: undefined as string | undefined, max: undefined as string | undefined };
+    return { min, max };
+  }, [academicTerm]);
+
   const teacherName = useMemo(() => {
     if (!subject?.teacher) return "—";
     const t = subject.teacher;
@@ -145,9 +155,11 @@ export default function CurriculumTopicDetailPage() {
     );
   }, [subject?.teacher]);
 
-  const classLine = subject?.classLevels?.length
-    ? subject.classLevels.map((c) => c.name).join(", ")
-    : "—";
+  const classLine = subject?.activeClassLevel?.name
+    ? subject.activeClassLevel.name
+    : subject?.classLevels?.length
+      ? subject.classLevels.map((c) => c.name).join(", ")
+      : "—";
 
   const breadcrumb = subject
     ? `${subject.subjectCatalog.name} · ${classLine} · ${teacherName}`
@@ -216,6 +228,11 @@ export default function CurriculumTopicDetailPage() {
       const e = new Date(`${end}T12:00:00`);
       if (s > e) {
         toast.error("Start date cannot be after end date.");
+        return;
+      }
+      const { min, max } = termDateBounds;
+      if (min && max && (start < min || start > max || end < min || end > max)) {
+        toast.error("Planned dates must fall within the academic term.");
         return;
       }
     }
@@ -317,6 +334,27 @@ export default function CurriculumTopicDetailPage() {
           <p className="text-gray-600">
             Missing <code className="text-sm bg-gray-100 px-1 rounded">subjectId</code>{" "}
             in the URL.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!classLevelId) {
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] px-0.5 py-6">
+        <div className="max-w-5xl mx-auto">
+          <Link
+            href={backHref}
+            className="text-sm text-purple-700 hover:text-purple-800 underline inline-flex items-center gap-1 mb-4"
+          >
+            <IconArrowLeft size={16} /> Back
+          </Link>
+          <p className="text-gray-600">
+            Missing{" "}
+            <code className="text-sm bg-gray-100 px-1 rounded">classLevelId</code> in
+            the URL. Open this topic from the curriculum progress table so the class
+            context is included.
           </p>
         </div>
       </div>
@@ -669,6 +707,15 @@ export default function CurriculumTopicDetailPage() {
         <p className="text-sm text-gray-600 my-4">
           Set both dates for a planned window, or clear both to remove them.
           Start must be on or before end.
+          {termDateBounds.min && termDateBounds.max ? (
+            <>
+              {" "}
+              Dates must be between{" "}
+              <span className="font-medium text-gray-800">{termDateBounds.min}</span>{" "}and{" "} 
+              <span className="font-medium text-gray-800">{termDateBounds.max}</span>{" "}
+              (this term).
+            </>
+          ) : null}
         </p>
         <div className="grid md:grid-cols-2 gap-4 mt-5">
           <InputField
@@ -676,6 +723,8 @@ export default function CurriculumTopicDetailPage() {
             type="date"
             label="Planned start"
             value={scheduleStart}
+            min={termDateBounds.min}
+            max={termDateBounds.max}
             onChange={(e) => setScheduleStart(e.target.value)}
           />
           <InputField
@@ -683,6 +732,8 @@ export default function CurriculumTopicDetailPage() {
             type="date"
             label="Planned end"
             value={scheduleEnd}
+            min={termDateBounds.min}
+            max={termDateBounds.max}
             onChange={(e) => setScheduleEnd(e.target.value)}
           />
         </div>

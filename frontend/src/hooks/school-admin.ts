@@ -38,6 +38,7 @@ import {
   UpdateSubtopicPayload,
   Topic,
   TopicPayload,
+  DuplicateTopicsToTermPayload,
   AdminAssignment,
   AssignmentSubmission,
   PlannerEvent,
@@ -564,24 +565,46 @@ export const useEditClassLevel = (id: string) => {
 /**
  * CURRICULUM CRUD
  */
-export const useGetCurricula = (search: string = "") => {
+export const useGetCurricula = (
+  search: string = "",
+  page: number = 1,
+  limit: number = 100
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["curricula", { search }],
+    queryKey: ["curricula", { search, page, limit }],
     queryFn: () => {
       const queryBuilder = [];
       if (search) {
-        queryBuilder.push(`search=${search}`);
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
       }
-      const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
+      queryBuilder.push(`page=${page}`);
+      queryBuilder.push(`limit=${limit}`);
+      const params = queryBuilder.join("&");
 
       return customAPI.get(`/curriculum?${params}`);
     },
     refetchOnWindowFocus: true,
   });
 
-  const curricula = (data?.data?.data as CurriculumItem[]) || [];
+  const resData = data?.data;
 
-  return { curricula, isLoading, refetch };
+  const curricula = resData?.data ?? [];
+  const total = resData?.total ?? 0;
+  const resolvedLimit = resData?.limit ?? limit;
+  const totalPages =
+    total === 0 ? 1 : Math.max(1, Math.ceil(total / resolvedLimit));
+
+  return {
+    curricula,
+    isLoading,
+    refetch,
+    paginationValues: {
+      totalPages,
+      total,
+      page: resData?.page ?? page,
+      limit: resolvedLimit,
+    },
+  };
 };
 
 export const useCreateCurriculum = () => {
@@ -675,21 +698,29 @@ export const useGetCurriculumProgressDashboard = (
 export const useGetCurriculumTopicDetail = (
   topicId: string,
   subjectId: string,
+  classLevelId: string,
   academicTermId?: string,
   options?: UseQueryOptions
 ) => {
   const { data, isLoading, refetch, error } = useQuery({
-    queryKey: ["curriculumTopicDetail", topicId, subjectId, academicTermId],
+    queryKey: [
+      "curriculumTopicDetail",
+      topicId,
+      subjectId,
+      classLevelId,
+      academicTermId,
+    ],
     queryFn: () => {
       const params = new URLSearchParams();
       params.set("subjectId", subjectId);
+      params.set("classLevelId", classLevelId);
       if (academicTermId) params.set("academicTermId", academicTermId);
       return customAPI.get(
         `/curriculum/topics/${topicId}/detail?${params.toString()}`
       );
     },
     enabled:
-      (options?.enabled ?? true) && Boolean(topicId && subjectId),
+      (options?.enabled ?? true) && Boolean(topicId && subjectId && classLevelId),
     refetchOnWindowFocus: true,
     ...options,
   });
@@ -802,19 +833,53 @@ export const useDeleteSubtopic = (topicId: string) => {
 /**
  * TOPICS CRUD
  */
-export const useGetTopics = () => {
+export const useGetTopics = (
+  search: string = "",
+  page: number = 1,
+  limit: number = 20,
+  academicTermId?: string,
+  queryEnabled: boolean = true
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["curriculumTopics"],
+    queryKey: ["curriculumTopics", { search, page, limit, academicTermId }],
     queryFn: () => {
-      return customAPI.get(`/curriculum/topics`);
+      const queryBuilder = [];
+      if (search) {
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
+      }
+      if (academicTermId) {
+        queryBuilder.push(
+          `academicTermId=${encodeURIComponent(academicTermId)}`
+        );
+      }
+      queryBuilder.push(`page=${page}`);
+      queryBuilder.push(`limit=${limit}`);
+      const params = queryBuilder.join("&");
+      return customAPI.get(`/curriculum/topics?${params}`);
     },
-    enabled: true,
+    enabled: queryEnabled,
     refetchOnWindowFocus: true,
   });
 
-  const topics = (data?.data?.data as Topic[]) || [];
+  const resData = data?.data;
 
-  return { topics, isLoading, refetch };
+  const topics = resData?.data ?? [];
+  const total = resData?.total ?? 0;
+  const resolvedLimit = resData?.limit ?? limit;
+  const totalPages =
+    total === 0 ? 1 : Math.max(1, Math.ceil(total / resolvedLimit));
+
+  return {
+    topics,
+    isLoading,
+    refetch,
+    paginationValues: {
+      totalPages,
+      total,
+      page: resData?.page ?? page,
+      limit: resolvedLimit,
+    },
+  };
 };
 
 export const useCreateTopic = () => {
@@ -841,12 +906,29 @@ export const useDeleteTopic = () => {
   });
 };
 
-export const useGetSubjectTopics = (subjectCatalogId?: string) => {
+export const useDuplicateTopicsToTerm = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: DuplicateTopicsToTermPayload) =>
+      customAPI.post("/curriculum/topics/duplicate-to-term", payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["curriculumTopics"] });
+    },
+  });
+};
+
+export const useGetSubjectTopics = (
+  subjectCatalogId?: string,
+  academicTermId?: string,
+) => {
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["subjectCatalogTopics", subjectCatalogId],
+    queryKey: ["subjectCatalogTopics", subjectCatalogId, academicTermId],
     queryFn: () => {
+      const qs = academicTermId
+        ? `?academicTermId=${encodeURIComponent(academicTermId)}`
+        : "";
       return customAPI.get(
-        `/curriculum/subject-catalogs/${subjectCatalogId}/topics`
+        `/curriculum/subject-catalogs/${subjectCatalogId}/topics${qs}`
       );
     },
     enabled: Boolean(subjectCatalogId),
@@ -1396,9 +1478,13 @@ export const useGetNotifications = (
 };
 
 export const useMarkNotificationAsRead = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => {
       return customAPI.patch(`/notifications/${id}/markAsRead`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 };

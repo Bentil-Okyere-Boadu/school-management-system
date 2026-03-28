@@ -27,6 +27,8 @@ import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/notification.entity';
 import { Assignment } from '../teacher/entities/assignment.entity';
 import { AssignmentSubmission } from '../student/entities/assignment-submission.entity';
+import { TenantContextService } from 'src/common/tenant/tenant-context.service';
+import { TenantScopedRepositoryService } from 'src/common/tenant/tenant-scoped-repository.service';
 
 @Injectable()
 export class SubjectService {
@@ -56,10 +58,13 @@ export class SubjectService {
     @InjectRepository(ClassLevelResultApproval)
     private classLevelResultApprovalRepository: Repository<ClassLevelResultApproval>,
     private readonly notificationService: NotificationService,
+    private readonly tenantContext: TenantContextService,
+    private readonly tenantScopedRepository: TenantScopedRepositoryService,
   ) {}
 
-  async create(createSubjectDto: CreateSubjectDto, admin: SchoolAdmin) {
+  async create(createSubjectDto: CreateSubjectDto, _admin: SchoolAdmin) {
     const { subjectCatalogId, classLevelIds, teacherId } = createSubjectDto;
+    const schoolId = this.tenantContext.getTenantIdOrThrow();
 
     // Validate subject catalog
     const subjectCatalog = await this.subjectCatalogRepository.findOne({
@@ -71,19 +76,15 @@ export class SubjectService {
 
     // Validate teacher
     const teacher = await this.teacherRepository.findOne({
-      where: { id: teacherId },
+      where: { id: teacherId, school: { id: schoolId } },
     });
     if (!teacher) {
       throw new NotFoundException('Teacher not found');
     }
 
     // Validate admin and school
-    if (!admin.school) {
-      throw new NotFoundException('Admin is not associated with a school');
-    }
-
     const school = await this.schoolRepository.findOne({
-      where: { id: admin.school.id },
+      where: { id: schoolId },
     });
     if (!school) {
       throw new NotFoundException('School not found');
@@ -112,7 +113,7 @@ export class SubjectService {
     const classLevels = await Promise.all(
       classLevelIds.map(async (id) => {
         const level = await this.classLevelRepository.findOne({
-          where: { id },
+          where: { id, school: { id: schoolId } },
         });
         if (!level) {
           throw new NotFoundException(`Class level not found: ${id}`);
@@ -147,15 +148,27 @@ export class SubjectService {
   async update(
     id: string,
     updateSubjectDto: UpdateSubjectDto,
-    admin: SchoolAdmin,
+    _admin: SchoolAdmin,
   ) {
-    const subject = await this.subjectRepository.findOne({
-      where: { id, school: { id: admin.school.id } },
-      relations: ['classLevels', 'subjectCatalog', 'teacher'],
-    });
+    const schoolId = this.tenantContext.getTenantIdOrThrow();
+    const subject = await this.tenantScopedRepository.findOne(
+      this.subjectRepository,
+      {
+        where: { id } as Subject,
+        relations: ['classLevels', 'subjectCatalog', 'teacher'],
+      },
+    );
+
+    if (subject?.school?.id && subject.school.id !== schoolId) {
+      throw new NotFoundException('Subject not found');
+    }
 
     if (!subject) throw new NotFoundException('Subject not found');
 
+    if (subject.school?.id !== schoolId) {
+      throw new NotFoundException('Subject not found');
+    }
+ 
     if (updateSubjectDto.subjectCatalogId) {
       const subjectCatalog = await this.subjectCatalogRepository.findOne({
         where: { id: updateSubjectDto.subjectCatalogId },
@@ -167,7 +180,7 @@ export class SubjectService {
 
     if (updateSubjectDto.teacherId) {
       const foundTeacher = await this.teacherRepository.findOne({
-        where: { id: updateSubjectDto.teacherId },
+        where: { id: updateSubjectDto.teacherId, school: { id: schoolId } },
       });
       if (!foundTeacher) throw new NotFoundException('Teacher not found');
       subject.teacher = foundTeacher;
@@ -180,7 +193,7 @@ export class SubjectService {
       const classLevels: ClassLevel[] = [];
       for (const classLevelId of updateSubjectDto.classLevelIds) {
         const classLevel = await this.classLevelRepository.findOne({
-          where: { id: classLevelId },
+          where: { id: classLevelId, school: { id: schoolId } },
         });
         if (!classLevel)
           throw new NotFoundException(`Class level not found: ${classLevelId}`);
@@ -211,11 +224,14 @@ export class SubjectService {
     };
   }
 
-  async remove(id: string, admin: SchoolAdmin): Promise<void> {
+  async remove(id: string, _admin: SchoolAdmin): Promise<void> {
+    const schoolId = this.tenantContext.getTenantIdOrThrow();
     const subject = await this.subjectRepository.findOne({
-      where: { id, school: { id: admin.school.id } },
+      where: { id, school: { id: schoolId } },
+      relations: ['classLevels', 'subjectCatalog', 'teacher'],
     });
     if (!subject) throw new NotFoundException('Subject not found');
+
     await this.subjectRepository.delete(subject.id);
   }
 

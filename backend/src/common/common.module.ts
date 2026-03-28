@@ -10,6 +10,8 @@ import { CleanupController } from './controllers/cleanup.controller';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
+import { TenantContextService } from './tenant/tenant-context.service';
+import { TenantScopedRepositoryService } from './tenant/tenant-scoped-repository.service';
 
 @Global()
 @Module({
@@ -24,6 +26,8 @@ import { Student } from 'src/student/student.entity';
     TransactionUtil,
     CleanupService,
     ScheduledCleanupService,
+    TenantContextService,
+    TenantScopedRepositoryService,
   ],
   exports: [
     EmailService,
@@ -32,6 +36,8 @@ import { Student } from 'src/student/student.entity';
     TransactionUtil,
     CleanupService,
     ScheduledCleanupService,
+    TenantContextService,
+    TenantScopedRepositoryService,
   ],
 })
 export class CommonModule {}

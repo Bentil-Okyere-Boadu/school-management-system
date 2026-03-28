@@ -20,6 +20,8 @@ import { ClassLevel } from 'src/class-level/class-level.entity';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { Subject } from 'src/subject/subject.entity';
+import { TenantContextService } from 'src/common/tenant/tenant-context.service';
+import { TenantScopedRepositoryService } from 'src/common/tenant/tenant-scoped-repository.service';
 
 @Injectable()
 export class SchoolAdminService {
@@ -45,7 +47,13 @@ export class SchoolAdminService {
     private assignmentSubmissionRepository: Repository<AssignmentSubmission>,
     @InjectRepository(Subject)
     private subjectRepository: Repository<Subject>,
+    private readonly tenantContext: TenantContextService,
+    private readonly tenantScopedRepository: TenantScopedRepositoryService,
   ) {}
+
+  private resolveSchoolId(schoolId?: string): string {
+    return schoolId ?? this.tenantContext.getTenantIdOrThrow();
+  }
 
   async findAll(): Promise<SchoolAdmin[]> {
     return this.schoolAdminRepository.find();
@@ -77,14 +85,18 @@ export class SchoolAdminService {
     await this.schoolAdminRepository.remove(schoolAdmin);
   }
 
-  async findAllStudents(schoolId: string, queryString: QueryString) {
+  async findAllStudents(
+    schoolId: string | undefined,
+    queryString: QueryString,
+  ) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const baseQuery = this.studentRepository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
       .leftJoinAndSelect('student.classLevels', 'classLevel')
       .leftJoinAndSelect('student.profile', 'profile')
-      .where('student.school.id = :schoolId', { schoolId })
+      .where('student.school.id = :schoolId', { schoolId: resolvedSchoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived: false });
 
     const featuresWithoutPagination = new APIFeatures(
@@ -129,16 +141,17 @@ export class SchoolAdminService {
   }
 
   async findStudentsForClassAssignment(
-    schoolId: string,
+    schoolId: string | undefined,
     queryString: QueryString,
   ) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const studentsQuery = this.studentRepository
       .createQueryBuilder('student')
       .leftJoinAndSelect('student.role', 'role')
       .leftJoinAndSelect('student.school', 'school')
       .leftJoinAndSelect('student.profile', 'profile')
       .leftJoinAndSelect('student.classLevels', 'classLevel')
-      .where('student.school.id = :schoolId', { schoolId })
+      .where('student.school.id = :schoolId', { schoolId: resolvedSchoolId })
       .andWhere('role.label = :roleLabel', { roleLabel: 'Student' });
 
     // Filter students: show only those without classes, or (if excludeClassId provided) those in that specific class
@@ -202,7 +215,8 @@ export class SchoolAdminService {
     return signedStudents;
   }
 
-  async findAllUsers(schoolId: string, queryString: QueryString) {
+  async findAllUsers(schoolId: string | undefined, queryString: QueryString) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const isArchived = queryString.status === 'archived' ? true : false;
 
     // --- Students Query ---
@@ -212,7 +226,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('student.school', 'school')
       .leftJoinAndSelect('student.profile', 'profile')
       .leftJoinAndSelect('student.classLevels', 'classLevel')
-      .where('student.school.id = :schoolId', { schoolId })
+      .where('student.school.id = :schoolId', { schoolId: resolvedSchoolId })
       .andWhere('student.isArchived = :isArchived', { isArchived });
 
     const studentsFeatures = new APIFeatures(studentsQuery, queryString)
@@ -229,7 +243,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('teacher.role', 'role')
       .leftJoinAndSelect('teacher.school', 'school')
       .leftJoinAndSelect('teacher.profile', 'profile')
-      .where('teacher.school.id = :schoolId', { schoolId })
+      .where('teacher.school.id = :schoolId', { schoolId: resolvedSchoolId })
       .andWhere('teacher.isArchived = :isArchived', { isArchived });
 
     const teachersFeatures = new APIFeatures(teachersQuery, queryString)
@@ -392,12 +406,13 @@ export class SchoolAdminService {
 
     return school;
   }
-  async getUserById(userId: string, schoolId: string) {
+  async getUserById(userId: string, schoolId?: string) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     // Try finding a student first
     const student = await this.studentRepository.findOne({
       where: {
         id: userId,
-        school: { id: schoolId },
+        school: { id: resolvedSchoolId },
       },
       relations: ['profile', 'classLevels'],
     });
@@ -418,7 +433,7 @@ export class SchoolAdminService {
     const teacher = await this.teacherRepository.findOne({
       where: {
         id: userId,
-        school: { id: schoolId },
+        school: { id: resolvedSchoolId },
       },
       relations: ['role', 'profile', 'school'],
     });
@@ -467,9 +482,13 @@ export class SchoolAdminService {
       ['role', 'school', 'profile'],
     );
   }
-  async findStudentById(id: string, schoolId: string): Promise<Student | null> {
+  async findStudentById(
+    id: string,
+    schoolId?: string,
+  ): Promise<Student | null> {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     return this.studentRepository.findOne({
-      where: { id, school: { id: schoolId } },
+      where: { id, school: { id: resolvedSchoolId } },
     });
   }
 
@@ -491,13 +510,14 @@ export class SchoolAdminService {
     throw new NotFoundException(`User with ID ${id} not found`);
   }
 
-  async getTeacherAssignments(teacherId: string, schoolId: string) {
+  async getTeacherAssignments(teacherId: string, schoolId?: string) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const teacher = await this.teacherRepository
       .createQueryBuilder('teacher')
       .leftJoinAndSelect('teacher.classLevels', 'classLevels')
       .leftJoinAndSelect('teacher.school', 'school')
       .where('teacher.id = :teacherId', { teacherId })
-      .andWhere('school.id = :schoolId', { schoolId })
+      .andWhere('school.id = :schoolId', { schoolId: resolvedSchoolId })
       .getOne();
 
     if (!teacher) {
@@ -539,9 +559,10 @@ export class SchoolAdminService {
     };
   }
 
-  async suspendTeacher(teacherId: string, suspend: boolean, schoolId: string) {
+  async suspendTeacher(teacherId: string, suspend: boolean, schoolId?: string) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const teacher = await this.teacherRepository.findOne({
-      where: { id: teacherId, school: { id: schoolId } },
+      where: { id: teacherId, school: { id: resolvedSchoolId } },
     });
 
     if (!teacher) {
@@ -562,35 +583,37 @@ export class SchoolAdminService {
    */
   async deleteUser(
     userId: string,
-    schoolId: string,
+    schoolId?: string,
   ): Promise<{ message: string }> {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const student = await this.studentRepository.findOne({
-      where: { id: userId, school: { id: schoolId } },
+      where: { id: userId, school: { id: resolvedSchoolId } },
     });
 
     if (student) {
-      return this.deleteStudent(userId, schoolId);
+      return this.deleteStudent(userId, resolvedSchoolId);
     }
 
     const teacher = await this.teacherRepository.findOne({
-      where: { id: userId, school: { id: schoolId } },
+      where: { id: userId, school: { id: resolvedSchoolId } },
     });
 
     if (teacher) {
-      return this.deleteTeacher(userId, schoolId);
+      return this.deleteTeacher(userId, resolvedSchoolId);
     }
 
     throw new NotFoundException(
-      `User with ID ${userId} not found in school ${schoolId}`,
+      `User with ID ${userId} not found in school ${resolvedSchoolId}`,
     );
   }
 
   async deleteTeacher(
     teacherId: string,
-    schoolId: string,
+    schoolId?: string,
   ): Promise<{ message: string }> {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const teacher = await this.teacherRepository.findOne({
-      where: { id: teacherId, school: { id: schoolId } },
+      where: { id: teacherId, school: { id: resolvedSchoolId } },
       relations: ['profile'],
     });
 
@@ -606,7 +629,7 @@ export class SchoolAdminService {
       await this.teacherRepository.remove(teacher);
 
       this.logger.log(
-        `Teacher ${teacherId} deleted successfully from school ${schoolId}`,
+        `Teacher ${teacherId} deleted successfully from school ${resolvedSchoolId}`,
       );
       return { message: 'Teacher record deleted successfully' };
     } catch (error) {
@@ -625,10 +648,11 @@ export class SchoolAdminService {
    */
   async deleteStudent(
     studentId: string,
-    schoolId: string,
+    schoolId?: string,
   ): Promise<{ message: string }> {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const student = await this.studentRepository.findOne({
-      where: { id: studentId, school: { id: schoolId } },
+      where: { id: studentId, school: { id: resolvedSchoolId } },
       relations: ['profile', 'parents'],
     });
 
@@ -656,7 +680,7 @@ export class SchoolAdminService {
       await this.studentRepository.remove(student);
 
       this.logger.log(
-        `Student ${studentId} deleted successfully from school ${schoolId}`,
+        `Student ${studentId} deleted successfully from school ${resolvedSchoolId}`,
       );
       return { message: 'Student record deleted successfully' };
     } catch (error) {
@@ -670,23 +694,26 @@ export class SchoolAdminService {
     }
   }
 
-  async getDashboardStats(schoolId: string) {
-    const totalTeachers = await this.teacherRepository.count({
-      where: { school: { id: schoolId }, isArchived: false },
-    });
+  async getDashboardStats(schoolId?: string) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
+    const totalTeachers = await this.tenantScopedRepository.count(
+      this.teacherRepository,
+      { isArchived: false } as Teacher,
+    );
 
-    const totalStudents = await this.studentRepository.count({
-      where: { school: { id: schoolId }, isArchived: false },
-    });
+    const totalStudents = await this.tenantScopedRepository.count(
+      this.studentRepository,
+      { isArchived: false } as Student,
+    );
 
     const admissionRepo =
       this.schoolRepository.manager.getRepository('Admission');
     const totalApplications = await admissionRepo.count({
-      where: { school: { id: schoolId }, isArchived: false },
+      where: { school: { id: resolvedSchoolId }, isArchived: false },
     });
 
     const classLevels = await this.classLevelRepository.find({
-      where: { school: { id: schoolId } },
+      where: { school: { id: resolvedSchoolId } },
       relations: ['students'],
     });
 
@@ -732,7 +759,11 @@ export class SchoolAdminService {
     };
   }
 
-  async findAllAssignments(schoolId: string, queryString: QueryString) {
+  async findAllAssignments(
+    schoolId: string | undefined,
+    queryString: QueryString,
+  ) {
+    const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const baseQuery = this.assignmentRepository
       .createQueryBuilder('assignment')
       .leftJoinAndSelect('assignment.teacher', 'teacher')
@@ -740,7 +771,7 @@ export class SchoolAdminService {
       .leftJoinAndSelect('topic.subjectCatalog', 'subjectCatalog')
       .leftJoinAndSelect('assignment.classLevel', 'classLevel')
       .leftJoinAndSelect('classLevel.students', 'students')
-      .where('teacher.school.id = :schoolId', { schoolId })
+      .where('teacher.school.id = :schoolId', { schoolId: resolvedSchoolId })
       .andWhere('assignment.state = :state', { state: 'published' });
 
     // Extract custom filter values before passing to APIFeatures

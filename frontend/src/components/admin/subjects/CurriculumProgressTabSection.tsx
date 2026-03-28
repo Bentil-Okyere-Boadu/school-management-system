@@ -1,12 +1,23 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Select } from "@mantine/core";
 import { IconEye } from "@tabler/icons-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { HashLoader } from "react-spinners";
 import type { CurriculumProgressDashboardRow } from "@/@types";
 import { User } from "@/@types";
+import { TermFilterCard } from "@/components/common/TermFilterCard";
+import {
+  findCalendarIdForTerm,
+  getSortedSchoolTerms,
+} from "@/utils/schoolTerms";
 import {
   useGetAllSubjects,
   useGetCalendars,
@@ -14,7 +25,6 @@ import {
   useGetCurricula,
   useGetCurriculumProgressDashboard,
   useGetSchoolUsers,
-  useGetTerms,
 } from "@/hooks/school-admin";
 
 const CP = {
@@ -74,8 +84,12 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const { subjects: allSubjectCatalogs, isLoading: subjectCatalogsLoading } =
     useGetAllSubjects();
   const { classLevels } = useGetClassLevels();
-  const { calendars } = useGetCalendars();
-  const { terms } = useGetTerms(selectedCalendarId || "");
+  const { calendars, isLoading: calendarsLoading } = useGetCalendars();
+
+  const sortedTerms = useMemo(
+    () => getSortedSchoolTerms(calendars),
+    [calendars],
+  );
   const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
     1,
     "",
@@ -120,56 +134,79 @@ export const CurriculumProgressTabSection: React.FC = () => {
     [pathname, router, searchParams]
   );
 
-  useEffect(() => {
-    if (!selectedCalendarId && calendars?.length) {
-      const firstId = String(calendars[0].id);
-      setSelectedCalendarId(firstId);
+  useLayoutEffect(() => {
+    if (calendarsLoading) return;
+
+    if (sortedTerms.length === 0) {
+      if (academicTermId || selectedCalendarId) {
+        setAcademicTermId("");
+        setSelectedCalendarId("");
+        replaceProgressUrl({
+          curriculumId,
+          subjectCatalogId,
+          classLevelId,
+          teacherId,
+          selectedCalendarId: "",
+          academicTermId: "",
+        });
+      }
+      return;
+    }
+
+    const urlTerm = searchParams.get(CP.term) ?? "";
+    const urlCal = searchParams.get(CP.cal) ?? "";
+
+    let nextTerm = "";
+    if (
+      academicTermId &&
+      sortedTerms.some((t) => t.id === academicTermId)
+    ) {
+      nextTerm = academicTermId;
+    } else if (urlTerm && sortedTerms.some((t) => t.id === urlTerm)) {
+      nextTerm = urlTerm;
+    } else if (urlCal) {
+      const firstInCal = sortedTerms.find((t) =>
+        (calendars ?? []).some(
+          (c) =>
+            String(c.id) === urlCal &&
+            c.terms?.some((x) => String(x.id) === String(t.id)),
+        ),
+      );
+      nextTerm = firstInCal?.id ?? sortedTerms[0].id;
+    } else {
+      nextTerm = sortedTerms[0].id;
+    }
+
+    const nextCal = findCalendarIdForTerm(calendars, nextTerm);
+
+    if (nextTerm !== urlTerm || String(nextCal) !== String(urlCal)) {
+      setAcademicTermId(nextTerm);
+      setSelectedCalendarId(nextCal);
       replaceProgressUrl({
         curriculumId,
         subjectCatalogId,
         classLevelId,
         teacherId,
-        selectedCalendarId: firstId,
-        academicTermId,
+        selectedCalendarId: nextCal,
+        academicTermId: nextTerm,
       });
+      return;
     }
-  }, [
-    calendars,
-    selectedCalendarId,
-    curriculumId,
-    subjectCatalogId,
-    classLevelId,
-    teacherId,
-    academicTermId,
-    replaceProgressUrl,
-  ]);
 
-  useEffect(() => {
-    if (!selectedCalendarId || !terms?.length) return;
-    const validIds = new Set(terms.map((t) => String(t.id)));
-    const next =
-      academicTermId && validIds.has(academicTermId)
-        ? academicTermId
-        : String(terms[0].id);
-    if (next === academicTermId) return;
-    setAcademicTermId(next);
-    replaceProgressUrl({
-      curriculumId,
-      subjectCatalogId,
-      classLevelId,
-      teacherId,
-      selectedCalendarId,
-      academicTermId: next,
-    });
+    if (academicTermId !== nextTerm) setAcademicTermId(nextTerm);
+    if (selectedCalendarId !== nextCal) setSelectedCalendarId(nextCal);
   }, [
-    terms,
-    selectedCalendarId,
-    academicTermId,
+    calendarsLoading,
+    calendars,
+    sortedTerms,
+    searchParams,
     curriculumId,
     subjectCatalogId,
     classLevelId,
     teacherId,
     replaceProgressUrl,
+    academicTermId,
+    selectedCalendarId,
   ]);
 
   const curriculumOptions =
@@ -234,18 +271,6 @@ export const CurriculumProgressTabSection: React.FC = () => {
     })) ?? []),
   ];
 
-  const calendarOptions =
-    calendars?.map((cal) => ({
-      value: String(cal.id),
-      label: String(cal.name),
-    })) ?? [];
-
-  const termOptions =
-    terms?.map((t) => ({
-      value: String(t.id),
-      label: String(t.name ?? t.termName ?? ""),
-    })) ?? [];
-
   const filters = useMemo(
     () => ({
       curriculumId: curriculumId || undefined,
@@ -292,6 +317,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const onViewTopicDetail = (row: CurriculumProgressDashboardRow) => {
     const params = new URLSearchParams();
     params.set("subjectId", row.subjectId);
+    params.set("classLevelId", row.classLevel.id);
     if (academicTermId) params.set("academicTermId", academicTermId);
     const cur = curricula?.find((c) => String(c.id) === curriculumId);
     if (cur?.name) params.set("curriculumName", cur.name);
@@ -360,7 +386,22 @@ export const CurriculumProgressTabSection: React.FC = () => {
       </section>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <TermFilterCard
+            fitFilterGrid
+            calendars={calendars ?? []}
+            calendarsLoading={calendarsLoading}
+            sortedTerms={sortedTerms}
+            value={academicTermId}
+            onChange={(id) => {
+              const nextTerm = id ?? "";
+              const nextCal = findCalendarIdForTerm(calendars ?? [], nextTerm);
+              patch({
+                academicTermId: nextTerm,
+                selectedCalendarId: nextCal,
+              });
+            }}
+          />
           <Select
             label="Curriculum"
             placeholder="Select curriculum"
@@ -399,32 +440,6 @@ export const CurriculumProgressTabSection: React.FC = () => {
             searchable
             clearable
           />
-          <Select
-            label="Academic Calendar"
-            placeholder="Pick calendar"
-            data={calendarOptions}
-            value={selectedCalendarId || null}
-            onChange={(v) => {
-              const next = (v as string) ?? "";
-              patch({
-                selectedCalendarId: next,
-                academicTermId: "",
-              });
-            }}
-            searchable
-          />
-          <Select
-            label="Academic Term"
-            placeholder="Optional — progress uses curriculum term if empty"
-            data={termOptions}
-            value={academicTermId || null}
-            onChange={(v) =>
-              patch({ academicTermId: (v as string) ?? "" })
-            }
-            searchable
-            clearable
-            disabled={!selectedCalendarId}
-          />
         </div>
       </div>
 
@@ -436,6 +451,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
                 {[
                   "Topic",
                   "Subject",
+                  "Class",
                   "Teacher",
                   "Start Date",
                   "End Date",
@@ -458,7 +474,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
                 if (isLoading) {
                   return (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <div className="relative py-20 bg-white">
                           <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                             <HashLoader color="#AB58E7" size={40} />
@@ -472,7 +488,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
                 if (!rows.length) {
                   return (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                           <p className="text-lg font-medium">No progress data</p>
                           <p className="text-sm text-gray-400 mt-1">
@@ -505,10 +521,12 @@ export const CurriculumProgressTabSection: React.FC = () => {
                       : row.progressPercent > 0
                         ? "bg-purple-500"
                         : "bg-gray-200";
-                  const rowClickable = Boolean(row.subjectId && row.topicId);
+                  const rowClickable = Boolean(
+                    row.subjectId && row.topicId && row.classLevel?.id
+                  );
                   return (
                     <tr
-                      key={`${row.subjectId}-${row.topicId}`}
+                      key={`${row.subjectId}-${row.topicId}-${row.classLevel.id}`}
                       onClick={() => {
                         if (!rowClickable) return;
                         onViewTopicDetail(row);
@@ -533,6 +551,9 @@ export const CurriculumProgressTabSection: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
                         {row.subjectCatalog.name}
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
+                        {row.classLevel.name}
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5">
                         {teacherDisplayName(row.teacher)}

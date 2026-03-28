@@ -22,6 +22,7 @@ import { Student } from 'src/student/student.entity';
 import { Role } from 'src/role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Parent } from 'src/parent/parent.entity';
+import { TenantContextService } from 'src/common/tenant/tenant-context.service';
 
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -54,6 +55,7 @@ export class AdmissionService {
     private emailService: EmailService,
     private smsService: SmsService,
     private invitationService: InvitationService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   async createAdmission(
@@ -218,10 +220,8 @@ export class AdmissionService {
     return classLevels;
   }
 
-  async findAllBySchool(
-    schoolId: string,
-    queryString: QueryString,
-  ): Promise<any> {
+  async findAllBySchool(queryString: QueryString): Promise<any> {
+    const schoolId = this.tenantContext.getTenantIdOrThrow();
     const baseQuery = this.admissionRepository
       .createQueryBuilder('admission')
       .leftJoinAndSelect('admission.school', 'school')
@@ -654,7 +654,8 @@ export class AdmissionService {
     }
   }
 
-  async getAdmissionAnalytics(schoolId: string) {
+  async getAdmissionAnalytics() {
+    const schoolId = this.tenantContext.getTenantIdOrThrow();
     // Get all admissions for the school
     const admissions = await this.admissionRepository.find({
       where: { school: { id: schoolId } },
@@ -770,9 +771,9 @@ export class AdmissionService {
   }
   async archiveAdmission(
     applicationId: string,
-    schoolId: string,
     archive: boolean,
   ): Promise<{ message: string }> {
+    const schoolId = this.tenantContext.getTenantIdOrThrow();
     const admission = await this.admissionRepository.findOne({
       where: { applicationId, school: { id: schoolId } },
     });
@@ -804,8 +805,8 @@ export class AdmissionService {
   }
   async deleteAdmission(
     applicationId: string,
-    schoolId: string,
   ): Promise<{ message: string }> {
+    const schoolId = this.tenantContext.getTenantIdOrThrow();
     const admission = await this.admissionRepository.findOne({
       where: { applicationId, school: { id: schoolId } },
       relations: ['guardians', 'previousSchoolResults'],

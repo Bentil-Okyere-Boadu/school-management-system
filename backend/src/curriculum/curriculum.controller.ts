@@ -8,11 +8,13 @@ import {
   Delete,
   UseGuards,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { CurriculumService } from './curriculum.service';
 import { CreateCurriculumDto } from './dto/create-curriculum.dto';
 import { UpdateCurriculumDto } from './dto/update-curriculum.dto';
 import { CreateTopicDto } from './dto/create-topic.dto';
+import { DuplicateTopicsToTermDto } from './dto/duplicate-topics-to-term.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { CreateSubtopicDto } from './dto/create-subtopic.dto';
 import { UpdateSubtopicDto } from './dto/update-subtopic.dto';
@@ -63,6 +65,16 @@ export class CurriculumController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('topics/duplicate-to-term')
+  @Roles(Role.SchoolAdmin)
+  duplicateTopicsToTerm(
+    @Body() dto: DuplicateTopicsToTermDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.duplicateTopicsToTerm(dto, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('topics')
   @Roles(Role.SchoolAdmin)
   findAllTopics(
@@ -79,12 +91,17 @@ export class CurriculumController {
     @CurrentUser() admin: SchoolAdmin,
     @Param('topicId') topicId: string,
     @Query('subjectId') subjectId: string,
+    @Query('classLevelId') classLevelId: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
+    if (!classLevelId) {
+      throw new BadRequestException('classLevelId query parameter is required');
+    }
     return this.curriculumService.getTopicDetail(
       topicId,
       subjectId,
       admin.school.id,
+      classLevelId,
       academicTermId,
     );
   }
@@ -157,10 +174,12 @@ export class CurriculumController {
   findAllTopicsBySubjectCatalog(
     @Param('subjectCatalogId') subjectCatalogId: string,
     @CurrentUser() admin: SchoolAdmin,
+    @Query('academicTermId') academicTermId?: string,
   ) {
     return this.curriculumService.findAllTopicsBySubjectCatalog(
       subjectCatalogId,
       admin.school.id,
+      academicTermId,
     );
   }
 

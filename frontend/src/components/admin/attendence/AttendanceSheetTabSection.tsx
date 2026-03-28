@@ -118,7 +118,7 @@ export const AttendanceSheetTabSection = () => {
     <div className="pb-8">
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" /> */}
 
-      <div className="flex gap-3 my-6">
+      <div className="flex flex-wrap gap-3 my-6">
         <CustomSelectTag value={currentWeek} options={weekOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} />
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />
         <CustomSelectTag value={currentYear} options={yearOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "year")} />

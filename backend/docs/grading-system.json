@@ -1,0 +1,134 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Grading System",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/grading-system/my-school": {
+      "get": {
+        "operationId": "GradingSystemController_findAllForMySchool",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingSystem"]
+      }
+    },
+    "/api/v1/grading-system": {
+      "post": {
+        "operationId": "GradingSystemController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGradingSystemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingSystem"]
+      }
+    },
+    "/api/v1/grading-system/{id}": {
+      "put": {
+        "operationId": "GradingSystemController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGradingSystemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingSystem"]
+      },
+      "delete": {
+        "operationId": "GradingSystemController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingSystem"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateGradingSystemDto": {
+        "type": "object",
+        "properties": {
+          "grade": {
+            "type": "string",
+            "example": "A"
+          },
+          "minRange": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "maxRange": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["grade", "minRange", "maxRange"]
+      },
+      "UpdateGradingSystemDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "grading-system"
+    }
+  ]
+}

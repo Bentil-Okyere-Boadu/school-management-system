@@ -10,9 +10,10 @@ import {
 import { Subtopic } from './subtopic.entity';
 import { Subject } from '../../subject/subject.entity';
 import { AcademicTerm } from '../../academic-calendar/entitites/academic-term.entity';
+import { ClassLevel } from '../../class-level/class-level.entity';
 
 @Entity()
-@Unique(['subtopic', 'subject', 'academicTerm'])
+@Unique(['subtopic', 'subject', 'academicTerm', 'classLevel'])
 export class SubtopicCompletion {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -28,6 +29,11 @@ export class SubtopicCompletion {
   @ManyToOne(() => AcademicTerm, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'academic_term_id' })
   academicTerm: AcademicTerm;
+
+  /** Nullable only during TypeORM synchronize upgrade; backfill sets NOT NULL in DB. */
+  @ManyToOne(() => ClassLevel, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'class_level_id' })
+  classLevel: ClassLevel | null;
 
   @CreateDateColumn()
   completedAt: Date;

@@ -1,0 +1,103 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Subject Catalog",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/subject-catalog": {
+      "post": {
+        "operationId": "SubjectCatalogController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["SubjectCatalog"]
+      },
+      "get": {
+        "operationId": "SubjectCatalogController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["SubjectCatalog"]
+      }
+    },
+    "/api/v1/subject-catalog/{id}": {
+      "get": {
+        "operationId": "SubjectCatalogController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["SubjectCatalog"]
+      },
+      "put": {
+        "operationId": "SubjectCatalogController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["SubjectCatalog"]
+      },
+      "delete": {
+        "operationId": "SubjectCatalogController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["SubjectCatalog"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "subject-catalog"
+    }
+  ]
+}

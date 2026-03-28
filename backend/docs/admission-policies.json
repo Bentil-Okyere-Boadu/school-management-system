@@ -1,0 +1,112 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Admission Policies",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/admission-policies": {
+      "post": {
+        "operationId": "AdmissionPolicyController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdmissionPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["AdmissionPolicy"]
+      },
+      "get": {
+        "operationId": "AdmissionPolicyController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AdmissionPolicy"]
+      }
+    },
+    "/api/v1/admission-policies/{id}": {
+      "get": {
+        "operationId": "AdmissionPolicyController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AdmissionPolicy"]
+      }
+    },
+    "/api/v1/admission-policies/{id}/document": {
+      "delete": {
+        "operationId": "AdmissionPolicyController_removeDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AdmissionPolicy"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateAdmissionPolicyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["name"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "admission-policies"
+    }
+  ]
+}
