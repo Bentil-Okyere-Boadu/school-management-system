@@ -62,7 +62,7 @@ const ClassesPage = () => {
           <Badge
             variant="light"
             size="xs"
-            className="shrink-0 font-semibold uppercase tracking-wide"
+            className="shrink-0 font-semibold"
             style={{ backgroundColor: "#F3E8FF", color: "#6B21A8" }}
           >
             Latest
@@ -207,9 +207,9 @@ const ClassesPage = () => {
 
   return (
     <div className="pb-8">
-      <div className="flex justify-between items-end flex-wrap gap-4 w-full mb-5 px-0.5">
+       <div className="flex justify-between items-end mb-6 flex-wrap gap-4">
         <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
-        <div className="w-full max-w-[320px] min-w-[200px] max-md:max-w-none">
+          <div className="w-full max-w-[320px] min-w-[200px]">
           <Select
             label="Academic term"
             placeholder="Select term"
@@ -223,7 +223,6 @@ const ClassesPage = () => {
             rightSectionWidth={showLatestInSelect ? 118 : undefined}
             styles={{
               input: {
-                borderRadius: "0.75rem",
                 borderColor: "var(--mantine-color-gray-3)",
               },
             }}

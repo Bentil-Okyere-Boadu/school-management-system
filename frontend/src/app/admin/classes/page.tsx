@@ -413,54 +413,48 @@ const ClassesPage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-5 mb-6 px-0.5">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-4 lg:justify-between">
-            <div className="w-full max-w-[320px] min-w-[200px]">
-              <Select
-                label="Select term"
-                placeholder="Select term"
-                data={termSelectData}
-                value={selectedTermId}
-                onChange={(v) => setSelectedTermId(v)}
-                searchable
-                disabled={sortedTerms.length === 0}
-                className="w-full"
-                rightSection={termSelectRightSection}
-                rightSectionWidth={showLatestInSelect ? 118 : undefined}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2 lg:justify-end">
-              <button
-                type="button"
-                onClick={handleUnlockAll}
-                disabled={
-                  lockedCount === 0 ||
-                  approveResultPending ||
-                  bulkBusy ||
-                  !selectedTermId
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl border-2
-                 border-emerald-400 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800
-                  hover:bg-emerald-50 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-              >
-                <IconLockOpen size={18} />
-                Unlock all ({lockedCount})
-              </button>
-              <button
-                type="button"
-                onClick={handleLockAll}
-                disabled={
-                  unlockedCount === 0 ||
-                  approveResultPending ||
-                  bulkBusy ||
-                  !selectedTermId
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-red-400 bg-white px-4 py-2.5 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-              >
-                <IconLock size={18} />
-                Lock all ({unlockedCount})
-              </button>
-            </div>
+        <div className="flex flex-col lg:flex-row lg:items-end gap-4 lg:justify-between mb-6 px-0.5">
+          <div className="w-full max-w-[320px] min-w-[200px]">
+            <Select
+              label="Select term"
+              placeholder="Select term"
+              data={termSelectData}
+              value={selectedTermId}
+              onChange={(v) => setSelectedTermId(v)}
+              searchable
+              disabled={sortedTerms.length === 0}
+              className="w-full"
+              rightSection={termSelectRightSection}
+              rightSectionWidth={showLatestInSelect ? 118 : undefined}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <CustomButton
+              variant="outline"
+              text={`Unlock all (${lockedCount})`}
+              icon={<IconLockOpen size={18} />}
+              onClick={handleUnlockAll}
+              disabled={
+                lockedCount === 0 ||
+                approveResultPending ||
+                bulkBusy ||
+                !selectedTermId
+              }
+              loading={bulkBusy}
+            />
+            <CustomButton
+              variant="outline"
+              text={`Lock all (${unlockedCount})`}
+              icon={<IconLock size={18} />}
+              onClick={handleLockAll}
+              disabled={
+                unlockedCount === 0 ||
+                approveResultPending ||
+                bulkBusy ||
+                !selectedTermId
+              }
+              loading={bulkBusy}
+            />
           </div>
         </div>
 
