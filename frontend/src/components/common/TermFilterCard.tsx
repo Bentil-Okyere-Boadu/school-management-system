@@ -13,6 +13,11 @@ export type TermFilterCardProps = {
   /** Right side (e.g. primary action buttons). */
   actions?: React.ReactNode;
   className?: string;
+  /**
+   * When true, drop outer margin and max-width so the term select sits in the
+   * same CSS grid row as other Mantine filter fields (e.g. curriculum progress).
+   */
+  fitFilterGrid?: boolean;
 };
 
 /**
@@ -26,6 +31,7 @@ export function TermFilterCard({
   onChange,
   actions,
   className,
+  fitFilterGrid = false,
 }: TermFilterCardProps) {
   const latestTermId = sortedTerms[0]?.id;
 
@@ -66,9 +72,15 @@ export function TermFilterCard({
 
   return (
     <div
-      className={`flex flex-col lg:flex-row lg:items-end gap-4 lg:justify-between mb-5 px-0.5 ${className ?? ""}`}
+      className={`flex flex-col gap-4 px-0.5 ${fitFilterGrid ? "mb-0 w-full min-w-0" : "mb-5 lg:flex-row lg:items-end lg:justify-between"} ${className ?? ""}`}
     >
-      <div className="w-full max-w-[320px] min-w-[200px]">
+      <div
+        className={
+          fitFilterGrid
+            ? "w-full min-w-0"
+            : "w-full max-w-[320px] min-w-[200px]"
+        }
+      >
         <Select
           label="Select term"
           placeholder={
@@ -89,7 +101,11 @@ export function TermFilterCard({
         />
       </div>
       {actions ? (
-        <div className="flex flex-wrap gap-2 lg:justify-end">{actions}</div>
+        <div
+          className={`flex flex-wrap gap-2 ${fitFilterGrid ? "justify-start" : "lg:justify-end"}`}
+        >
+          {actions}
+        </div>
       ) : null}
     </div>
   );

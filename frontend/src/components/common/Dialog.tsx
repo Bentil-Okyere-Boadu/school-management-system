@@ -16,6 +16,8 @@ interface DialogProps {
   subheader?: string;
   hideCancelButton?: boolean;
   dialogWidth?: string;
+  /** When true, primary action is non-interactive (e.g. invalid form state). */
+  saveDisabled?: boolean;
 }
 
 export const Dialog: React.FC<DialogProps> = ({
@@ -30,6 +32,7 @@ export const Dialog: React.FC<DialogProps> = ({
   subheader= '',
   hideCancelButton = false,
   dialogWidth = 'w-[568px] max-w-[569px]',
+  saveDisabled = false,
 }) => {
 
   useEffect(() => {
@@ -103,7 +106,11 @@ export const Dialog: React.FC<DialogProps> = ({
           </button>
           )}
 
-          <CustomButton text={saveButtonText} onClick={onSave} />
+          <CustomButton
+            text={saveButtonText}
+            onClick={onSave}
+            disabled={saveDisabled}
+          />
         </div>
       </div>
     </div>

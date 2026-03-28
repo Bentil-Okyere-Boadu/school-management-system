@@ -1,0 +1,224 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Message Reminders",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/message-reminders": {
+      "post": {
+        "operationId": "MessageReminderController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMessageReminderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["MessageReminder"]
+      },
+      "get": {
+        "operationId": "MessageReminderController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["MessageReminder"]
+      }
+    },
+    "/api/v1/message-reminders/{id}": {
+      "get": {
+        "operationId": "MessageReminderController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["MessageReminder"]
+      },
+      "patch": {
+        "operationId": "MessageReminderController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMessageReminderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["MessageReminder"]
+      },
+      "delete": {
+        "operationId": "MessageReminderController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["MessageReminder"]
+      }
+    },
+    "/api/v1/message-reminders/{id}/toggle-status": {
+      "patch": {
+        "operationId": "MessageReminderController_toggleStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["MessageReminder"]
+      }
+    },
+    "/api/v1/message-reminders/{id}/send-now": {
+      "post": {
+        "operationId": "MessageReminderController_sendNow",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["MessageReminder"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateMessageReminderDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["immediate", "scheduled", "recurring"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "inactive", "scheduled"]
+          },
+          "sendToStudents": {
+            "type": "boolean"
+          },
+          "sendToParents": {
+            "type": "boolean"
+          },
+          "scheduledAt": {
+            "type": "string",
+            "example": "2025-12-31T09:00:00.000Z"
+          },
+          "targetStudentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "targetClassLevelIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "targetGradeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["title", "message"]
+      },
+      "UpdateMessageReminderDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "message-reminders"
+    }
+  ]
+}

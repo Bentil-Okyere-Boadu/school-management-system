@@ -14,6 +14,7 @@ import { CurriculumService } from './curriculum.service';
 import { CreateCurriculumDto } from './dto/create-curriculum.dto';
 import { UpdateCurriculumDto } from './dto/update-curriculum.dto';
 import { CreateTopicDto } from './dto/create-topic.dto';
+import { DuplicateTopicsToTermDto } from './dto/duplicate-topics-to-term.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { CreateSubtopicDto } from './dto/create-subtopic.dto';
 import { UpdateSubtopicDto } from './dto/update-subtopic.dto';
@@ -61,6 +62,16 @@ export class CurriculumController {
     @CurrentUser() admin: SchoolAdmin,
   ) {
     return this.curriculumService.createTopic(createTopicDto, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('topics/duplicate-to-term')
+  @Roles(Role.SchoolAdmin)
+  duplicateTopicsToTerm(
+    @Body() dto: DuplicateTopicsToTermDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.duplicateTopicsToTerm(dto, admin);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

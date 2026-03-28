@@ -1,0 +1,58 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Cleanup",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/cleanup/orphaned-users": {
+      "post": {
+        "operationId": "CleanupController_cleanupOrphanedUsers",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Cleanup"]
+      }
+    },
+    "/api/v1/cleanup/expired-tokens": {
+      "post": {
+        "operationId": "CleanupController_cleanupExpiredTokens",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Cleanup"]
+      }
+    },
+    "/api/v1/cleanup/stats": {
+      "get": {
+        "operationId": "CleanupController_getPendingUsersStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Cleanup"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "cleanup"
+    }
+  ]
+}

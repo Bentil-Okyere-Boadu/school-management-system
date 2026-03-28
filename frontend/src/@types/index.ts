@@ -928,6 +928,14 @@ export interface TopicPayload {
   plannedEndDate?: string | null;
 }
 
+/** POST /curriculum/topics/duplicate-to-term */
+export interface DuplicateTopicsToTermPayload {
+  sourceAcademicTermId: string;
+  targetAcademicTermId: string;
+  duplicateAllFromSource?: boolean;
+  topicIds?: string[];
+}
+
 /** POST /teacher/topics, PATCH /teacher/topics/:id */
 export interface TeacherTopicPayload {
   name: string;

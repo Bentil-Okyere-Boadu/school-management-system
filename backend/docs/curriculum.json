@@ -1,0 +1,722 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Curriculum",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/curriculum": {
+      "post": {
+        "operationId": "CurriculumController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCurriculumDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "get": {
+        "operationId": "CurriculumController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/topics": {
+      "post": {
+        "operationId": "CurriculumController_createTopic",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "get": {
+        "operationId": "CurriculumController_findAllTopics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/topics/duplicate-to-term": {
+      "post": {
+        "operationId": "CurriculumController_duplicateTopicsToTerm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateTopicsToTermDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/topics/{topicId}/detail": {
+      "get": {
+        "operationId": "CurriculumController_getTopicDetail",
+        "parameters": [
+          {
+            "name": "topicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/topics/{topicId}/subtopics": {
+      "post": {
+        "operationId": "CurriculumController_createSubtopic",
+        "parameters": [
+          {
+            "name": "topicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubtopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "get": {
+        "operationId": "CurriculumController_findSubtopicsByTopic",
+        "parameters": [
+          {
+            "name": "topicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/topics/{id}": {
+      "get": {
+        "operationId": "CurriculumController_findOneTopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "patch": {
+        "operationId": "CurriculumController_updateTopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "delete": {
+        "operationId": "CurriculumController_removeTopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/curricula/{curriculumId}/topics": {
+      "get": {
+        "operationId": "CurriculumController_findAllTopicsByCurriculum",
+        "parameters": [
+          {
+            "name": "curriculumId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/subject-catalogs/{subjectCatalogId}/topics": {
+      "get": {
+        "operationId": "CurriculumController_findAllTopicsBySubjectCatalog",
+        "parameters": [
+          {
+            "name": "subjectCatalogId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/progress-dashboard": {
+      "get": {
+        "operationId": "CurriculumController_getProgressDashboard",
+        "parameters": [
+          {
+            "name": "curriculumId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectCatalogId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teacherId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/subtopics/{id}": {
+      "patch": {
+        "operationId": "CurriculumController_updateSubtopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubtopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "delete": {
+        "operationId": "CurriculumController_removeSubtopic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/notes": {
+      "post": {
+        "operationId": "CurriculumController_createNote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCurriculumTopicNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/topics/{topicId}/notes": {
+      "get": {
+        "operationId": "CurriculumController_getNotesForTopic",
+        "parameters": [
+          {
+            "name": "topicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/notes/{id}": {
+      "delete": {
+        "operationId": "CurriculumController_deleteNote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    },
+    "/api/v1/curriculum/{id}": {
+      "get": {
+        "operationId": "CurriculumController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "patch": {
+        "operationId": "CurriculumController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCurriculumDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      },
+      "delete": {
+        "operationId": "CurriculumController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Curriculum"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateCurriculumDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "subjectCatalogIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "academicTermId": {
+            "type": "string",
+            "description": "Academic term UUID — omit for a reusable (term-agnostic) curriculum; subtopic progress stays per term via completions"
+          }
+        },
+        "required": ["name", "subjectCatalogIds"]
+      },
+      "CreateTopicDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "order": {
+            "type": "number",
+            "minimum": 0
+          },
+          "plannedStartDate": {
+            "type": "string",
+            "description": "Planned start date (ISO date)"
+          },
+          "plannedEndDate": {
+            "type": "string",
+            "description": "Planned end date (ISO date)"
+          },
+          "subjectCatalogId": {
+            "type": "string",
+            "description": "Subject catalog UUID"
+          },
+          "curriculumId": {
+            "type": "string",
+            "description": "Curriculum UUID"
+          },
+          "academicTermId": {
+            "type": "string",
+            "description": "Academic term UUID (must belong to the school)"
+          }
+        },
+        "required": [
+          "name",
+          "subjectCatalogId",
+          "curriculumId",
+          "academicTermId"
+        ]
+      },
+      "DuplicateTopicsToTermDto": {
+        "type": "object",
+        "properties": {
+          "sourceAcademicTermId": {
+            "type": "string",
+            "description": "Academic term to copy topics from"
+          },
+          "targetAcademicTermId": {
+            "type": "string",
+            "description": "Academic term to create duplicated topics in"
+          },
+          "duplicateAllFromSource": {
+            "type": "boolean",
+            "description": "When true, duplicate every topic whose effective term is the source term. Do not send topicIds."
+          },
+          "topicIds": {
+            "description": "Topic UUIDs to copy. Required unless duplicateAllFromSource is true.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["sourceAcademicTermId", "targetAcademicTermId"]
+      },
+      "CreateSubtopicDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["name"]
+      },
+      "UpdateTopicDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateSubtopicDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateCurriculumTopicNoteDto": {
+        "type": "object",
+        "properties": {
+          "topicId": {
+            "type": "string",
+            "description": "Topic UUID"
+          },
+          "subjectId": {
+            "type": "string",
+            "description": "Subject UUID - omit for school-wide note"
+          },
+          "content": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Parent note UUID for replies"
+          },
+          "academicTermId": {
+            "type": "string",
+            "description": "Academic term UUID — scopes the note to a term (recommended when topics are reused across terms)"
+          }
+        },
+        "required": ["topicId", "content"]
+      },
+      "UpdateCurriculumDto": {
+        "type": "object",
+        "properties": {
+          "academicTermId": {
+            "type": "object",
+            "nullable": true,
+            "description": "Academic term UUID, or null to unlink (term-agnostic curriculum)"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

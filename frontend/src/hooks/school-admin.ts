@@ -38,6 +38,7 @@ import {
   UpdateSubtopicPayload,
   Topic,
   TopicPayload,
+  DuplicateTopicsToTermPayload,
   AdminAssignment,
   AssignmentSubmission,
   PlannerEvent,
@@ -893,6 +894,17 @@ export const useDeleteTopic = () => {
   return useMutation({
     mutationFn: (id: string) => {
       return customAPI.delete(`/curriculum/topics/${id}`);
+    },
+  });
+};
+
+export const useDuplicateTopicsToTerm = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: DuplicateTopicsToTermPayload) =>
+      customAPI.post("/curriculum/topics/duplicate-to-term", payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["curriculumTopics"] });
     },
   });
 };
