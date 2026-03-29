@@ -30,6 +30,8 @@ import { CurriculumModule } from './curriculum/curriculum.module';
 import { PlannerModule } from './planner/planner.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 
 @Module({
   imports: [
@@ -62,7 +64,7 @@ import { APP_GUARD } from '@nestjs/core';
       // ssl: {
       //   rejectUnauthorized : false,
       // },
-      logging: true,
+      logging: false,
     }),
     CommonModule,
     RoleModule,
@@ -95,6 +97,10 @@ import { APP_GUARD } from '@nestjs/core';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TenantContextInterceptor,
     },
   ],
 })

@@ -1,0 +1,231 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - School",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/schools/create": {
+      "post": {
+        "operationId": "SchoolController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSchoolDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
+    "/api/v1/schools": {
+      "get": {
+        "operationId": "SchoolController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
+    "/api/v1/schools/dashboard": {
+      "get": {
+        "operationId": "SchoolController_getDashboardData",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
+    "/api/v1/schools/logo": {
+      "delete": {
+        "operationId": "SchoolController_deleteLogo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      },
+      "post": {
+        "operationId": "SchoolController_uploadLogo",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
+    "/api/v1/schools/{id}": {
+      "get": {
+        "operationId": "SchoolController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      },
+      "delete": {
+        "operationId": "SchoolController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
+    "/api/v1/schools/update-calendly-url": {
+      "put": {
+        "operationId": "SchoolController_updateCalendlyUrl",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCalendlyUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
+    "/api/v1/schools/update-grading-percentages": {
+      "put": {
+        "operationId": "SchoolController_updateGradingPercentages",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGradingPercentagesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateSchoolDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "school@example.com"
+          },
+          "calendlyUrl": {
+            "type": "string",
+            "example": "https://calendly.com/school"
+          }
+        },
+        "required": ["name", "calendlyUrl"]
+      },
+      "UpdateCalendlyUrlDto": {
+        "type": "object",
+        "properties": {
+          "calendlyUrl": {
+            "type": "string",
+            "example": "https://calendly.com/school"
+          },
+          "schoolId": {
+            "type": "string",
+            "description": "School UUID"
+          }
+        },
+        "required": ["calendlyUrl", "schoolId"]
+      },
+      "UpdateGradingPercentagesDto": {
+        "type": "object",
+        "properties": {
+          "schoolId": {
+            "type": "string",
+            "description": "School UUID"
+          },
+          "classScorePercentage": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "examScorePercentage": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["schoolId", "classScorePercentage", "examScorePercentage"]
+      }
+    }
+  },
+  "tags": []
+}

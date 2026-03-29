@@ -21,8 +21,7 @@ export class ReminderScheduler {
     private readonly service: MessageReminderService,
   ) {}
 
-  // every 30 seconds (override via REMINDER_CRON if you like)
-  @Cron(process.env.REMINDER_CRON ?? '*/30 * * * * *')
+  @Cron(process.env.REMINDER_CRON ?? '0 */2 * * * *')
   async tick() {
     if (this.running) return;
     this.running = true;

@@ -1,30 +1,75 @@
 "use client";
-import React, { useState } from "react";
-import { SearchBar } from "@/components/common/SearchBar";
+import React, { useState, useMemo } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
-import { Topic, ErrorResponse } from "@/@types";
-import { useGetTeacherTopics, useGetTeacherSubjects, useCreateTeacherTopic, useUpdateTeacherTopic, useDeleteTeacherTopic } from "@/hooks/teacher";
+import { Topic, ErrorResponse, TeacherTopicPayload } from "@/@types";
+import { useGetTeacherTopics, useGetTeacherSubjects, useCreateTeacherTopic, useUpdateTeacherTopic, useDeleteTeacherTopic, useTeacherAcademicTermSelection } from "@/hooks/teacher";
+import { TeacherTermSelect } from "@/components/teacher/subjects/TeacherTermSelect";
+import { buildTermSelectData } from "@/utils/schoolTerms";
 import { HashLoader } from "react-spinners";
-import { Select, Menu } from "@mantine/core";
+import { Badge, Combobox, Select, Menu } from "@mantine/core";
 import { IconDots, IconEdit, IconTrashFilled } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 
+function toDateInputValue(iso: string | null | undefined): string {
+  if (iso == null || iso === "") return "";
+  const s = String(iso).trim();
+  return s.length >= 10 ? s.slice(0, 10) : "";
+}
+
 
 export const TopicsTabSection: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    calendars,
+    calendarsLoading,
+    sortedTerms,
+    academicTermId,
+    setAcademicTermId,
+  } = useTeacherAcademicTermSelection();
+
+  const latestTermId = sortedTerms[0]?.id;
+
+  const teacherTermSelectData = useMemo(
+    () => buildTermSelectData(calendars ?? [], sortedTerms),
+    [calendars, sortedTerms],
+  );
+
+  const termSelectRightSection = (termId: string) => (
+    <div className="flex items-center justify-end gap-1.5 pr-0.5">
+      {latestTermId && termId === latestTermId ? (
+        <Badge
+          variant="light"
+          size="xs"
+          className="shrink-0 font-semibold"
+          style={{ backgroundColor: "#F3E8FF", color: "#6B21A8" }}
+        >
+          Latest
+        </Badge>
+      ) : null}
+      <Combobox.Chevron size="sm" />
+    </div>
+  );
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
-  const [topic, setTopic] = useState<Partial<Topic & { subjectCatalogId: string }>>({
+  const [topic, setTopic] = useState<
+    Partial<Topic & { subjectCatalogId: string; plannedStartDate: string; plannedEndDate: string }>
+  >({
     id: "",
     name: "",
     description: "",
     subjectCatalogId: "",
+    plannedStartDate: "",
+    plannedEndDate: "",
   });
+  const [dialogAcademicTermId, setDialogAcademicTermId] = useState("");
 
-  const { teacherTopics: topics, isLoading, refetch } = useGetTeacherTopics(searchQuery);
+  const { teacherTopics: topics, isLoading, refetch } = useGetTeacherTopics(
+    "",
+    academicTermId,
+  );
   const { teacherSubjects } = useGetTeacherSubjects("");
   const { mutate: createTopic, isPending: creating } = useCreateTeacherTopic();
   const { mutate: updateTopic, isPending: updating } = useUpdateTeacherTopic(topic?.id || "");
@@ -43,7 +88,14 @@ export const TopicsTabSection: React.FC = () => {
       name: "",
       description: "",
       subjectCatalogId: "",
+      plannedStartDate: "",
+      plannedEndDate: "",
     });
+    setDialogAcademicTermId(
+      academicTermId && sortedTerms.some((t) => t.id === academicTermId)
+        ? academicTermId
+        : sortedTerms[0]?.id ?? "",
+    );
     setIsDialogOpen(true);
   };
 
@@ -54,7 +106,12 @@ export const TopicsTabSection: React.FC = () => {
       name: row.name,
       description: row.description,
       subjectCatalogId: row.subjectCatalog?.id || "",
+      plannedStartDate: toDateInputValue(row.plannedStartDate),
+      plannedEndDate: toDateInputValue(row.plannedEndDate),
     });
+    setDialogAcademicTermId(
+      row.academicTerm?.id ?? row.academicTermId ?? academicTermId ?? "",
+    );
     setIsDialogOpen(true);
   };
 
@@ -67,14 +124,39 @@ export const TopicsTabSection: React.FC = () => {
   };
 
   const saveTopic = () => {
-    const payload = {
+    const start = topic.plannedStartDate?.trim() ?? "";
+    const end = topic.plannedEndDate?.trim() ?? "";
+    if (isCreate && !dialogAcademicTermId) {
+      toast.error("Select an academic term for this topic.");
+      return;
+    }
+    if (
+      isCreate &&
+      !sortedTerms.some((t) => t.id === dialogAcademicTermId)
+    ) {
+      toast.error("Invalid academic term.");
+      return;
+    }
+    const base: TeacherTopicPayload = {
       name: topic.name || "",
-      description: topic.description || "",
+      description: (topic.description as string),
       subjectCatalogId: topic.subjectCatalogId || "",
+      ...(isCreate && dialogAcademicTermId
+        ? { academicTermId: dialogAcademicTermId }
+        : {}),
+      ...(isCreate
+        ? {
+            ...(start ? { plannedStartDate: start } : {}),
+            ...(end ? { plannedEndDate: end } : {}),
+          }
+        : {
+            plannedStartDate: start || null,
+            plannedEndDate: end || null,
+          }),
     };
 
     if (isCreate) {
-      createTopic(payload, {
+      createTopic(base, {
         onSuccess: () => {
           toast.success("Topic created successfully");
           setIsDialogOpen(false);
@@ -85,7 +167,7 @@ export const TopicsTabSection: React.FC = () => {
         },
       });
     } else {
-      updateTopic(payload, {
+      updateTopic(base, {
         onSuccess: () => {
           toast.success("Topic updated successfully");
           setIsDialogOpen(false);
@@ -111,25 +193,19 @@ export const TopicsTabSection: React.FC = () => {
     });
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
   return (
     <div className="pb-8">
 
-      <div className="w-full flex justify-between mb-4">
-        {false  ? (        
-          <SearchBar
-            placeholder="Search topics..."
-            onSearch={handleSearch}
-            className="w-full max-w-md"
-          />
-        ) : (
-          <div></div>
-        )}
-        <CustomButton text="Create Topic" onClick={onOpenCreate} />
-      </div>
+      <TeacherTermSelect
+        calendars={calendars ?? []}
+        calendarsLoading={calendarsLoading}
+        sortedTerms={sortedTerms}
+        academicTermId={academicTermId}
+        setAcademicTermId={setAcademicTermId}
+        actions={
+          <CustomButton text="Create Topic" onClick={onOpenCreate} />
+        }
+      />
 
       <section className="bg-white mt-2">
         <div className="overflow-x-auto">
@@ -145,6 +221,12 @@ export const TopicsTabSection: React.FC = () => {
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-center max-md:px-5 max-w-[150px]">
                     <div>Subject</div>
                   </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 whitespace-nowrap">
+                    <div>Planned start</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 whitespace-nowrap">
+                    <div>Planned end</div>
+                  </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-center max-md:px-5 max-w-[120px]">
                     <div>Created By</div>
                   </th>
@@ -153,10 +235,40 @@ export const TopicsTabSection: React.FC = () => {
               </thead>
               <tbody>
                 {(() => {
+                  if (!calendarsLoading && !sortedTerms.length) {
+                    return (
+                      <tr>
+                        <td colSpan={7}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">No academic terms</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Your school has no terms in its calendars yet.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  if (!academicTermId) {
+                    return (
+                      <tr>
+                        <td colSpan={7}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">Select a term</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Choose an academic term above to load topics.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
                   if (isLoading) {
                     return (
                       <tr>
-                        <td colSpan={5}>
+                        <td colSpan={7}>
                           <div className="relative py-20 bg-white">
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                               <HashLoader color="#AB58E7" size={40} />
@@ -170,7 +282,7 @@ export const TopicsTabSection: React.FC = () => {
                   if (!topics?.length) {
                     return (
                       <tr>
-                        <td colSpan={5}>
+                        <td colSpan={7}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No topics assigned</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -200,6 +312,12 @@ export const TopicsTabSection: React.FC = () => {
                         <div className="flex items-center justify-center">
                           {row.subjectCatalog?.name}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 whitespace-nowrap text-sm text-gray-800">
+                        {row.plannedStartDate}
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 whitespace-nowrap text-sm text-gray-800">
+                        {row.plannedEndDate}
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex items-center justify-center">
@@ -269,6 +387,35 @@ export const TopicsTabSection: React.FC = () => {
             value={topic.description || ""}
           />
           <Select
+            className="mt-4"
+            label="Academic term"
+            placeholder={
+              calendarsLoading
+                ? "Loading terms…"
+                : sortedTerms.length === 0
+                  ? "No terms configured"
+                  : "Select term"
+            }
+            data={teacherTermSelectData}
+            value={dialogAcademicTermId}
+            onChange={(v) => setDialogAcademicTermId(v ?? "")}
+            searchable
+            disabled={
+              !isCreate || calendarsLoading || sortedTerms.length === 0
+            }
+            description={
+              isCreate
+                ? undefined
+                : "Term cannot be changed when editing a topic."
+            }
+            rightSection={termSelectRightSection(dialogAcademicTermId)}
+            rightSectionWidth={
+              latestTermId && dialogAcademicTermId === latestTermId
+                ? 118
+                : undefined
+            }
+          />
+          <Select
             label="Subject"
             required
             placeholder="Select subject"
@@ -277,6 +424,32 @@ export const TopicsTabSection: React.FC = () => {
             onChange={(v) => setTopic((p) => ({ ...p, subjectCatalogId: v || "" }))}
             searchable
           />
+          <div className="grid md:grid-cols-2 gap-4 mt-5">
+            <InputField
+              className="!py-0"
+              type="date"
+              label="Planned start"
+              value={topic.plannedStartDate ?? ""}
+              onChange={(e) =>
+                setTopic((p) => ({
+                  ...p,
+                  plannedStartDate: e.target.value,
+                }))
+              }
+            />
+            <InputField
+              className="!py-0"
+              type="date"
+              label="Planned end"
+              value={topic.plannedEndDate ?? ""}
+              onChange={(e) =>
+                setTopic((p) => ({
+                  ...p,
+                  plannedEndDate: e.target.value,
+                }))
+              }
+            />
+          </div>
         </form>
       </Dialog>
 

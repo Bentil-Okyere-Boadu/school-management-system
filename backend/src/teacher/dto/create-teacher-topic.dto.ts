@@ -1,16 +1,42 @@
-import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateTeacherTopicDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   name: string;
 
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   description?: string;
 
-  // subject = SubjectCatalog
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  plannedStartDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  plannedEndDate?: string;
+
+  @ApiProperty({ description: 'Subject catalog UUID' })
   @IsUUID()
   @IsNotEmpty()
   subjectCatalogId: string;
+
+  @ApiProperty({
+    description: 'Academic term UUID (must belong to the school)',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  academicTermId: string;
 }

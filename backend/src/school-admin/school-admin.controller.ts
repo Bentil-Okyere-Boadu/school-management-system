@@ -12,6 +12,7 @@ import {
   Patch,
   Delete,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
@@ -37,6 +38,7 @@ import {
   AttendanceService,
 } from 'src/attendance/attendance.service';
 
+@ApiTags('School Admin')
 @Controller('school-admin')
 @UseInterceptors(SanitizeResponseInterceptor)
 export class SchoolAdminController {
@@ -78,30 +80,24 @@ export class SchoolAdminController {
   @Get('users')
   @Roles(Role.SchoolAdmin)
   @UseInterceptors(DeepSanitizeResponseInterceptor)
-  findAllUsers(@CurrentUser() admin: SchoolAdmin, @Query() query: QueryString) {
-    return this.schoolAdminService.findAllUsers(admin.school.id, query);
+  findAllUsers(@Query() query: QueryString) {
+    return this.schoolAdminService.findAllUsers(undefined, query);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('students')
   @Roles(Role.SchoolAdmin)
-  async findAllStudents(
-    @CurrentUser() admin: SchoolAdmin,
-    @Query() query: QueryString,
-  ) {
-    return this.schoolAdminService.findAllStudents(admin.school.id, query);
+  async findAllStudents(@Query() query: QueryString) {
+    return this.schoolAdminService.findAllStudents(undefined, query);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('students/for-class-assignment')
   @Roles(Role.SchoolAdmin)
   @UseInterceptors(DeepSanitizeResponseInterceptor)
-  findStudentsForClassAssignment(
-    @CurrentUser() admin: SchoolAdmin,
-    @Query() query: QueryString,
-  ) {
+  findStudentsForClassAssignment(@Query() query: QueryString) {
     return this.schoolAdminService.findStudentsForClassAssignment(
-      admin.school.id,
+      undefined,
       query,
     );
   }
@@ -124,8 +120,8 @@ export class SchoolAdminController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SchoolAdmin)
   @Get('admissions/analytics')
-  async getAdmissionAnalytics(@CurrentUser() admin: SchoolAdmin) {
-    return this.admissionService.getAdmissionAnalytics(admin.school.id);
+  async getAdmissionAnalytics() {
+    return this.admissionService.getAdmissionAnalytics();
   }
   @UseGuards(SchoolAdminJwtAuthGuard)
   @Get('my-school/details')
@@ -144,11 +140,8 @@ export class SchoolAdminController {
   @Get('users/:id')
   @Roles(Role.SchoolAdmin)
   @UseInterceptors(DeepSanitizeResponseInterceptor)
-  async getUserById(
-    @Param('id') id: string,
-    @CurrentUser() admin: SchoolAdmin,
-  ) {
-    return this.schoolAdminService.getUserById(id, admin.school.id);
+  async getUserById(@Param('id') id: string) {
+    return this.schoolAdminService.getUserById(id);
   }
   @UseGuards(
     SchoolAdminJwtAuthGuard,
@@ -164,11 +157,8 @@ export class SchoolAdminController {
   @Get('admissions')
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SchoolAdmin)
-  getAdmissionsBySchool(
-    @CurrentUser() admin: SchoolAdmin,
-    @Query() query: QueryString,
-  ) {
-    return this.admissionService.findAllBySchool(admin.school.id, query);
+  getAdmissionsBySchool(@Query() query: QueryString) {
+    return this.admissionService.findAllBySchool(query);
   }
   @Patch('admissions/:applicationId/status')
   @Roles(Role.SchoolAdmin)
@@ -193,14 +183,8 @@ export class SchoolAdminController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('teachers/:id/assignments')
   @Roles(Role.SchoolAdmin)
-  async getTeacherAssignments(
-    @Param('id') teacherId: string,
-    @CurrentUser() admin: SchoolAdmin,
-  ) {
-    return this.schoolAdminService.getTeacherAssignments(
-      teacherId,
-      admin.school.id,
-    );
+  async getTeacherAssignments(@Param('id') teacherId: string) {
+    return this.schoolAdminService.getTeacherAssignments(teacherId);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -208,14 +192,9 @@ export class SchoolAdminController {
   @Roles(Role.SchoolAdmin)
   async suspendTeacher(
     @Param('id') teacherId: string,
-    @CurrentUser() admin: SchoolAdmin,
     @Body() body: { suspend: boolean },
   ) {
-    return this.schoolAdminService.suspendTeacher(
-      teacherId,
-      body.suspend,
-      admin.school.id,
-    );
+    return this.schoolAdminService.suspendTeacher(teacherId, body.suspend);
   }
 
   @UseGuards(
@@ -239,15 +218,15 @@ export class SchoolAdminController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete('users/:id')
   @Roles(Role.SchoolAdmin)
-  async deleteUser(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
-    return this.schoolAdminService.deleteUser(id, admin.school.id);
+  async deleteUser(@Param('id') id: string) {
+    return this.schoolAdminService.deleteUser(id);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('dashboard/stats')
   @Roles(Role.SchoolAdmin)
-  async getDashboardStats(@CurrentUser() admin: SchoolAdmin) {
-    return this.schoolAdminService.getDashboardStats(admin.school.id);
+  async getDashboardStats() {
+    return this.schoolAdminService.getDashboardStats();
   }
   // @UseGuards(
   //   SchoolAdminJwtAuthGuard,
@@ -332,14 +311,9 @@ export class SchoolAdminController {
   @Roles(Role.SchoolAdmin)
   async archiveAdmission(
     @Param('applicationId') applicationId: string,
-    @CurrentUser() admin: SchoolAdmin,
     @Body() body: { archive: boolean },
   ) {
-    return this.admissionService.archiveAdmission(
-      applicationId,
-      admin.school.id,
-      body.archive,
-    );
+    return this.admissionService.archiveAdmission(applicationId, body.archive);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -388,11 +362,8 @@ export class SchoolAdminController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('assignments')
   @Roles(Role.SchoolAdmin)
-  async getAllAssignments(
-    @CurrentUser() admin: SchoolAdmin,
-    @Query() query: QueryString,
-  ) {
-    return this.schoolAdminService.findAllAssignments(admin.school.id, query);
+  async getAllAssignments(@Query() query: QueryString) {
+    return this.schoolAdminService.findAllAssignments(undefined, query);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

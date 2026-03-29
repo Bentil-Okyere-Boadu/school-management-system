@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateTopicDto } from './create-topic.dto';
-import { IsOptional, IsString, IsInt, Min, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, IsUUID, IsDateString } from 'class-validator';
 
 export class UpdateTopicDto extends PartialType(CreateTopicDto) {
   @IsOptional()
@@ -15,6 +15,14 @@ export class UpdateTopicDto extends PartialType(CreateTopicDto) {
   @IsInt()
   @Min(0)
   order?: number;
+
+  @IsOptional()
+  @IsDateString()
+  plannedStartDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  plannedEndDate?: string;
 
   @IsOptional()
   @IsUUID()

@@ -1,4 +1,7 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
 export class UpdateNotificationDto {
+  @ApiPropertyOptional()
   read?: boolean;
 }
 

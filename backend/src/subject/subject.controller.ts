@@ -29,7 +29,9 @@ import { QueryString } from 'src/common/api-features/api-features';
 import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
 import { ClassLevelResultNotApprovedGuard } from 'src/auth/guards/classLevelResultNotApproved.guard';
 import { Role } from 'src/auth/enums/role.enum';
-
+/*
+Subject = a teaching assignment: one teacher + one SubjectCatalog + one or more ClassLevels (e.g. “Mr. Kofi teaches Mathematics to Grade 8”
+*/
 @Controller('subject')
 export class SubjectController {
   constructor(
@@ -72,12 +74,14 @@ export class SubjectController {
     @CurrentUser() teacher: Teacher,
     @Body('action') action: 'approve' | 'unapprove' = 'approve',
     @Body('forceApprove') forceApprove?: boolean,
+    @Body('academicTermId') academicTermId?: string,
   ) {
     return this.subjectService.toggleClassResultsApproval(
       classLevelId,
       teacher,
       action,
       forceApprove,
+      academicTermId,
     );
   }
 
@@ -85,11 +89,13 @@ export class SubjectController {
   @Get('class-results-approval-status/:classLevelId')
   async getClassResultsApprovalStatus(
     @Param('classLevelId') classLevelId: string,
+    @Query('academicTermId') academicTermId: string | undefined,
     @CurrentUser() teacher: Teacher,
   ) {
     return this.subjectService.getClassResultsApprovalStatus(
       classLevelId,
       teacher,
+      academicTermId,
     );
   }
 
@@ -99,11 +105,13 @@ export class SubjectController {
     @Body('classLevelId') classLevelId: string,
     @CurrentUser() schoolAdmin: SchoolAdmin,
     @Body('action') action: 'approve' | 'unapprove' = 'approve',
+    @Body('academicTermId') academicTermId?: string,
   ) {
     return this.subjectService.toggleSchoolAdminApproval(
       classLevelId,
       schoolAdmin,
       action,
+      academicTermId,
     );
   }
 
@@ -111,11 +119,13 @@ export class SubjectController {
   @Get('school-admin/class-results-approval-status/:classLevelId')
   async getSchoolAdminClassResultsApprovalStatus(
     @Param('classLevelId') classLevelId: string,
+    @Query('academicTermId') academicTermId: string | undefined,
     @CurrentUser() schoolAdmin: SchoolAdmin,
   ) {
     return this.subjectService.getClassResultsApprovalStatus(
       classLevelId,
       schoolAdmin,
+      academicTermId,
     );
   }
 

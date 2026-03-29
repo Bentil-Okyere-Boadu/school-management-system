@@ -56,6 +56,7 @@ export class StudentJwtStrategy extends PassportStrategy(
       role: student.role,
       studentId: student.studentId,
       school: student.school,
+      schoolId: student.school?.id,
     };
   }
 }

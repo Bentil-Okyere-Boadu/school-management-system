@@ -3,11 +3,9 @@ import React, { useState, useEffect } from "react";
 import { Pagination } from "@/components/common/Pagination";
 import { UserTable } from "@/components/admin/users/UsersTable";
 import { SearchBar } from "@/components/common/SearchBar";
-import FilterButton from "@/components/common/FilterButton";
-import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import CustomButton from "@/components/Button";
 import { Dialog } from "@/components/common/Dialog";
-import { Select } from '@mantine/core';
+import { Select } from "@mantine/core";
 import InputField from "@/components/InputField";
 import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,10 +13,16 @@ import { useDebouncer } from "@/hooks/generalHooks";
 import { useGetSchoolUsers, useInvitation } from "@/hooks/school-admin";
 import { ErrorResponse, Roles } from "@/@types";
 
+const ACCOUNT_STATUS_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "pending", label: "Pending" },
+  { value: "archived", label: "Archived" },
+];
+
 const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
   const [selectedDataRole, setSelectedDataRole] = useState<string>("teacher");
   const [firstName, setFirstName] = useState("");
@@ -30,12 +34,6 @@ const UsersPage: React.FC = () => {
 
   const { schoolUsers, paginationValues, refetch, isLoading } = useGetSchoolUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "","",  10);
 
-  const statusOptions = [
-    { value: "", label: "Status" },
-    { value: "active", label: "Active" },
-    { value: "pending", label: "Pending" },
-    { value: "archived", label: "Archived" }
-  ];
   const roles = [
     { value: "teacher", label: "Teacher" },
     { value: "student", label: "Student" }
@@ -48,11 +46,6 @@ const UsersPage: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-  };
-
-  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = event.target.value;
-    setSelectedStatus(selectedValue);
   };
 
   const handleRoleDataChange = (event: string = Roles.TEACHER) => {
@@ -83,25 +76,29 @@ const UsersPage: React.FC = () => {
   }
 
   useEffect(() => {
-    refetch();
+    setCurrentPage(1);
   }, [selectedStatus]);
 
   return (
     <div>
-      <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
-        <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+      <div className="flex flex-wrap items-end justify-between gap-4 w-full mb-5 px-0.5">
+        <div className="flex flex-wrap items-end gap-4">
+          <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+          <Select
+            label="Account status"
+            placeholder="All statuses"
+            data={ACCOUNT_STATUS_OPTIONS}
+            value={selectedStatus}
+            onChange={(v) => setSelectedStatus(v ?? "")}
+            searchable={false}
+            className="w-[min(220px,100%)] min-w-[180px]"
+            comboboxProps={{ withinPortal: true }}
+          />
+        </div>
         <CustomButton text="Invite New User" onClick={() => setIsInviteUserDialogOpen(true)} />
       </div>
-      <div className="flex flex-col items-end mb-4 px-1">
-        <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
-        {showFilterOptions && (
-          <div className="flex gap-3 mt-3">
-            <CustomSelectTag value={selectedStatus} options={statusOptions} onOptionItemClick={handleStatusChange} />
-          </div>
-        )}
-      </div>
 
-      <UserTable users={schoolUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus('')} busy={isLoading} />
+      <UserTable users={schoolUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus("")} busy={isLoading} />
 
       <Pagination
         currentPage={currentPage}

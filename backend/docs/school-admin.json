@@ -1,0 +1,687 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - School Admin",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/school-admin/login": {
+      "post": {
+        "operationId": "SchoolAdminController_login",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/forgot-password": {
+      "post": {
+        "operationId": "SchoolAdminController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/reset-password": {
+      "post": {
+        "operationId": "SchoolAdminController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/users": {
+      "get": {
+        "operationId": "SchoolAdminController_findAllUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/students": {
+      "get": {
+        "operationId": "SchoolAdminController_findAllStudents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/students/for-class-assignment": {
+      "get": {
+        "operationId": "SchoolAdminController_findStudentsForClassAssignment",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/me": {
+      "get": {
+        "operationId": "SchoolAdminController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/profile/me": {
+      "put": {
+        "operationId": "SchoolAdminController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/admissions/analytics": {
+      "get": {
+        "operationId": "SchoolAdminController_getAdmissionAnalytics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/my-school/details": {
+      "get": {
+        "operationId": "SchoolAdminController_getMySchoolWithDetails",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/my-school": {
+      "get": {
+        "operationId": "SchoolAdminController_getMySchool",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/users/{id}": {
+      "get": {
+        "operationId": "SchoolAdminController_getUserById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      },
+      "delete": {
+        "operationId": "SchoolAdminController_deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/admissions/{applicationId}": {
+      "get": {
+        "operationId": "SchoolAdminController_getAdmissionById",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/admissions": {
+      "get": {
+        "operationId": "SchoolAdminController_getAdmissionsBySchool",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/admissions/{applicationId}/status": {
+      "patch": {
+        "operationId": "SchoolAdminController_updateAdmissionStatus",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdmissionStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/users/{id}/archive": {
+      "put": {
+        "operationId": "SchoolAdminController_archiveUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/teachers/{id}/assignments": {
+      "get": {
+        "operationId": "SchoolAdminController_getTeacherAssignments",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/teachers/{id}/suspend": {
+      "put": {
+        "operationId": "SchoolAdminController_suspendTeacher",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/admissions/{applicationId}/interview": {
+      "post": {
+        "operationId": "SchoolAdminController_sendInterviewInvitation",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/dashboard/stats": {
+      "get": {
+        "operationId": "SchoolAdminController_getDashboardStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/classes/{classLevelId}/attendance": {
+      "get": {
+        "operationId": "SchoolAdminController_getClassAttendance",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/classes/{classLevelId}/terms/{termId}/attendance": {
+      "get": {
+        "operationId": "SchoolAdminController_getClassAttendanceByTerm",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/admissions/{applicationId}/archive": {
+      "put": {
+        "operationId": "SchoolAdminController_archiveAdmission",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/classes/{classLevelId}/calendars/{calendarId}/attendance": {
+      "get": {
+        "operationId": "SchoolAdminController_getClassAttendanceByAcademicYear",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "calendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/classes/{classLevelId}/calendars/{calendarId}/attendance/grouped": {
+      "get": {
+        "operationId": "SchoolAdminController_getClassAttendanceGroupedByTermAndMonth",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "calendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/classes/{classLevelId}/students/{studentId}/calendars/{calendarId}/attendance/grouped": {
+      "get": {
+        "operationId": "SchoolAdminController_getStudentAttendanceGroupedByTermAndMonth",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "calendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/assignments": {
+      "get": {
+        "operationId": "SchoolAdminController_getAllAssignments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/assignments/{id}/students": {
+      "get": {
+        "operationId": "SchoolAdminController_getAssignmentStudents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pending",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "submitted",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@school.com"
+          }
+        },
+        "required": ["email"]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Password reset token from email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": ["token", "password"]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "otherName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "phoneContact": {
+            "type": "string"
+          },
+          "PlaceOfBirth": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female"]
+          },
+          "DateOfBirth": {
+            "type": "string"
+          },
+          "BoxAddress": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "streetAddress": {
+            "type": "string"
+          },
+          "optionalPhoneContact": {
+            "type": "string"
+          },
+          "optionalPhoneContactTwo": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateAdmissionStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "Application Submitted",
+              "Interview Completed",
+              "Interview Pending",
+              "Accepted",
+              "Rejected",
+              "Waitlisted",
+              "Archived"
+            ]
+          }
+        },
+        "required": ["status"]
+      }
+    }
+  },
+  "tags": []
+}

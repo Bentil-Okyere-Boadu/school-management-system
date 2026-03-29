@@ -166,7 +166,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
     <div className="pb-8 px-0.5">
       {/* <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full px-0.5" /> */}
 
-      <div className="flex gap-3 my-6 justify-between">
+      <div className="flex flex-wrap gap-3 my-6 justify-between">
         <div className="flex gap-3">
         <CustomSelectTag value={currentWeek} options={weekOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "week")} />
         <CustomSelectTag value={currentMonth} options={monthOptions} onOptionItemClick={(e) => handleSelectChange(e as React.ChangeEvent<HTMLSelectElement>, "month")} />

@@ -5,19 +5,37 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { Curriculum } from './entities/curriculum.entity';
 import { Topic } from './entities/topic.entity';
+import { Subtopic } from './entities/subtopic.entity';
+import { SubtopicCompletion } from './entities/subtopic-completion.entity';
+import { CurriculumTopicNote } from './entities/curriculum-topic-note.entity';
+import { Subject } from '../subject/subject.entity';
 import { CreateCurriculumDto } from './dto/create-curriculum.dto';
 import { UpdateCurriculumDto } from './dto/update-curriculum.dto';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
+import { CreateSubtopicDto } from './dto/create-subtopic.dto';
+import { UpdateSubtopicDto } from './dto/update-subtopic.dto';
+import { CreateCurriculumTopicNoteDto } from './dto/create-curriculum-topic-note.dto';
+import { DuplicateTopicsToTermDto } from './dto/duplicate-topics-to-term.dto';
 import { SubjectCatalog } from '../subject/subject-catalog.entity';
 import { School } from '../school/school.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { QueryString } from '../common/api-features/api-features';
 import { APIFeatures } from '../common/api-features/api-features';
+
+const TOPIC_READ_RELATIONS = [
+  'subjectCatalog',
+  'subjectCatalog.school',
+  'curriculum',
+  'curriculum.academicTerm',
+  'curriculum.academicTerm.academicCalendar',
+  'academicTerm',
+  'academicTerm.academicCalendar',
+] as const;
 
 @Injectable()
 export class CurriculumService {
@@ -26,6 +44,14 @@ export class CurriculumService {
     private curriculumRepository: Repository<Curriculum>,
     @InjectRepository(Topic)
     private topicRepository: Repository<Topic>,
+    @InjectRepository(Subtopic)
+    private subtopicRepository: Repository<Subtopic>,
+    @InjectRepository(SubtopicCompletion)
+    private subtopicCompletionRepository: Repository<SubtopicCompletion>,
+    @InjectRepository(CurriculumTopicNote)
+    private curriculumTopicNoteRepository: Repository<CurriculumTopicNote>,
+    @InjectRepository(Subject)
+    private subjectRepository: Repository<Subject>,
     @InjectRepository(SubjectCatalog)
     private subjectCatalogRepository: Repository<SubjectCatalog>,
     @InjectRepository(School)
@@ -33,6 +59,66 @@ export class CurriculumService {
     @InjectRepository(AcademicTerm)
     private academicTermRepository: Repository<AcademicTerm>,
   ) {}
+
+  /** Validates term belongs to school; used for subtopic completions and notes. */
+  private async assertAcademicTermInSchool(
+    academicTermId: string,
+    schoolId: string,
+  ): Promise<AcademicTerm> {
+    const term = await this.academicTermRepository.findOne({
+      where: { id: academicTermId },
+      relations: ['academicCalendar', 'academicCalendar.school'],
+    });
+    if (!term) throw new NotFoundException('Academic term not found');
+    if (term.academicCalendar.school.id !== schoolId) {
+      throw new ForbiddenException(
+        'Academic term does not belong to your school',
+      );
+    }
+    return term;
+  }
+
+  /**
+   * Curriculum that links this subject catalog and term (same school), if any.
+   * Mirrors teacher topic creation resolution.
+   */
+  private async findCurriculumForSubjectCatalogAndTerm(
+    manager: EntityManager,
+    schoolId: string,
+    subjectCatalogId: string,
+    academicTermId: string,
+  ): Promise<Curriculum | null> {
+    return manager
+      .createQueryBuilder(Curriculum, 'c')
+      .innerJoin('c.subjectCatalogs', 'sc')
+      .innerJoin('c.school', 'sch')
+      .where('sch.id = :schoolId', { schoolId })
+      .andWhere('c.academicTermId = :termId', { termId: academicTermId })
+      .andWhere('sc.id = :scId', { scId: subjectCatalogId })
+      .getOne();
+  }
+
+  /** Prefer explicit request term, then topic.academicTerm, then curriculum-linked term. */
+  private resolveTopicAcademicTermId(
+    topic: Topic,
+    explicitTermId?: string,
+  ): string | undefined {
+    return (
+      explicitTermId ??
+      topic.academicTerm?.id ??
+      topic.curriculum?.academicTerm?.id
+    );
+  }
+
+  /** Serializes DB dates (Date or string) to YYYY-MM-DD for API responses. */
+  private formatDateOnly(
+    value: Date | string | null | undefined,
+  ): string | null {
+    if (value == null) return null;
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+  }
 
   async create(createCurriculumDto: CreateCurriculumDto, admin: SchoolAdmin) {
     const { name, description, isActive, subjectCatalogIds, academicTermId } =
@@ -62,42 +148,62 @@ export class CurriculumService {
       }
     }
 
-    // Validate academic term exists
-    const academicTerm = await this.academicTermRepository.findOne({
-      where: { id: academicTermId },
-      relations: ['academicCalendar', 'academicCalendar.school'],
-    });
+    let academicTerm: AcademicTerm | null = null;
+    if (academicTermId) {
+      const term = await this.academicTermRepository.findOne({
+        where: { id: academicTermId },
+        relations: ['academicCalendar', 'academicCalendar.school'],
+      });
 
-    if (!academicTerm) {
-      throw new NotFoundException('Academic term not found');
-    }
+      if (!term) {
+        throw new NotFoundException('Academic term not found');
+      }
 
-    if (academicTerm.academicCalendar.school.id !== admin.school.id) {
-      throw new ForbiddenException(
-        'Academic term does not belong to your school',
-      );
-    }
+      if (term.academicCalendar.school.id !== admin.school.id) {
+        throw new ForbiddenException(
+          'Academic term does not belong to your school',
+        );
+      }
 
-    // Check if curriculum already exists for these subject catalogs and term
-    // Using In operator to check if any of the subject catalogs already have a curriculum
-    const existingCurriculum = await this.curriculumRepository
-      .createQueryBuilder('curriculum')
-      .innerJoin('curriculum.subjectCatalogs', 'subjectCatalog')
-      .where('curriculum.academicTerm.id = :academicTermId', {
-        academicTermId,
-      })
-      .andWhere('curriculum.school.id = :schoolId', {
-        schoolId: admin.school.id,
-      })
-      .andWhere('subjectCatalog.id IN (:...subjectCatalogIds)', {
-        subjectCatalogIds,
-      })
-      .getOne();
+      academicTerm = term;
 
-    if (existingCurriculum) {
-      throw new BadRequestException(
-        'Curriculum already exists for one or more of these subject catalogs and academic term',
-      );
+      const existingCurriculum = await this.curriculumRepository
+        .createQueryBuilder('curriculum')
+        .innerJoin('curriculum.subjectCatalogs', 'subjectCatalog')
+        .where('curriculum.academicTerm.id = :academicTermId', {
+          academicTermId,
+        })
+        .andWhere('curriculum.school.id = :schoolId', {
+          schoolId: admin.school.id,
+        })
+        .andWhere('subjectCatalog.id IN (:...subjectCatalogIds)', {
+          subjectCatalogIds,
+        })
+        .getOne();
+
+      if (existingCurriculum) {
+        throw new BadRequestException(
+          'Curriculum already exists for one or more of these subject catalogs and academic term',
+        );
+      }
+    } else {
+      const existingTermAgnostic = await this.curriculumRepository
+        .createQueryBuilder('curriculum')
+        .innerJoin('curriculum.subjectCatalogs', 'subjectCatalog')
+        .where('curriculum.school.id = :schoolId', {
+          schoolId: admin.school.id,
+        })
+        .andWhere('curriculum.academicTerm IS NULL')
+        .andWhere('subjectCatalog.id IN (:...subjectCatalogIds)', {
+          subjectCatalogIds,
+        })
+        .getOne();
+
+      if (existingTermAgnostic) {
+        throw new BadRequestException(
+          'A term-agnostic curriculum already exists for one or more of these subject catalogs',
+        );
+      }
     }
 
     // Create curriculum
@@ -162,8 +268,8 @@ export class CurriculumService {
     return {
       data,
       total,
-      page: parseInt (query.page ?? '1', 10),
-      limit: parseInt (query.limit ?? '20', 10),
+      page: parseInt(query.page ?? '1', 10),
+      limit: parseInt(query.limit ?? '20', 10),
     };
   }
 
@@ -225,50 +331,70 @@ export class CurriculumService {
       curriculum.subjectCatalogs = subjectCatalogs;
     }
 
-    // If academic term is being updated, validate it
-    if (updateCurriculumDto.academicTermId) {
-      const academicTerm = await this.academicTermRepository.findOne({
-        where: { id: updateCurriculumDto.academicTermId },
-        relations: ['academicCalendar', 'academicCalendar.school'],
-      });
+    if (updateCurriculumDto.academicTermId !== undefined) {
+      if (updateCurriculumDto.academicTermId === null) {
+        const subjectCatalogIds =
+          updateCurriculumDto.subjectCatalogIds ||
+          curriculum.subjectCatalogs.map((sc) => sc.id);
+        const conflicting = await this.curriculumRepository
+          .createQueryBuilder('c')
+          .innerJoin('c.subjectCatalogs', 'subjectCatalog')
+          .where('c.school.id = :schoolId', { schoolId: admin.school.id })
+          .andWhere('c.academicTerm IS NULL')
+          .andWhere('c.id != :curriculumId', { curriculumId: id })
+          .andWhere('subjectCatalog.id IN (:...subjectCatalogIds)', {
+            subjectCatalogIds,
+          })
+          .getOne();
+        if (conflicting) {
+          throw new BadRequestException(
+            'Another term-agnostic curriculum already exists for one or more of these subject catalogs',
+          );
+        }
+        curriculum.academicTerm = null;
+      } else {
+        const academicTerm = await this.academicTermRepository.findOne({
+          where: { id: updateCurriculumDto.academicTermId },
+          relations: ['academicCalendar', 'academicCalendar.school'],
+        });
 
-      if (!academicTerm) {
-        throw new NotFoundException('Academic term not found');
+        if (!academicTerm) {
+          throw new NotFoundException('Academic term not found');
+        }
+
+        if (academicTerm.academicCalendar.school.id !== admin.school.id) {
+          throw new ForbiddenException(
+            'Academic term does not belong to your school',
+          );
+        }
+
+        const subjectCatalogIds =
+          updateCurriculumDto.subjectCatalogIds ||
+          curriculum.subjectCatalogs.map((sc) => sc.id);
+
+        const existingCurriculum = await this.curriculumRepository
+          .createQueryBuilder('curriculum')
+          .innerJoin('curriculum.subjectCatalogs', 'subjectCatalog')
+          .where('curriculum.academicTerm.id = :academicTermId', {
+            academicTermId: updateCurriculumDto.academicTermId,
+          })
+          .andWhere('curriculum.school.id = :schoolId', {
+            schoolId: admin.school.id,
+          })
+          .andWhere('curriculum.id != :curriculumId', { curriculumId: id })
+          .andWhere('subjectCatalog.id IN (:...subjectCatalogIds)', {
+            subjectCatalogIds,
+          })
+          .getOne();
+
+        if (existingCurriculum) {
+          throw new BadRequestException(
+            'Another curriculum already exists for one or more of these subject catalogs and academic term',
+          );
+        }
+
+        curriculum.academicTerm = academicTerm;
       }
-
-      if (academicTerm.academicCalendar.school.id !== admin.school.id) {
-        throw new ForbiddenException(
-          'Academic term does not belong to your school',
-        );
-      }
-
-      // Check if another curriculum exists for the new subject catalogs and term combination
-      const subjectCatalogIds =
-        updateCurriculumDto.subjectCatalogIds ||
-        curriculum.subjectCatalogs.map((sc) => sc.id);
-
-      const existingCurriculum = await this.curriculumRepository
-        .createQueryBuilder('curriculum')
-        .innerJoin('curriculum.subjectCatalogs', 'subjectCatalog')
-        .where('curriculum.academicTerm.id = :academicTermId', {
-          academicTermId: updateCurriculumDto.academicTermId,
-        })
-        .andWhere('curriculum.school.id = :schoolId', {
-          schoolId: admin.school.id,
-        })
-        .andWhere('curriculum.id != :curriculumId', { curriculumId: id })
-        .andWhere('subjectCatalog.id IN (:...subjectCatalogIds)', {
-          subjectCatalogIds,
-        })
-        .getOne();
-
-      if (existingCurriculum) {
-        throw new BadRequestException(
-          'Another curriculum already exists for one or more of these subject catalogs and academic term',
-        );
-      }
-
-      curriculum.academicTerm = academicTerm;
     }
 
     // Update other fields
@@ -303,8 +429,16 @@ export class CurriculumService {
 
   // Topic CRUD operations
   async createTopic(createTopicDto: CreateTopicDto, admin: SchoolAdmin) {
-    const { name, description, order, subjectCatalogId, curriculumId } =
-      createTopicDto;
+    const {
+      name,
+      description,
+      order,
+      plannedStartDate,
+      plannedEndDate,
+      subjectCatalogId,
+      curriculumId,
+      academicTermId,
+    } = createTopicDto;
 
     // Validate curriculum exists and belongs to the school
     const curriculum = await this.curriculumRepository.findOne({
@@ -347,31 +481,270 @@ export class CurriculumService {
       );
     }
 
+    const academicTerm = await this.assertAcademicTermInSchool(
+      academicTermId,
+      admin.school.id,
+    );
+
     // Create topic
     const topic = this.topicRepository.create({
       name,
       description,
       order: order ?? 0,
+      plannedStartDate: plannedStartDate
+        ? new Date(plannedStartDate)
+        : undefined,
+      plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : undefined,
       subjectCatalog,
       curriculum,
+      academicTerm,
     });
 
-    return await this.topicRepository.save(topic);
+    const saved = await this.topicRepository.save(topic);
+    const reloaded = await this.findOneTopicEntityOrThrow(
+      saved.id,
+      admin.school.id,
+    );
+    return this.enrichTopicResponse(reloaded);
+  }
+
+  async duplicateTopicsToTerm(
+    dto: DuplicateTopicsToTermDto,
+    admin: SchoolAdmin,
+  ): Promise<{
+    createdCount: number;
+    data: ReturnType<CurriculumService['enrichTopicResponse']>[];
+  }> {
+    const schoolId = admin.school.id;
+    if (dto.sourceAcademicTermId === dto.targetAcademicTermId) {
+      throw new BadRequestException(
+        'Source and target academic terms must be different',
+      );
+    }
+    if (dto.duplicateAllFromSource === true && dto.topicIds?.length) {
+      throw new BadRequestException(
+        'Do not pass topicIds when duplicateAllFromSource is true',
+      );
+    }
+
+    await this.assertAcademicTermInSchool(dto.sourceAcademicTermId, schoolId);
+    await this.assertAcademicTermInSchool(dto.targetAcademicTermId, schoolId);
+
+    const uniqueTopicIds =
+      dto.duplicateAllFromSource === true
+        ? undefined
+        : dto.topicIds
+          ? [...new Set(dto.topicIds)]
+          : undefined;
+
+    if (
+      dto.duplicateAllFromSource !== true &&
+      (!uniqueTopicIds || uniqueTopicIds.length === 0)
+    ) {
+      throw new BadRequestException(
+        'Provide topicIds or set duplicateAllFromSource to true',
+      );
+    }
+
+    const createdIds = await this.topicRepository.manager.transaction(
+      async (manager) => {
+        const topicRepo = manager.getRepository(Topic);
+        const subtopicRepo = manager.getRepository(Subtopic);
+
+        let sources: Topic[];
+
+        if (dto.duplicateAllFromSource === true) {
+          const orderedStubTopics = await topicRepo
+            .createQueryBuilder('topic')
+            .innerJoin('topic.subjectCatalog', 'subjectCatalog')
+            .innerJoin('subjectCatalog.school', 'school')
+            .leftJoin('topic.curriculum', 'curriculum')
+            .leftJoin('curriculum.academicTerm', 'curriculumTerm')
+            .leftJoin('topic.academicTerm', 'topicTerm')
+            .where('school.id = :schoolId', { schoolId })
+            .andWhere(
+              new Brackets((qb) => {
+                qb.where('topicTerm.id = :sourceTermId', {
+                  sourceTermId: dto.sourceAcademicTermId,
+                }).orWhere(
+                  '(topic.academic_term_id IS NULL AND curriculumTerm.id = :sourceTermId)',
+                  { sourceTermId: dto.sourceAcademicTermId },
+                );
+              }),
+            )
+            .orderBy('topic.order', 'ASC')
+            .addOrderBy('topic.createdAt', 'ASC')
+            .getMany();
+
+          const ids = orderedStubTopics.map((t) => t.id);
+
+          sources = ids.length
+            ? await topicRepo.find({
+                where: { id: In(ids) },
+                relations: [
+                  'subjectCatalog',
+                  'subjectCatalog.school',
+                  'curriculum',
+                  'curriculum.academicTerm',
+                  'academicTerm',
+                  'subtopics',
+                ],
+              })
+            : [];
+          const idOrder = new Map<string, number>(ids.map((id, i) => [id, i]));
+          sources.sort(
+            (a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0),
+          );
+        } else {
+          sources = await topicRepo.find({
+            where: { id: In(uniqueTopicIds!) },
+            relations: [
+              'subjectCatalog',
+              'subjectCatalog.school',
+              'curriculum',
+              'curriculum.academicTerm',
+              'academicTerm',
+              'subtopics',
+            ],
+          });
+          if (sources.length !== uniqueTopicIds!.length) {
+            throw new NotFoundException('One or more topics were not found');
+          }
+          for (const t of sources) {
+            if (t.subjectCatalog.school.id !== schoolId) {
+              throw new ForbiddenException(
+                'Topic does not belong to your school',
+              );
+            }
+            const effective = this.resolveTopicAcademicTermId(t);
+            if (effective !== dto.sourceAcademicTermId) {
+              throw new BadRequestException(
+                'One or more topics do not belong to the source term',
+              );
+            }
+          }
+        }
+
+        const out: string[] = [];
+        for (const src of sources) {
+          const matchedCurriculum =
+            await this.findCurriculumForSubjectCatalogAndTerm(
+              manager,
+              schoolId,
+              src.subjectCatalog.id,
+              dto.targetAcademicTermId,
+            );
+          const subtopicsOrdered = [...(src.subtopics ?? [])].sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+          const newTopic = topicRepo.create({
+            name: src.name,
+            description: src.description,
+            order: src.order,
+            plannedStartDate: null,
+            plannedEndDate: null,
+            subjectCatalog: src.subjectCatalog,
+            curriculum: matchedCurriculum,
+            academicTerm: { id: dto.targetAcademicTermId } as AcademicTerm,
+            createdBy: 'admin',
+            subtopics: subtopicsOrdered.map((s) =>
+              subtopicRepo.create({
+                name: s.name,
+                description: s.description,
+                createdBy: 'admin',
+              }),
+            ),
+          });
+          const saved = await topicRepo.save(newTopic);
+          out.push(saved.id);
+        }
+        return out;
+      },
+    );
+
+    if (createdIds.length === 0) {
+      return { data: [], createdCount: 0 };
+    }
+
+    const reloaded = await this.topicRepository.find({
+      where: { id: In(createdIds) },
+      relations: [...TOPIC_READ_RELATIONS],
+    });
+    const idOrder = new Map<string, number>(createdIds.map((id, i) => [id, i]));
+    reloaded.sort(
+      (a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0),
+    );
+
+    for (const t of reloaded) {
+      if (t.subjectCatalog.school.id !== schoolId) {
+        throw new ForbiddenException('Topic does not belong to your school');
+      }
+    }
+
+    return {
+      createdCount: reloaded.length,
+      data: reloaded.map((t) => this.enrichTopicResponse(t)),
+    };
   }
 
   async findAllTopics(schoolId: string, query?: QueryString) {
-    // Get all topics for all subject catalogs in the school
+    // Get all topics for subject catalogs in the school, with optional filters
     const queryBuilder = this.topicRepository
       .createQueryBuilder('topic')
       .leftJoinAndSelect('topic.subjectCatalog', 'subjectCatalog')
       .leftJoinAndSelect('topic.curriculum', 'curriculum')
       .leftJoinAndSelect('curriculum.academicTerm', 'academicTerm')
       .leftJoinAndSelect('academicTerm.academicCalendar', 'academicCalendar')
+      .leftJoinAndSelect('topic.academicTerm', 'topicOwnTerm')
+      .leftJoinAndSelect('topicOwnTerm.academicCalendar', 'topicOwnTermCal')
       .leftJoin('subjectCatalog.school', 'school')
       .where('school.id = :schoolId', { schoolId });
 
+    // Optional filters: curriculum, subject catalog (subject), class level, teacher
+    const curriculumId = query?.curriculumId;
+    const subjectCatalogId = query?.subjectCatalogId;
+    const teacherId = query?.teacherId;
+    const classLevelId = query?.classLevelId;
+
+    if (curriculumId) {
+      queryBuilder.andWhere('curriculum.id = :curriculumId', {
+        curriculumId,
+      });
+    }
+    if (subjectCatalogId) {
+      queryBuilder.andWhere('subjectCatalog.id = :subjectCatalogId', {
+        subjectCatalogId,
+      });
+    }
+    const listTermId = query?.academicTermId;
+    if (listTermId) {
+      queryBuilder.andWhere('topicOwnTerm.id = :listAcademicTermId', {
+        listAcademicTermId: listTermId,
+      });
+    }
+    if (teacherId || classLevelId) {
+      queryBuilder.innerJoin('subjectCatalog.subjects', 'subjectsFilter');
+      if (teacherId) {
+        queryBuilder
+          .innerJoin('subjectsFilter.teacher', 'teacherFilter')
+          .andWhere('teacherFilter.id = :teacherId', { teacherId });
+      }
+      if (classLevelId) {
+        queryBuilder
+          .innerJoin('subjectsFilter.classLevels', 'classLevelsFilter')
+          .andWhere('classLevelsFilter.id = :classLevelId', { classLevelId });
+      }
+    }
+
     if (query) {
-      const apiFeatures = new APIFeatures(queryBuilder, query)
+      const queryForFeatures = { ...query };
+      delete queryForFeatures.curriculumId;
+      delete queryForFeatures.subjectCatalogId;
+      delete queryForFeatures.academicTermId;
+      delete queryForFeatures.teacherId;
+      delete queryForFeatures.classLevelId;
+      const apiFeatures = new APIFeatures(queryBuilder, queryForFeatures)
         .filter()
         .search(['name', 'description'])
         .sort()
@@ -431,6 +804,7 @@ export class CurriculumService {
   async findAllTopicsBySubjectCatalog(
     subjectCatalogId: string,
     schoolId: string,
+    academicTermId?: string,
   ) {
     // Verify subject catalog belongs to school
     const subjectCatalog = await this.subjectCatalogRepository.findOne({
@@ -448,13 +822,23 @@ export class CurriculumService {
       );
     }
 
+    const where: {
+      subjectCatalog: { id: string };
+      academicTerm?: { id: string };
+    } = { subjectCatalog: { id: subjectCatalogId } };
+    if (academicTermId) {
+      where.academicTerm = { id: academicTermId };
+    }
+
     const topics = await this.topicRepository.find({
-      where: { subjectCatalog: { id: subjectCatalogId } },
+      where,
       relations: [
         'subjectCatalog',
         'curriculum',
         'curriculum.academicTerm',
         'curriculum.academicTerm.academicCalendar',
+        'academicTerm',
+        'academicTerm.academicCalendar',
       ],
       order: { order: 'ASC', createdAt: 'ASC' },
     });
@@ -463,15 +847,17 @@ export class CurriculumService {
   }
 
   async findOneTopic(topicId: string, schoolId: string) {
+    const topic = await this.findOneTopicEntityOrThrow(topicId, schoolId);
+    return this.enrichTopicResponse(topic);
+  }
+
+  private async findOneTopicEntityOrThrow(
+    topicId: string,
+    schoolId: string,
+  ): Promise<Topic> {
     const topic = await this.topicRepository.findOne({
       where: { id: topicId },
-      relations: [
-        'subjectCatalog',
-        'subjectCatalog.school',
-        'curriculum',
-        'curriculum.academicTerm',
-        'curriculum.academicTerm.academicCalendar',
-      ],
+      relations: [...TOPIC_READ_RELATIONS],
     });
 
     if (!topic) {
@@ -485,6 +871,53 @@ export class CurriculumService {
     return topic;
   }
 
+  /**
+   * Same rules as getTopicDetail nested topic: duration from plan span; week index from plan start vs term start.
+   */
+  private deriveTopicWeekFields(
+    topic: Pick<Topic, 'plannedStartDate' | 'plannedEndDate'>,
+    academicTerm: AcademicTerm | null | undefined,
+  ): {
+    weekDuration: number | null;
+    weekNumber: number | null;
+    weekLabel: string | null;
+  } {
+    let weekDuration: number | null = null;
+    let weekNumber: number | null = null;
+    let weekLabel: string | null = null;
+
+    if (topic.plannedStartDate && topic.plannedEndDate) {
+      const start = new Date(topic.plannedStartDate);
+      const end = new Date(topic.plannedEndDate);
+      const diffMs = end.getTime() - start.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      weekDuration = Math.max(1, Math.ceil(diffDays / 7));
+      const termForWeek = academicTerm;
+      if (termForWeek?.startDate) {
+        const termStart = new Date(termForWeek.startDate);
+        const daysFromTermStart = Math.floor(
+          (start.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        weekNumber = Math.max(1, Math.floor(daysFromTermStart / 7) + 1);
+        weekLabel = `Week ${weekNumber}`;
+      }
+    }
+
+    return { weekDuration, weekNumber, weekLabel };
+  }
+
+  private enrichTopicResponse(topic: Topic): Topic & {
+    weekDuration: number | null;
+    weekNumber: number | null;
+    weekLabel: string | null;
+  } {
+    const { weekDuration, weekNumber, weekLabel } = this.deriveTopicWeekFields(
+      topic,
+      topic.academicTerm ?? topic.curriculum?.academicTerm,
+    );
+    return { ...topic, weekDuration, weekNumber, weekLabel };
+  }
+
   async updateTopic(
     topicId: string,
     updateTopicDto: UpdateTopicDto,
@@ -492,7 +925,12 @@ export class CurriculumService {
   ) {
     const topic = await this.topicRepository.findOne({
       where: { id: topicId },
-      relations: ['subjectCatalog', 'subjectCatalog.school', 'curriculum'],
+      relations: [
+        'subjectCatalog',
+        'subjectCatalog.school',
+        'curriculum',
+        'academicTerm',
+      ],
     });
 
     if (!topic) {
@@ -501,6 +939,13 @@ export class CurriculumService {
 
     if (topic.subjectCatalog.school.id !== admin.school.id) {
       throw new ForbiddenException('Topic does not belong to your school');
+    }
+
+    if (updateTopicDto.academicTermId) {
+      topic.academicTerm = await this.assertAcademicTermInSchool(
+        updateTopicDto.academicTermId,
+        admin.school.id,
+      );
     }
 
     // If subject catalog is being updated, validate it
@@ -568,8 +1013,23 @@ export class CurriculumService {
     if (updateTopicDto.order !== undefined) {
       topic.order = updateTopicDto.order;
     }
+    if (updateTopicDto.plannedStartDate !== undefined) {
+      topic.plannedStartDate = updateTopicDto.plannedStartDate
+        ? new Date(updateTopicDto.plannedStartDate)
+        : null;
+    }
+    if (updateTopicDto.plannedEndDate !== undefined) {
+      topic.plannedEndDate = updateTopicDto.plannedEndDate
+        ? new Date(updateTopicDto.plannedEndDate)
+        : null;
+    }
 
-    return await this.topicRepository.save(topic);
+    const saved = await this.topicRepository.save(topic);
+    const reloaded = await this.findOneTopicEntityOrThrow(
+      saved.id,
+      admin.school.id,
+    );
+    return this.enrichTopicResponse(reloaded);
   }
 
   async removeTopic(topicId: string, admin: SchoolAdmin) {
@@ -588,5 +1048,1143 @@ export class CurriculumService {
 
     await this.topicRepository.remove(topic);
     return { message: 'Topic deleted successfully' };
+  }
+
+  // Subtopic CRUD (admin)
+  async createSubtopic(
+    topicId: string,
+    createSubtopicDto: CreateSubtopicDto,
+    admin: SchoolAdmin,
+  ): Promise<Subtopic> {
+    const topic = await this.topicRepository.findOne({
+      where: { id: topicId },
+      relations: ['subjectCatalog', 'subjectCatalog.school'],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== admin.school.id) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+    const subtopic = this.subtopicRepository.create({
+      name: createSubtopicDto.name,
+      description: createSubtopicDto.description,
+      topic,
+      createdBy: 'admin',
+    });
+    return await this.subtopicRepository.save(subtopic);
+  }
+
+  async findSubtopicsByTopic(
+    topicId: string,
+    schoolId: string,
+  ): Promise<Subtopic[]> {
+    const topic = await this.topicRepository.findOne({
+      where: { id: topicId },
+      relations: ['subjectCatalog', 'subjectCatalog.school'],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+    return this.subtopicRepository.find({
+      where: { topic: { id: topicId } },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async updateSubtopic(
+    subtopicId: string,
+    updateSubtopicDto: UpdateSubtopicDto,
+    admin: SchoolAdmin,
+  ): Promise<Subtopic> {
+    const subtopic = await this.subtopicRepository.findOne({
+      where: { id: subtopicId },
+      relations: [
+        'topic',
+        'topic.subjectCatalog',
+        'topic.subjectCatalog.school',
+      ],
+    });
+    if (!subtopic) throw new NotFoundException('Subtopic not found');
+    if (subtopic.topic.subjectCatalog.school.id !== admin.school.id) {
+      throw new ForbiddenException('Subtopic does not belong to your school');
+    }
+    if (updateSubtopicDto.name !== undefined)
+      subtopic.name = updateSubtopicDto.name;
+    if (updateSubtopicDto.description !== undefined)
+      subtopic.description = updateSubtopicDto.description;
+    return await this.subtopicRepository.save(subtopic);
+  }
+
+  async removeSubtopic(subtopicId: string, admin: SchoolAdmin) {
+    const subtopic = await this.subtopicRepository.findOne({
+      where: { id: subtopicId },
+      relations: [
+        'topic',
+        'topic.subjectCatalog',
+        'topic.subjectCatalog.school',
+      ],
+    });
+    if (!subtopic) throw new NotFoundException('Subtopic not found');
+    if (subtopic.topic.subjectCatalog.school.id !== admin.school.id) {
+      throw new ForbiddenException('Subtopic does not belong to your school');
+    }
+    await this.subtopicRepository.remove(subtopic);
+    return { message: 'Subtopic deleted successfully' };
+  }
+
+  // Progress dashboard: subjects with their topics and progress per (subject, topic)
+  async getProgressDashboard(
+    schoolId: string,
+    filters?: {
+      curriculumId?: string;
+      subjectCatalogId?: string;
+      classLevelId?: string;
+      teacherId?: string;
+      academicTermId?: string;
+    },
+  ) {
+    const qb = this.subjectRepository
+      .createQueryBuilder('subject')
+      .leftJoinAndSelect('subject.teacher', 'teacher')
+      .leftJoinAndSelect('subject.subjectCatalog', 'subjectCatalog')
+      .leftJoinAndSelect('subject.classLevels', 'classLevels')
+      .leftJoinAndSelect('teacher.profile', 'teacherProfile')
+      .where('subject.school.id = :schoolId', { schoolId });
+
+    if (filters?.teacherId) {
+      qb.andWhere('teacher.id = :teacherId', { teacherId: filters.teacherId });
+    }
+    if (filters?.subjectCatalogId) {
+      qb.andWhere('subjectCatalog.id = :subjectCatalogId', {
+        subjectCatalogId: filters.subjectCatalogId,
+      });
+    }
+    if (filters?.classLevelId) {
+      qb.andWhere('classLevels.id = :classLevelId', {
+        classLevelId: filters.classLevelId,
+      });
+    }
+
+    const subjects = await qb.getMany();
+    const curriculumId = filters?.curriculumId;
+    const academicTermId = filters?.academicTermId;
+
+    const flatRows: Array<{
+      subjectId: string;
+      teacher: {
+        id: string;
+        firstName?: string;
+        lastName?: string;
+        name?: string;
+      };
+      classLevel: { id: string; name: string };
+      subjectCatalog: { id: string; name: string };
+      topicId: string;
+      topicName: string;
+      topicDescription?: string;
+      plannedStartDate: string | null;
+      plannedEndDate: string | null;
+      progressPercent: number;
+      status: 'pending' | 'completed';
+      dateCompleted: string | null;
+    }> = [];
+
+    for (const subject of subjects) {
+      let topicIds: string[] = [];
+      if (curriculumId) {
+        const curriculum = await this.curriculumRepository.findOne({
+          where: { id: curriculumId, school: { id: schoolId } },
+          relations: ['subjectCatalogs'],
+        });
+        if (!curriculum) continue;
+        const hasCatalog = curriculum.subjectCatalogs?.some(
+          (sc) => sc.id === subject.subjectCatalog.id,
+        );
+        if (!hasCatalog) continue;
+        const topicsWhere: {
+          subjectCatalog: { id: string };
+          curriculum: { id: string };
+          academicTerm?: { id: string };
+        } = {
+          subjectCatalog: { id: subject.subjectCatalog.id },
+          curriculum: { id: curriculum.id },
+        };
+        if (academicTermId) {
+          topicsWhere.academicTerm = { id: academicTermId };
+        }
+        const topicsInCurriculum = await this.topicRepository.find({
+          where: topicsWhere,
+          order: { order: 'ASC' },
+        });
+        topicIds = topicsInCurriculum.map((t) => t.id);
+      } else if (academicTermId) {
+        const topicsForTerm = await this.topicRepository.find({
+          where: {
+            subjectCatalog: { id: subject.subjectCatalog.id },
+            academicTerm: { id: academicTermId },
+          },
+          order: { order: 'ASC' },
+        });
+        topicIds = topicsForTerm.map((t) => t.id);
+      } else {
+        const topicsForCatalog = await this.topicRepository.find({
+          where: { subjectCatalog: { id: subject.subjectCatalog.id } },
+          order: { order: 'ASC' },
+        });
+        topicIds = topicsForCatalog.map((t) => t.id);
+      }
+
+      const subjectClassLevels = subject.classLevels || [];
+      const classLevelsForRows = filters?.classLevelId
+        ? subjectClassLevels.filter((cl) => cl.id === filters.classLevelId)
+        : subjectClassLevels;
+
+      const teacher = subject.teacher;
+      const teacherRow = teacher
+        ? {
+            id: teacher.id,
+            firstName: (teacher as any).firstName,
+            lastName: (teacher as any).lastName,
+            name:
+              (teacher as any).name ??
+              `${(teacher as any).firstName ?? ''} ${(teacher as any).lastName ?? ''}`.trim(),
+          }
+        : { id: '', firstName: '', lastName: '', name: 'Unassigned' };
+
+      const subjectCatalogRow = {
+        id: subject.subjectCatalog.id,
+        name: subject.subjectCatalog.name,
+      };
+
+      for (const classLevel of classLevelsForRows) {
+        for (const topicId of topicIds) {
+          const topic = await this.topicRepository.findOne({
+            where: { id: topicId },
+            relations: [
+              'subtopics',
+              'curriculum',
+              'curriculum.academicTerm',
+              'academicTerm',
+            ],
+          });
+          if (!topic) continue;
+          const totalSubtopics = topic.subtopics?.length ?? 0;
+          const termIdForProgress = this.resolveTopicAcademicTermId(
+            topic,
+            academicTermId,
+          );
+          const completionWhereBase = {
+            subtopic: { topic: { id: topicId } },
+            subject: { id: subject.id },
+            classLevel: { id: classLevel.id },
+          };
+          const completedCount = termIdForProgress
+            ? await this.subtopicCompletionRepository.count({
+                where: {
+                  ...completionWhereBase,
+                  academicTerm: { id: termIdForProgress },
+                },
+              })
+            : 0;
+          const progressPercent =
+            totalSubtopics === 0
+              ? 0
+              : Math.round((completedCount / totalSubtopics) * 100);
+          const status: 'pending' | 'completed' =
+            progressPercent < 100 ? 'pending' : 'completed';
+
+          let dateCompleted: string | null = null;
+          if (completedCount > 0 && termIdForProgress) {
+            const lastCompletion =
+              await this.subtopicCompletionRepository.findOne({
+                where: {
+                  subject: { id: subject.id },
+                  subtopic: { topic: { id: topicId } },
+                  academicTerm: { id: termIdForProgress },
+                  classLevel: { id: classLevel.id },
+                },
+                order: { completedAt: 'DESC' },
+              });
+            if (lastCompletion) {
+              dateCompleted = this.formatDateOnly(lastCompletion.completedAt);
+            }
+          }
+
+          flatRows.push({
+            subjectId: subject.id,
+            teacher: teacherRow,
+            classLevel: { id: classLevel.id, name: classLevel.name },
+            subjectCatalog: subjectCatalogRow,
+            topicId: topic.id,
+            topicName: topic.name,
+            topicDescription: topic.description ?? undefined,
+            plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
+            plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
+            progressPercent,
+            status,
+            dateCompleted,
+          });
+        }
+      }
+    }
+
+    const totalTopics = flatRows.length;
+    const completedCount = flatRows.filter(
+      (r) => r.status === 'completed',
+    ).length;
+    const pendingCount = flatRows.filter((r) => r.status === 'pending').length;
+    const avgProgress =
+      totalTopics === 0
+        ? 0
+        : Math.round(
+            flatRows.reduce((acc, r) => acc + r.progressPercent, 0) /
+              totalTopics,
+          );
+
+    return {
+      summary: {
+        totalTopics,
+        completed: completedCount,
+        pending: pendingCount,
+        avgProgress,
+      },
+      rows: flatRows,
+    };
+  }
+
+  async getTeacherProgressDashboard(
+    teacherId: string,
+    schoolId: string,
+    filters: {
+      academicTermId: string;
+      subjectId?: string;
+      classLevelId?: string;
+    },
+  ) {
+    if (!filters.academicTermId) {
+      throw new BadRequestException('academicTermId is required');
+    }
+    const academicTerm = await this.assertAcademicTermInSchool(
+      filters.academicTermId,
+      schoolId,
+    );
+
+    const assignedSubjects = await this.subjectRepository.find({
+      where: { teacher: { id: teacherId }, school: { id: schoolId } },
+      relations: ['subjectCatalog', 'classLevels'],
+      order: { createdAt: 'ASC' },
+    });
+
+    if (assignedSubjects.length === 0) {
+      return this.buildTeacherProgressEmptyResponse(academicTerm.id);
+    }
+
+    const requestedSubject = filters.subjectId
+      ? assignedSubjects.find((s) => s.id === filters.subjectId)
+      : null;
+    if (filters.subjectId && !requestedSubject) {
+      throw new ForbiddenException(
+        'subjectId does not belong to this teacher in your school',
+      );
+    }
+    const subjectsAfterClassFilter = filters.classLevelId
+      ? assignedSubjects.filter((s) =>
+          (s.classLevels || []).some((cl) => cl.id === filters.classLevelId),
+        )
+      : assignedSubjects;
+    if (
+      requestedSubject &&
+      filters.classLevelId &&
+      !(requestedSubject.classLevels || []).some(
+        (cl) => cl.id === filters.classLevelId,
+      )
+    ) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to the selected teacher subject',
+      );
+    }
+
+    const subjectsForCards = requestedSubject
+      ? [requestedSubject]
+      : subjectsAfterClassFilter;
+
+    if (subjectsForCards.length === 0) {
+      return this.buildTeacherProgressEmptyResponse(
+        academicTerm.id,
+        filters.classLevelId ?? null,
+      );
+    }
+
+    const topicCards: any[] = [];
+    for (const subject of subjectsForCards) {
+      if (filters.classLevelId) {
+        const cards = await this.buildTeacherProgressTopicCards(
+          subject,
+          academicTerm,
+          filters.classLevelId,
+        );
+        topicCards.push(...cards);
+      } else {
+        const levels = subject.classLevels || [];
+        if (levels.length === 0) {
+          const cards = await this.buildTeacherProgressTopicCards(
+            subject,
+            academicTerm,
+            null,
+          );
+          topicCards.push(...cards);
+        } else {
+          for (const cl of levels) {
+            const cards = await this.buildTeacherProgressTopicCards(
+              subject,
+              academicTerm,
+              cl.id,
+            );
+            topicCards.push(...cards);
+          }
+        }
+      }
+    }
+    const overall = this.computeTeacherProgressOverall(topicCards);
+
+    return {
+      selection: {
+        academicTermId: academicTerm.id,
+        subjectId: requestedSubject?.id ?? null,
+        classLevelId: filters.classLevelId ?? null,
+      },
+      overall,
+      topics: topicCards,
+    };
+  }
+
+  /** Empty dashboard: clients load subject/class options from other teacher endpoints. */
+  private buildTeacherProgressEmptyResponse(
+    academicTermId: string,
+    classLevelId: string | null = null,
+  ) {
+    return {
+      selection: {
+        academicTermId,
+        subjectId: null as string | null,
+        classLevelId,
+      },
+      overall: {
+        totalTopics: 0,
+        completedTopics: 0,
+        pendingTopics: 0,
+        avgProgress: 0,
+        completedLabel: '0 of 0 topics completed',
+      },
+      topics: [] as any[],
+    };
+  }
+
+  private async buildTeacherProgressTopicCards(
+    selectedSubject: Subject,
+    academicTerm: AcademicTerm,
+    classLevelId: string | null,
+  ) {
+    const topics = await this.topicRepository.find({
+      where: {
+        subjectCatalog: { id: selectedSubject.subjectCatalog.id },
+        academicTerm: { id: academicTerm.id },
+      },
+      relations: ['subtopics'],
+      order: { order: 'ASC', createdAt: 'ASC' },
+    });
+
+    const allSubtopicIds = topics.flatMap((t) =>
+      (t.subtopics || []).map((s) => s.id),
+    );
+    const completions =
+      allSubtopicIds.length > 0 && classLevelId
+        ? await this.subtopicCompletionRepository.find({
+            where: {
+              subject: { id: selectedSubject.id },
+              academicTerm: { id: academicTerm.id },
+              subtopic: { id: In(allSubtopicIds) },
+              classLevel: { id: classLevelId },
+            },
+            relations: ['subtopic'],
+          })
+        : [];
+    const completionBySubtopicId = new Map(
+      completions.map((c) => [c.subtopic.id, c]),
+    );
+
+    const classLevelName = classLevelId
+      ? ((selectedSubject.classLevels || []).find(
+          (cl) => cl.id === classLevelId,
+        )?.name ?? null)
+      : null;
+
+    const topicCards: any[] = [];
+    for (const topic of topics) {
+      const subtopics = [...(topic.subtopics || [])].sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+      );
+      const completedCount = subtopics.filter((s) =>
+        completionBySubtopicId.has(s.id),
+      ).length;
+      const totalSubtopics = subtopics.length;
+      const progressPercent =
+        totalSubtopics === 0
+          ? 0
+          : Math.round((completedCount / totalSubtopics) * 100);
+      const status: 'pending' | 'completed' =
+        progressPercent >= 100 ? 'completed' : 'pending';
+      const weekLabel = this.computeWeekLabel(
+        topic.plannedStartDate,
+        academicTerm,
+      );
+      const notesCount = await this.getTeacherTopicNotesCount(
+        topic.id,
+        selectedSubject.id,
+        academicTerm.id,
+      );
+
+      topicCards.push({
+        subjectId: selectedSubject.id,
+        classLevelId,
+        classLevelName,
+        topicId: topic.id,
+        name: topic.name,
+        description: topic.description ?? null,
+        plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
+        plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
+        progressPercent,
+        status,
+        weekLabel,
+        subtopicCounts: { total: totalSubtopics, completed: completedCount },
+        notesCount,
+        subtopics: subtopics.map((s) => {
+          const completion = completionBySubtopicId.get(s.id);
+          return {
+            id: s.id,
+            name: s.name,
+            completed: Boolean(completion),
+            completedAt: completion
+              ? this.formatDateOnly(completion.completedAt)
+              : null,
+          };
+        }),
+      });
+    }
+    return topicCards;
+  }
+
+  private computeWeekLabel(
+    plannedStartDate: Date | null,
+    academicTerm: AcademicTerm,
+  ): string | null {
+    if (!plannedStartDate || !academicTerm.startDate) return null;
+    const start = new Date(plannedStartDate);
+    const termStart = new Date(academicTerm.startDate);
+    const daysFromTermStart = Math.floor(
+      (start.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const weekNumber = Math.max(1, Math.floor(daysFromTermStart / 7) + 1);
+    return `W${weekNumber}`;
+  }
+
+  private async getTeacherTopicNotesCount(
+    topicId: string,
+    subjectId: string,
+    academicTermId: string,
+  ): Promise<number> {
+    return this.curriculumTopicNoteRepository
+      .createQueryBuilder('note')
+      .where('note.topic.id = :topicId', { topicId })
+      .andWhere('note.parent IS NULL')
+      .andWhere('(note.subject.id = :subjectId OR note.subject.id IS NULL)', {
+        subjectId,
+      })
+      .andWhere(
+        '(note.academicTerm.id = :academicTermId OR note.academicTerm.id IS NULL)',
+        { academicTermId },
+      )
+      .getCount();
+  }
+
+  private computeTeacherProgressOverall(
+    topicCards: Array<{
+      progressPercent: number;
+      status: 'pending' | 'completed';
+    }>,
+  ) {
+    const totalTopics = topicCards.length;
+    const completedTopics = topicCards.filter(
+      (t) => t.status === 'completed',
+    ).length;
+    const pendingTopics = totalTopics - completedTopics;
+    const avgProgress =
+      totalTopics === 0
+        ? 0
+        : Math.round(
+            topicCards.reduce((acc, t) => acc + t.progressPercent, 0) /
+              totalTopics,
+          );
+    return {
+      totalTopics,
+      completedTopics,
+      pendingTopics,
+      avgProgress,
+      completedLabel: `${completedTopics} of ${totalTopics} topics completed`,
+    };
+  }
+
+  // Topic detail for a given subject: topic + subtopics with completion state
+  async getTopicDetail(
+    topicId: string,
+    subjectId: string,
+    schoolId: string,
+    classLevelId: string,
+    academicTermId?: string,
+  ) {
+    const topic = await this.topicRepository.findOne({
+      where: { id: topicId },
+      relations: [
+        'subjectCatalog',
+        'subjectCatalog.school',
+        'curriculum',
+        'curriculum.academicTerm',
+        'academicTerm',
+        'subtopics',
+      ],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+
+    const subject = await this.subjectRepository.findOne({
+      where: { id: subjectId, school: { id: schoolId } },
+      relations: ['subjectCatalog', 'teacher', 'classLevels'],
+    });
+    if (!subject) throw new NotFoundException('Subject not found');
+    if (subject.subjectCatalog.id !== topic.subjectCatalog.id) {
+      throw new BadRequestException(
+        'Subject does not belong to the same subject catalog as the topic',
+      );
+    }
+
+    const activeClassLevel = (subject.classLevels || []).find(
+      (cl) => cl.id === classLevelId,
+    );
+    if (!activeClassLevel) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to this subject',
+      );
+    }
+
+    const resolvedTermId = this.resolveTopicAcademicTermId(
+      topic,
+      academicTermId,
+    );
+    if (!resolvedTermId) {
+      throw new BadRequestException(
+        'academicTermId is required when the topic has no academic term',
+      );
+    }
+    const academicTermEntity = await this.assertAcademicTermInSchool(
+      resolvedTermId,
+      schoolId,
+    );
+
+    const totalSubtopics = topic.subtopics?.length ?? 0;
+    const completions = await this.subtopicCompletionRepository.find({
+      where: {
+        subject: { id: subjectId },
+        subtopic: { topic: { id: topicId } },
+        academicTerm: { id: resolvedTermId },
+        classLevel: { id: classLevelId },
+      },
+      relations: ['subtopic'],
+    });
+    const completedCount = completions.length;
+    const progressPercent =
+      totalSubtopics === 0
+        ? 0
+        : Math.round((completedCount / totalSubtopics) * 100);
+    // Default status is pending; only completed when 100%
+    const status: 'pending' | 'completed' =
+      progressPercent < 100 ? 'pending' : 'completed';
+
+    let dateCompleted: string | null = null;
+    if (completions.length > 0) {
+      const latest = completions.reduce((a, b) =>
+        a.completedAt > b.completedAt ? a : b,
+      );
+      dateCompleted = this.formatDateOnly(latest.completedAt);
+    }
+
+    const subtopicsWithCompletion = (topic.subtopics || []).map((st) => {
+      const comp = completions.find((c) => c.subtopic.id === st.id);
+      return {
+        id: st.id,
+        name: st.name,
+        description: st.description,
+        completed: !!comp,
+        completedAt: comp ? this.formatDateOnly(comp.completedAt) : null,
+      };
+    });
+
+    const { weekDuration, weekNumber, weekLabel } = this.deriveTopicWeekFields(
+      topic,
+      academicTermEntity,
+    );
+
+    const teacher = subject.teacher;
+    const teacherDisplay =
+      teacher != null
+        ? {
+            id: teacher.id,
+            firstName: teacher.firstName,
+            lastName: teacher.lastName,
+            name:
+              [teacher.firstName, teacher.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim() || teacher.email,
+          }
+        : null;
+
+    return {
+      topic: {
+        id: topic.id,
+        name: topic.name,
+        description: topic.description,
+        plannedStartDate: this.formatDateOnly(topic.plannedStartDate),
+        plannedEndDate: this.formatDateOnly(topic.plannedEndDate),
+        progressPercent,
+        status,
+        dateCompleted,
+        weekDuration,
+        weekNumber,
+        weekLabel,
+      },
+      subject: {
+        id: subject.id,
+        subjectCatalog: {
+          id: subject.subjectCatalog.id,
+          name: subject.subjectCatalog.name,
+        },
+        teacher: teacherDisplay,
+        classLevels: (subject.classLevels || []).map((cl) => ({
+          id: cl.id,
+          name: cl.name,
+        })),
+        activeClassLevel: {
+          id: activeClassLevel.id,
+          name: activeClassLevel.name,
+        },
+      },
+      academicTerm: {
+        id: academicTermEntity.id,
+        termName: academicTermEntity.termName,
+        startDate: this.formatDateOnly(academicTermEntity.startDate),
+        endDate: this.formatDateOnly(academicTermEntity.endDate),
+      },
+      subtopics: subtopicsWithCompletion,
+    };
+  }
+
+  // Notes
+  async createNote(
+    dto: CreateCurriculumTopicNoteDto,
+    admin: SchoolAdmin,
+  ): Promise<CurriculumTopicNote> {
+    const topic = await this.topicRepository.findOne({
+      where: { id: dto.topicId },
+      relations: [
+        'subjectCatalog',
+        'subjectCatalog.school',
+        'curriculum',
+        'curriculum.academicTerm',
+        'academicTerm',
+      ],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== admin.school.id) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+    let subject: Subject | null = null;
+    if (dto.subjectId) {
+      const sub = await this.subjectRepository.findOne({
+        where: { id: dto.subjectId, school: { id: admin.school.id } },
+      });
+      if (!sub) throw new NotFoundException('Subject not found');
+      subject = sub;
+    }
+    let parent: CurriculumTopicNote | null = null;
+    if (dto.parentId) {
+      parent = await this.curriculumTopicNoteRepository.findOne({
+        where: { id: dto.parentId },
+        relations: ['topic'],
+      });
+      if (!parent) throw new NotFoundException('Parent note not found');
+      if (parent.topic.id !== dto.topicId) {
+        throw new BadRequestException(
+          'Parent note does not belong to this topic',
+        );
+      }
+    }
+    let noteAcademicTerm: AcademicTerm | null = null;
+    if (dto.academicTermId) {
+      noteAcademicTerm = await this.assertAcademicTermInSchool(
+        dto.academicTermId,
+        admin.school.id,
+      );
+    } else if (topic.academicTerm) {
+      noteAcademicTerm = topic.academicTerm;
+    } else if (topic.curriculum?.academicTerm) {
+      noteAcademicTerm = topic.curriculum.academicTerm;
+    }
+    const note = this.curriculumTopicNoteRepository.create({
+      topic,
+      subject: subject ?? undefined,
+      academicTerm: noteAcademicTerm ?? undefined,
+      authorId: admin.id,
+      authorRole: 'school_admin',
+      content: dto.content,
+      parent: parent ?? undefined,
+    });
+    return await this.curriculumTopicNoteRepository.save(note);
+  }
+
+  async getNotesForTopic(
+    topicId: string,
+    schoolId: string,
+    subjectId?: string,
+    academicTermId?: string,
+  ): Promise<CurriculumTopicNote[]> {
+    const topic = await this.topicRepository.findOne({
+      where: { id: topicId },
+      relations: ['subjectCatalog', 'subjectCatalog.school'],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+    const qb = this.curriculumTopicNoteRepository
+      .createQueryBuilder('note')
+      .leftJoinAndSelect('note.replies', 'replies')
+      .leftJoinAndSelect('note.subject', 'subject')
+      .leftJoinAndSelect('note.academicTerm', 'academicTerm')
+      .where('note.topic.id = :topicId', { topicId })
+      .andWhere('note.parent IS NULL');
+    if (subjectId) {
+      qb.andWhere('(note.subject.id = :subjectId OR note.subject.id IS NULL)', {
+        subjectId,
+      });
+    }
+    if (academicTermId) {
+      qb.andWhere(
+        '(note.academicTerm.id = :academicTermId OR note.academicTerm.id IS NULL)',
+        { academicTermId },
+      );
+    }
+    qb.orderBy('note.createdAt', 'ASC').addOrderBy('replies.createdAt', 'ASC');
+    return qb.getMany();
+  }
+
+  async deleteNote(noteId: string, admin: SchoolAdmin) {
+    const note = await this.curriculumTopicNoteRepository.findOne({
+      where: { id: noteId },
+      relations: [
+        'topic',
+        'topic.subjectCatalog',
+        'topic.subjectCatalog.school',
+      ],
+    });
+    if (!note) throw new NotFoundException('Note not found');
+    if (note.topic.subjectCatalog.school.id !== admin.school.id) {
+      throw new ForbiddenException('Note does not belong to your school');
+    }
+    await this.curriculumTopicNoteRepository.remove(note);
+    return { message: 'Note deleted successfully' };
+  }
+
+  // ---- Teacher-scoped methods (called from TeacherController) ----
+  async findSubtopicsByTopicAsTeacher(
+    topicId: string,
+    teacherId: string,
+    schoolId: string,
+  ): Promise<Subtopic[]> {
+    const topic = await this.topicRepository.findOne({
+      where: { id: topicId },
+      relations: ['subjectCatalog', 'subjectCatalog.school'],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+    const teacherSubject = await this.subjectRepository.findOne({
+      where: {
+        teacher: { id: teacherId },
+        subjectCatalog: { id: topic.subjectCatalog.id },
+      },
+    });
+    if (!teacherSubject) {
+      throw new ForbiddenException('You do not teach this subject');
+    }
+    return this.subtopicRepository.find({
+      where: { topic: { id: topicId } },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async createSubtopicAsTeacher(
+    topicId: string,
+    dto: CreateSubtopicDto,
+    _teacherId: string,
+    teacherIdentifier: string,
+    schoolId: string,
+  ): Promise<Subtopic> {
+    const topic = await this.topicRepository.findOne({
+      where: { id: topicId },
+      relations: ['subjectCatalog', 'subjectCatalog.school'],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+    const subtopic = this.subtopicRepository.create({
+      name: dto.name,
+      description: dto.description,
+      topic,
+      createdBy: teacherIdentifier,
+    });
+    return await this.subtopicRepository.save(subtopic);
+  }
+
+  async updateSubtopicAsTeacher(
+    subtopicId: string,
+    dto: UpdateSubtopicDto,
+    teacherIdentifier: string,
+    schoolId: string,
+  ): Promise<Subtopic> {
+    const subtopic = await this.subtopicRepository.findOne({
+      where: { id: subtopicId },
+      relations: [
+        'topic',
+        'topic.subjectCatalog',
+        'topic.subjectCatalog.school',
+      ],
+    });
+    if (!subtopic) throw new NotFoundException('Subtopic not found');
+    if (subtopic.topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Subtopic does not belong to your school');
+    }
+    if (subtopic.createdBy !== teacherIdentifier) {
+      throw new ForbiddenException('You can only edit subtopics you created');
+    }
+    if (dto.name !== undefined) subtopic.name = dto.name;
+    if (dto.description !== undefined) subtopic.description = dto.description;
+    return await this.subtopicRepository.save(subtopic);
+  }
+
+  async removeSubtopicAsTeacher(
+    subtopicId: string,
+    teacherIdentifier: string,
+    schoolId: string,
+  ) {
+    const subtopic = await this.subtopicRepository.findOne({
+      where: { id: subtopicId },
+      relations: [
+        'topic',
+        'topic.subjectCatalog',
+        'topic.subjectCatalog.school',
+      ],
+    });
+    if (!subtopic) throw new NotFoundException('Subtopic not found');
+    if (subtopic.topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Subtopic does not belong to your school');
+    }
+    if (subtopic.createdBy !== teacherIdentifier) {
+      throw new ForbiddenException('You can only delete subtopics you created');
+    }
+    await this.subtopicRepository.remove(subtopic);
+    return { message: 'Subtopic deleted successfully' };
+  }
+
+  async markSubtopicComplete(
+    subtopicId: string,
+    subjectId: string,
+    teacherId: string,
+    schoolId: string,
+    classLevelId: string,
+    academicTermId?: string,
+  ) {
+    if (!classLevelId) {
+      throw new BadRequestException('classLevelId is required');
+    }
+    const subtopic = await this.subtopicRepository.findOne({
+      where: { id: subtopicId },
+      relations: [
+        'topic',
+        'topic.subjectCatalog',
+        'topic.subjectCatalog.school',
+        'topic.curriculum',
+        'topic.curriculum.academicTerm',
+        'topic.academicTerm',
+      ],
+    });
+    if (!subtopic) throw new NotFoundException('Subtopic not found');
+    if (subtopic.topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Subtopic does not belong to your school');
+    }
+    const subject = await this.subjectRepository.findOne({
+      where: { id: subjectId, school: { id: schoolId } },
+      relations: ['teacher', 'subjectCatalog', 'classLevels'],
+    });
+    if (!subject) throw new NotFoundException('Subject not found');
+    if (subject.teacher?.id !== teacherId) {
+      throw new ForbiddenException(
+        'You can only mark complete for your own subjects',
+      );
+    }
+    if (subject.subjectCatalog.id !== subtopic.topic.subjectCatalog.id) {
+      throw new BadRequestException(
+        'Subject does not match topic subject catalog',
+      );
+    }
+    const classLevel = (subject.classLevels || []).find(
+      (cl) => cl.id === classLevelId,
+    );
+    if (!classLevel) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to this subject',
+      );
+    }
+    const resolvedTermId = this.resolveTopicAcademicTermId(
+      subtopic.topic,
+      academicTermId,
+    );
+    if (!resolvedTermId) {
+      throw new BadRequestException(
+        'academicTermId is required when the topic has no academic term',
+      );
+    }
+    const academicTerm = await this.assertAcademicTermInSchool(
+      resolvedTermId,
+      schoolId,
+    );
+    const existing = await this.subtopicCompletionRepository.findOne({
+      where: {
+        subtopic: { id: subtopicId },
+        subject: { id: subjectId },
+        academicTerm: { id: academicTerm.id },
+        classLevel: { id: classLevelId },
+      },
+    });
+    if (existing) return existing;
+    const completion = this.subtopicCompletionRepository.create({
+      subtopic,
+      subject,
+      academicTerm,
+      classLevel,
+      completedBy: teacherId,
+    });
+    return await this.subtopicCompletionRepository.save(completion);
+  }
+
+  async unmarkSubtopicComplete(
+    subtopicId: string,
+    subjectId: string,
+    teacherId: string,
+    schoolId: string,
+    classLevelId: string,
+    academicTermId?: string,
+  ) {
+    if (!classLevelId) {
+      throw new BadRequestException('classLevelId is required');
+    }
+    const subject = await this.subjectRepository.findOne({
+      where: { id: subjectId, school: { id: schoolId } },
+      relations: ['teacher', 'classLevels'],
+    });
+    if (!subject) throw new NotFoundException('Subject not found');
+    if (subject.teacher?.id !== teacherId) {
+      throw new ForbiddenException('You can only unmark for your own subjects');
+    }
+    const classLevelOk = (subject.classLevels || []).some(
+      (cl) => cl.id === classLevelId,
+    );
+    if (!classLevelOk) {
+      throw new BadRequestException(
+        'classLevelId is not assigned to this subject',
+      );
+    }
+    const subtopic = await this.subtopicRepository.findOne({
+      where: { id: subtopicId },
+      relations: [
+        'topic',
+        'topic.curriculum',
+        'topic.curriculum.academicTerm',
+        'topic.academicTerm',
+      ],
+    });
+    if (!subtopic) throw new NotFoundException('Subtopic not found');
+    const resolvedTermId = this.resolveTopicAcademicTermId(
+      subtopic.topic,
+      academicTermId,
+    );
+    if (!resolvedTermId) {
+      throw new BadRequestException(
+        'academicTermId is required when the topic has no academic term',
+      );
+    }
+    await this.assertAcademicTermInSchool(resolvedTermId, schoolId);
+    const completion = await this.subtopicCompletionRepository.findOne({
+      where: {
+        subtopic: { id: subtopicId },
+        subject: { id: subjectId },
+        academicTerm: { id: resolvedTermId },
+        classLevel: { id: classLevelId },
+      },
+    });
+    if (!completion) throw new NotFoundException('Completion record not found');
+    await this.subtopicCompletionRepository.remove(completion);
+    return { message: 'Subtopic marked incomplete' };
+  }
+
+  async createNoteReplyAsTeacher(
+    dto: CreateCurriculumTopicNoteDto,
+    teacherId: string,
+    schoolId: string,
+  ): Promise<CurriculumTopicNote> {
+    if (!dto.parentId) {
+      throw new BadRequestException('Reply must have a parent note');
+    }
+    const topic = await this.topicRepository.findOne({
+      where: { id: dto.topicId },
+      relations: ['subjectCatalog', 'subjectCatalog.school'],
+    });
+    if (!topic) throw new NotFoundException('Topic not found');
+    if (topic.subjectCatalog.school.id !== schoolId) {
+      throw new ForbiddenException('Topic does not belong to your school');
+    }
+    const parent = await this.curriculumTopicNoteRepository.findOne({
+      where: { id: dto.parentId },
+      relations: ['topic', 'subject', 'academicTerm'],
+    });
+    if (!parent) throw new NotFoundException('Parent note not found');
+    if (parent.topic.id !== dto.topicId) {
+      throw new BadRequestException(
+        'Parent note does not belong to this topic',
+      );
+    }
+    const note = this.curriculumTopicNoteRepository.create({
+      topic,
+      subject: parent.subject ?? undefined,
+      academicTerm: parent.academicTerm ?? undefined,
+      authorId: teacherId,
+      authorRole: 'teacher',
+      content: dto.content,
+      parent,
+    });
+    return await this.curriculumTopicNoteRepository.save(note);
   }
 }

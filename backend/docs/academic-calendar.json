@@ -1,0 +1,318 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Academic Calendar",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/academic-calendar": {
+      "post": {
+        "operationId": "AcademicCalendarController_createCalendar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAcademicCalendarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      },
+      "get": {
+        "operationId": "AcademicCalendarController_findAllCalendars",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      }
+    },
+    "/api/v1/academic-calendar/{id}": {
+      "get": {
+        "operationId": "AcademicCalendarController_findOneCalendar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      },
+      "put": {
+        "operationId": "AcademicCalendarController_updateCalendar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicCalendarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      },
+      "delete": {
+        "operationId": "AcademicCalendarController_removeCalendar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      }
+    },
+    "/api/v1/academic-calendar/term": {
+      "post": {
+        "operationId": "AcademicCalendarController_createTerm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAcademicTermDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      }
+    },
+    "/api/v1/academic-calendar/{calendarId}/terms": {
+      "get": {
+        "operationId": "AcademicCalendarController_findAllTerms",
+        "parameters": [
+          {
+            "name": "calendarId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      }
+    },
+    "/api/v1/academic-calendar/term/{id}": {
+      "get": {
+        "operationId": "AcademicCalendarController_findOneTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      },
+      "put": {
+        "operationId": "AcademicCalendarController_updateTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicTermDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      },
+      "delete": {
+        "operationId": "AcademicCalendarController_removeTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["AcademicCalendar"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateAcademicCalendarDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["name"]
+      },
+      "UpdateAcademicCalendarDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateAcademicTermDto": {
+        "type": "object",
+        "properties": {
+          "termName": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2025-01-06"
+          },
+          "endDate": {
+            "type": "string",
+            "example": "2025-04-15"
+          },
+          "academicCalendarId": {
+            "type": "string",
+            "description": "Academic calendar UUID"
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateHolidayDto"
+            }
+          }
+        },
+        "required": ["termName", "startDate", "endDate", "academicCalendarId"]
+      },
+      "CreateHolidayDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "example": "2025-12-25"
+          }
+        },
+        "required": ["name", "date"]
+      },
+      "UpdateAcademicTermDto": {
+        "type": "object",
+        "properties": {
+          "termName": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2025-01-06"
+          },
+          "endDate": {
+            "type": "string",
+            "example": "2025-04-15"
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateHolidayDto"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "academic-calendar"
+    }
+  ]
+}

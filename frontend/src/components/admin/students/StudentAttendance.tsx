@@ -28,8 +28,19 @@ const StudentAttendance = ({
     })),
   ];
 
-  const presentPercentage = (studentAttendance?.summary.totalPresentCount / studentAttendance?.summary.totalAttendanceCount) * 100 || 0 + '%'
-  const absentPercentage = (studentAttendance?.summary.totalAbsentCount / studentAttendance?.summary.totalAttendanceCount) * 100 || 0 + '%'
+  const totalSessions = studentAttendance?.summary?.totalAttendanceCount ?? 0;
+  const presentCount = studentAttendance?.summary?.totalPresentCount ?? 0;
+  const absentCount = studentAttendance?.summary?.totalAbsentCount ?? 0;
+
+  const formatPercent = (count: number): string => {
+    if (totalSessions <= 0 || !Number.isFinite(count)) return "0%";
+    const pct = (count / totalSessions) * 100;
+    if (!Number.isFinite(pct)) return "0%";
+    return `${pct.toFixed(1)}%`;
+  };
+
+  const presentPercentage = formatPercent(presentCount);
+  const absentPercentage = formatPercent(absentCount);
 
   return (
     <div>
@@ -60,7 +71,7 @@ const StudentAttendance = ({
           <InputField
             className="!py-0"
             label="Present Percentage"
-            value={presentPercentage as string}
+            value={presentPercentage}
             isTransulent={true}
           />
           <InputField
@@ -72,7 +83,7 @@ const StudentAttendance = ({
           <InputField
             className="!py-0"
             label="Absent Percentage"
-            value={absentPercentage as string}
+            value={absentPercentage}
             isTransulent={true}
           />
         </div>

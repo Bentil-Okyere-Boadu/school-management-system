@@ -1,0 +1,145 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Fee Structure",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/fee-structure/my-school": {
+      "get": {
+        "operationId": "FeeStructureController_findAllForMySchool",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["FeeStructure"]
+      }
+    },
+    "/api/v1/fee-structure": {
+      "post": {
+        "operationId": "FeeStructureController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFeeStructureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["FeeStructure"]
+      }
+    },
+    "/api/v1/fee-structure/{id}": {
+      "put": {
+        "operationId": "FeeStructureController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFeeStructureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["FeeStructure"]
+      },
+      "delete": {
+        "operationId": "FeeStructureController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["FeeStructure"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateFeeStructureDto": {
+        "type": "object",
+        "properties": {
+          "feeTitle": {
+            "type": "string"
+          },
+          "feeType": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "appliesTo": {
+            "type": "string",
+            "enum": ["all", "new", "continuing"],
+            "default": "all"
+          },
+          "dueDate": {
+            "type": "string",
+            "example": "2025-12-31"
+          },
+          "classLevelIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["feeTitle", "feeType", "amount"]
+      },
+      "UpdateFeeStructureDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "fee-structure"
+    }
+  ]
+}

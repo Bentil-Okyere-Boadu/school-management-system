@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import { ClassLevel } from 'src/class-level/class-level.entity';
 import { Subject } from 'src/subject/subject.entity';
 import { SubjectCatalog } from 'src/subject/subject-catalog.entity';
 import { Topic } from 'src/curriculum/entities/topic.entity';
+import { Curriculum } from 'src/curriculum/entities/curriculum.entity';
 import { In } from 'typeorm';
 import { CreateTeacherTopicDto } from './dto/create-teacher-topic.dto';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
@@ -213,7 +215,10 @@ export class TeacherService {
     return Array.from(uniqueById.values());
   }
 
-  async getMyTopics(teacherId: string) {
+  async getMyTopics(teacherId: string, academicTermId: string) {
+    if (!academicTermId?.trim()) {
+      throw new BadRequestException('academicTermId is required');
+    }
     const subjectRepository =
       this.teacherRepository.manager.getRepository(Subject);
     const topicRepository = this.teacherRepository.manager.getRepository(Topic);
@@ -236,20 +241,65 @@ export class TeacherService {
     }
 
     const topics = await topicRepository.find({
-      where: { subjectCatalog: { id: In(subjectCatalogIds) } },
+      where: {
+        subjectCatalog: { id: In(subjectCatalogIds) },
+        academicTerm: { id: academicTermId },
+      },
       order: { order: 'ASC' },
-      relations: ['subjectCatalog', 'curriculum'],
+      relations: ['subjectCatalog', 'curriculum', 'academicTerm'],
     });
 
     return topics;
   }
 
+  /**
+   * Curriculum that links this catalog and term (same school), if any; else null.
+   * Topic.academicTerm is the listing source of truth; curriculum is optional.
+   */
+  private async findCurriculumForCatalogAndTerm(
+    manager: typeof this.teacherRepository.manager,
+    schoolId: string,
+    subjectCatalogId: string,
+    academicTermId: string,
+  ): Promise<Curriculum | null> {
+    const curriculumRepo = manager.getRepository(Curriculum);
+    return curriculumRepo
+      .createQueryBuilder('c')
+      .innerJoin('c.subjectCatalogs', 'sc')
+      .innerJoin('c.school', 'sch')
+      .where('sch.id = :schoolId', { schoolId })
+      .andWhere('c.academicTermId = :termId', { termId: academicTermId })
+      .andWhere('sc.id = :scId', { scId: subjectCatalogId })
+      .getOne();
+  }
+
   async createTopic(teacher: Teacher, dto: CreateTeacherTopicDto) {
-    const subjectRepository =
-      this.teacherRepository.manager.getRepository(Subject);
-    const subjectCatalogRepository =
-      this.teacherRepository.manager.getRepository(SubjectCatalog);
-    const topicRepository = this.teacherRepository.manager.getRepository(Topic);
+    const manager = this.teacherRepository.manager;
+    const subjectRepository = manager.getRepository(Subject);
+    const subjectCatalogRepository = manager.getRepository(SubjectCatalog);
+    const topicRepository = manager.getRepository(Topic);
+    const academicTermRepository = manager.getRepository(AcademicTerm);
+
+    const teacherWithSchool = await this.teacherRepository.findOne({
+      where: { id: teacher.id },
+      relations: ['school'],
+    });
+    if (!teacherWithSchool?.school) {
+      throw new NotFoundException('Teacher school not found');
+    }
+
+    const term = await academicTermRepository.findOne({
+      where: { id: dto.academicTermId },
+      relations: ['academicCalendar', 'academicCalendar.school'],
+    });
+    if (!term) {
+      throw new NotFoundException('Academic term not found');
+    }
+    if (term.academicCalendar.school.id !== teacherWithSchool.school.id) {
+      throw new ForbiddenException(
+        'Academic term does not belong to your school',
+      );
+    }
 
     // Ensure teacher has this subjectCatalog assigned via Subject
     const subject = await subjectRepository.findOne({
@@ -279,15 +329,23 @@ export class TeacherService {
       .trim()
       .replace(/\s+/g, ' ');
 
-    const activeOrFirstCurriculum =
-      subjectCatalog.curricula?.find((c) => c.isActive) ??
-      subjectCatalog.curricula?.[0];
+    const matchedCurriculum = await this.findCurriculumForCatalogAndTerm(
+      manager,
+      teacherWithSchool.school.id,
+      dto.subjectCatalogId,
+      dto.academicTermId,
+    );
 
     const topic = topicRepository.create({
       name: dto.name,
       description: dto.description,
+      plannedStartDate: dto.plannedStartDate
+        ? new Date(dto.plannedStartDate)
+        : null,
+      plannedEndDate: dto.plannedEndDate ? new Date(dto.plannedEndDate) : null,
       subjectCatalog,
-      curriculum: activeOrFirstCurriculum,
+      curriculum: matchedCurriculum,
+      academicTerm: term,
       createdBy: `Teacher - ${createdByName || teacher.email}`,
     });
 
@@ -567,9 +625,17 @@ export class TeacherService {
     const subjectCatalogRepo = manager.getRepository(SubjectCatalog);
     const subjectRepo = manager.getRepository(Subject);
 
+    const teacherWithSchool = await this.teacherRepository.findOne({
+      where: { id: teacher.id },
+      relations: ['school'],
+    });
+    if (!teacherWithSchool?.school) {
+      throw new NotFoundException('Teacher school not found');
+    }
+
     const topic = await topicRepo.findOne({
       where: { id: topicId },
-      relations: ['subjectCatalog', 'curriculum'],
+      relations: ['subjectCatalog', 'curriculum', 'academicTerm'],
     });
     if (!topic) {
       throw new NotFoundException('Topic not found');
@@ -581,6 +647,17 @@ export class TeacherService {
 
     if (dto.name !== undefined) topic.name = dto.name;
     if (dto.description !== undefined) topic.description = dto.description;
+
+    if (dto.plannedStartDate !== undefined) {
+      topic.plannedStartDate = dto.plannedStartDate
+        ? new Date(dto.plannedStartDate)
+        : null;
+    }
+    if (dto.plannedEndDate !== undefined) {
+      topic.plannedEndDate = dto.plannedEndDate
+        ? new Date(dto.plannedEndDate)
+        : null;
+    }
 
     if (
       dto.subjectCatalogId &&
@@ -608,11 +685,20 @@ export class TeacherService {
       }
 
       topic.subjectCatalog = newCatalog;
-      // auto-select curriculum (active > first)
-      topic.curriculum =
-        newCatalog.curricula?.find((c) => c.isActive) ??
-        newCatalog.curricula?.[0] ??
-        null;
+      const termId = topic.academicTerm?.id;
+      if (termId) {
+        topic.curriculum = await this.findCurriculumForCatalogAndTerm(
+          manager,
+          teacherWithSchool.school.id,
+          newCatalog.id,
+          termId,
+        );
+      } else {
+        topic.curriculum =
+          newCatalog.curricula?.find((c) => c.isActive) ??
+          newCatalog.curricula?.[0] ??
+          null;
+      }
     }
 
     return topicRepo.save(topic);
@@ -1318,7 +1404,9 @@ export class TeacherService {
       .select('classLevel.id', 'id')
       .getRawMany<{ id: string }>();
     const classTeacherIds = classesAsClassTeacher.map((cl) => cl.id);
-    const uniqueClassLevelIds = [...new Set([...assignedClassIds, ...classTeacherIds])];
+    const uniqueClassLevelIds = [
+      ...new Set([...assignedClassIds, ...classTeacherIds]),
+    ];
 
     if (uniqueClassLevelIds.length === 0) {
       const page = parseInt(queryString.page ?? '1', 10);

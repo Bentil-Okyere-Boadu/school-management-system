@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { ApiTags, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
 import { AuthService } from './auth.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,11 +20,13 @@ import { Student } from '../student/student.entity';
 import { SuperAdmin } from '../super-admin/super-admin.entity';
 
 export class RefreshTokenDto {
+  @ApiPropertyOptional({ description: 'Refresh token from login response' })
   @IsString()
   @IsOptional()
   refresh_token?: string;
 }
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -99,7 +102,7 @@ export class AuthController {
       role: user.role?.name,
     };
 
-    const accessToken = this.authService.generateToken(payload, '15m');
+    const accessToken = this.authService.generateAccessToken(payload);
 
     this.logger.log(
       `Token refreshed for user ${user.id} (${refreshToken.userType})`,

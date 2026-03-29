@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { CurriculumCard } from "@/components/admin/subjects/CurriculumCard";
 import { Dialog } from "@/components/common/Dialog";
+import { Pagination } from "@/components/common/Pagination";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
@@ -19,10 +20,15 @@ import {
 } from "@/hooks/school-admin";
 import { Calendar, CurriculumPayload, ErrorResponse, Subject, Term, CurriculumRecord, SubjectOption } from "@/@types";
 import { useRouter } from "next/navigation";
+import { HashLoader } from "react-spinners";
+import { useQueryClient } from "@tanstack/react-query";
 
+const CURRICULA_PAGE_SIZE = 10;
 
 export const CurriculumTabSection: React.FC = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -37,7 +43,15 @@ export const CurriculumTabSection: React.FC = () => {
 
   const [busyToggleId, setBusyToggleId] = useState<string | null>(null);
 
-  const { curricula, refetch } = useGetCurricula();
+  const { curricula, refetch, isLoading, paginationValues } = useGetCurricula(
+    "",
+    currentPage,
+    CURRICULA_PAGE_SIZE
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const { mutate: createMutation, isPending: creating } = useCreateCurriculum();
   const { mutate: editMutation, isPending: editing } = useEditCurriculum(activeId);
@@ -135,12 +149,12 @@ export const CurriculumTabSection: React.FC = () => {
       name,
       description,
       subjectCatalogIds: selectedSubjectIds,
-      academicTermId: selectedTermId,
+      ...(selectedTermId ? { academicTermId: selectedTermId } : {}),
       isActive: true,
     };
 
-    if (!name || !selectedTermId || selectedSubjectIds.length === 0) {
-      toast.error("Name, academic term and at least one subject are required.");
+    if (!name || selectedSubjectIds.length === 0) {
+      toast.error("Name and at least one subject are required.");
       return;
     }
 
@@ -156,12 +170,12 @@ export const CurriculumTabSection: React.FC = () => {
         },
       });
     } else {
-      // require term on create
       createMutation(payload as CurriculumPayload, {
         onSuccess: () => {
           toast.success("Successfully created curriculum.");
           setIsDialogOpen(false);
-          refetch();
+          setCurrentPage(1);
+          queryClient.invalidateQueries({ queryKey: ["curricula"] });
         },
         onError: (error: unknown) => {
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -172,11 +186,11 @@ export const CurriculumTabSection: React.FC = () => {
 
   const onConfirmDelete = () => {
     deleteMutation(activeId, {
-      onSuccess: () => {
-        toast.success("Deleted successfully.");
-        setIsDeleteDialogOpen(false);
-        refetch();
-      },
+        onSuccess: () => {
+          toast.success("Deleted successfully.");
+          setIsDeleteDialogOpen(false);
+          refetch();
+        },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
       },
@@ -195,40 +209,52 @@ export const CurriculumTabSection: React.FC = () => {
           <CustomButton text="Add Curriculum" onClick={onAddNew} />
         </div>
 
-        <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-1 px-0.5">
-          {curricula?.map((data: CurriculumRecord, index: number) => (
-            <CurriculumCard
-              key={data.id ?? index}
-              curriculumData={{
-                id: data.id,
-                name: data.name,
-                description: data.description,
-                isActive: data.isActive,
-                subjectCatalogIds:
-                  data.subjectCatalogIds ??
-                  (data.subjectCatalogs?.map((s) => s.id) ?? []),
-              }}
-              showEditAndDelete={true}
-              showToggleActive={true}
-              showViewSubjects={true}
-              tooltipText="Toggle whether this curriculum is active for assignment."
-              onEditClick={() => onEdit(data)}
-              onDeleteClick={() => onDeleteClick(data.id)}
-              onToggleActiveClick={() => onToggleActive(data)}
-              onViewSubjectsClick={() => onViewSubjects(data)}
-              subjectCount={
-                data.subjectCatalogIds?.length ??
-                data.subjectCatalogs?.length ??
-                0
-              }
-              busy={busyToggleId === data.id}
-            />
-          ))}
+        <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-1 px-0.5 min-h-[200px] relative">
+          {isLoading ? (
+            <div className="col-span-full flex justify-center items-center py-20">
+              <HashLoader color="#AB58E7" size={40} />
+            </div>
+          ) : (
+            curricula?.map((data: CurriculumRecord, index: number) => (
+              <CurriculumCard
+                key={data.id ?? index}
+                curriculumData={{
+                  id: data.id,
+                  name: data.name,
+                  description: data.description,
+                  isActive: data.isActive,
+                  subjectCatalogIds:
+                    data.subjectCatalogIds ??
+                    (data.subjectCatalogs?.map((s) => s.id) ?? []),
+                }}
+                showEditAndDelete={true}
+                showToggleActive={true}
+                showViewSubjects={true}
+                tooltipText="Toggle whether this curriculum is active for assignment."
+                onEditClick={() => onEdit(data)}
+                onDeleteClick={() => onDeleteClick(data.id)}
+                onToggleActiveClick={() => onToggleActive(data)}
+                onViewSubjectsClick={() => onViewSubjects(data)}
+                subjectCount={
+                  data.subjectCatalogIds?.length ??
+                  data.subjectCatalogs?.length ??
+                  0
+                }
+                busy={busyToggleId === data.id}
+              />
+            ))
+          )}
         </section>
 
-        {curricula?.length === 0 && (
+        {!isLoading && curricula?.length === 0 && (
           <NoAvailableEmptyState message="No curriculum available, click ‘Add Curriculum’ to create one." />
         )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={paginationValues?.totalPages ?? 1}
+          onPageChange={handlePageChange}
+        />
       </div>
 
       <Dialog
@@ -297,11 +323,12 @@ export const CurriculumTabSection: React.FC = () => {
             />
             <Select
               label="Academic Term"
-              placeholder="Pick term (select academic calendar first)"
+              placeholder="Optional — reusable for all terms if empty"
               data={termOptions}
               value={selectedTermId}
-              onChange={(e) => setSelectedTermId(e as string)}
+              onChange={(e) => setSelectedTermId((e as string) ?? "")}
               searchable
+              clearable
             />
           </div>
         </div>

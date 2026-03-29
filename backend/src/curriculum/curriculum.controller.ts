@@ -8,12 +8,17 @@ import {
   Delete,
   UseGuards,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { CurriculumService } from './curriculum.service';
 import { CreateCurriculumDto } from './dto/create-curriculum.dto';
 import { UpdateCurriculumDto } from './dto/update-curriculum.dto';
 import { CreateTopicDto } from './dto/create-topic.dto';
+import { DuplicateTopicsToTermDto } from './dto/duplicate-topics-to-term.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
+import { CreateSubtopicDto } from './dto/create-subtopic.dto';
+import { UpdateSubtopicDto } from './dto/update-subtopic.dto';
+import { CreateCurriculumTopicNoteDto } from './dto/create-curriculum-topic-note.dto';
 import { SchoolAdminJwtAuthGuard } from '../school-admin/guards/school-admin-jwt-auth.guard';
 import { ActiveUserGuard } from '../auth/guards/active-user.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -60,6 +65,16 @@ export class CurriculumController {
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('topics/duplicate-to-term')
+  @Roles(Role.SchoolAdmin)
+  duplicateTopicsToTerm(
+    @Body() dto: DuplicateTopicsToTermDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.duplicateTopicsToTerm(dto, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('topics')
   @Roles(Role.SchoolAdmin)
   findAllTopics(
@@ -67,6 +82,52 @@ export class CurriculumController {
     @Query() query: QueryString,
   ) {
     return this.curriculumService.findAllTopics(admin.school.id, query);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('topics/:topicId/detail')
+  @Roles(Role.SchoolAdmin)
+  getTopicDetail(
+    @CurrentUser() admin: SchoolAdmin,
+    @Param('topicId') topicId: string,
+    @Query('subjectId') subjectId: string,
+    @Query('classLevelId') classLevelId: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    if (!classLevelId) {
+      throw new BadRequestException('classLevelId query parameter is required');
+    }
+    return this.curriculumService.getTopicDetail(
+      topicId,
+      subjectId,
+      admin.school.id,
+      classLevelId,
+      academicTermId,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('topics/:topicId/subtopics')
+  @Roles(Role.SchoolAdmin)
+  createSubtopic(
+    @Param('topicId') topicId: string,
+    @Body() dto: CreateSubtopicDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.createSubtopic(topicId, dto, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('topics/:topicId/subtopics')
+  @Roles(Role.SchoolAdmin)
+  findSubtopicsByTopic(
+    @Param('topicId') topicId: string,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.findSubtopicsByTopic(
+      topicId,
+      admin.school.id,
+    );
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -113,11 +174,85 @@ export class CurriculumController {
   findAllTopicsBySubjectCatalog(
     @Param('subjectCatalogId') subjectCatalogId: string,
     @CurrentUser() admin: SchoolAdmin,
+    @Query('academicTermId') academicTermId?: string,
   ) {
     return this.curriculumService.findAllTopicsBySubjectCatalog(
       subjectCatalogId,
       admin.school.id,
+      academicTermId,
     );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('progress-dashboard')
+  @Roles(Role.SchoolAdmin)
+  getProgressDashboard(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query('curriculumId') curriculumId?: string,
+    @Query('subjectCatalogId') subjectCatalogId?: string,
+    @Query('classLevelId') classLevelId?: string,
+    @Query('teacherId') teacherId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.curriculumService.getProgressDashboard(admin.school.id, {
+      curriculumId,
+      subjectCatalogId,
+      classLevelId,
+      teacherId,
+      academicTermId,
+    });
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('subtopics/:id')
+  @Roles(Role.SchoolAdmin)
+  updateSubtopic(
+    @Param('id') id: string,
+    @Body() dto: UpdateSubtopicDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.updateSubtopic(id, dto, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('subtopics/:id')
+  @Roles(Role.SchoolAdmin)
+  removeSubtopic(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    return this.curriculumService.removeSubtopic(id, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('notes')
+  @Roles(Role.SchoolAdmin)
+  createNote(
+    @Body() dto: CreateCurriculumTopicNoteDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    return this.curriculumService.createNote(dto, admin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('topics/:topicId/notes')
+  @Roles(Role.SchoolAdmin)
+  getNotesForTopic(
+    @Param('topicId') topicId: string,
+    @CurrentUser() admin: SchoolAdmin,
+    @Query('subjectId') subjectId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.curriculumService.getNotesForTopic(
+      topicId,
+      admin.school.id,
+      subjectId,
+      academicTermId,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('notes/:id')
+  @Roles(Role.SchoolAdmin)
+  deleteNote(@Param('id') id: string, @CurrentUser() admin: SchoolAdmin) {
+    return this.curriculumService.deleteNote(id, admin);
   }
 
   // Curriculum specific routes - Must come after specific routes

@@ -79,6 +79,15 @@ $ npm run test:cov
 $ npm run seed:superadmin
 ```
 
+## API documentation (OpenAPI / Postman)
+
+OpenAPI specs are generated into the `docs/` folder. You can import them into **Postman** or other API clients.
+
+- **Generate docs:** `npm run generate:openapi`
+- **Full guide:** see [docs/README.md](docs/README.md) for how to generate the specs and import them into Postman (one collection vs multiple collections, base URL, and auth).
+
+---
+
 ## API Features – Usage Guide
 
 ### Base URL

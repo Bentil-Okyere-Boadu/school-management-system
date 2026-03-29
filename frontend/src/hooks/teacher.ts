@@ -1,6 +1,8 @@
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload } from "@/@types";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
+import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 
 export const useTeacherGetMe = () => {
     const { data, isPending, refetch} = useQuery({
@@ -16,25 +18,33 @@ export const useTeacherGetMe = () => {
     return { me, isPending, refetch }
 }
 
-export const useGetTeacherClasses = (search: string = "") => {
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['teacherClasses', { search }],
-        queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
-            }
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+export const useGetTeacherClasses = (
+  search: string = "",
+  academicTermId?: string
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["teacherClasses", { search, academicTermId }],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+      if (search) {
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
+      }
+      if (academicTermId) {
+        queryBuilder.push(
+          `academicTermId=${encodeURIComponent(academicTermId)}`
+        );
+      }
+      const qs = queryBuilder.length > 0 ? `?${queryBuilder.join("&")}` : "";
 
-            return customAPI.get(`/teacher/my-classes?${params}`);
-        },
-        refetchOnWindowFocus: true
-    })
+      return customAPI.get(`/teacher/my-classes${qs}`);
+    },
+    refetchOnWindowFocus: true,
+  });
 
-    const classLevels = data?.data as ClassLevel[] || [] ;
+  const classLevels = (data?.data as ClassLevel[]) || [];
 
-    return { classLevels, isLoading, refetch }
-}
+  return { classLevels, isLoading, refetch };
+};
 
 export const useGetTeacherSubjectClasses = (search: string = "") => {
     const { data, isLoading, refetch } = useQuery({
@@ -290,6 +300,40 @@ export const useGetCalendars = () => {
   return { studentCalendars, isLoading, refetch }
 }
 
+/**
+ * Single-term selection for teacher topic lists: flattened sorted terms,
+ * defaulting to the latest term when the set changes.
+ */
+export const useTeacherAcademicTermSelection = () => {
+  const { studentCalendars: calendars, isLoading: calendarsLoading } =
+    useGetCalendars();
+  const [academicTermId, setAcademicTermId] = useState("");
+
+  const sortedTerms = useMemo(
+    () => getSortedSchoolTerms(calendars),
+    [calendars],
+  );
+
+  useEffect(() => {
+    if (sortedTerms.length === 0) return;
+    setAcademicTermId((prev) => {
+      if (prev && sortedTerms.some((t) => t.id === prev)) return prev;
+      return sortedTerms[0].id;
+    });
+  }, [sortedTerms]);
+
+  const latestTermId = sortedTerms[0]?.id;
+
+  return {
+    calendars,
+    calendarsLoading,
+    sortedTerms,
+    academicTermId,
+    setAcademicTermId,
+    latestTermId,
+  };
+};
+
 export const useGetSubjectClasses = (search: string = "") => {
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['subjectClasses', { search }],
@@ -330,18 +374,27 @@ export const useGetTeacherSubjects = (search: string = "") => {
     return { teacherSubjects, isLoading, refetch }
 }
 
-export const useGetTeacherTopics = (search: string = "") => {
+export const useGetTeacherTopics = (
+  search: string = "",
+  academicTermId?: string,
+) => {
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['teacherTopics', { search }],
+        queryKey: ['teacherTopics', { search, academicTermId }],
         queryFn: () => {
-            const queryBuilder = [];
-            if(search) {
-                queryBuilder.push(`search=${search}`);
+            const queryBuilder: string[] = [];
+            if (search) {
+                queryBuilder.push(`search=${encodeURIComponent(search)}`);
             }
-            const params = queryBuilder.length > 0 ?  queryBuilder.join("&") : "";
+            if (academicTermId) {
+                queryBuilder.push(
+                    `academicTermId=${encodeURIComponent(academicTermId)}`,
+                );
+            }
+            const params = queryBuilder.length > 0 ? queryBuilder.join("&") : "";
 
             return customAPI.get(`/teacher/my-topics?${params}`);
         },
+        enabled: Boolean(academicTermId?.trim()),
         refetchOnWindowFocus: true
     })
 
@@ -350,16 +403,49 @@ export const useGetTeacherTopics = (search: string = "") => {
     return { teacherTopics, isLoading, refetch }
 }
 
+export type TeacherCurriculumProgressFilters = {
+    academicTermId: string;
+    subjectId?: string;
+    classLevelId?: string;
+};
+
+export const useGetTeacherCurriculumProgress = (
+    filters: TeacherCurriculumProgressFilters | null
+) => {
+    const { data, isLoading, refetch, error } = useQuery({
+        queryKey: ["teacherCurriculumProgress", filters],
+        queryFn: () => {
+            const params = new URLSearchParams();
+            params.set("academicTermId", filters!.academicTermId);
+            if (filters!.subjectId) params.set("subjectId", filters!.subjectId);
+            if (filters!.classLevelId) {
+                params.set("classLevelId", filters!.classLevelId);
+            }
+            return customAPI.get(
+                `/teacher/curriculum/progress?${params.toString()}`
+            );
+        },
+        enabled: Boolean(filters?.academicTermId),
+        refetchOnWindowFocus: true,
+        refetchOnMount: "always",
+    });
+
+    const dashboard = (data as { data?: TeacherCurriculumProgressDashboard })
+        ?.data;
+
+    return { dashboard, isLoading, refetch, error };
+};
+
 export const useCreateTeacherTopic = () => {
     return useMutation({
-        mutationFn: (payload: { name: string; description: string; subjectCatalogId: string }) =>
+        mutationFn: (payload: TeacherTopicPayload) =>
             customAPI.post('/teacher/topics', payload),
     });
 };
 
 export const useUpdateTeacherTopic = (topicId: string) => {
     return useMutation({
-        mutationFn: (payload: { name: string; description: string; subjectCatalogId: string }) =>
+        mutationFn: (payload: Partial<TeacherTopicPayload>) =>
             customAPI.patch(`/teacher/topics/${topicId}`, payload),
     });
 };
@@ -368,6 +454,111 @@ export const useDeleteTeacherTopic = () => {
     return useMutation({
         mutationFn: (topicId: string) =>
             customAPI.delete(`/teacher/topics/${topicId}`),
+    });
+};
+
+export const useGetSubtopicsForTopic = (topicId: string | undefined, enabled = true) => {
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherSubtopics', topicId],
+        queryFn: () => customAPI.get(`/teacher/topics/${topicId}/subtopics`),
+        enabled: Boolean(topicId) && enabled,
+        refetchOnWindowFocus: true,
+    });
+    const subtopics = (data?.data as Subtopic[]) ?? [];
+    return { subtopics, isLoading, refetch };
+};
+
+export const useCreateTeacherSubtopic = () => {
+    return useMutation({
+        mutationFn: ({ topicId, payload }: { topicId: string; payload: CreateSubtopicPayload }) =>
+            customAPI.post(`/teacher/topics/${topicId}/subtopics`, {
+                name: payload.name,
+                description: payload.description,
+            }),
+    });
+};
+
+export const useUpdateTeacherSubtopic = () => {
+    return useMutation({
+        mutationFn: ({ id, payload }: { id: string; payload: UpdateSubtopicPayload }) =>
+            customAPI.patch(`/teacher/subtopics/${id}`, payload),
+    });
+};
+
+export const useDeleteTeacherSubtopic = () => {
+    return useMutation({
+        mutationFn: (id: string) => customAPI.delete(`/teacher/subtopics/${id}`),
+    });
+};
+
+export const useMarkSubtopicComplete = () => {
+    return useMutation({
+        mutationFn: ({
+            subtopicId,
+            subjectId,
+            classLevelId,
+            academicTermId,
+        }: {
+            subtopicId: string;
+            subjectId: string;
+            classLevelId: string;
+            academicTermId?: string;
+        }) =>
+            customAPI.post(`/teacher/subtopics/${subtopicId}/complete`, {
+                subjectId,
+                classLevelId,
+                ...(academicTermId ? { academicTermId } : {}),
+            }),
+    });
+};
+
+export const useUnmarkSubtopicComplete = () => {
+    return useMutation({
+        mutationFn: ({
+            subtopicId,
+            subjectId,
+            classLevelId,
+            academicTermId,
+        }: {
+            subtopicId: string;
+            subjectId: string;
+            classLevelId: string;
+            academicTermId?: string;
+        }) => {
+            const params = new URLSearchParams({ subjectId, classLevelId });
+            if (academicTermId) params.set('academicTermId', academicTermId);
+            return customAPI.delete(
+                `/teacher/subtopics/${subtopicId}/complete?${params.toString()}`,
+            );
+        },
+    });
+};
+
+export const useGetTeacherTopicNotes = (
+    topicId: string | undefined,
+    options?: { subjectId?: string; academicTermId?: string; enabled?: boolean },
+) => {
+    const { subjectId, academicTermId, enabled = true } = options ?? {};
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['teacherTopicNotes', topicId, subjectId, academicTermId],
+        queryFn: () => {
+            const params = new URLSearchParams();
+            if (subjectId) params.set('subjectId', subjectId);
+            if (academicTermId) params.set('academicTermId', academicTermId);
+            const q = params.toString() ? `?${params.toString()}` : '';
+            return customAPI.get(`/teacher/topics/${topicId}/notes${q}`);
+        },
+        enabled: Boolean(topicId) && enabled,
+        refetchOnWindowFocus: true,
+    });
+    const notes = (data?.data as CurriculumTopicNote[]) ?? [];
+    return { notes, isLoading, refetch };
+};
+
+export const useReplyToCurriculumNote = () => {
+    return useMutation({
+        mutationFn: (payload: CreateCurriculumTopicNotePayload) =>
+            customAPI.post('/teacher/notes/reply', payload),
     });
 };
 
@@ -471,11 +662,49 @@ export const useGetStudentsForGrading = (
   return { studentsForGrading, isLoading, refetch };
 };
 
+export type TeacherClassResultsApprovalStatus = {
+  isApproved: boolean;
+  approvedAt?: string | null;
+  schoolAdminApproved: boolean;
+  schoolAdminApprovedAt?: string | null;
+  term: string;
+  termId: string;
+};
+
+export const useGetTeacherClassResultsApprovalStatus = (
+  classLevelId: string | undefined,
+  academicTermId: string | undefined
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["teacherClassApprovalStatus", classLevelId, academicTermId],
+    queryFn: () => {
+      const q = academicTermId
+        ? `?academicTermId=${encodeURIComponent(academicTermId)}`
+        : "";
+      return customAPI.get(
+        `/subject/class-results-approval-status/${classLevelId}${q}`
+      );
+    },
+    enabled: Boolean(classLevelId && academicTermId),
+    refetchOnWindowFocus: true,
+  });
+
+  const status = data?.data as TeacherClassResultsApprovalStatus | undefined;
+
+  return { status, isLoading, refetch };
+};
 
 export const usePostStudentGrades = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: PostGradesPayload) =>
       customAPI.post(`/subject/submit-grades`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["studentsForGrading"] });
+      queryClient.invalidateQueries({
+        queryKey: ["teacherClassApprovalStatus"],
+      });
+    },
   });
 };
 
@@ -520,9 +749,16 @@ export const useSubmitStudentTermRemarks = (studentId: string, termId: string) =
 };
 
 export const useApproveClassResults = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: ApproveClassResultsPayload) =>
       customAPI.post(`/subject/toggle-class-results-approval`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacherClasses"] });
+      queryClient.invalidateQueries({
+        queryKey: ["teacherClassApprovalStatus"],
+      });
+    },
   });
 };
 

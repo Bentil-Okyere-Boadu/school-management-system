@@ -33,7 +33,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     },
     {
       icon: ClipboardIcon,      
-      label: "Subjects",
+      label: "Curriculum",
     },
     {
       icon: PlannerIcon,      
@@ -61,7 +61,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setActiveMenuItem("Grading");
       setIsOverviewPage(true);
     } else if (pathname === "/teacher/subjects" || pathname.startsWith("/teacher/assignments/")) {
-      setActiveMenuItem("Subjects");
+      setActiveMenuItem("Curriculum");
       setIsOverviewPage(true);
     } else if (pathname === "/teacher/planner") {
       setActiveMenuItem("Planner");
@@ -79,7 +79,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setActiveMenuItem("Grading");
       setIsOverviewPage(false);
     } else if (pathname.startsWith("/teacher/subjects")) {
-      setActiveMenuItem("Subjects");
+      setActiveMenuItem("Curriculum");
       setIsOverviewPage(false);
     } else if (pathname.startsWith("/teacher/planner")) {
       setActiveMenuItem("Planner");
@@ -106,7 +106,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       case "Grading":
         router.push("/teacher/grading");
         break;
-      case "Subjects":
+      case "Curriculum":
         router.push("/teacher/subjects");
         break;
       case "Planner":
