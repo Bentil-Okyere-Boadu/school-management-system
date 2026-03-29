@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { HashLoader } from "react-spinners";
 import { Dialog } from "@/components/common/Dialog";
+import { StudentStatusBadge } from "@/components/common/StudentStatusBadge";
 import { useArchiveUser } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 
@@ -71,6 +72,9 @@ const StudentsTable = ({ students, refetch, busy }: StudentsTableProps) => {
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[200px]">
                 <div>Date of Birth</div>
               </th>
+              <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[120px]">
+                <div>Status</div>
+              </th>
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-30 max-w-[50px]"></th>
             </tr>
           </thead>
@@ -79,7 +83,7 @@ const StudentsTable = ({ students, refetch, busy }: StudentsTableProps) => {
     if (busy) {
       return (
         <tr>
-          <td colSpan={8}>
+          <td colSpan={9}>
             <div className="relative py-16">
               <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10">
                 <HashLoader color="#AB58E7" size={40} />
@@ -93,7 +97,7 @@ const StudentsTable = ({ students, refetch, busy }: StudentsTableProps) => {
     if (!students?.length) {
       return (
         <tr>
-          <td colSpan={8}>
+          <td colSpan={9}>
             <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
               <p className="text-lg font-medium">No students found</p>
               <p className="text-sm text-gray-400 mt-1">
@@ -130,6 +134,10 @@ const StudentsTable = ({ students, refetch, busy }: StudentsTableProps) => {
 
         <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
           {student.profile?.DateOfBirth}
+        </td>
+
+        <td className="px-6 py-6 leading-none text-center border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+          <StudentStatusBadge student={student} />
         </td>
 
         <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">

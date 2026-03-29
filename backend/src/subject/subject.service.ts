@@ -240,14 +240,30 @@ export class SubjectService {
     teacher: Teacher,
     action: 'approve' | 'unapprove' = 'approve',
     forceApprove = false,
+    academicTermId?: string,
   ) {
-    const latestTerm = await this.academicTermRepository.findOne({
-      where: { academicCalendar: { school: { id: teacher.school.id } } },
-      order: { startDate: 'DESC' },
-      relations: ['academicCalendar'],
-    });
-    if (!latestTerm)
+    let term: AcademicTerm | null = null;
+    if (academicTermId) {
+      term = await this.academicTermRepository.findOne({
+        where: {
+          id: academicTermId,
+          academicCalendar: { school: { id: teacher.school.id } },
+        },
+        relations: ['academicCalendar'],
+      });
+      if (!term) {
+        throw new NotFoundException('Academic term not found');
+      }
+    } else {
+      term = await this.academicTermRepository.findOne({
+        where: { academicCalendar: { school: { id: teacher.school.id } } },
+        order: { startDate: 'DESC' },
+        relations: ['academicCalendar'],
+      });
+    }
+    if (!term) {
       throw new NotFoundException('No academic term found for this school');
+    }
 
     const classLevel = await this.classLevelRepository.findOne({
       where: { id: classLevelId },
@@ -266,7 +282,7 @@ export class SubjectService {
     const grades = await this.studentGradeRepository.find({
       where: {
         classLevel: { id: classLevelId },
-        academicTerm: { id: latestTerm.id },
+        academicTerm: { id: term.id },
       },
       relations: [
         'student',
@@ -329,7 +345,7 @@ export class SubjectService {
     let approval = await this.classLevelResultApprovalRepository.findOne({
       where: {
         classLevel: { id: classLevelId },
-        academicTerm: { id: latestTerm.id },
+        academicTerm: { id: term.id },
       },
     });
 
@@ -351,7 +367,7 @@ export class SubjectService {
     if (!approval) {
       approval = this.classLevelResultApprovalRepository.create({
         classLevel,
-        academicTerm: latestTerm,
+        academicTerm: term,
         approved: action === 'approve',
         approvedAt: action === 'approve' ? new Date() : undefined,
         schoolAdminApproved: false,
@@ -368,7 +384,7 @@ export class SubjectService {
       // Notify school admin
       await this.notificationService.create({
         title: 'Class Results Approved',
-        message: `Teacher ${teacher.firstName} ${teacher.lastName} has approved results for ${classLevel.name} for academic term ${latestTerm.termName}.`,
+        message: `Teacher ${teacher.firstName} ${teacher.lastName} has approved results for ${classLevel.name} for academic term ${term.termName}.`,
         schoolId: teacher.school.id,
         type: NotificationType.ClassTeacherResultSubmission,
       });
@@ -383,7 +399,7 @@ export class SubjectService {
       approvedAt: approval.approvedAt,
       schoolAdminApproved: approval.schoolAdminApproved,
       schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
-      term: latestTerm.termName,
+      term: term.termName,
       missingGrades: action === 'approve' ? missingGrades : [],
     };
   }
@@ -391,19 +407,37 @@ export class SubjectService {
   async getClassResultsApprovalStatus(
     classLevelId: string,
     user: Teacher | SchoolAdmin,
+    academicTermId?: string,
   ) {
-    const latestTerm = await this.academicTermRepository.findOne({
-      where: { academicCalendar: { school: { id: user.school.id } } },
-      order: { startDate: 'DESC' },
-      relations: ['academicCalendar'],
-    });
-    if (!latestTerm)
+    let term: AcademicTerm | null = null;
+
+    if (academicTermId) {
+      term = await this.academicTermRepository.findOne({
+        where: {
+          id: academicTermId,
+          academicCalendar: { school: { id: user.school.id } },
+        },
+        relations: ['academicCalendar'],
+      });
+      if (!term) {
+        throw new NotFoundException('Academic term not found');
+      }
+    } else {
+      term = await this.academicTermRepository.findOne({
+        where: { academicCalendar: { school: { id: user.school.id } } },
+        order: { startDate: 'DESC' },
+        relations: ['academicCalendar'],
+      });
+    }
+
+    if (!term) {
       throw new NotFoundException('No academic term found for this school');
+    }
 
     const approval = await this.classLevelResultApprovalRepository.findOne({
       where: {
         classLevel: { id: classLevelId },
-        academicTerm: { id: latestTerm.id },
+        academicTerm: { id: term.id },
       },
     });
 
@@ -413,8 +447,8 @@ export class SubjectService {
       schoolAdminApproved: approval?.schoolAdminApproved || false,
       schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
       approvedBySchoolAdmin: approval?.approvedBySchoolAdmin,
-      term: latestTerm.termName,
-      termId: latestTerm.id,
+      term: term.termName,
+      termId: term.id,
     };
   }
 
@@ -422,14 +456,30 @@ export class SubjectService {
     classLevelId: string,
     schoolAdmin: SchoolAdmin,
     action: 'approve' | 'unapprove' = 'approve',
+    academicTermId?: string,
   ) {
-    const latestTerm = await this.academicTermRepository.findOne({
-      where: { academicCalendar: { school: { id: schoolAdmin.school.id } } },
-      order: { startDate: 'DESC' },
-      relations: ['academicCalendar'],
-    });
-    if (!latestTerm)
+    let term: AcademicTerm | null = null;
+    if (academicTermId) {
+      term = await this.academicTermRepository.findOne({
+        where: {
+          id: academicTermId,
+          academicCalendar: { school: { id: schoolAdmin.school.id } },
+        },
+        relations: ['academicCalendar'],
+      });
+      if (!term) {
+        throw new NotFoundException('Academic term not found');
+      }
+    } else {
+      term = await this.academicTermRepository.findOne({
+        where: { academicCalendar: { school: { id: schoolAdmin.school.id } } },
+        order: { startDate: 'DESC' },
+        relations: ['academicCalendar'],
+      });
+    }
+    if (!term) {
       throw new NotFoundException('No academic term found for this school');
+    }
 
     const classLevel = await this.classLevelRepository.findOne({
       where: { id: classLevelId },
@@ -439,7 +489,7 @@ export class SubjectService {
     let approval = await this.classLevelResultApprovalRepository.findOne({
       where: {
         classLevel: { id: classLevelId },
-        academicTerm: { id: latestTerm.id },
+        academicTerm: { id: term.id },
       },
     });
 
@@ -447,7 +497,7 @@ export class SubjectService {
       // Create new approval record if it doesn't exist
       approval = this.classLevelResultApprovalRepository.create({
         classLevel,
-        academicTerm: latestTerm,
+        academicTerm: term,
         approved: false,
         approvedAt: undefined,
         schoolAdminApproved: action === 'approve',
@@ -475,7 +525,7 @@ export class SubjectService {
       schoolAdminApproved: approval.schoolAdminApproved,
       schoolAdminApprovedAt: approval.schoolAdminApprovedAt,
       approvedBySchoolAdmin: approval.approvedBySchoolAdmin,
-      term: latestTerm.termName,
+      term: term.termName,
     };
   }
 

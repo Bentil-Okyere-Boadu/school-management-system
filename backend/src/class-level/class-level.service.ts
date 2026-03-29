@@ -204,6 +204,26 @@ export class ClassLevelService {
     await this.classLevelRepository.remove(classLevel);
     return { message: 'Class level deleted successfully' };
   }
+
+  /** Term used for isApproved / schoolAdminApproved enrichment on class lists. */
+  private async resolveTermForApprovals(
+    schoolId: string,
+    academicTermId?: string,
+  ): Promise<AcademicTerm | null> {
+    if (academicTermId) {
+      return this.academicTermRepository.findOne({
+        where: {
+          id: academicTermId,
+          academicCalendar: { school: { id: schoolId } },
+        },
+      });
+    }
+    return this.academicTermRepository.findOne({
+      where: { academicCalendar: { school: { id: schoolId } } },
+      order: { startDate: 'DESC' },
+    });
+  }
+
   async findAll(
     admin: SchoolAdmin,
     query?: QueryString,
@@ -219,18 +239,18 @@ export class ClassLevelService {
       const features = new APIFeatures(queryBuilder, query).search(['name']);
       let classes = await features.getQuery().getMany();
 
-      const latestTerm = await this.academicTermRepository.findOne({
-        where: { academicCalendar: { school: { id: admin.school.id } } },
-        order: { startDate: 'DESC' },
-      });
+      const term = await this.resolveTermForApprovals(
+        admin.school.id,
+        query.academicTermId,
+      );
 
-      if (latestTerm) {
+      if (term) {
         const classLevelIds = classes.map((c) => c.id);
         const classLevelApprovals =
           await this.classLevelResultApprovalRepository.find({
             where: {
               classLevel: { id: In(classLevelIds) },
-              academicTerm: { id: latestTerm.id },
+              academicTerm: { id: term.id },
             },
           });
         const approvalMap = new Map<string, ClassLevelResultApproval>(
@@ -254,18 +274,18 @@ export class ClassLevelService {
     }
     let classes = await queryBuilder.getMany();
 
-    const latestTerm = await this.academicTermRepository.findOne({
-      where: { academicCalendar: { school: { id: admin.school.id } } },
-      order: { startDate: 'DESC' },
-    });
+    const termNoSearch = await this.resolveTermForApprovals(
+      admin.school.id,
+      undefined,
+    );
 
-    if (latestTerm) {
+    if (termNoSearch) {
       const classLevelIds = classes.map((c) => c.id);
       const classLevelApprovals =
         await this.classLevelResultApprovalRepository.find({
           where: {
             classLevel: { id: In(classLevelIds) },
-            academicTerm: { id: latestTerm.id },
+            academicTerm: { id: termNoSearch.id },
           },
         });
       const approvalMap = new Map<string, ClassLevelResultApproval>(
@@ -305,11 +325,24 @@ export class ClassLevelService {
       return [];
     }
 
-    const latestTerm = await this.academicCalendarService.getLatestTerm(
-      currentCalendar.id,
-    );
-    if (!latestTerm) {
-      return [];
+    let approvalTermId: string;
+    if (query?.academicTermId) {
+      const t = await this.resolveTermForApprovals(
+        teacher.school.id,
+        query.academicTermId,
+      );
+      if (!t) {
+        return [];
+      }
+      approvalTermId = t.id;
+    } else {
+      const latestTerm = await this.academicCalendarService.getLatestTerm(
+        currentCalendar.id,
+      );
+      if (!latestTerm) {
+        return [];
+      }
+      approvalTermId = latestTerm.id;
     }
 
     const classes = await this.classLevelRepository
@@ -331,7 +364,7 @@ export class ClassLevelService {
       await this.classLevelResultApprovalRepository.find({
         where: {
           classLevel: { id: In(classLevelIds) },
-          academicTerm: { id: latestTerm.id },
+          academicTerm: { id: approvalTermId },
         },
       });
 

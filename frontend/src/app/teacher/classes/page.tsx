@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ClassCard } from '@/components/admin/classes/ClassCard';
 import { SearchBar } from '@/components/common/SearchBar';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
 import { ClassLevel, MissingGrade, ErrorResponse, NotificationType } from "@/@types";
-import { useGetTeacherClasses, useApproveClassResults, useTeacherGetMe } from "@/hooks/teacher";
+import { useGetTeacherClasses, useApproveClassResults, useTeacherGetMe, useGetCalendars } from "@/hooks/teacher";
 import { useDebouncer } from '@/hooks/generalHooks';
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
 import { toast } from "react-toastify";
 import { useCreateNotification } from '@/hooks/school-admin';
 import { useQueryClient } from '@tanstack/react-query';
+import { Badge, Combobox, Select } from '@mantine/core';
+import { getSortedSchoolTerms } from '@/utils/schoolTerms';
 
 
 const ClassesPage = () => {
@@ -19,9 +21,63 @@ const ClassesPage = () => {
   const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
   const { me } = useTeacherGetMe();
+  const { studentCalendars } = useGetCalendars();
 
-  const { classLevels, refetch: refetchTeacherClasses } = useGetTeacherClasses(useDebouncer(searchQuery));
+  const sortedTerms = useMemo(
+    () => getSortedSchoolTerms(studentCalendars ?? []),
+    [studentCalendars]
+  );
+
+  useEffect(() => {
+    if (sortedTerms.length === 0) return;
+    setSelectedTermId((prev) => {
+      if (prev && sortedTerms.some((t) => t.id === prev)) return prev;
+      return sortedTerms[0].id;
+    });
+  }, [sortedTerms]);
+
+  const latestTermId = sortedTerms[0]?.id;
+  const termSelectData = useMemo(
+    () =>
+      sortedTerms.map((t) => {
+        const cal = studentCalendars?.find((c) =>
+          c.terms?.some((term) => term.id === t.id)
+        );
+        const label = cal ? `${t.termName} — ${cal.name}` : t.termName;
+        return { value: t.id, label };
+      }),
+    [sortedTerms, studentCalendars]
+  );
+
+  const showLatestInSelect = Boolean(
+    latestTermId && selectedTermId === latestTermId
+  );
+
+  const termSelectRightSection = useMemo(
+    () => (
+      <div className="flex items-center justify-end gap-1.5 pr-0.5">
+        {showLatestInSelect && (
+          <Badge
+            variant="light"
+            size="xs"
+            className="shrink-0 font-semibold"
+            style={{ backgroundColor: "#F3E8FF", color: "#6B21A8" }}
+          >
+            Latest
+          </Badge>
+        )}
+        <Combobox.Chevron size="sm" />
+      </div>
+    ),
+    [showLatestInSelect]
+  );
+
+  const { classLevels, refetch: refetchTeacherClasses } = useGetTeacherClasses(
+    useDebouncer(searchQuery),
+    selectedTermId ?? undefined
+  );
 
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
   const [missingGrades, setMissingGrades] = useState<MissingGrade[]>();
@@ -54,8 +110,9 @@ const ClassesPage = () => {
 
     const payload = {
       classLevelId: classData?.id,
-      action: "approve",
+      action: "approve" as const,
       forceApprove: false,
+      academicTermId: selectedTermId ?? undefined,
     };
     
     approveResults(payload, {
@@ -100,8 +157,9 @@ const ClassesPage = () => {
 
     const payload = {
       classLevelId: classData?.id || selectedClass?.id as string,
-      action: "approve",
+      action: "approve" as const,
       forceApprove: true,
+      academicTermId: selectedTermId ?? undefined,
     };
 
     approveResults(payload, {
@@ -128,8 +186,9 @@ const ClassesPage = () => {
 
       const payload = {
         classLevelId: classData?.id as string,
-        action: "unapprove",
+        action: "unapprove" as const,
         forceApprove: true,
+        academicTermId: selectedTermId ?? undefined,
       };
   
       approveResults(payload, {
@@ -148,8 +207,27 @@ const ClassesPage = () => {
 
   return (
     <div className="pb-8">
-      <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
+       <div className="flex justify-between items-end mb-6 flex-wrap gap-4">
         <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
+          <div className="w-full max-w-[320px] min-w-[200px]">
+          <Select
+            label="Academic term"
+            placeholder="Select term"
+            data={termSelectData}
+            value={selectedTermId}
+            onChange={(v) => setSelectedTermId(v)}
+            searchable
+            disabled={sortedTerms.length === 0}
+            className="w-full"
+            rightSection={termSelectRightSection}
+            rightSectionWidth={showLatestInSelect ? 118 : undefined}
+            styles={{
+              input: {
+                borderColor: "var(--mantine-color-gray-3)",
+              },
+            }}
+          />
+        </div>
       </div>
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-6 px-0.5">
         {classLevels?.map((data, index) => (
