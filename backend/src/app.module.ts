@@ -32,6 +32,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
+import { PaymentsModule } from './payments/payments.module';
+import { HubtelModule } from './integrations/hubtel/hubtel.module';
 
 @Module({
   imports: [
@@ -90,6 +92,8 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
     NotificationModule,
     CurriculumModule,
     PlannerModule,
+    PaymentsModule,
+    HubtelModule,
   ],
   controllers: [AppController],
   providers: [

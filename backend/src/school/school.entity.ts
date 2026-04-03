@@ -18,6 +18,8 @@ import { Student } from 'src/student/student.entity';
 import { Teacher } from '../teacher/teacher.entity';
 import { VirtualColumn } from 'typeorm/decorator/columns/VirtualColumn';
 import { EventCategory } from '../planner/entities/event-category.entity';
+import { PaymentTransaction } from 'src/payments/entities/payment-transaction.entity';
+import { PaymentReceipt } from 'src/payments/entities/payment-receipt.entity';
 
 @Entity()
 export class School {
@@ -118,6 +120,16 @@ export class School {
     onDelete: 'CASCADE',
   })
   eventCategories: EventCategory[];
+
+  @OneToMany(() => PaymentTransaction, (transaction) => transaction.school, {
+    onDelete: 'CASCADE',
+  })
+  paymentTransactions: PaymentTransaction[];
+
+  @OneToMany(() => PaymentReceipt, (receipt) => receipt.school, {
+    onDelete: 'CASCADE',
+  })
+  paymentReceipts: PaymentReceipt[];
 
   @CreateDateColumn()
   createdAt: Date;

@@ -5,9 +5,11 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { ClassLevel } from '../class-level/class-level.entity';
+import { PaymentAllocation } from 'src/payments/entities/payment-allocation.entity';
 
 @Entity()
 export class FeeStructure {
@@ -37,4 +39,7 @@ export class FeeStructure {
   @ManyToMany(() => ClassLevel)
   @JoinTable()
   classLevels?: ClassLevel[];
+
+  @OneToMany(() => PaymentAllocation, (allocation) => allocation.feeStructure)
+  paymentAllocations: PaymentAllocation[];
 }

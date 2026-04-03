@@ -15,6 +15,9 @@ import { Role } from '../role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Parent } from '../parent/parent.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { PaymentTransaction } from 'src/payments/entities/payment-transaction.entity';
+import { PaymentReceipt } from 'src/payments/entities/payment-receipt.entity';
+import { PaymentAllocation } from 'src/payments/entities/payment-allocation.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -82,6 +85,9 @@ export class Student {
   @Column({ unique: true })
   studentId: string; // Custom generated ID for student login
 
+  @Column({ type: 'varchar', nullable: true, unique: true })
+  studentBillingCode: string | null;
+
   @Column({ default: false })
   isArchived: boolean;
 
@@ -100,4 +106,13 @@ export class Student {
 
   @ManyToMany(() => ClassLevel, (classLevel) => classLevel.students)
   classLevels: ClassLevel[];
+
+  @OneToMany(() => PaymentTransaction, (transaction) => transaction.student)
+  paymentTransactions: PaymentTransaction[];
+
+  @OneToMany(() => PaymentReceipt, (receipt) => receipt.student)
+  paymentReceipts: PaymentReceipt[];
+
+  @OneToMany(() => PaymentAllocation, (allocation) => allocation.student)
+  paymentAllocations: PaymentAllocation[];
 }
