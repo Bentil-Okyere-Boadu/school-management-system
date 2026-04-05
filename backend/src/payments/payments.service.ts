@@ -13,6 +13,7 @@ import {
   Repository,
 } from 'typeorm';
 import {
+  PaymentProvider,
   PaymentTransaction,
   PaymentTransactionStatus,
 } from './entities/payment-transaction.entity';
@@ -111,7 +112,9 @@ export class PaymentsService {
    * Sum of outstanding school fee amounts for the student (matches allocation logic).
    */
   async getTotalOutstandingForStudent(student: Student): Promise<number> {
-    const fees = await this.findApplicableFeeStructuresForStudent(student);
+    const fees = await this.findApplicableFeeStructuresForStudent(student, {
+      ussdEligibleOnly: true,
+    });
     let total = 0;
     for (const fee of fees) {
       const paid = await this.sumPaidAllocationsForStudentFee(
@@ -264,6 +267,7 @@ export class PaymentsService {
 
   private async findApplicableFeeStructuresForStudent(
     student: Student,
+    options?: { ussdEligibleOnly?: boolean },
   ): Promise<FeeStructure[]> {
     if (!student.school?.id) {
       return [];
@@ -279,10 +283,19 @@ export class PaymentsService {
       .getMany();
 
     return fees.filter((fee) => {
-      if (!fee.classLevels || fee.classLevels.length === 0) {
+      if (options?.ussdEligibleOnly && fee.allowUssdPayment === false) {
+        return false;
+      }
+      const levels = fee.classLevels ?? [];
+      // No class restriction: fee applies to every student in the school.
+      if (levels.length === 0) {
         return true;
       }
-      return fee.classLevels.some((c) => classLevelIds.includes(c.id));
+      // Class-restricted: student must belong to at least one of the fee's classes.
+      if (classLevelIds.length === 0) {
+        return false;
+      }
+      return levels.some((c) => classLevelIds.includes(c.id));
     });
   }
 
@@ -338,8 +351,12 @@ export class PaymentsService {
         return;
       }
 
+      const ussdOnly =
+        transaction.provider === PaymentProvider.HUBTEL;
       const filteredFees =
-        await this.findApplicableFeeStructuresForStudent(transaction.student);
+        await this.findApplicableFeeStructuresForStudent(transaction.student, {
+          ussdEligibleOnly: ussdOnly,
+        });
 
       let remaining = transaction.amountAfterCharges || transaction.amount;
       let order = 1;

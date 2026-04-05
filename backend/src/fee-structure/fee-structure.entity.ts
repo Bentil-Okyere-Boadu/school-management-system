@@ -24,9 +24,9 @@ export class FeeStructure {
   @Column('float')
   amount: number;
 
-  // This field indicates the student category the fee applies to
-  @Column({ nullable: true })
-  appliesTo?: 'all' | 'new' | 'continuing';
+  /** When false, this fee is excluded from USSD/Hubtel outstanding and allocation. */
+  @Column({ default: true })
+  allowUssdPayment: boolean;
 
   @Column({ nullable: true, type: 'date' })
   dueDate?: string;
