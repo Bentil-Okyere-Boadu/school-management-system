@@ -101,6 +101,10 @@ export class PaymentTransaction {
   @Column({ type: 'timestamptz', nullable: true })
   lastStatusCheckAt: Date | null;
 
+  /** When set (USSD "pay specific fee"), allocation applies to this fee first, then remainder auto. */
+  @Column({ type: 'varchar', nullable: true })
+  targetFeeStructureId: string | null;
+
   @ManyToOne(() => School, { onDelete: 'CASCADE', eager: true })
   @JoinColumn()
   school: School;

@@ -126,12 +126,126 @@ export class PaymentsService {
     return Math.round(total * 100) / 100;
   }
 
+  /**
+   * USSD: fees with positive outstanding, oldest due first (same order as allocation).
+   */
+  async getOutstandingFees(
+    student: Student,
+  ): Promise<{ id: string; feeTitle: string; outstanding: number }[]> {
+    const fees = await this.findApplicableFeeStructuresForStudent(student, {
+      ussdEligibleOnly: true,
+    });
+    const rows: { id: string; feeTitle: string; outstanding: number }[] = [];
+    for (const fee of fees) {
+      const paid = await this.sumPaidAllocationsForStudentFee(
+        student.id,
+        fee.id,
+      );
+      const outstanding = Math.max(0, fee.amount - paid);
+      if (outstanding > 0) {
+        rows.push({
+          id: fee.id,
+          feeTitle: (fee.feeTitle ?? 'Fee').trim() || 'Fee',
+          outstanding: Math.round(outstanding * 100) / 100,
+        });
+      }
+    }
+    return rows;
+  }
+
+  /**
+   * Simulate pay-all allocation (oldest due first) without persisting.
+   */
+  async previewAllocation(
+    studentId: string,
+    amount: number,
+  ): Promise<{ feeName: string; amount: number }[]> {
+    const student = await this.getStudentById(studentId);
+    return this.simulateAllocationLines(student, amount, {
+      ussdOnly: true,
+    });
+  }
+
+  /**
+   * Simulate pay-specific-fee first, then remainder auto-allocated.
+   */
+  async previewAllocationForSpecificFee(
+    studentId: string,
+    feeStructureId: string,
+    amount: number,
+  ): Promise<{ feeName: string; amount: number }[]> {
+    const student = await this.getStudentById(studentId);
+    const fees = await this.getOutstandingFees(student);
+    if (!fees.some((f) => f.id === feeStructureId)) {
+      throw new BadRequestException('Fee not applicable or already paid');
+    }
+    return this.simulateAllocationLines(student, amount, {
+      ussdOnly: true,
+      prioritizeFeeId: feeStructureId,
+    });
+  }
+
+  private async simulateAllocationLines(
+    student: Student,
+    amount: number,
+    opts?: { ussdOnly?: boolean; prioritizeFeeId?: string | null },
+  ): Promise<{ feeName: string; amount: number }[]> {
+    const ussdOnly = opts?.ussdOnly ?? false;
+    const fees = await this.findApplicableFeeStructuresForStudent(student, {
+      ussdEligibleOnly: ussdOnly,
+    });
+
+    const virtualOut = new Map<string, number>();
+    for (const fee of fees) {
+      const paid = await this.sumPaidAllocationsForStudentFee(
+        student.id,
+        fee.id,
+      );
+      virtualOut.set(fee.id, Math.max(0, fee.amount - paid));
+    }
+
+    let ordered: FeeStructure[] = [...fees];
+    if (opts?.prioritizeFeeId) {
+      const t = ordered.find((f) => f.id === opts.prioritizeFeeId);
+      ordered = t ? [t, ...ordered.filter((f) => f.id !== t.id)] : ordered;
+    }
+
+    let remaining = Math.round(amount * 100) / 100;
+    const lines: { feeName: string; amount: number }[] = [];
+
+    for (const fee of ordered) {
+      if (remaining <= 0) {
+        break;
+      }
+      const out = virtualOut.get(fee.id) ?? 0;
+      if (out <= 0) {
+        continue;
+      }
+      const take = Math.round(Math.min(remaining, out) * 100) / 100;
+      if (take > 0) {
+        lines.push({
+          feeName: (fee.feeTitle ?? 'Fee').trim() || 'Fee',
+          amount: take,
+        });
+        virtualOut.set(fee.id, Math.round((out - take) * 100) / 100);
+        remaining = Math.round((remaining - take) * 100) / 100;
+      }
+    }
+
+    if (remaining > 0) {
+      lines.push({ feeName: 'Unallocated', amount: remaining });
+    }
+
+    return lines;
+  }
+
   async createPendingTransaction(input: {
     sessionId: string;
     student: Student;
     amount: number;
     mobile: string;
     interactionPayload: Record<string, unknown>;
+    targetFeeStructureId?: string | null;
   }): Promise<PaymentTransaction> {
     if (input.amount <= 0) {
       throw new BadRequestException('Payment amount must be greater than zero');
@@ -152,6 +266,7 @@ export class PaymentsService {
       mobile: input.mobile,
       rawInteractionPayload: input.interactionPayload,
       status: PaymentTransactionStatus.PENDING,
+      targetFeeStructureId: input.targetFeeStructureId ?? null,
     });
 
     return this.paymentTransactionRepository.save(transaction);
@@ -319,6 +434,37 @@ export class PaymentsService {
     return Number(paidAgainstFee?.sum ?? 0);
   }
 
+  /**
+   * Prioritize a fee then auto-allocate remainder (same as fulfilment when
+   * `targetFeeStructureId` is set on the transaction). Updates target and runs allocation.
+   * When `expectedAmount` is passed, it must match the transaction net amount (after charges).
+   */
+  async allocateToSpecificFee(
+    transactionId: string,
+    feeStructureId: string,
+    expectedAmount?: number,
+  ): Promise<void> {
+    if (expectedAmount !== undefined) {
+      const tx = await this.paymentTransactionRepository.findOne({
+        where: { id: transactionId },
+      });
+      if (!tx) {
+        throw new NotFoundException('Transaction not found for allocation');
+      }
+      const net = tx.amountAfterCharges || tx.amount;
+      if (Math.abs(net - expectedAmount) > 0.02) {
+        throw new BadRequestException(
+          'Payment amount does not match transaction',
+        );
+      }
+    }
+    await this.paymentTransactionRepository.update(
+      { id: transactionId },
+      { targetFeeStructureId: feeStructureId },
+    );
+    await this.allocatePaidTransaction(transactionId);
+  }
+
   async allocatePaidTransaction(transactionId: string): Promise<void> {
     await this.transactionUtil.executeInTransaction(async (manager) => {
       const transactionRepo = manager.getRepository(PaymentTransaction);
@@ -351,17 +497,26 @@ export class PaymentsService {
         return;
       }
 
-      const ussdOnly =
-        transaction.provider === PaymentProvider.HUBTEL;
-      const filteredFees =
-        await this.findApplicableFeeStructuresForStudent(transaction.student, {
+      const ussdOnly = transaction.provider === PaymentProvider.HUBTEL;
+      const filteredFees = await this.findApplicableFeeStructuresForStudent(
+        transaction.student,
+        {
           ussdEligibleOnly: ussdOnly,
-        });
+        },
+      );
+
+      let feeOrder: FeeStructure[] = [...filteredFees];
+      if (transaction.targetFeeStructureId) {
+        const t = feeOrder.find(
+          (f) => f.id === transaction.targetFeeStructureId,
+        );
+        feeOrder = t ? [t, ...feeOrder.filter((f) => f.id !== t.id)] : feeOrder;
+      }
 
       let remaining = transaction.amountAfterCharges || transaction.amount;
       let order = 1;
 
-      for (const fee of filteredFees) {
+      for (const fee of feeOrder) {
         if (remaining <= 0) {
           break;
         }

@@ -14,11 +14,23 @@ import { HubtelFulfilmentRequestDto } from './dto/hubtel-fulfilment-request.dto'
 import { HubtelCallbackService } from './hubtel-callback.service';
 import { PaymentTransactionStatus } from 'src/payments/entities/payment-transaction.entity';
 import { Student } from 'src/student/student.entity';
+import {
+  buildShortStudentDisplayName,
+  buildUssdPaymentPreviewBody,
+  formatGhsAmount,
+  parseAmountFromUserInput,
+  stripNonAsciiForUssd,
+  truncateToUssdLimit,
+  truncateWithEllipsis,
+} from './ussd-text.util';
 
-const MSG_STUDENT_NOT_FOUND = 'Student not found. Try again.';
-const MSG_INVALID_AMOUNT = 'Invalid amount entered';
-const MSG_INVALID_SESSION = 'Invalid session. Please start again.';
-const MSG_PAYMENT_SENT = 'Payment request sent.\nPlease approve on your phone.';
+/** USSD main menu (welcome + options); kept short for ~178 char limit. */
+const MAIN_MENU_MESSAGE =
+  'Welcome!\nSchool fees made easy.\n1.Pay all outstanding fees \n2.Pay specific fee\n3.Exit';
+const MSG_PAYMENT_SENT = 'Payment sent.\nApprove on your phone.';
+const MSG_INVALID = 'Invalid choice. Try again.';
+const MSG_NO_FEES = 'No fees due.';
+const MSG_BAD_AMOUNT = 'Bad amount. Try again.';
 
 @Injectable()
 export class HubtelService {
@@ -36,8 +48,8 @@ export class HubtelService {
       case HubtelPushType.INITIATION:
         return this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RESPONSE,
-          Message: 'Welcome to SMS School Fees\n1. Pay Fees\n2. Exit',
-          Label: 'School fees menu',
+          Message: truncateToUssdLimit(MAIN_MENU_MESSAGE),
+          Label: 'Welcome',
           DataType: HubtelDataType.INPUT,
           FieldType: 'text',
           ClientState: 'awaiting_action',
@@ -48,7 +60,7 @@ export class HubtelService {
         return this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RELEASE,
           Message: 'Session timed out',
-          Label: 'Session timed out',
+          Label: 'Timeout',
           DataType: HubtelDataType.DISPLAY,
           FieldType: 'text',
           ServiceCode: payload.ServiceCode,
@@ -132,61 +144,115 @@ export class HubtelService {
   private async handleInteractiveResponse(
     payload: HubtelInteractionRequestDto,
   ): Promise<HubtelInteractionResponseDto> {
-    const state = (payload.ClientState ?? '').trim();
-    const message = (payload.Message ?? '').trim();
+    const clientState = (payload.ClientState ?? '').trim();
+    const userInput = (payload.Message ?? '').trim();
 
-    if (!state) {
-      return this.release(payload, MSG_INVALID_SESSION);
+    if (!clientState) {
+      return this.release(payload, MSG_INVALID);
     }
 
-    if (state === 'awaiting_action') {
-      return this.onAwaitingAction(payload, message);
+    if (clientState === 'awaiting_action') {
+      return this.onMainMenuSelection(payload, userInput);
     }
 
-    if (state === 'awaiting_student_identifier') {
-      return this.onAwaitingStudentIdentifier(payload, message);
+    if (
+      clientState === 'await_student:all' ||
+      clientState === 'await_student:fee'
+    ) {
+      return this.onStudentIdentifierStep(payload, clientState, userInput);
     }
 
-    const chooseMatch = /^student:([^:]+):choose_amount$/.exec(state);
-    if (chooseMatch) {
-      return this.onChooseAmount(payload, chooseMatch[1], message);
+    const payAllAmountStep = /^stu:([^:]+):payall_amt$/.exec(clientState);
+    if (payAllAmountStep) {
+      const studentId = payAllAmountStep[1];
+      return this.onPayAllAmountStep(payload, studentId, userInput);
     }
 
-    const enterMatch = /^student:([^:]+):enter_amount$/.exec(state);
-    if (enterMatch) {
-      return this.onEnterAmount(payload, enterMatch[1], message);
-    }
-
-    const confirm = this.parseConfirmState(state);
-    if (confirm) {
-      return this.onConfirm(
+    const payAllConfirmStep = /^payall_c:([^:]+):(.+)$/.exec(clientState);
+    if (payAllConfirmStep) {
+      const studentId = payAllConfirmStep[1];
+      const confirmedAmount = Number(payAllConfirmStep[2]);
+      return this.onPayAllConfirmStep(
         payload,
-        confirm.studentId,
-        confirm.amount,
-        message,
+        studentId,
+        confirmedAmount,
+        userInput,
       );
     }
 
-    this.logger.warn(`Unknown Hubtel ClientState: ${state}`);
-    return this.release(payload, MSG_INVALID_SESSION);
+    const feeMenuStep = /^stu:([^:]+):fee_menu$/.exec(clientState);
+    if (feeMenuStep) {
+      const studentId = feeMenuStep[1];
+      return this.onSpecificFeeMenuSelection(payload, studentId, userInput);
+    }
+
+    const specificFeeAmountStep = /^stu:([^:]+):feeamt:(\d+)$/.exec(
+      clientState,
+    );
+    if (specificFeeAmountStep) {
+      const studentId = specificFeeAmountStep[1];
+      const feeListIndex = parseInt(specificFeeAmountStep[2], 10);
+      return this.onSpecificFeeAmountStep(
+        payload,
+        studentId,
+        feeListIndex,
+        userInput,
+      );
+    }
+
+    const specificFeeConfirmStep = /^feecnf:([^:]+):(\d+):(.+)$/.exec(
+      clientState,
+    );
+    if (specificFeeConfirmStep) {
+      const studentId = specificFeeConfirmStep[1];
+      const feeListIndex = parseInt(specificFeeConfirmStep[2], 10);
+      const confirmAmount = Number(specificFeeConfirmStep[3]);
+      return this.onSpecificFeeConfirmStep(
+        payload,
+        studentId,
+        feeListIndex,
+        confirmAmount,
+        userInput,
+      );
+    }
+
+    this.logger.warn(`Unknown Hubtel ClientState: ${clientState}`);
+    return this.release(payload, MSG_INVALID);
   }
 
-  private onAwaitingAction(
+  private onMainMenuSelection(
     payload: HubtelInteractionRequestDto,
-    message: string,
+    userInput: string,
   ): Promise<HubtelInteractionResponseDto> {
-    if (message === '2') {
+    if (userInput === '3') {
       return Promise.resolve(this.release(payload, 'Goodbye.'));
     }
-    if (message === '1') {
+    if (userInput === '1') {
       return Promise.resolve(
         this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RESPONSE,
-          Message: 'Enter student billing code or student ID:',
-          Label: 'Billing code or student ID',
+          Message: truncateToUssdLimit(
+            'Enter student ID or billing code\n0=Back',
+          ),
+          Label: 'Student',
           DataType: HubtelDataType.INPUT,
           FieldType: 'text',
-          ClientState: 'awaiting_student_identifier',
+          ClientState: 'await_student:all',
+          ServiceCode: payload.ServiceCode,
+        }),
+      );
+    }
+    if (userInput === '2') {
+      return Promise.resolve(
+        this.buildResponse(payload.SessionId, {
+          Type: HubtelResponseType.RESPONSE,
+          Message: truncateToUssdLimit(
+            'Enter student ID or billing code\n0=Back',
+          ),
+          Label: 'Student',
+          DataType: HubtelDataType.INPUT,
+          FieldType: 'text',
+          ClientState: 'await_student:fee',
           ServiceCode: payload.ServiceCode,
         }),
       );
@@ -194,7 +260,7 @@ export class HubtelService {
     return Promise.resolve(
       this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
-        Message: 'Enter 1 or 2.',
+        Message: truncateToUssdLimit(MAIN_MENU_MESSAGE),
         Label: 'Menu',
         DataType: HubtelDataType.INPUT,
         FieldType: 'text',
@@ -204,18 +270,33 @@ export class HubtelService {
     );
   }
 
-  private async onAwaitingStudentIdentifier(
+  private async onStudentIdentifierStep(
     payload: HubtelInteractionRequestDto,
-    message: string,
+    awaitingState: string,
+    userInput: string,
   ): Promise<HubtelInteractionResponseDto> {
-    if (!message) {
+    if (userInput === '0') {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
-        Message: 'Enter student billing code or student ID:',
-        Label: 'Billing code or student ID',
+        Message: truncateToUssdLimit(MAIN_MENU_MESSAGE),
+        Label: 'Menu',
         DataType: HubtelDataType.INPUT,
         FieldType: 'text',
-        ClientState: 'awaiting_student_identifier',
+        ClientState: 'awaiting_action',
+        ServiceCode: payload.ServiceCode,
+      });
+    }
+
+    if (!userInput) {
+      return this.buildResponse(payload.SessionId, {
+        Type: HubtelResponseType.RESPONSE,
+        Message: truncateToUssdLimit(
+          'Enter student ID or billing code\n0=Back',
+        ),
+        Label: 'Student',
+        DataType: HubtelDataType.INPUT,
+        FieldType: 'text',
+        ClientState: awaitingState,
         ServiceCode: payload.ServiceCode,
       });
     }
@@ -223,133 +304,345 @@ export class HubtelService {
     try {
       const student =
         await this.paymentsService.resolveStudentByBillingCodeOrStudentId(
-          message,
+          userInput,
         );
-      const outstanding =
+
+      if (awaitingState === 'await_student:fee') {
+        return this.showOutstandingFeeMenu(payload, student);
+      }
+
+      const totalOutstanding =
         await this.paymentsService.getTotalOutstandingForStudent(student);
-      const name = this.formatStudentName(student);
-      const body = `${name}\nOutstanding: GHS ${this.formatMoney(outstanding)}\n\n1. Pay Full Amount\n2. Pay Custom Amount`;
+      if (totalOutstanding <= 0) {
+        return this.release(
+          payload,
+          truncateToUssdLimit(
+            `No balance.\n${buildShortStudentDisplayName(student.firstName, student.lastName)}`,
+          ),
+        );
+      }
 
+      const studentLabel = buildShortStudentDisplayName(
+        student.firstName,
+        student.lastName,
+      );
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
-        Message: body,
-        Label: 'Amount option',
+        Message: truncateToUssdLimit(
+          `${studentLabel}\nTotal GHS ${formatGhsAmount(totalOutstanding)}\nEnter amount\n0=Back`,
+        ),
+        Label: 'Amount',
+        DataType: HubtelDataType.INPUT,
+        FieldType: 'decimal',
+        ClientState: `stu:${student.id}:payall_amt`,
+        ServiceCode: payload.ServiceCode,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return this.buildResponse(payload.SessionId, {
+          Type: HubtelResponseType.RESPONSE,
+          Message: truncateToUssdLimit('Not found.\nEnter ID or code\n0=Back'),
+          Label: 'Student',
+          DataType: HubtelDataType.INPUT,
+          FieldType: 'text',
+          ClientState: awaitingState,
+          ServiceCode: payload.ServiceCode,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async showOutstandingFeeMenu(
+    payload: HubtelInteractionRequestDto,
+    student: Student,
+  ): Promise<HubtelInteractionResponseDto> {
+    const outstandingFees =
+      await this.paymentsService.getOutstandingFees(student);
+    if (outstandingFees.length === 0) {
+      return this.release(payload, MSG_NO_FEES);
+    }
+
+    const menuLines: string[] = ['Pick fee:'];
+    const feesShownOnMenu = outstandingFees.slice(0, 4);
+    feesShownOnMenu.forEach((feeOption, index) => {
+      const optionLabel = truncateWithEllipsis(feeOption.feeTitle, 14);
+      const amountLabel = formatGhsAmount(feeOption.outstanding);
+      menuLines.push(`${index + 1}.${optionLabel} ${amountLabel}`);
+    });
+    menuLines.push('0=Back');
+
+    return this.buildResponse(payload.SessionId, {
+      Type: HubtelResponseType.RESPONSE,
+      Message: truncateToUssdLimit(menuLines.join('\n')),
+      Label: 'Fees',
+      DataType: HubtelDataType.INPUT,
+      FieldType: 'text',
+      ClientState: `stu:${student.id}:fee_menu`,
+      ServiceCode: payload.ServiceCode,
+    });
+  }
+
+  private async onSpecificFeeMenuSelection(
+    payload: HubtelInteractionRequestDto,
+    studentId: string,
+    userInput: string,
+  ): Promise<HubtelInteractionResponseDto> {
+    const student = await this.paymentsService.getStudentById(studentId);
+    const outstandingFees =
+      await this.paymentsService.getOutstandingFees(student);
+
+    if (userInput === '0') {
+      return this.buildResponse(payload.SessionId, {
+        Type: HubtelResponseType.RESPONSE,
+        Message: truncateToUssdLimit(
+          'Enter student ID or billing code\n0=Back',
+        ),
+        Label: 'Student',
         DataType: HubtelDataType.INPUT,
         FieldType: 'text',
-        ClientState: `student:${student.id}:choose_amount`,
-        ServiceCode: payload.ServiceCode,
-      });
-    } catch (e) {
-      if (e instanceof NotFoundException) {
-        return this.release(payload, MSG_STUDENT_NOT_FOUND);
-      }
-      throw e;
-    }
-  }
-
-  private async onChooseAmount(
-    payload: HubtelInteractionRequestDto,
-    studentId: string,
-    message: string,
-  ): Promise<HubtelInteractionResponseDto> {
-    const student = await this.paymentsService.getStudentById(studentId);
-    const outstanding =
-      await this.paymentsService.getTotalOutstandingForStudent(student);
-    const name = this.formatStudentName(student);
-
-    if (message === '2') {
-      return this.buildResponse(payload.SessionId, {
-        Type: HubtelResponseType.RESPONSE,
-        Message: `Enter amount to pay:\n(${name})`,
-        Label: 'Amount',
-        DataType: HubtelDataType.INPUT,
-        FieldType: 'decimal',
-        ClientState: `student:${studentId}:enter_amount`,
+        ClientState: 'await_student:fee',
         ServiceCode: payload.ServiceCode,
       });
     }
 
-    if (message === '1') {
-      if (outstanding <= 0) {
-        return this.release(payload, `No outstanding balance.\n${name}`);
-      }
-      return this.promptConfirm(payload, studentId, outstanding, name);
+    const selectedIndex = parseInt(userInput, 10) - 1;
+    const maxMenuSlots = Math.min(4, outstandingFees.length);
+    if (selectedIndex < 0 || selectedIndex >= maxMenuSlots) {
+      return this.showOutstandingFeeMenu(payload, student);
     }
 
+    const selectedFee = outstandingFees[selectedIndex];
     return this.buildResponse(payload.SessionId, {
       Type: HubtelResponseType.RESPONSE,
-      Message: `Enter 1 or 2.\n${name}\nOut: GHS ${this.formatMoney(outstanding)}`,
-      Label: 'Amount option',
+      Message: truncateToUssdLimit(
+        `${truncateWithEllipsis(selectedFee.feeTitle, 16)}\nMax GHS ${formatGhsAmount(selectedFee.outstanding)}\nEnter amount\n0=Back`,
+      ),
+      Label: 'Amount',
       DataType: HubtelDataType.INPUT,
-      FieldType: 'text',
-      ClientState: `student:${studentId}:choose_amount`,
+      FieldType: 'decimal',
+      ClientState: `stu:${studentId}:feeamt:${selectedIndex}`,
       ServiceCode: payload.ServiceCode,
     });
   }
 
-  private async onEnterAmount(
+  private async onSpecificFeeAmountStep(
     payload: HubtelInteractionRequestDto,
     studentId: string,
-    message: string,
+    feeListIndex: number,
+    userInput: string,
   ): Promise<HubtelInteractionResponseDto> {
     const student = await this.paymentsService.getStudentById(studentId);
-    const name = this.formatStudentName(student);
-    const amount = this.parseAmount(message);
+    const outstandingFees =
+      await this.paymentsService.getOutstandingFees(student);
 
-    if (amount === null || amount <= 0) {
+    if (userInput === '0') {
+      return this.showOutstandingFeeMenu(payload, student);
+    }
+
+    const selectedFee = outstandingFees[feeListIndex];
+    if (!selectedFee) {
+      return this.showOutstandingFeeMenu(payload, student);
+    }
+
+    const paymentAmount = parseAmountFromUserInput(userInput);
+    if (paymentAmount === null || paymentAmount <= 0) {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
-        Message: `${MSG_INVALID_AMOUNT}\nEnter amount to pay:\n(${name})`,
+        Message: truncateToUssdLimit(
+          `${MSG_BAD_AMOUNT}\nMax ${formatGhsAmount(selectedFee.outstanding)}\n0=Back`,
+        ),
         Label: 'Amount',
         DataType: HubtelDataType.INPUT,
         FieldType: 'decimal',
-        ClientState: `student:${studentId}:enter_amount`,
+        ClientState: `stu:${studentId}:feeamt:${feeListIndex}`,
         ServiceCode: payload.ServiceCode,
       });
     }
 
-    return this.promptConfirm(payload, studentId, amount, name);
-  }
+    const allocationPreview =
+      await this.paymentsService.previewAllocationForSpecificFee(
+        studentId,
+        selectedFee.id,
+        paymentAmount,
+      );
+    const previewMessage = buildUssdPaymentPreviewBody(
+      paymentAmount,
+      buildShortStudentDisplayName(student.firstName, student.lastName),
+      allocationPreview,
+    );
 
-  private promptConfirm(
-    payload: HubtelInteractionRequestDto,
-    studentId: string,
-    amount: number,
-    studentName: string,
-  ): HubtelInteractionResponseDto {
-    const amtStr = this.formatMoney(amount);
     return this.buildResponse(payload.SessionId, {
       Type: HubtelResponseType.RESPONSE,
-      Message: `Pay GHS ${amtStr} for ${studentName}?\n1. Confirm\n2. Cancel`,
-      Label: 'Confirm payment',
+      Message: truncateToUssdLimit(previewMessage),
+      Label: 'Confirm',
       DataType: HubtelDataType.INPUT,
       FieldType: 'text',
-      ClientState: `confirm:${studentId}:${amtStr}`,
+      ClientState: `feecnf:${studentId}:${feeListIndex}:${formatGhsAmount(paymentAmount)}`,
       ServiceCode: payload.ServiceCode,
     });
   }
 
-  private async onConfirm(
+  private async onSpecificFeeConfirmStep(
     payload: HubtelInteractionRequestDto,
     studentId: string,
-    amount: number,
-    message: string,
+    feeListIndex: number,
+    paymentAmount: number,
+    userInput: string,
   ): Promise<HubtelInteractionResponseDto> {
-    if (message === '2') {
-      return this.release(payload, 'Payment cancelled.');
+    if (userInput === '2') {
+      return this.release(payload, 'Cancelled.');
     }
-
-    if (message !== '1') {
+    if (userInput !== '1') {
       const student = await this.paymentsService.getStudentById(studentId);
-      const name = this.formatStudentName(student);
-      const amtStr = this.formatMoney(amount);
+      const outstandingFees =
+        await this.paymentsService.getOutstandingFees(student);
+      const selectedFee = outstandingFees[feeListIndex];
+      if (!selectedFee) {
+        return this.release(payload, MSG_INVALID);
+      }
+      const allocationPreview =
+        await this.paymentsService.previewAllocationForSpecificFee(
+          studentId,
+          selectedFee.id,
+          paymentAmount,
+        );
+      const previewMessage = buildUssdPaymentPreviewBody(
+        paymentAmount,
+        buildShortStudentDisplayName(student.firstName, student.lastName),
+        allocationPreview,
+      );
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
-        Message: `Enter 1 or 2.\nPay GHS ${amtStr} for ${name}?`,
-        Label: 'Confirm payment',
+        Message: truncateToUssdLimit(previewMessage),
+        Label: 'Confirm',
         DataType: HubtelDataType.INPUT,
         FieldType: 'text',
-        ClientState: `confirm:${studentId}:${amtStr}`,
+        ClientState: `feecnf:${studentId}:${feeListIndex}:${formatGhsAmount(paymentAmount)}`,
+        ServiceCode: payload.ServiceCode,
+      });
+    }
+
+    const student = await this.paymentsService.getStudentById(studentId);
+    const outstandingFees =
+      await this.paymentsService.getOutstandingFees(student);
+    const selectedFee = outstandingFees[feeListIndex];
+    if (!selectedFee) {
+      return this.release(payload, MSG_INVALID);
+    }
+
+    await this.paymentsService.createPendingTransaction({
+      sessionId: payload.SessionId,
+      amount: paymentAmount,
+      mobile: payload.Mobile,
+      student,
+      interactionPayload: payload as unknown as Record<string, unknown>,
+      targetFeeStructureId: selectedFee.id,
+    });
+
+    return this.respondWithHubtelAddToCart(payload, paymentAmount);
+  }
+
+  private async onPayAllAmountStep(
+    payload: HubtelInteractionRequestDto,
+    studentId: string,
+    userInput: string,
+  ): Promise<HubtelInteractionResponseDto> {
+    const student = await this.paymentsService.getStudentById(studentId);
+    const totalOutstanding =
+      await this.paymentsService.getTotalOutstandingForStudent(student);
+
+    if (userInput === '0') {
+      return this.buildResponse(payload.SessionId, {
+        Type: HubtelResponseType.RESPONSE,
+        Message: truncateToUssdLimit(
+          'Enter student ID or billing code\n0=Back',
+        ),
+        Label: 'Student',
+        DataType: HubtelDataType.INPUT,
+        FieldType: 'text',
+        ClientState: 'await_student:all',
+        ServiceCode: payload.ServiceCode,
+      });
+    }
+
+    const paymentAmount = parseAmountFromUserInput(userInput);
+    if (paymentAmount === null || paymentAmount <= 0) {
+      return this.buildResponse(payload.SessionId, {
+        Type: HubtelResponseType.RESPONSE,
+        Message: truncateToUssdLimit(
+          `${MSG_BAD_AMOUNT}\nMax GHS ${formatGhsAmount(totalOutstanding)}\n0=Back`,
+        ),
+        Label: 'Amount',
+        DataType: HubtelDataType.INPUT,
+        FieldType: 'decimal',
+        ClientState: `stu:${studentId}:payall_amt`,
+        ServiceCode: payload.ServiceCode,
+      });
+    }
+
+    if (paymentAmount > totalOutstanding + 0.001) {
+      return this.buildResponse(payload.SessionId, {
+        Type: HubtelResponseType.RESPONSE,
+        Message: truncateToUssdLimit(
+          `Max GHS ${formatGhsAmount(totalOutstanding)}\nTry again\n0=Back`,
+        ),
+        Label: 'Amount',
+        DataType: HubtelDataType.INPUT,
+        FieldType: 'decimal',
+        ClientState: `stu:${studentId}:payall_amt`,
+        ServiceCode: payload.ServiceCode,
+      });
+    }
+
+    const allocationPreview = await this.paymentsService.previewAllocation(
+      studentId,
+      paymentAmount,
+    );
+    const previewMessage = buildUssdPaymentPreviewBody(
+      paymentAmount,
+      buildShortStudentDisplayName(student.firstName, student.lastName),
+      allocationPreview,
+    );
+
+    return this.buildResponse(payload.SessionId, {
+      Type: HubtelResponseType.RESPONSE,
+      Message: truncateToUssdLimit(previewMessage),
+      Label: 'Confirm',
+      DataType: HubtelDataType.INPUT,
+      FieldType: 'text',
+      ClientState: `payall_c:${studentId}:${formatGhsAmount(paymentAmount)}`,
+      ServiceCode: payload.ServiceCode,
+    });
+  }
+
+  private async onPayAllConfirmStep(
+    payload: HubtelInteractionRequestDto,
+    studentId: string,
+    paymentAmount: number,
+    userInput: string,
+  ): Promise<HubtelInteractionResponseDto> {
+    if (userInput === '2') {
+      return this.release(payload, 'Cancelled.');
+    }
+    if (userInput !== '1') {
+      const student = await this.paymentsService.getStudentById(studentId);
+      const allocationPreview = await this.paymentsService.previewAllocation(
+        studentId,
+        paymentAmount,
+      );
+      const previewMessage = buildUssdPaymentPreviewBody(
+        paymentAmount,
+        buildShortStudentDisplayName(student.firstName, student.lastName),
+        allocationPreview,
+      );
+      return this.buildResponse(payload.SessionId, {
+        Type: HubtelResponseType.RESPONSE,
+        Message: truncateToUssdLimit(previewMessage),
+        Label: 'Confirm',
+        DataType: HubtelDataType.INPUT,
+        FieldType: 'text',
+        ClientState: `payall_c:${studentId}:${formatGhsAmount(paymentAmount)}`,
         ServiceCode: payload.ServiceCode,
       });
     }
@@ -358,68 +651,34 @@ export class HubtelService {
 
     await this.paymentsService.createPendingTransaction({
       sessionId: payload.SessionId,
-      amount,
+      amount: paymentAmount,
       mobile: payload.Mobile,
       student,
       interactionPayload: payload as unknown as Record<string, unknown>,
+      targetFeeStructureId: null,
     });
 
+    return this.respondWithHubtelAddToCart(payload, paymentAmount);
+  }
+
+  /** Hubtel checkout step: add line item and prompt MoMo approval on device. */
+  private respondWithHubtelAddToCart(
+    payload: HubtelInteractionRequestDto,
+    cartPriceGhs: number,
+  ): HubtelInteractionResponseDto {
     return this.buildResponse(payload.SessionId, {
       Type: HubtelResponseType.ADD_TO_CART,
       Message: MSG_PAYMENT_SENT,
-      Label: 'Approve on phone',
+      Label: 'Pay',
       DataType: HubtelDataType.DISPLAY,
       FieldType: 'text',
       ServiceCode: payload.ServiceCode,
       Item: {
-        ItemName: 'School Fees Payment',
+        ItemName: 'School Fees',
         Qty: 1,
-        Price: amount,
+        Price: cartPriceGhs,
       },
     });
-  }
-
-  private parseConfirmState(
-    state: string,
-  ): { studentId: string; amount: number } | null {
-    const prefix = 'confirm:';
-    if (!state.startsWith(prefix)) {
-      return null;
-    }
-    const rest = state.slice(prefix.length);
-    const lastColon = rest.lastIndexOf(':');
-    if (lastColon <= 0) {
-      return null;
-    }
-    const studentId = rest.slice(0, lastColon);
-    const amountStr = rest.slice(lastColon + 1).trim();
-    const amount = Number(amountStr);
-    if (!studentId || Number.isNaN(amount) || amount <= 0) {
-      return null;
-    }
-    return { studentId, amount };
-  }
-
-  private parseAmount(raw: string): number | null {
-    const n = Number(String(raw).replace(/,/g, '').trim());
-    if (Number.isNaN(n) || !Number.isFinite(n)) {
-      return null;
-    }
-    return Math.round(n * 100) / 100;
-  }
-
-  private formatMoney(n: number): string {
-    if (Number.isInteger(n)) {
-      return String(n);
-    }
-    return n.toFixed(2).replace(/\.?0+$/, '') || '0';
-  }
-
-  private formatStudentName(student: Student): string {
-    const first = (student.firstName ?? '').trim();
-    const last = (student.lastName ?? '').trim();
-    const full = `${first} ${last}`.trim();
-    return full || 'Student';
   }
 
   private release(
@@ -445,11 +704,7 @@ export class HubtelService {
     return {
       SessionId: sessionId,
       ...response,
-      Message: this.toAscii(response.Message),
+      Message: stripNonAsciiForUssd(response.Message),
     };
-  }
-
-  private toAscii(text: string): string {
-    return text.replace(/[^\x20-\x7E\n]/g, '');
   }
 }
