@@ -9,10 +9,9 @@ export class HubtelCallbackService {
   private readonly maxRetries: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.callbackUrl = this.configService.get<string>(
-      'HUBTEL_SERVICE_CALLBACK_URL',
-      'https://gs-callback.hubtel.com:9055/callback',
-    );
+    this.callbackUrl =
+      this.configService.get<string>('HUBTEL_SERVICE_CALLBACK_URL')?.trim() ??
+      '';
     this.maxRetries = this.configService.get<number>(
       'HUBTEL_CALLBACK_MAX_RETRIES',
       3,
@@ -22,6 +21,13 @@ export class HubtelCallbackService {
   async sendFulfilmentCallback(
     payload: HubtelFulfilmentCallbackDto,
   ): Promise<void> {
+    if (!this.callbackUrl) {
+      this.logger.warn(
+        'HUBTEL_SERVICE_CALLBACK_URL not configured; skipping Hubtel fulfilment callback',
+      );
+      return;
+    }
+
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt += 1) {

@@ -180,6 +180,10 @@ export class HubtelService {
       );
     }
 
+    /* ClientState shape: stu:{studentId}:fee_menu
+       Example: stu:a1b2c3d4-0000-4000-8000-000000000001:fee_menu
+       user sees "Pick fee:" (up to 4 lines); userInput is 1–4 or 0=Back.
+       Regex [^:]+ is the student UUID (hyphens ok; colons would break the pattern). */
     const feeMenuStep = /^stu:([^:]+):fee_menu$/.exec(clientState);
     if (feeMenuStep) {
       const studentId = feeMenuStep[1];
