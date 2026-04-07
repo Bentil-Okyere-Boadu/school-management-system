@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { seedSubtopicCompletionClassLevels } from './curriculum/subtopic-completion-class-level.backfill';
 import { seedTopicAcademicTerms } from './curriculum/topic-academic-term.backfill';
+import { seedStudentBillingCodes } from './payments/student-billing-code.backfill';
 
 async function seedRoles(app: INestApplication) {
   const logger = new Logger('Seeder');
@@ -227,6 +228,7 @@ async function bootstrap() {
   await seedDefaultGradingSystems(app);
   await seedSubtopicCompletionClassLevels(app);
   await seedTopicAcademicTerms(app);
+  await seedStudentBillingCodes(app);
 
   await app.listen(process.env.PORT ?? 5000);
 }

@@ -5,9 +5,11 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 import { School } from '../school/school.entity';
 import { ClassLevel } from '../class-level/class-level.entity';
+import { PaymentAllocation } from 'src/payments/entities/payment-allocation.entity';
 
 @Entity()
 export class FeeStructure {
@@ -22,9 +24,9 @@ export class FeeStructure {
   @Column('float')
   amount: number;
 
-  // This field indicates the student category the fee applies to
-  @Column({ nullable: true })
-  appliesTo?: 'all' | 'new' | 'continuing';
+  /** When false, this fee is excluded from USSD/Hubtel outstanding and allocation. */
+  @Column({ default: true })
+  allowUssdPayment: boolean;
 
   @Column({ nullable: true, type: 'date' })
   dueDate?: string;
@@ -37,4 +39,7 @@ export class FeeStructure {
   @ManyToMany(() => ClassLevel)
   @JoinTable()
   classLevels?: ClassLevel[];
+
+  @OneToMany(() => PaymentAllocation, (allocation) => allocation.feeStructure)
+  paymentAllocations: PaymentAllocation[];
 }

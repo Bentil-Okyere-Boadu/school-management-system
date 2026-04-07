@@ -31,7 +31,7 @@ export class FeeStructureService {
       feeTitle: fee.feeTitle,
       feeType: fee.feeType,
       amount: fee.amount,
-      appliesTo: fee.appliesTo,
+      allowUssdPayment: fee.allowUssdPayment !== false,
       dueDate: fee.dueDate,
       classLevelIds: fee.classLevels?.map((cl) => cl.id) ?? [],
     }));
@@ -44,10 +44,12 @@ export class FeeStructureService {
     createFeeStructureDto: CreateFeeStructureDto,
     school: School,
   ): Promise<FeeStructure> {
-    const { classLevelIds, ...feeData } = createFeeStructureDto;
+    const { classLevelIds, allowUssdPayment, ...feeData } =
+      createFeeStructureDto;
 
     const newFeeStructure = this.feeStructureRepository.create({
       ...feeData,
+      allowUssdPayment: allowUssdPayment ?? true,
       school,
     });
 
