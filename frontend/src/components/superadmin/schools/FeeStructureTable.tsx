@@ -6,9 +6,9 @@ interface FeeStructureTableProps {
   feeStructures: FeeStructure[];
 }
 
-
-export const FeeStructureTable: React.FC<FeeStructureTableProps> = ({feeStructures}) => {
-
+export const FeeStructureTable: React.FC<FeeStructureTableProps> = ({
+  feeStructures,
+}) => {
   return (
     <>
       <table className="w-full border-collapse">
@@ -18,35 +18,45 @@ export const FeeStructureTable: React.FC<FeeStructureTableProps> = ({feeStructur
               Fee Title
             </th>
             <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-              Apply Fees To
+              Fee Duration
             </th>
             <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
-              Fee Duration
+              Due Date
             </th>
             <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
               Class/Level
             </th>
+            <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal max-md:text-sm max-sm:text-xs">
+              USSD
+            </th>
           </tr>
         </thead>
         <tbody>
-          {feeStructures?.length > 0 && feeStructures?.map((fee, index) => (
-            <tr className="border-b border-solid border-b-gray-200" key={index + "12"}>
-              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-              {fee.feeTitle}
-              </td>
-              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-              {fee.appliesTo}
-              </td>
-              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-              {fee.dueDate}
-              </td>
-              <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
-              {fee.classLevels && fee.classLevels.length > 0
-                ? fee.classLevels.map((cl) => cl.name).join(', ')
-                : '-'}
-              </td>
-            </tr>
-          ))}
+          {feeStructures?.length > 0 &&
+            feeStructures?.map((fee, index) => (
+              <tr
+                className="border-b border-solid border-b-gray-200"
+                key={index + "12"}
+              >
+                <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+                  {fee.feeTitle}
+                </td>
+                <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+                  {fee.feeType}
+                </td>
+                <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+                  {fee.dueDate ?? "—"}
+                </td>
+                <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+                  {fee.classLevels && fee.classLevels.length > 0
+                    ? fee.classLevels.map((cl) => cl.name).join(", ")
+                    : "All classes"}
+                </td>
+                <td className="py-2 pl-2.5 text-sm text-left text-[#252C32] max-md:text-sm max-sm:text-xs">
+                  {fee.allowUssdPayment !== false ? "Yes" : "No"}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
 
@@ -56,4 +66,3 @@ export const FeeStructureTable: React.FC<FeeStructureTableProps> = ({feeStructur
     </>
   );
 };
- 

@@ -112,10 +112,10 @@
           "amount": {
             "type": "number"
           },
-          "appliesTo": {
-            "type": "string",
-            "enum": ["all", "new", "continuing"],
-            "default": "all"
+          "allowUssdPayment": {
+            "type": "boolean",
+            "default": true,
+            "description": "If false, fee is excluded from USSD/Hubtel balance and allocation."
           },
           "dueDate": {
             "type": "string",

@@ -94,10 +94,11 @@ export type FeeStructure = {
   feeTitle: string;
   feeType: string;
   amount: number;
-  appliesTo: string;
+  /** Default true when omitted (API). */
+  allowUssdPayment?: boolean;
   dueDate: string;
-  classLevels: { name: string }[];
-  classLevelIds: string[];
+  classLevels?: { name: string }[];
+  classLevelIds?: string[];
 };
 
 export type Grade = {

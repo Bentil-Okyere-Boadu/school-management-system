@@ -4,10 +4,10 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsEnum,
   IsUUID,
   IsDateString,
   IsArray,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateFeeStructureDto {
@@ -26,13 +26,14 @@ export class CreateFeeStructureDto {
   @IsNumber()
   amount: number;
 
-  @ApiPropertyOptional({ enum: ['all', 'new', 'continuing'], default: 'all' })
-  @IsOptional()
-  @IsEnum(['all', 'new', 'continuing'], {
-    message:
-      'appliesTo must be one of the following values: all, new, continuing',
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'If false, parents cannot pay this fee via USSD; Hubtel balance and allocation skip it.',
   })
-  appliesTo?: 'all' | 'new' | 'continuing' = 'all';
+  @IsOptional()
+  @IsBoolean()
+  allowUssdPayment?: boolean = true;
 
   @ApiPropertyOptional({ example: '2025-12-31' })
   @IsOptional()

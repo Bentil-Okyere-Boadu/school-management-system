@@ -8,7 +8,13 @@ import { GradingSystemTable } from "./GradingSystemTable";
 import { GradingPercentagesSection } from "./GradingPercentagesSection";
 import SchoolCard from "@/components/common/SchoolCard";
 import { Dialog } from "@/components/common/Dialog";
-import { MultiSelect, NativeSelect, Select, TextInput } from "@mantine/core";
+import {
+  MultiSelect,
+  NativeSelect,
+  Select,
+  Switch,
+  TextInput,
+} from "@mantine/core";
 import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUpdateCalendlyUrl, useUploadSchoolLogoFile } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { ClassLevel, ErrorResponse, FeeStructure, School } from "@/@types";
@@ -17,6 +23,9 @@ import FileUploadArea from "@/components/common/FileUploadArea";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdmissionPoliciesSection } from "./AdmissionPoliesSection";
 import Link from "next/link";
+
+/** Multi-select sentinel: empty `classLevelIds` on the API means all classes. */
+const ALL_CLASSES_VALUE = "__all_classes__";
 
 interface SchoolSettingsTabSectionProps {
   schoolData: School;
@@ -28,11 +37,13 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const [isFeeStructureDialogOpen, setIsFeeStructureDialogOpen] =
     useState(false);
   const [selectedDuration, setSelectedDuration] = useState<string>("daily");
-  const [feesAppliesTo, setFeesAppliesTo] = useState<string>("new");
   const [feesTitle, setFeesTitle] = useState("");
   const [amount, setAmount] = useState<number>(0);
   const [dueDate, setDueDate] = useState('')
-  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [allowUssdPayment, setAllowUssdPayment] = useState(true);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([
+    ALL_CLASSES_VALUE,
+  ]);
   const [
     isConfirmDeleteFeeStructureDialogOpen,
     setIsConfirmDeleteFeeStructureDialogOpen,
@@ -50,10 +61,6 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const [calendlyDialogOpen, setCalendlyDialogOpen] = useState(false);
 
 
-  const appliesTo = [
-    { value: "new", label: "New Students" },
-    { value: "continuing", label: "Continuing Students" },
-  ];
   const duration = [
     { value: "daily", label: "Daily" },
     { value: "monthly", label: "Monthly" },
@@ -62,10 +69,14 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   ];
 
   useEffect(() => {
-    setClassLevels(classes.map((classlvl) => {
-        return { value: classlvl.id, label: classlvl.name };
-      }));
-  }, [classes])
+    setClassLevels([
+      { value: ALL_CLASSES_VALUE, label: "All classes" },
+      ...classes.map((classlvl) => ({
+        value: classlvl.id,
+        label: classlvl.name,
+      })),
+    ]);
+  }, [classes]);
   
   const currencies = [
     { value: "ghc", label: " GHC" },
@@ -116,14 +127,25 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     setIsConfirmDeleteFeeStructureDialogOpen(true);
   }
 
+  const classLevelIdsForApi = (): string[] => {
+    if (selectedClasses.includes(ALL_CLASSES_VALUE)) {
+      return [];
+    }
+    return selectedClasses;
+  };
+
   const addNewFeeStructure = () => {
+    if (selectedClasses.length === 0) {
+      toast.error("Select at least one class level, or All classes.");
+      return;
+    }
     createFeeStructure({
       feeTitle: feesTitle,
      feeType: selectedDuration,
      amount: amount,
-     appliesTo: feesAppliesTo,
      dueDate: dueDate,
-     classLevelIds: selectedClasses
+     allowUssdPayment,
+     classLevelIds: classLevelIdsForApi(),
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');
@@ -138,13 +160,17 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   }
 
   const editFeeStructure = () => {
+    if (selectedClasses.length === 0) {
+      toast.error("Select at least one class level, or All classes.");
+      return;
+    }
     editMutation({
       feeTitle: feesTitle,
      feeType: selectedDuration,
      amount: amount,
-     appliesTo: feesAppliesTo,
      dueDate: dueDate,
-     classLevelIds: selectedClasses
+     allowUssdPayment,
+     classLevelIds: classLevelIdsForApi(),
     }, {
       onSuccess: () => {
         toast.success('Saved successfully.');
@@ -164,19 +190,22 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     setAmount(fee.amount);
     setDueDate(fee.dueDate);
     setFeesTitle(fee.feeTitle);
-    setFeesAppliesTo(fee.appliesTo);
-    setSelectedClasses(fee.classLevelIds);
+    setSelectedClasses(
+      !fee.classLevelIds || fee.classLevelIds.length === 0
+        ? [ALL_CLASSES_VALUE]
+        : fee.classLevelIds,
+    );
     setSelectedDuration(fee.feeType);
+    setAllowUssdPayment(fee.allowUssdPayment !== false);
     setIsFeeStructureDialogOpen(true);
   }
 
   const clearDialog = () => {
-     setFeesAppliesTo('');
-      setFeesAppliesTo('');
       setDueDate('');
       setFeesTitle('');
       setAmount(0);
-      setSelectedClasses([]);
+      setAllowUssdPayment(true);
+      setSelectedClasses([ALL_CLASSES_VALUE]);
       setEditMode(false);
   }
 
@@ -184,11 +213,17 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     setSelectedDuration(value as string);
   };
 
-  const handleAppliesToChange = (value: string | null) => {
-    setFeesAppliesTo(value as string);
-  };
-
   const handleClassesChange = (value: string[]) => {
+    const hadAll = selectedClasses.includes(ALL_CLASSES_VALUE);
+    const hasAll = value.includes(ALL_CLASSES_VALUE);
+    if (hasAll && !hadAll) {
+      setSelectedClasses([ALL_CLASSES_VALUE]);
+      return;
+    }
+    if (hasAll && hadAll && value.length > 1) {
+      setSelectedClasses(value.filter((v) => v !== ALL_CLASSES_VALUE));
+      return;
+    }
     setSelectedClasses(value);
   };
 
@@ -271,7 +306,10 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           <CustomUnderlinedButton
             text="Add New"
             textColor="text-purple-500"
-            onClick={() => setIsFeeStructureDialogOpen(true)}
+            onClick={() => {
+              clearDialog();
+              setIsFeeStructureDialogOpen(true);
+            }}
             showIcon={false}
           />
         </div>
@@ -443,21 +481,20 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
             onChange={handleDurationChange}
           />
 
-          <Select
-            label="Apply Fees to"
-            placeholder="Please Select"
-            data={appliesTo}
-            value={feesAppliesTo}
-            onChange={handleAppliesToChange}
-          />
-
           <MultiSelect
-            label="Class / Level"
-            placeholder="Please Select"
-            data={classLevels}
+            label="Fee Applies to"
+            placeholder="All classes or specific class levels"
+            data={classLevels ?? []}
             value={selectedClasses}
             onChange={handleClassesChange}
             withCheckIcon
+          />
+
+          <Switch
+            label="Payable via USSD"
+            description="If off, this fee will not be included in mobile or USSD payments."
+            checked={allowUssdPayment}
+            onChange={(e) => setAllowUssdPayment(e.currentTarget.checked)}
           />
 
           <TextInput
