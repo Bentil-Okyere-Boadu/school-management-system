@@ -14,7 +14,6 @@ import {
   NumberInput,
   Select,
   Switch,
-  TextInput,
 } from "@mantine/core";
 import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUpdateCalendlyUrl, useUploadSchoolLogoFile } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
