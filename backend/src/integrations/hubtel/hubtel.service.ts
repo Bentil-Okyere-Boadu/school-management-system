@@ -182,7 +182,7 @@ export class HubtelService {
 
     /* ClientState shape: stu:{studentId}:fee_menu
        Example: stu:a1b2c3d4-0000-4000-8000-000000000001:fee_menu
-       user sees "Pick fee:" (up to 4 lines); userInput is 1–4 or 0=Back.
+       user sees "Pick fee:" (up to 4 lines); userInput is 1–4 or 0. Back.
        Regex [^:]+ is the student UUID (hyphens ok; colons would break the pattern). */
     const feeMenuStep = /^stu:([^:]+):fee_menu$/.exec(clientState);
     if (feeMenuStep) {
@@ -236,7 +236,7 @@ export class HubtelService {
         this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RESPONSE,
           Message: truncateToUssdLimit(
-            'Enter student ID or billing code\n0=Back',
+            'Enter student ID or billing code\n0. Back',
           ),
           Label: 'Student',
           DataType: HubtelDataType.INPUT,
@@ -251,7 +251,7 @@ export class HubtelService {
         this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RESPONSE,
           Message: truncateToUssdLimit(
-            'Enter student ID or billing code\n0=Back',
+            'Enter student ID or billing code\n0. Back',
           ),
           Label: 'Student',
           DataType: HubtelDataType.INPUT,
@@ -295,7 +295,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          'Enter student ID or billing code\n0=Back',
+          'Enter student ID or billing code\n0. Back',
         ),
         Label: 'Student',
         DataType: HubtelDataType.INPUT,
@@ -333,7 +333,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          `${studentLabel}\nTotal GHS ${formatGhsAmount(totalOutstanding)}\nEnter amount\n0=Back`,
+          `${studentLabel}\nTotal GHS ${formatGhsAmount(totalOutstanding)}\nEnter amount\n0. Back`,
         ),
         Label: 'Amount',
         DataType: HubtelDataType.INPUT,
@@ -345,7 +345,7 @@ export class HubtelService {
       if (error instanceof NotFoundException) {
         return this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RESPONSE,
-          Message: truncateToUssdLimit('Not found.\nEnter ID or code\n0=Back'),
+          Message: truncateToUssdLimit('Not found.\nEnter ID or code\n0. Back'),
           Label: 'Student',
           DataType: HubtelDataType.INPUT,
           FieldType: 'text',
@@ -374,7 +374,7 @@ export class HubtelService {
       const amountLabel = formatGhsAmount(feeOption.outstanding);
       menuLines.push(`${index + 1}.${optionLabel} ${amountLabel}`);
     });
-    menuLines.push('0=Back');
+    menuLines.push('0. Back');
 
     return this.buildResponse(payload.SessionId, {
       Type: HubtelResponseType.RESPONSE,
@@ -400,7 +400,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          'Enter student ID or billing code\n0=Back',
+          'Enter student ID or billing code\n0. Back',
         ),
         Label: 'Student',
         DataType: HubtelDataType.INPUT,
@@ -420,7 +420,7 @@ export class HubtelService {
     return this.buildResponse(payload.SessionId, {
       Type: HubtelResponseType.RESPONSE,
       Message: truncateToUssdLimit(
-        `${truncateWithEllipsis(selectedFee.feeTitle, 16)}\nMax GHS ${formatGhsAmount(selectedFee.outstanding)}\nEnter amount\n0=Back`,
+        `${truncateWithEllipsis(selectedFee.feeTitle, 16)}\nMax GHS ${formatGhsAmount(selectedFee.outstanding)}\nEnter amount\n0. Back`,
       ),
       Label: 'Amount',
       DataType: HubtelDataType.INPUT,
@@ -454,7 +454,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          `${MSG_BAD_AMOUNT}\nMax ${formatGhsAmount(selectedFee.outstanding)}\n0=Back`,
+          `${MSG_BAD_AMOUNT}\nMax ${formatGhsAmount(selectedFee.outstanding)}\n0. Back`,
         ),
         Label: 'Amount',
         DataType: HubtelDataType.INPUT,
@@ -560,7 +560,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          'Enter student ID or billing code\n0=Back',
+          'Enter student ID or billing code\n0. Back',
         ),
         Label: 'Student',
         DataType: HubtelDataType.INPUT,
@@ -575,7 +575,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          `${MSG_BAD_AMOUNT}\nMax GHS ${formatGhsAmount(totalOutstanding)}\n0=Back`,
+          `${MSG_BAD_AMOUNT}\nMax GHS ${formatGhsAmount(totalOutstanding)}\n0. Back`,
         ),
         Label: 'Amount',
         DataType: HubtelDataType.INPUT,
@@ -589,7 +589,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          `Max GHS ${formatGhsAmount(totalOutstanding)}\nTry again\n0=Back`,
+          `Max GHS ${formatGhsAmount(totalOutstanding)}\nTry again\n0. Back`,
         ),
         Label: 'Amount',
         DataType: HubtelDataType.INPUT,
