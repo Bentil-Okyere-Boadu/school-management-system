@@ -1,0 +1,240 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Integrations",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/integrations/hubtel/interaction": {
+      "post": {
+        "operationId": "HubtelController_interaction",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HubtelInteractionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Hubtel Integrations"]
+      }
+    },
+    "/api/v1/integrations/hubtel/fulfilment": {
+      "post": {
+        "operationId": "HubtelController_fulfilment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HubtelFulfilmentRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Hubtel Integrations"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HubtelInteractionRequestDto": {
+        "type": "object",
+        "properties": {
+          "Type": {
+            "type": "string",
+            "enum": ["Initiation", "Response", "Timeout"]
+          },
+          "Message": {
+            "type": "string"
+          },
+          "ServiceCode": {
+            "type": "string"
+          },
+          "Operator": {
+            "type": "string"
+          },
+          "ClientState": {
+            "type": "string"
+          },
+          "Mobile": {
+            "type": "string"
+          },
+          "SessionId": {
+            "type": "string"
+          },
+          "Sequence": {
+            "type": "number"
+          },
+          "Platform": {
+            "type": "string",
+            "enum": ["USSD", "Webstore", "Hubtel-App"]
+          }
+        },
+        "required": [
+          "Type",
+          "Message",
+          "ServiceCode",
+          "Operator",
+          "ClientState",
+          "Mobile",
+          "SessionId",
+          "Sequence",
+          "Platform"
+        ]
+      },
+      "HubtelFulfilmentRequestDto": {
+        "type": "object",
+        "properties": {
+          "SessionId": {
+            "type": "string"
+          },
+          "OrderId": {
+            "type": "string"
+          },
+          "ExtraData": {
+            "type": "object"
+          },
+          "OrderInfo": {
+            "$ref": "#/components/schemas/HubtelOrderInfoDto"
+          }
+        },
+        "required": ["SessionId", "OrderId", "ExtraData", "OrderInfo"]
+      },
+      "HubtelOrderInfoDto": {
+        "type": "object",
+        "properties": {
+          "CustomerMobileNumber": {
+            "type": "string"
+          },
+          "CustomerEmail": {
+            "type": "object"
+          },
+          "CustomerName": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "OrderDate": {
+            "type": "string"
+          },
+          "Currency": {
+            "type": "string"
+          },
+          "BranchName": {
+            "type": "string"
+          },
+          "IsRecurring": {
+            "type": "boolean"
+          },
+          "RecurringInvoiceId": {
+            "type": "object"
+          },
+          "Subtotal": {
+            "type": "number"
+          },
+          "Items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HubtelFulfilmentItemDto"
+            }
+          },
+          "Payment": {
+            "$ref": "#/components/schemas/HubtelFulfilmentPaymentDto"
+          }
+        },
+        "required": [
+          "CustomerMobileNumber",
+          "CustomerEmail",
+          "CustomerName",
+          "Status",
+          "OrderDate",
+          "Currency",
+          "BranchName",
+          "IsRecurring",
+          "RecurringInvoiceId",
+          "Subtotal",
+          "Items",
+          "Payment"
+        ]
+      },
+      "HubtelFulfilmentItemDto": {
+        "type": "object",
+        "properties": {
+          "ItemId": {
+            "type": "string"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "Quantity": {
+            "type": "number"
+          },
+          "UnitPrice": {
+            "type": "number"
+          }
+        },
+        "required": ["ItemId", "Name", "Quantity", "UnitPrice"]
+      },
+      "HubtelFulfilmentPaymentDto": {
+        "type": "object",
+        "properties": {
+          "PaymentType": {
+            "type": "string"
+          },
+          "AmountPaid": {
+            "type": "number"
+          },
+          "AmountAfterCharges": {
+            "type": "number"
+          },
+          "PaymentDate": {
+            "type": "string"
+          },
+          "PaymentDescription": {
+            "type": "string"
+          },
+          "IsSuccessful": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "PaymentType",
+          "AmountPaid",
+          "AmountAfterCharges",
+          "PaymentDate",
+          "PaymentDescription",
+          "IsSuccessful"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "integrations"
+    }
+  ]
+}

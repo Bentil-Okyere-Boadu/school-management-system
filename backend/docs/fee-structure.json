@@ -115,7 +115,7 @@
           "allowUssdPayment": {
             "type": "boolean",
             "default": true,
-            "description": "If false, fee is excluded from USSD/Hubtel balance and allocation."
+            "description": "If false, parents cannot pay this fee via USSD; Hubtel balance and allocation skip it."
           },
           "dueDate": {
             "type": "string",

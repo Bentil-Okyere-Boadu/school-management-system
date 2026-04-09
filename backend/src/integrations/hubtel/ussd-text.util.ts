@@ -58,7 +58,7 @@ const PREVIEW_FEE_NAME_MAX_CHARS = 12;
 
 /**
  * Multi-line confirmation body: amount, student name, up to three allocation
- * lines, optional "+more", and Yes/No prompt.
+ * lines, optional "+more", and Confirm/Cancel prompt (Ghana-style numbering).
  */
 export function buildUssdPaymentPreviewBody(
   paymentAmountGhs: number,
@@ -80,7 +80,7 @@ export function buildUssdPaymentPreviewBody(
   if (allocationLines.length > PREVIEW_MAX_FEE_ROWS) {
     lines.push('+more');
   }
-  lines.push('1=Yes 2=No');
+  lines.push('1. Confirm', '2. Cancel');
   return lines.join('\n');
 }
 
