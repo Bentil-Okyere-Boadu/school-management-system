@@ -11,6 +11,7 @@ import { Dialog } from "@/components/common/Dialog";
 import {
   MultiSelect,
   NativeSelect,
+  NumberInput,
   Select,
   Switch,
   TextInput,
@@ -134,9 +135,22 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     return selectedClasses;
   };
 
+  const setAmountSafe = (value: number | string) => {
+    if (value === "" || value === undefined) {
+      setAmount(0);
+      return;
+    }
+    const n = typeof value === "number" ? value : parseFloat(String(value));
+    setAmount(Number.isFinite(n) ? n : 0);
+  };
+
   const addNewFeeStructure = () => {
     if (selectedClasses.length === 0) {
       toast.error("Select at least one class level, or All classes.");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a valid amount greater than 0.");
       return;
     }
     createFeeStructure({
@@ -164,6 +178,10 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       toast.error("Select at least one class level, or All classes.");
       return;
     }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a valid amount greater than 0.");
+      return;
+    }
     editMutation({
       feeTitle: feesTitle,
      feeType: selectedDuration,
@@ -187,7 +205,11 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   const onEditFeeStructureClick = (fee: FeeStructure) => {
     setFeeId(fee.id || "");
     setEditMode(true);
-    setAmount(fee.amount);
+    setAmount(
+      typeof fee.amount === "number" && Number.isFinite(fee.amount)
+        ? fee.amount
+        : parseFloat(String(fee.amount)) || 0,
+    );
     setDueDate(fee.dueDate);
     setFeesTitle(fee.feeTitle);
     setSelectedClasses(
@@ -497,17 +519,23 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
             onChange={(e) => setAllowUssdPayment(e.currentTarget.checked)}
           />
 
-          <TextInput
-            type=""
+          <NumberInput
             label="Amount"
+            placeholder="0.00"
+            min={0}
+            allowDecimal
+            decimalScale={2}
+            fixedDecimalScale={false}
+            hideControls
+            clampBehavior="strict"
+            value={Number.isFinite(amount) ? amount : 0}
+            onChange={setAmountSafe}
             leftSection={select}
             leftSectionWidth={90}
-            value={amount}
-            onChange={(e) => { setAmount(Number(e.target.value)) }}
             styles={{
               section: {
-                justifyContent: 'flex-start',
-              }
+                justifyContent: "flex-start",
+              },
             }}
           />
 

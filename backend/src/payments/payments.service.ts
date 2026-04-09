@@ -567,8 +567,10 @@ export class PaymentsService {
         await receiptRepo.save(receipt);
       }
 
-      transaction.isFulfilled = true;
-      await transactionRepo.save(transaction);
+      await transactionRepo.update(
+        { id: transaction.id },
+        { isFulfilled: true },
+      );
     });
   }
 
