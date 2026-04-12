@@ -769,6 +769,8 @@ export class SchoolAdminService {
       .leftJoinAndSelect('assignment.teacher', 'teacher')
       .leftJoinAndSelect('assignment.topic', 'topic')
       .leftJoinAndSelect('topic.subjectCatalog', 'subjectCatalog')
+      .leftJoinAndSelect('topic.academicTerm', 'topicAcademicTerm')
+      .leftJoinAndSelect('topic.curriculum', 'topicCurriculum')
       .leftJoinAndSelect('assignment.classLevel', 'classLevel')
       .leftJoinAndSelect('classLevel.students', 'students')
       .where('teacher.school.id = :schoolId', { schoolId: resolvedSchoolId })
@@ -778,12 +780,16 @@ export class SchoolAdminService {
     const classLevelId = queryString.classLevelId;
     const subjectCatalogId = queryString.subjectCatalogId;
     const teacherId = queryString.teacherId;
+    const academicTermId = queryString.academicTermId;
+    const curriculumId = queryString.curriculumId;
 
     // Create a copy of queryString without custom filters to avoid APIFeatures processing them
     const filteredQueryString = { ...queryString };
     delete filteredQueryString.classLevelId;
     delete filteredQueryString.subjectCatalogId;
     delete filteredQueryString.teacherId;
+    delete filteredQueryString.academicTermId;
+    delete filteredQueryString.curriculumId;
     // Remove search since we're handling it manually with joined tables
     const searchValue = filteredQueryString.search;
     delete filteredQueryString.search;
@@ -804,6 +810,18 @@ export class SchoolAdminService {
     if (teacherId) {
       baseQuery.andWhere('teacher.id = :teacherId', {
         teacherId,
+      });
+    }
+
+    if (academicTermId) {
+      baseQuery.andWhere('topicAcademicTerm.id = :academicTermId', {
+        academicTermId,
+      });
+    }
+
+    if (curriculumId) {
+      baseQuery.andWhere('topicCurriculum.id = :curriculumId', {
+        curriculumId,
       });
     }
 
@@ -911,6 +929,18 @@ export class SchoolAdminService {
             id: a.classLevel?.id ?? null,
             name: a.classLevel?.name ?? null,
           },
+          academicTerm: a.topic?.academicTerm
+            ? {
+                id: a.topic.academicTerm.id,
+                termName: a.topic.academicTerm.termName,
+              }
+            : null,
+          curriculum: a.topic?.curriculum
+            ? {
+                id: a.topic.curriculum.id,
+                name: a.topic.curriculum.name,
+              }
+            : null,
           teacher: {
             id: a.teacher?.id ?? null,
             firstName: a.teacher?.firstName ?? null,

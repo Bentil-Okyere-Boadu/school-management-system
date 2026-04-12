@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Select } from "@mantine/core";
+import { Select, Switch } from "@mantine/core";
 import {
   IconCalendar,
   IconChevronDown,
@@ -50,6 +50,7 @@ import { TermFilterCard } from "@/components/common/TermFilterCard";
 import CustomButton from "@/components/Button";
 import InputField from "@/components/InputField";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
+import { isCurriculumTopicOverdue } from "@/utils/curriculumProgress";
 
 function topicStatusLabel(topic: TeacherProgressTopicCard): {
   label: string;
@@ -102,6 +103,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const [academicTermId, setAcademicTermId] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [classLevelId, setClassLevelId] = useState("");
+  const [overdueOnly, setOverdueOnly] = useState(false);
 
   const [expandedTopicIds, setExpandedTopicIds] = useState<Set<string>>(
     () => new Set()
@@ -387,12 +389,33 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const overall = dashboard?.overall;
   const topics = dashboard?.topics ?? [];
 
+  const overdueTopicCount = useMemo(
+    () =>
+      topics.filter((t) =>
+        isCurriculumTopicOverdue({
+          status: t.status,
+          plannedEndDate: t.plannedEndDate,
+        })
+      ).length,
+    [topics]
+  );
+
+  const visibleTopics = useMemo(() => {
+    if (!overdueOnly) return topics;
+    return topics.filter((t) =>
+      isCurriculumTopicOverdue({
+        status: t.status,
+        plannedEndDate: t.plannedEndDate,
+      })
+    );
+  }, [topics, overdueOnly]);
+
   const filtersBusy = calendarsLoading || classesLoading;
 
   return (
     <div className="pb-8 space-y-6">
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <TermFilterCard
             fitFilterGrid
             calendars={calendars ?? []}
@@ -421,6 +444,12 @@ export const CurriculumProgressTabSection: React.FC = () => {
             onChange={(v) => setClassLevelId((v) ?? "")}
             searchable
             disabled={filtersBusy}
+          />
+          <Switch
+            className="pb-1"
+            label="Overdue only"
+            checked={overdueOnly}
+            onChange={(e) => setOverdueOnly(e.currentTarget.checked)}
           />
         </div>
       </div>
@@ -455,6 +484,13 @@ export const CurriculumProgressTabSection: React.FC = () => {
             </div>
             <p className="text-sm text-gray-500">
               {overall?.completedLabel ?? "0 of 0 topics completed"}
+              {overdueTopicCount > 0 ? (
+                <span className="block mt-1 text-amber-800 font-medium">
+                  {overdueTopicCount} topic
+                  {overdueTopicCount === 1 ? "" : "s"} overdue (by planned end
+                  date)
+                </span>
+              ) : null}
             </p>
           </div>
 
@@ -463,8 +499,17 @@ export const CurriculumProgressTabSection: React.FC = () => {
               <div className="bg-white rounded-xl border border-dashed border-gray-200 p-10 text-center text-gray-500 text-sm">
                 No curriculum topics for this selection.
               </div>
+            ) : visibleTopics.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 p-10 text-center text-gray-700 text-sm">
+                <p className="font-medium text-gray-900">
+                  No overdue topics for this selection
+                </p>
+                <p className="text-gray-500 mt-1">
+                  Turn off Overdue only or adjust filters.
+                </p>
+              </div>
             ) : (
-              topics.map((topic) => {
+              visibleTopics.map((topic) => {
                 const topicKey = `${topic.subjectId}:${topic.classLevelId ?? "none"}:${topic.topicId}`;
                 return (
                 <TopicAccordionRow
@@ -616,6 +661,10 @@ function TopicAccordionRow({
   replying,
 }: TopicAccordionRowProps) {
   const status = topicStatusLabel(topic);
+  const overdue = isCurriculumTopicOverdue({
+    status: topic.status,
+    plannedEndDate: topic.plannedEndDate,
+  });
   const { notes, isLoading: notesLoading } = useGetTeacherTopicNotes(
     expanded ? topic.topicId : undefined,
     {
@@ -660,6 +709,11 @@ function TopicAccordionRow({
             {showClassLevelChip && topic.classLevelName ? (
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
                 {topic.classLevelName}
+              </span>
+            ) : null}
+            {overdue ? (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                Overdue
               </span>
             ) : null}
             <span

@@ -57,6 +57,12 @@ const AssignmentsTable = ({ assignments, busy }: AssignmentsTableProps) => {
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-[120px]">
                 <div>Class</div>
               </th>
+              <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-[110px]">
+                <div>Term</div>
+              </th>
+              <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-[120px]">
+                <div>Curriculum</div>
+              </th>
               <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-[100px]">
                 <div>Due Date</div>
               </th>
@@ -77,7 +83,7 @@ const AssignmentsTable = ({ assignments, busy }: AssignmentsTableProps) => {
               if (busy) {
                 return (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={11}>
                       <div className="relative py-16">
                         <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10">
                           <HashLoader color="#AB58E7" size={40} />
@@ -91,7 +97,7 @@ const AssignmentsTable = ({ assignments, busy }: AssignmentsTableProps) => {
               if (!assignments?.length) {
                 return (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={11}>
                       <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                         <p className="text-lg font-medium">No assignments found</p>
                         <p className="text-sm text-gray-400 mt-1">
@@ -130,6 +136,14 @@ const AssignmentsTable = ({ assignments, busy }: AssignmentsTableProps) => {
 
                   <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
                     {assignment.classLevel?.name || "-"}
+                  </td>
+
+                  <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                    {assignment.academicTerm?.termName ?? "—"}
+                  </td>
+
+                  <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                    {assignment.curriculum?.name ?? "—"}
                   </td>
 
                   <td className="text-sm px-6 py-4 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
