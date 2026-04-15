@@ -223,7 +223,7 @@ export class TeacherController {
   }
   @Post('forgot-password')
   forgotPassword(@Body() forgotPasswordDto: ForgotTeacherPasswordDto) {
-    return this.TeacherService.forgotPin(forgotPasswordDto.email);
+    return this.TeacherService.forgotPin(forgotPasswordDto.identifier);
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)

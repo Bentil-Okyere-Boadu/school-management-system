@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/common/Dialog";
 import CustomButton from "@/components/Button";
@@ -9,8 +9,8 @@ import { IconDots, IconEdit, IconTrashFilled, IconClipboardCheck } from "@tabler
 import { Topic, Assignment, ErrorResponse } from "@/@types";
 import { AttachmentIcon } from "@/utils/icons";
 import FileUploadArea from "@/components/common/FileUploadArea";
+import { TermFilterCard } from "@/components/common/TermFilterCard";
 import { useGetTeacherTopics, useGetTeacherAssignments, useCreateTeacherAssignment, useUpdateTeacherAssignment, useDeleteTeacherAssignment, useGetTeacherSubjectClasses, useTeacherAcademicTermSelection } from "@/hooks/teacher";
-import { TeacherTermSelect } from "@/components/teacher/subjects/TeacherTermSelect";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
 
@@ -28,7 +28,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isCreate, setIsCreate] = useState(true);
-  const [assignment, setAssignment] = useState<Partial<Assignment> & { classLevelId?: string }>({
+  const [draftAssignment, setDraftAssignment] = useState<Partial<Assignment> & { classLevelId?: string }>({
     id: "",
     title: "",
     topicId: "",
@@ -41,17 +41,64 @@ export const TopicAssignmentsTabSection: React.FC = () => {
     assignmentType: "online",
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState("");
 
-  const { teacherTopics: topics } = useGetTeacherTopics("", academicTermId);
+  const { teacherTopics: topicsForTerm } = useGetTeacherTopics("", academicTermId);
+
+  useEffect(() => {
+    setSelectedCurriculumId("");
+  }, [academicTermId]);
+
+  const curriculumOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const topic of topicsForTerm ?? []) {
+      const cur = topic.curriculum;
+      if (cur?.id && cur.name && !byId.has(cur.id)) {
+        byId.set(cur.id, cur.name);
+      }
+    }
+    return [
+      { value: "", label: "All curricula" },
+      ...Array.from(byId.entries()).map(([value, label]) => ({ value, label })),
+    ];
+  }, [topicsForTerm]);
+
+  const topicById = useMemo(() => {
+    const map = new Map<string, Topic>();
+    for (const topic of topicsForTerm ?? []) {
+      map.set(topic.id, topic);
+    }
+    return map;
+  }, [topicsForTerm]);
+
   const { classSubjects } = useGetTeacherSubjectClasses("");
   const { teacherAssignments: assignments, isLoading, refetch } =
     useGetTeacherAssignments("");
+
+  const filteredAssignments = useMemo(() => {
+    if (!assignments?.length || !academicTermId) return [];
+    const allowedTopicIds = new Set(
+      (topicsForTerm ?? [])
+        .filter(
+          (topic) =>
+            !selectedCurriculumId ||
+            topic.curriculum?.id === selectedCurriculumId,
+        )
+        .map((topic) => topic.id),
+    );
+    return assignments.filter((row) => allowedTopicIds.has(row.topicId));
+  }, [
+    assignments,
+    topicsForTerm,
+    academicTermId,
+    selectedCurriculumId,
+  ]);
   const { mutate: createAssignment, isPending: creating } = useCreateTeacherAssignment();
-  const { mutate: updateAssignment, isPending: updating } = useUpdateTeacherAssignment(assignment?.id || "");
+  const { mutate: updateAssignment, isPending: updating } = useUpdateTeacherAssignment(draftAssignment?.id || "");
   const { mutate: deleteAssignment, isPending: deleting } = useDeleteTeacherAssignment();
 
   const topicOptions =
-    topics?.map((topic: Topic) => ({
+    topicsForTerm?.map((topic: Topic) => ({
       value: topic.id,
       label: topic.name,
     })) ?? [];
@@ -64,7 +111,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
 
   const onOpenCreate = () => {
     setIsCreate(true);
-    setAssignment({
+    setDraftAssignment({
       id: "",
       title: "",
       topicId: "",
@@ -82,7 +129,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
 
   const onOpenEdit = (row: Assignment) => {
     setIsCreate(false);
-    setAssignment({
+    setDraftAssignment({
       id: row.id,
       title: row.title,
       topicId: row.topicId,
@@ -102,7 +149,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
   };
 
   const onAskDelete = (row: Assignment) => {
-    setAssignment({
+    setDraftAssignment({
       id: row.id,
       title: row.title,
     });
@@ -112,14 +159,14 @@ export const TopicAssignmentsTabSection: React.FC = () => {
   const saveAssignment = () => {
     if (isCreate) {
       const formData = new FormData();
-      formData.append('topicId', assignment.topicId || "");
-      formData.append('classLevelId', assignment.classLevelId || "");
-      formData.append('title', assignment.title || "");
-      formData.append('instructions', assignment.instructions || "");
-      formData.append('dueDate', assignment.dueDate || "");
-      formData.append('maxScore', String(assignment.maxScore || 100));
-      formData.append('state', assignment.isPublished ? "published" : "draft");
-      formData.append('assignmentType', assignment.assignmentType || "online");
+      formData.append('topicId', draftAssignment.topicId || "");
+      formData.append('classLevelId', draftAssignment.classLevelId || "");
+      formData.append('title', draftAssignment.title || "");
+      formData.append('instructions', draftAssignment.instructions || "");
+      formData.append('dueDate', draftAssignment.dueDate || "");
+      formData.append('maxScore', String(draftAssignment.maxScore || 100));
+      formData.append('state', draftAssignment.isPublished ? "published" : "draft");
+      formData.append('assignmentType', draftAssignment.assignmentType || "online");
       
       if (selectedFiles.length > 0) {
         formData.append('file', selectedFiles[0]);
@@ -138,12 +185,12 @@ export const TopicAssignmentsTabSection: React.FC = () => {
       });
     } else {
       const formData = new FormData();
-      formData.append('title', assignment.title || "");
-      formData.append('instructions', assignment.instructions || "");
-      if (assignment.dueDate) formData.append('dueDate', assignment.dueDate);
-      if (assignment.maxScore) formData.append('maxScore', String(assignment.maxScore));
-      formData.append('state', assignment.isPublished ? "published" : "draft");
-      formData.append('assignmentType', assignment.assignmentType || "online");
+      formData.append('title', draftAssignment.title || "");
+      formData.append('instructions', draftAssignment.instructions || "");
+      if (draftAssignment.dueDate) formData.append('dueDate', draftAssignment.dueDate);
+      if (draftAssignment.maxScore) formData.append('maxScore', String(draftAssignment.maxScore));
+      formData.append('state', draftAssignment.isPublished ? "published" : "draft");
+      formData.append('assignmentType', draftAssignment.assignmentType || "online");
       
       if (selectedFiles.length > 0) {
         formData.append('file', selectedFiles[0]);
@@ -164,7 +211,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
   };
 
   const confirmDelete = () => {
-    deleteAssignment(assignment.id as string, {
+    deleteAssignment(draftAssignment.id as string, {
       onSuccess: () => {
         toast.success("Assignment deleted successfully");
         setIsConfirmDeleteOpen(false);
@@ -186,7 +233,6 @@ export const TopicAssignmentsTabSection: React.FC = () => {
     });
   };
 
-  // Convert ISO date to yyyy-MM-dd format for date input
   const formatDateForInput = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -203,16 +249,31 @@ export const TopicAssignmentsTabSection: React.FC = () => {
     <>
       <div className="pb-8">
 
-        <TeacherTermSelect
-          calendars={calendars ?? []}
-          calendarsLoading={calendarsLoading}
-          sortedTerms={sortedTerms}
-          academicTermId={academicTermId}
-          setAcademicTermId={setAcademicTermId}
-          actions={
-            <CustomButton text="Create Assignment" onClick={onOpenCreate} />
-          }
-        />
+        <div className="flex flex-col gap-4 px-0.5 mb-5 lg:flex-row lg:items-end lg:justify-between lg:flex-wrap">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end flex-1 min-w-0">
+            <div className="w-full max-w-[320px] min-w-[200px]">
+              <TermFilterCard
+                calendars={calendars ?? []}
+                calendarsLoading={calendarsLoading}
+                sortedTerms={sortedTerms}
+                value={academicTermId}
+                onChange={setAcademicTermId}
+                className="mb-0!"
+              />
+            </div>
+            <Select
+              label="Curriculum"
+              placeholder="All curricula"
+              data={curriculumOptions}
+              value={selectedCurriculumId}
+              onChange={(v) => setSelectedCurriculumId(v ?? "")}
+              searchable
+              className="w-full max-w-[300px] min-w-[200px]"
+              disabled={!academicTermId || curriculumOptions.length <= 1}
+            />
+          </div>
+          <CustomButton text="Create Assignment" onClick={onOpenCreate} />
+        </div>
 
         <section className="bg-white mt-2">
           <div className="overflow-x-auto">
@@ -224,6 +285,9 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                     <div>Topic</div>
+                  </th>
+                  <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-[100px]">
+                    <div>Curriculum</div>
                   </th>
                   <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5">
                     <div>Class</div>
@@ -251,7 +315,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   if (!calendarsLoading && !sortedTerms.length) {
                     return (
                       <tr>
-                        <td colSpan={9}>
+                        <td colSpan={10}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No academic terms</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -263,25 +327,10 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                     );
                   }
 
-                  if (!academicTermId) {
-                    return (
-                      <tr>
-                        <td colSpan={9}>
-                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                            <p className="text-lg font-medium">Select a term</p>
-                            <p className="text-sm text-gray-400 mt-1">
-                              Choose an academic term above to filter topic choices.
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-
                   if (isLoading) {
                     return (
                       <tr>
-                        <td colSpan={9}>
+                        <td colSpan={10}>
                           <div className="relative py-20 bg-white">
                             <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
                               <HashLoader color="#AB58E7" size={40} />
@@ -295,7 +344,7 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   if (!assignments?.length) {
                     return (
                       <tr>
-                        <td colSpan={9}>
+                        <td colSpan={10}>
                           <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                             <p className="text-lg font-medium">No assignments created</p>
                             <p className="text-sm text-gray-400 mt-1">
@@ -307,7 +356,24 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                     );
                   }
 
-                  return assignments.map((row: Assignment) => (
+                  if (assignments.length > 0 && filteredAssignments.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={10}>
+                          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                            <p className="text-lg font-medium">
+                              No assignments match this curriculum
+                            </p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              Try &quot;All curricula&quot; or pick another curriculum.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return filteredAssignments.map((row: Assignment) => (
                     <tr key={row.id}>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex flex-row gap-2">
@@ -325,10 +391,15 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                             )}
                           </div>
                           {row.title}
-                      </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div>{row.topic || "-"}</div>
+                      </td>
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 text-sm text-zinc-700">
+                        <div>
+                          {topicById.get(row.topicId)?.curriculum?.name ?? "—"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div>{row.class || "-"}</div>
@@ -418,8 +489,10 @@ export const TopicAssignmentsTabSection: React.FC = () => {
               label="Topic"
               placeholder="Select a topic"
               data={topicOptions}
-              value={assignment.topicId}
-              onChange={(v) => setAssignment({ ...assignment, topicId: v || "" })}
+              value={draftAssignment.topicId}
+              onChange={(v) =>
+                setDraftAssignment({ ...draftAssignment, topicId: v || "" })
+              }
               searchable
               required
               disabled={!isCreate}
@@ -428,8 +501,13 @@ export const TopicAssignmentsTabSection: React.FC = () => {
               label="Class Level"
               placeholder="Select a class"
               data={classOptions}
-              value={assignment.classLevelId}
-              onChange={(v) => setAssignment({ ...assignment, classLevelId: v || "" })}
+              value={draftAssignment.classLevelId}
+              onChange={(v) =>
+                setDraftAssignment({
+                  ...draftAssignment,
+                  classLevelId: v || "",
+                })
+              }
               searchable
               required
               disabled={!isCreate}
@@ -445,8 +523,13 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   { value: "online", label: "Online" },
                   { value: "offline", label: "Offline" }
                 ]}
-                value={assignment.assignmentType}
-                onChange={(v) => setAssignment({ ...assignment, assignmentType: v as "online" | "offline" || "online" })}
+                value={draftAssignment.assignmentType}
+                onChange={(v) =>
+                  setDraftAssignment({
+                    ...draftAssignment,
+                    assignmentType: (v as "online" | "offline") || "online",
+                  })
+                }
                 required
               />
             </div>
@@ -457,8 +540,10 @@ export const TopicAssignmentsTabSection: React.FC = () => {
             label="Assignment Title"
             min={1}
             placeholder="e.g., Algebra Problem Set 1"
-            onChange={(e) => setAssignment({ ...assignment, title: e.target.value })}
-            value={assignment.title || ""}
+            onChange={(e) =>
+              setDraftAssignment({ ...draftAssignment, title: e.target.value })
+            }
+            value={draftAssignment.title || ""}
             required
           />
 
@@ -471,32 +556,34 @@ export const TopicAssignmentsTabSection: React.FC = () => {
               className="px-3 py-2.5 h-24 rounded border-solid border-[0.5px] border-zinc-500 text-zinc-800 w-full resize-y"
               placeholder="Provide clear instructions for students..."
               onChange={(e) =>
-                setAssignment({ ...assignment, instructions: e.target.value })
+                setDraftAssignment({
+                  ...draftAssignment,
+                  instructions: e.target.value,
+                })
               }
-              value={assignment.instructions || ""}
+              value={draftAssignment.instructions || ""}
             />
           </div>
 
-          {assignment.assignmentType === "online" && (
+          {draftAssignment.assignmentType === "online" && (
             <div className="mb-4">
               <div className="mb-1.5 text-xs text-zinc-600">
                 Attachment (Optional)
               </div>
-              
-              {/* Show existing file indication when editing */}
-              {!isCreate && assignment.attachmentPath && (
+              {!isCreate && draftAssignment.attachmentPath && (
                 <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       <span className="text-sm text-blue-800 font-medium">
-                        Current file: {assignment.attachmentPath?.split('/').pop()}
+                        Current file:{" "}
+                        {draftAssignment.attachmentPath?.split("/").pop()}
                       </span>
                     </div>
-                    {assignment.attachmentUrl && (
-                      <a 
-                        href={assignment.attachmentUrl} 
-                        target="_blank" 
+                    {draftAssignment.attachmentUrl && (
+                      <a
+                        href={draftAssignment.attachmentUrl}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-blue-600 hover:text-blue-800 underline"
                       >
@@ -509,7 +596,6 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   </p>
                 </div>
               )}
-              
               <FileUploadArea 
                 onFileSelect={setSelectedFiles} 
                 accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" 
@@ -533,10 +619,10 @@ export const TopicAssignmentsTabSection: React.FC = () => {
             </div>
             <Switch
               id="publishSwitch"
-              checked={assignment.isPublished || false}
+              checked={draftAssignment.isPublished || false}
               onChange={(e) =>
-                setAssignment({
-                  ...assignment,
+                setDraftAssignment({
+                  ...draftAssignment,
                   isPublished: e.currentTarget.checked,
                   status: e.currentTarget.checked ? "published" : "draft",
                 })
@@ -553,9 +639,12 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                   type="date"
                   required
                   className="px-3 py-2.5 h-10 rounded border-solid border-[0.5px] border-zinc-500 text-zinc-800 w-full"
-                  value={assignment.dueDate || ""}
+                  value={draftAssignment.dueDate || ""}
                   onChange={(e) =>
-                    setAssignment({ ...assignment, dueDate: e.target.value })
+                    setDraftAssignment({
+                      ...draftAssignment,
+                      dueDate: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -567,12 +656,12 @@ export const TopicAssignmentsTabSection: React.FC = () => {
               min={1}
               placeholder="100"
               onChange={(e) =>
-                setAssignment({
-                  ...assignment,
-                  maxScore: Number.parseInt(e.target.value) || 100,
+                setDraftAssignment({
+                  ...draftAssignment,
+                  maxScore: Number.parseInt(e.target.value, 10) || 100,
                 })
               }
-              value={assignment.maxScore?.toString() || "100"}
+              value={draftAssignment.maxScore?.toString() || "100"}
             />
           </div>
         </form>

@@ -94,11 +94,12 @@ export class TeacherService {
   }
 
   async forgotPin(
-    email: string,
+    identifier: string,
   ): Promise<{ success: boolean; message: string }> {
+    const trimmed = identifier.trim();
     const teacher = await this.teacherRepository.findOne({
-      where: { email },
-      relations: ['role'],
+      where: [{ email: trimmed }, { teacherId: trimmed }],
+      relations: ['role', 'school'],
     });
     if (!teacher) {
       throw new NotFoundException(

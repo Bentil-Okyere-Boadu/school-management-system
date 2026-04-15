@@ -300,10 +300,6 @@ export const useGetCalendars = () => {
   return { studentCalendars, isLoading, refetch }
 }
 
-/**
- * Single-term selection for teacher topic lists: flattened sorted terms,
- * defaulting to the latest term when the set changes.
- */
 export const useTeacherAcademicTermSelection = () => {
   const { studentCalendars: calendars, isLoading: calendarsLoading } =
     useGetCalendars();
