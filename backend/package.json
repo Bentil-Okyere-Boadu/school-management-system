@@ -26,8 +26,8 @@
     "generate:openapi": "node scripts/generate-openapi.mjs && prettier --write docs/*.json"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.816.0",
-    "@aws-sdk/s3-request-presigner": "^3.816.0",
+    "@aws-sdk/client-s3": "^3.1030.0",
+    "@aws-sdk/s3-request-presigner": "^3.1030.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
