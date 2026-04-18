@@ -34,6 +34,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { PaymentsModule } from './payments/payments.module';
 import { HubtelModule } from './integrations/hubtel/hubtel.module';
+import { ExternalApiProxyModule } from './external-api-proxy/external-api-proxy.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { HubtelModule } from './integrations/hubtel/hubtel.module';
     PlannerModule,
     PaymentsModule,
     HubtelModule,
+    ExternalApiProxyModule,
   ],
   controllers: [AppController],
   providers: [

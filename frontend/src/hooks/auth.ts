@@ -45,7 +45,7 @@ export const useCompleteRegistration = (payload: {token: string, password: strin
 export const useGetRoles = () => {
     const { data, isLoading, error, isSuccess } = useQuery({
         queryFn: () => {
-            return customAPI.get('/roles')
+            return customAPI.get('/proxy/roles')
         },
         queryKey: ['roles']
     })
