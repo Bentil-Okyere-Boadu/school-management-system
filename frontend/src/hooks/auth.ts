@@ -22,13 +22,9 @@ export const useAdminSignUp = () => {
     })
 }
 
-export const useRequestPasswordReset = (email: string) => {
-    return useMutation({ 
-        mutationFn: (url: string) => {
-            return customAPI.post(`${url}/forgot-password`, { email: email})
-        }
-    })
-}
+export type ForgotPasswordBody =
+  | { email: string }
+  | { identifier: string };
 
 export const usePasswordReset = (payload: {token: string, password: string}) => {
     return useMutation({ 

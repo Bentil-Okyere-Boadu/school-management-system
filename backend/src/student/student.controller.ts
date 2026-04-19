@@ -57,7 +57,7 @@ export class StudentController {
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
   @Post('forgot-password')
   forgotPassword(@Body() forgotPasswordDto: ForgotStudentPasswordDto) {
-    return this.studentService.forgotPin(forgotPasswordDto.email);
+    return this.studentService.forgotPin(forgotPasswordDto.identifier);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)

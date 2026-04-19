@@ -22,6 +22,7 @@ import { In } from 'typeorm';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from './entities/assignment-submission.entity';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
+
 @Injectable()
 export class StudentService {
   private readonly logger = new Logger(StudentService.name);
@@ -101,11 +102,12 @@ export class StudentService {
    * Handle forgot PIN for students
    */
   async forgotPin(
-    email: string,
+    identifier: string,
   ): Promise<{ success: boolean; message: string }> {
+    const trimmed = identifier.trim();
     const student = await this.studentRepository.findOne({
-      where: { email },
-      relations: ['role'],
+      where: [{ email: trimmed }, { studentId: trimmed }],
+      relations: ['role', 'school'],
     });
 
     if (!student) {
@@ -127,7 +129,10 @@ export class StudentService {
         message: 'PIN reset instructions sent to your email',
       };
     } catch (error) {
-      this.logger.error(`Failed to send PIN reset email to ${email}`, error);
+      this.logger.error(
+        `Failed to send PIN reset email to ${student.email}`,
+        error,
+      );
       throw new InvitationException(
         `Failed to send PIN reset email: ${BaseException.getErrorMessage(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,

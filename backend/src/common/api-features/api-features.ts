@@ -28,6 +28,7 @@ export class APIFeatures<T extends ObjectLiteral> {
       'withoutClass',
       'excludeClassId',
       'academicTermId',
+      'curriculumId',
     ];
     excludedFields.forEach((el) => delete queryObj[el]);
 

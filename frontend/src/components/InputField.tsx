@@ -59,11 +59,13 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
               <button
                 type="button"
                 aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword((prev) => !prev)}
                 className="text-zinc-600 hover:text-zinc-800 cursor-pointer"
                 disabled={isTransulent}
               >
-                {showPassword ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+                {/* Open eye = visible text; slashed eye = masked (standard state icons) */}
+                {showPassword ? <IconEye size={20} /> : <IconEyeOff size={20} />}
               </button>
             )}
           </div>

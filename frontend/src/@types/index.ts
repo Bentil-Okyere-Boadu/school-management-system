@@ -501,6 +501,14 @@ export interface AdminAssignment {
     id: string;
     name: string;
   } | null;
+  academicTerm?: {
+    id: string;
+    termName: string;
+  } | null;
+  curriculum?: {
+    id: string;
+    name: string;
+  } | null;
   teacher: {
     id: string;
     firstName: string;

@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Select } from "@mantine/core";
+import { Select, Switch } from "@mantine/core";
 import { IconEye } from "@tabler/icons-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { HashLoader } from "react-spinners";
@@ -18,6 +18,7 @@ import {
   findCalendarIdForTerm,
   getSortedSchoolTerms,
 } from "@/utils/schoolTerms";
+import { isCurriculumTopicOverdue } from "@/utils/curriculumProgress";
 import {
   useGetAllSubjects,
   useGetCalendars,
@@ -34,6 +35,7 @@ const CP = {
   teacher: "cpTeacher",
   cal: "cpCal",
   term: "cpTerm",
+  overdue: "cpOverdue",
 } as const;
 
 function teacherDisplayName(
@@ -79,6 +81,9 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const [academicTermId, setAcademicTermId] = useState(
     () => searchParams.get(CP.term) ?? ""
   );
+  const [overdueOnly, setOverdueOnly] = useState(
+    () => searchParams.get(CP.overdue) === "1"
+  );
 
   const { curricula } = useGetCurricula();
   const { subjects: allSubjectCatalogs, isLoading: subjectCatalogsLoading } =
@@ -106,6 +111,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
     setTeacherId(searchParams.get(CP.teacher) ?? "");
     setSelectedCalendarId(searchParams.get(CP.cal) ?? "");
     setAcademicTermId(searchParams.get(CP.term) ?? "");
+    setOverdueOnly(searchParams.get(CP.overdue) === "1");
   }, [searchParams]);
 
   const replaceProgressUrl = useCallback(
@@ -116,6 +122,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
       teacherId: string;
       selectedCalendarId: string;
       academicTermId: string;
+      overdueOnly: boolean;
     }) => {
       const p = new URLSearchParams(searchParams.toString());
       p.set("tab", "curriculum-progress");
@@ -129,6 +136,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
       setOrDel(CP.teacher, next.teacherId);
       setOrDel(CP.cal, next.selectedCalendarId);
       setOrDel(CP.term, next.academicTermId);
+      setOrDel(CP.overdue, next.overdueOnly ? "1" : "");
       router.replace(`${pathname}?${p.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams]
@@ -148,6 +156,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
           teacherId,
           selectedCalendarId: "",
           academicTermId: "",
+          overdueOnly,
         });
       }
       return;
@@ -189,6 +198,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
         teacherId,
         selectedCalendarId: nextCal,
         academicTermId: nextTerm,
+        overdueOnly,
       });
       return;
     }
@@ -207,6 +217,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
     replaceProgressUrl,
     academicTermId,
     selectedCalendarId,
+    overdueOnly,
   ]);
 
   const curriculumOptions =
@@ -241,6 +252,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
         teacherId,
         selectedCalendarId,
         academicTermId,
+        overdueOnly,
       });
     }
   }, [
@@ -252,6 +264,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
     teacherId,
     selectedCalendarId,
     academicTermId,
+    overdueOnly,
     replaceProgressUrl,
   ]);
 
@@ -287,11 +300,27 @@ export const CurriculumProgressTabSection: React.FC = () => {
   const rows = dashboard?.rows ?? [];
   const summary = dashboard?.summary;
 
+  const displayRows = useMemo(() => {
+    if (!overdueOnly) return rows;
+    return rows.filter((r) =>
+      isCurriculumTopicOverdue({
+        status: r.status,
+        plannedEndDate: r.plannedEndDate,
+      })
+    );
+  }, [rows, overdueOnly]);
+
   const headline = useMemo(() => {
     const total = rows.length;
     const completed = rows.filter((r) => r.status === "completed").length;
     const inProgress = rows.filter(
       (r) => r.status === "pending" && r.progressPercent > 0
+    ).length;
+    const overdue = rows.filter((r) =>
+      isCurriculumTopicOverdue({
+        status: r.status,
+        plannedEndDate: r.plannedEndDate,
+      })
     ).length;
     const avg =
       total === 0
@@ -299,7 +328,13 @@ export const CurriculumProgressTabSection: React.FC = () => {
         : Math.round(
             rows.reduce((acc, r) => acc + r.progressPercent, 0) / total
           );
-    return { total, completed, inProgress, avgProgress: summary?.avgProgress ?? avg };
+    return {
+      total,
+      completed,
+      inProgress,
+      overdue,
+      avgProgress: summary?.avgProgress ?? avg,
+    };
   }, [rows, summary?.avgProgress]);
 
   const buildProgressListUrl = () => {
@@ -311,6 +346,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
     if (teacherId) p.set(CP.teacher, teacherId);
     if (selectedCalendarId) p.set(CP.cal, selectedCalendarId);
     if (academicTermId) p.set(CP.term, academicTermId);
+    if (overdueOnly) p.set(CP.overdue, "1");
     return `${pathname}?${p.toString()}`;
   };
 
@@ -334,6 +370,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
     teacherId: string;
     selectedCalendarId: string;
     academicTermId: string;
+    overdueOnly: boolean;
   }>) => {
     const next = {
       curriculumId,
@@ -342,6 +379,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
       teacherId,
       selectedCalendarId,
       academicTermId,
+      overdueOnly,
       ...partial,
     };
     if (partial.curriculumId !== undefined) setCurriculumId(partial.curriculumId);
@@ -353,12 +391,13 @@ export const CurriculumProgressTabSection: React.FC = () => {
       setSelectedCalendarId(partial.selectedCalendarId);
     if (partial.academicTermId !== undefined)
       setAcademicTermId(partial.academicTermId);
+    if (partial.overdueOnly !== undefined) setOverdueOnly(partial.overdueOnly);
     replaceProgressUrl(next);
   };
 
   return (
     <div className="pb-8">
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <p className="text-sm text-gray-500 mb-1">Total Topics</p>
           <p className="text-2xl font-semibold text-gray-900">
@@ -378,6 +417,12 @@ export const CurriculumProgressTabSection: React.FC = () => {
           </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p className="text-sm text-gray-500 mb-1">Overdue</p>
+          <p className="text-2xl font-semibold text-amber-700">
+            {headline.overdue}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <p className="text-sm text-gray-500 mb-1">Avg. Progress</p>
           <p className="text-2xl font-semibold text-purple-600">
             {headline.avgProgress}%
@@ -386,7 +431,7 @@ export const CurriculumProgressTabSection: React.FC = () => {
       </section>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
           <TermFilterCard
             fitFilterGrid
             calendars={calendars ?? []}
@@ -439,6 +484,14 @@ export const CurriculumProgressTabSection: React.FC = () => {
             onChange={(v) => patch({ teacherId: (v as string) ?? "" })}
             searchable
             clearable
+          />
+          <Switch
+            className="pb-1"
+            label="Overdue only"
+            checked={overdueOnly}
+            onChange={(e) =>
+              patch({ overdueOnly: e.currentTarget.checked })
+            }
           />
         </div>
       </div>
@@ -501,7 +554,28 @@ export const CurriculumProgressTabSection: React.FC = () => {
                   );
                 }
 
-                return rows.map((row) => {
+                if (!displayRows.length) {
+                  return (
+                    <tr>
+                      <td colSpan={10}>
+                        <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                          <p className="text-lg font-medium">
+                            No overdue topics for this selection
+                          </p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            Turn off Overdue only or adjust other filters.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return displayRows.map((row) => {
+                  const overdue = isCurriculumTopicOverdue({
+                    status: row.status,
+                    plannedEndDate: row.plannedEndDate,
+                  });
                   const ui = rowUiStatus(row);
                   const statusClass =
                     ui === "completed"
@@ -540,8 +614,15 @@ export const CurriculumProgressTabSection: React.FC = () => {
                       }
                     >
                       <td className="px-6 py-4 border-b border-solid border-b-(--Gray-200,#EAECF0) min-h-18 max-md:px-5 align-top">
-                        <div className="font-semibold text-gray-900">
-                          {row.topicName}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-gray-900">
+                            {row.topicName}
+                          </span>
+                          {overdue ? (
+                            <span className="inline-flex text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                              Overdue
+                            </span>
+                          ) : null}
                         </div>
                         {row.topicDescription ? (
                           <div className="text-sm text-gray-500 mt-0.5">

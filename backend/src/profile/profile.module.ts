@@ -9,9 +9,9 @@ import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { SuperAdminService } from 'src/super-admin/super-admin.service';
 import { Student } from 'src/student/student.entity';
-import { StudentService } from 'src/student/student.service';
+import { StudentModule } from 'src/student/student.module';
 import { Teacher } from 'src/teacher/teacher.entity';
-import { TeacherService } from 'src/teacher/teacher.service';
+import { TeacherModule } from 'src/teacher/teacher.module';
 import { School } from 'src/school/school.entity';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { Role } from 'src/role/role.entity';
@@ -26,10 +26,12 @@ import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { SubjectCatalog } from 'src/subject/subject-catalog.entity';
-import { Subject } from 'rxjs';
+import { Subject } from 'src/subject/subject.entity';
 
 @Module({
   imports: [
+    StudentModule,
+    TeacherModule,
     TypeOrmModule.forFeature([
       Profile,
       School,
@@ -57,8 +59,6 @@ import { Subject } from 'rxjs';
     ObjectStorageServiceService,
     SchoolAdminService,
     SuperAdminService,
-    StudentService,
-    TeacherService,
     InvitationService,
     AcademicCalendarService,
   ],

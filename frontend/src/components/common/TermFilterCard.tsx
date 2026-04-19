@@ -10,19 +10,13 @@ export type TermFilterCardProps = {
   sortedTerms: Term[];
   value: string;
   onChange: (id: string) => void;
-  /** Right side (e.g. primary action buttons). */
   actions?: React.ReactNode;
   className?: string;
-  /**
-   * When true, drop outer margin and max-width so the term select sits in the
-   * same CSS grid row as other Mantine filter fields (e.g. curriculum progress).
-   */
   fitFilterGrid?: boolean;
+  includeAllOption?: boolean;
+  hideLabel?: boolean;
 };
 
-/**
- * Term picker row: `max-w-[320px]` select, Latest badge + chevron, optional actions.
- */
 export function TermFilterCard({
   calendars,
   calendarsLoading = false,
@@ -32,22 +26,28 @@ export function TermFilterCard({
   actions,
   className,
   fitFilterGrid = false,
+  includeAllOption = false,
+  hideLabel = false,
 }: TermFilterCardProps) {
   const latestTermId = sortedTerms[0]?.id;
 
-  const termSelectData = useMemo(
-    () =>
-      sortedTerms.map((t) => {
-        const cal = calendars.find((c) =>
-          c.terms?.some((term) => term.id === t.id),
-        );
-        const label = cal ? `${t.termName} — ${cal.name}` : t.termName;
-        return { value: t.id, label };
-      }),
-    [sortedTerms, calendars],
-  );
+  const termSelectData = useMemo(() => {
+    const rows = sortedTerms.map((t) => {
+      const cal = calendars.find((c) =>
+        c.terms?.some((term) => term.id === t.id),
+      );
+      const label = cal ? `${t.termName} — ${cal.name}` : t.termName;
+      return { value: t.id, label };
+    });
+    if (includeAllOption) {
+      return [{ value: "", label: "All terms" }, ...rows];
+    }
+    return rows;
+  }, [sortedTerms, calendars, includeAllOption]);
 
-  const showLatestInSelect = Boolean(latestTermId && value === latestTermId);
+  const showLatestInSelect = Boolean(
+    latestTermId && value === latestTermId && value !== "",
+  );
 
   const termSelectRightSection = useMemo(
     () => (
@@ -82,12 +82,14 @@ export function TermFilterCard({
         }
       >
         <Select
-          label="Select term"
+          label={hideLabel ? undefined : "Select term"}
           placeholder={
             calendarsLoading
               ? "Loading…"
               : sortedTerms.length
-                ? "Select term"
+                ? includeAllOption
+                  ? "Term"
+                  : "Select term"
                 : "No terms available"
           }
           data={termSelectData}

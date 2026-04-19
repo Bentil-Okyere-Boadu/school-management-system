@@ -1610,26 +1610,46 @@ export const useGetAssignments = (
   search: string = "",
   teacherId: string = "",
   classLevelId: string = "",
-  limit?: number
+  limit?: number,
+  academicTermId?: string,
+  curriculumId?: string
 ) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
       "adminAssignments",
-      { page, search, teacherId, classLevelId, limit },
+      {
+        page,
+        search,
+        teacherId,
+        classLevelId,
+        limit,
+        academicTermId,
+        curriculumId,
+      },
     ],
     queryFn: () => {
       const queryBuilder: string[] = [];
 
       if (search) {
-        queryBuilder.push(`search=${search}`);
+        queryBuilder.push(`search=${encodeURIComponent(search)}`);
       }
 
       if (teacherId) {
-        queryBuilder.push(`teacherId=${teacherId}`);
+        queryBuilder.push(`teacherId=${encodeURIComponent(teacherId)}`);
       }
 
       if (classLevelId) {
-        queryBuilder.push(`classLevelId=${classLevelId}`);
+        queryBuilder.push(`classLevelId=${encodeURIComponent(classLevelId)}`);
+      }
+
+      if (academicTermId) {
+        queryBuilder.push(
+          `academicTermId=${encodeURIComponent(academicTermId)}`
+        );
+      }
+
+      if (curriculumId) {
+        queryBuilder.push(`curriculumId=${encodeURIComponent(curriculumId)}`);
       }
 
       if (page) {
