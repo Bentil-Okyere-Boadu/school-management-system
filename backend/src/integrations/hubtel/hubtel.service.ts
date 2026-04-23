@@ -106,21 +106,46 @@ export class HubtelService {
       : PaymentTransactionStatus.UNPAID;
 
     const payment = payload.OrderInfo.Payment;
+    const hubtelTxnId =
+      payment?.TransactionId != null
+        ? String(payment.TransactionId).trim() || null
+        : null;
+    const networkTxnId =
+      payment?.ExternalTransactionId != null
+        ? String(payment.ExternalTransactionId).trim() || null
+        : null;
+
+    const subtotal = payload.OrderInfo?.Subtotal;
+    const amountAfterCharges = payment?.AmountAfterCharges;
+    let charges = 0;
+    if (
+      typeof subtotal === 'number' &&
+      typeof amountAfterCharges === 'number' &&
+      !Number.isNaN(subtotal) &&
+      !Number.isNaN(amountAfterCharges)
+    ) {
+      charges = Math.max(0, subtotal - amountAfterCharges);
+    } else {
+      charges = Math.max(
+        0,
+        (payment?.AmountPaid ?? 0) - (payment?.AmountAfterCharges ?? 0),
+      );
+    }
+
     const updated =
       await this.paymentsService.updateTransactionStatusFromHubtel({
         sessionId: payload.SessionId,
         orderId: payload.OrderId,
         status: mappedStatus,
         providerStatus: payload.OrderInfo.Status,
+        hubtelTransactionId: hubtelTxnId,
+        networkTransactionId: networkTxnId,
         paymentMethod: payment?.PaymentType ?? null,
         paymentDate: payment?.PaymentDate
           ? new Date(payment.PaymentDate)
           : null,
         amount: payment?.AmountPaid ?? 0,
-        charges: Math.max(
-          0,
-          (payment?.AmountPaid ?? 0) - (payment?.AmountAfterCharges ?? 0),
-        ),
+        charges,
         amountAfterCharges: payment?.AmountAfterCharges ?? 0,
         rawFulfilmentPayload: payload as unknown as Record<string, unknown>,
       });
