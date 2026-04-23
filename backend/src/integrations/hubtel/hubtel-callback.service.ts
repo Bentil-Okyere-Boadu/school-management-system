@@ -47,6 +47,9 @@ export class HubtelCallbackService {
           );
         }
 
+        this.logger.log(
+          `Hubtel fulfilment callback: success SessionId=${payload.SessionId} OrderId=${payload.OrderId} ServiceStatus=${payload.ServiceStatus} httpStatus=${response.status}`,
+        );
         return;
       } catch (error) {
         lastError = error;
