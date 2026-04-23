@@ -1,12 +1,14 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { getSortedSchoolTerms } from '@/utils/schoolTerms';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Student, StudentAttendanceData } from '@/@types';
+import { Calendar, Student, StudentAttendanceData } from '@/@types';
 import StudentAttendance from '@/components/admin/students/StudentAttendance';
 import StudentProfile from '@/components/admin/students/StudentProfile';
 import TabBar from '@/components/common/TabBar';
-import { useGetStudentById, useAdminViewStudentAttendance, useGetCalendars, useGetStudentTermResults,  } from '@/hooks/teacher';
+import StudentPerformanceAnalytics from '@/components/common/StudentPerformanceAnalytics';
+import { useGetStudentById, useAdminViewStudentAttendance, useGetCalendars, useGetStudentTermResults, useTeacherStudentPerformanceAnalytics,  } from '@/hooks/teacher';
 import StudentResults from '@/components/teacher/students/StudentResults';
 
 export type TabListItem = {
@@ -46,6 +48,7 @@ const ViewStudentPage = () => {
       { tabLabel: "Student Profile", tabKey: "student-profile" },
       { tabLabel: "Attendance", tabKey: "attendance" },
       { tabLabel: "Results", tabKey: "results" },
+      { tabLabel: "Analytics", tabKey: "analytics" },
     ];
 
     const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
@@ -55,7 +58,12 @@ const ViewStudentPage = () => {
       id as string,
       selectedAcademicYear
     ) as AttendanceData;
-    const { studentCalendars } = useGetCalendars();
+    const { studentCalendars, isLoading: calendarsLoading } = useGetCalendars();
+
+    const sortedAnalyticsTerms = useMemo(
+      () => getSortedSchoolTerms(studentCalendars ?? []),
+      [studentCalendars],
+    );
 
     const handleSelectAcademicYear = (academicYearId: string) => {
       setSelectedAcademicYear(academicYearId);
@@ -73,6 +81,25 @@ const ViewStudentPage = () => {
         queryKey: ['studentTermResults', id, selectedResultYear, selectedResultTerm],
       }
     );
+
+    const [selectedAnalyticsTerm, setSelectedAnalyticsTerm] = useState("");
+
+    useEffect(() => {
+      if (sortedAnalyticsTerms.length === 0) return;
+      setSelectedAnalyticsTerm((prev) => {
+        if (prev && sortedAnalyticsTerms.some((t) => t.id === prev)) return prev;
+        return sortedAnalyticsTerms[0].id;
+      });
+    }, [sortedAnalyticsTerms]);
+
+    const { analytics: performanceAnalytics, isLoading: analyticsLoading } =
+      useTeacherStudentPerformanceAnalytics(id as string, selectedAnalyticsTerm, {
+        enabled:
+          !!id &&
+          !!selectedAnalyticsTerm &&
+          activeTabKey === "analytics",
+        queryKey: ["teacherStudentAnalytics", id, selectedAnalyticsTerm],
+      });
 
   return (
     <div className='px-0.5'>
@@ -106,6 +133,19 @@ const ViewStudentPage = () => {
               schoolId={schoolId}
               onCalendarChange={(calendarId) => setSelectedResultYear(calendarId)}
               onTermChange={(termId) => setSelectedResultTerm(termId)}
+            />
+          </div>
+        )}
+        { activeTabKey === "analytics" && (
+          <div>
+            <StudentPerformanceAnalytics
+              calendars={(studentCalendars as Calendar[]) ?? []}
+              calendarsLoading={calendarsLoading}
+              selectedTermId={selectedAnalyticsTerm}
+              onTermChange={setSelectedAnalyticsTerm}
+              analytics={performanceAnalytics}
+              isLoading={analyticsLoading}
+              teacherScoped
             />
           </div>
         )}

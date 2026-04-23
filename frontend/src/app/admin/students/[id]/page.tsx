@@ -4,9 +4,11 @@ import StudentAttendance from '@/components/admin/students/StudentAttendance';
 import StudentProfile from '@/components/admin/students/StudentProfile';
 import StudentResults from '@/components/admin/students/StudentResults';
 import TabBar from '@/components/common/TabBar';
-import { useAdminViewStudentAttendance, useGetCalendars, useGetSchoolUserById, useGetStudentResults } from '@/hooks/school-admin';
+import StudentPerformanceAnalytics from '@/components/common/StudentPerformanceAnalytics';
+import { useAdminStudentPerformanceAnalytics, useAdminViewStudentAttendance, useGetCalendars, useGetSchoolUserById, useGetStudentResults } from '@/hooks/school-admin';
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { getSortedSchoolTerms } from '@/utils/schoolTerms';
 
 export type TabListItem = {
   tabLabel: string;
@@ -44,18 +46,32 @@ const ViewStudentPage = () => {
         { tabLabel: "Student Profile", tabKey: "student-profile" },
         { tabLabel: "Attendance", tabKey: "attendance" },
         { tabLabel: "Results", tabKey: "results" },
+        { tabLabel: "Analytics", tabKey: "analytics" },
       ];
     
     const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
     const [selectedResultYear, setSelectedResultYear] = useState("");
+    const [selectedAnalyticsTerm, setSelectedAnalyticsTerm] = useState("");
 
     const { studentAttendance } = useAdminViewStudentAttendance(
       (schoolUser as Student)?.classLevels?.[0]?.id,
       id as string,
       selectedAcademicYear
     ) as AttendanceData;
-    const { calendars } = useGetCalendars();
+    const { calendars, isLoading: calendarsLoading } = useGetCalendars();
 
+    const sortedAnalyticsTerms = useMemo(
+      () => getSortedSchoolTerms(calendars ?? []),
+      [calendars],
+    );
+
+    useEffect(() => {
+      if (sortedAnalyticsTerms.length === 0) return;
+      setSelectedAnalyticsTerm((prev) => {
+        if (prev && sortedAnalyticsTerms.some((t) => t.id === prev)) return prev;
+        return sortedAnalyticsTerms[0].id;
+      });
+    }, [sortedAnalyticsTerms]);
 
     const handleSelectAcademicYear = (academicYearId: string) => {
       setSelectedAcademicYear(academicYearId);
@@ -65,6 +81,15 @@ const ViewStudentPage = () => {
       enabled: !!id && !!selectedResultYear,
       queryKey: ['studentResult', id, selectedResultYear],
     });
+
+    const { analytics: performanceAnalytics, isLoading: analyticsLoading } =
+      useAdminStudentPerformanceAnalytics(id as string, selectedAnalyticsTerm, {
+        enabled:
+          !!id &&
+          !!selectedAnalyticsTerm &&
+          activeTabKey === "analytics",
+        queryKey: ["studentAnalytics", id, selectedAnalyticsTerm],
+      });
 
   return (
     <div className='px-0.5'>
@@ -96,6 +121,18 @@ const ViewStudentPage = () => {
                   showExportButton={false}
                   onCalendarChange={(calendarId) => setSelectedResultYear(calendarId)}
                 />
+            </div>
+        )}
+        { activeTabKey === "analytics" && (
+            <div  className='mt-10'>
+              <StudentPerformanceAnalytics
+                calendars={(calendars as Calendar[]) ?? []}
+                calendarsLoading={calendarsLoading}
+                selectedTermId={selectedAnalyticsTerm}
+                onTermChange={setSelectedAnalyticsTerm}
+                analytics={performanceAnalytics}
+                isLoading={analyticsLoading}
+              />
             </div>
         )}
     </div>

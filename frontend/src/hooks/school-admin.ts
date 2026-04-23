@@ -23,6 +23,7 @@ import {
   AdminDashboardStats,
   Subject,
   AssignSubjectTeacherPayload,
+  StudentPerformanceAnalytics,
   StudentResultsResponse,
   Notification,
   Reminder,
@@ -1456,6 +1457,34 @@ export const useGetStudentResults = (
   const resultsData = (data as { data: StudentResultsResponse })?.data || {};
 
   return { resultsData, isLoading, refetch };
+};
+
+export const useAdminStudentPerformanceAnalytics = (
+  studentId: string,
+  academicTermId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "studentPerformanceAnalytics",
+      "admin",
+      studentId,
+      academicTermId,
+    ],
+    queryFn: () =>
+      customAPI.get(`/school-admin/students/${studentId}/performance-analytics`, {
+        params: { academicTermId },
+      }),
+    enabled:
+      options?.enabled ?? Boolean(studentId && academicTermId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const analytics =
+    (data as { data: StudentPerformanceAnalytics })?.data ?? null;
+
+  return { analytics, isLoading, refetch };
 };
 
 export const useGetNotifications = (

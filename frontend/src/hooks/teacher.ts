@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentPerformanceAnalytics, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
@@ -731,6 +731,34 @@ export const useGetStudentTermResults = (
   const resultsData = (data as { data: StudentResultsResponse })?.data || {};
 
   return { resultsData, isLoading, refetch };
+};
+
+export const useTeacherStudentPerformanceAnalytics = (
+  studentId: string,
+  academicTermId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "studentPerformanceAnalytics",
+      "teacher",
+      studentId,
+      academicTermId,
+    ],
+    queryFn: () =>
+      customAPI.get(`/teacher/students/${studentId}/performance-analytics`, {
+        params: { academicTermId },
+      }),
+    enabled:
+      options?.enabled ?? Boolean(studentId && academicTermId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const analytics =
+    (data as { data: StudentPerformanceAnalytics })?.data ?? null;
+
+  return { analytics, isLoading, refetch };
 };
 
 
