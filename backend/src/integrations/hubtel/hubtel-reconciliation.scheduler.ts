@@ -24,14 +24,25 @@ export class HubtelReconciliationScheduler {
       const staleTransactions =
         await this.paymentsService.getStalePendingTransactions(5);
 
+      if (staleTransactions.length > 0) {
+        this.logger.log(
+          `Hubtel reconciliation: checking ${staleTransactions.length} stale pending transaction(s)`,
+        );
+      }
+
       for (const transaction of staleTransactions) {
         try {
           const statusResponse =
-            await this.hubtelStatusService.checkTransactionStatus(
-              transaction.sessionId,
-            );
+            await this.hubtelStatusService.checkTransactionStatus({
+              sessionId: transaction.sessionId,
+              hubtelTransactionId: transaction.hubtelTransactionId,
+              networkTransactionId: transaction.networkTransactionId,
+            });
           await this.paymentsService.markStatusCheck(transaction.id);
           if (!statusResponse?.data) {
+            this.logger.warn(
+              `Hubtel reconciliation: no status from Hubtel for transaction ${transaction.id} sessionId=${transaction.sessionId} (hubtelTxnId=${transaction.hubtelTransactionId ?? 'none'} networkTxnId=${transaction.networkTransactionId ?? 'none'})`,
+            );
             continue;
           }
 
@@ -62,9 +73,17 @@ export class HubtelReconciliationScheduler {
           if (mappedStatus === PaymentTransactionStatus.PAID) {
             await this.paymentsService.allocatePaidTransaction(updated.id);
           }
+
+          this.logger.log(
+            `Hubtel reconciliation: success transactionId=${updated.id} sessionId=${transaction.sessionId} mappedStatus=${mappedStatus} providerStatus=${statusResponse.data.status} hubtelTransactionId=${statusResponse.data.transactionId ?? 'n/a'} networkTransactionId=${statusResponse.data.externalTransactionId ?? 'n/a'}`,
+          );
         } catch (error) {
-          this.logger.warn(
-            `Failed reconciling transaction ${transaction.id}: ${String(error)}`,
+          const message =
+            error instanceof Error ? error.message : String(error);
+          const stack = error instanceof Error ? error.stack : undefined;
+          this.logger.error(
+            `Hubtel reconciliation: failed transactionId=${transaction.id} sessionId=${transaction.sessionId}: ${message}`,
+            stack,
           );
         }
       }

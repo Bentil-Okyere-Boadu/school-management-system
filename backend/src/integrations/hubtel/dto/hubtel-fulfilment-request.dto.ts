@@ -34,6 +34,18 @@ class HubtelFulfilmentPaymentDto {
   @IsString()
   PaymentType: string;
 
+  /** Hubtel ledger transaction id — required for reliable txn status API lookups. */
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  TransactionId?: string;
+
+  /** Network / external reference (e.g. MoMo id) — secondary lookup key. */
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  ExternalTransactionId?: string;
+
   @ApiProperty()
   @IsNumber()
   AmountPaid: number;

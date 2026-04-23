@@ -2,6 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HubtelStatusResponseDto } from './dto/hubtel-status-response.dto';
 
+export type HubtelStatusLookup = {
+  sessionId: string;
+  hubtelTransactionId?: string | null;
+  networkTransactionId?: string | null;
+};
+
 @Injectable()
 export class HubtelStatusService {
   private readonly logger = new Logger(HubtelStatusService.name);
@@ -34,8 +40,14 @@ export class HubtelStatusService {
     return `Basic ${credentials}`;
   }
 
+  /**
+   * Resolves payment status via Hubtel, trying lookup keys in order:
+   * 1. HubtelTransactionId (ledger id from fulfilment)
+   * 2. NetworkTransactionId (from fulfilment ExternalTransactionId)
+   * 3. clientReference (USSD SessionId — least reliable alone)
+   */
   async checkTransactionStatus(
-    clientReference: string,
+    lookup: HubtelStatusLookup,
   ): Promise<HubtelStatusResponseDto | null> {
     const authHeader = this.buildAuthorizationHeader();
 
@@ -53,21 +65,94 @@ export class HubtelStatusService {
       return null;
     }
 
-    const url = `${this.baseUrl.replace(/\/$/, '')}/transactions/${this.posSalesId}/status?clientReference=${encodeURIComponent(clientReference)}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Authorization: authHeader,
-      },
+    const attempts: { label: string; query: string }[] = [];
+    const hid = lookup.hubtelTransactionId?.trim();
+    const nid = lookup.networkTransactionId?.trim();
+
+    if (hid) {
+      attempts.push({
+        label: 'HubtelTransactionId',
+        query: `HubtelTransactionId=${encodeURIComponent(hid)}`,
+      });
+    }
+    if (nid) {
+      attempts.push({
+        label: 'NetworkTransactionId',
+        query: `NetworkTransactionId=${encodeURIComponent(nid)}`,
+      });
+    }
+    const sid = lookup.sessionId;
+    attempts.push({
+      label: 'clientReference',
+      query: `clientReference=${encodeURIComponent(sid)}`,
+    });
+    attempts.push({
+      label: 'ClientReference',
+      query: `ClientReference=${encodeURIComponent(sid)}`,
     });
 
-    if (!response.ok) {
-      throw new Error(
-        `Hubtel status check failed (${response.status}) for ${clientReference}`,
+    const base = `${this.baseUrl.replace(/\/$/, '')}/transactions/${this.posSalesId}/status`;
+
+    for (const attempt of attempts) {
+      const url = `${base}?${attempt.query}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: authHeader,
+          Accept: 'application/json',
+        },
+      });
+
+      const text = await response.text();
+      let json: HubtelStatusResponseDto | null = null;
+      try {
+        json = JSON.parse(text) as HubtelStatusResponseDto;
+      } catch {
+        this.logger.warn(
+          `Hubtel status non-JSON response (${response.status}) for ${attempt.label}`,
+        );
+        if (!response.ok && response.status >= 500) {
+          throw new Error(
+            `Hubtel status upstream ${response.status} for ${attempt.label}`,
+          );
+        }
+        continue;
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(
+          `Hubtel status auth failed (${response.status}). Check HUBTEL_CLIENT_ID / HUBTEL_CLIENT_SECRET.`,
+        );
+      }
+
+      if (response.status >= 500 || (!response.ok && response.status !== 404)) {
+        throw new Error(
+          `Hubtel status request failed (${response.status}) for ${attempt.label}`,
+        );
+      }
+
+      if (this.isSuccessfulHubtelStatus(json)) {
+        this.logger.log(
+          `Hubtel status API: success via ${attempt.label} sessionId=${lookup.sessionId}`,
+        );
+        return json;
+      }
+
+      this.logger.debug(
+        `Hubtel status attempt ${attempt.label}: ${json.message} (responseCode=${String(json.responseCode)})`,
       );
     }
 
-    const json = (await response.json()) as HubtelStatusResponseDto;
-    return json;
+    return null;
+  }
+
+  private isSuccessfulHubtelStatus(
+    json: HubtelStatusResponseDto | null,
+  ): boolean {
+    if (!json || json.data == null) {
+      return false;
+    }
+    const code = String(json.responseCode ?? '');
+    return code === '200';
   }
 }
