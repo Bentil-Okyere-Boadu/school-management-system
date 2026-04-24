@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Allow, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 
 export enum HubtelPushType {
   INITIATION = 'Initiation',
@@ -50,4 +50,10 @@ export class HubtelInteractionRequestDto {
   @ApiProperty({ enum: HubtelPlatform })
   @IsEnum(HubtelPlatform)
   Platform: HubtelPlatform;
+
+  /** Present on some Hubtel USSD variants (e.g. Vodafone); ignored by our handler. */
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @Allow()
+  MetaData?: unknown;
 }
