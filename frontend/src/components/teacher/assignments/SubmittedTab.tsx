@@ -198,7 +198,7 @@ export const SubmittedTab: React.FC<SubmittedTabProps> = ({ assignmentId, maxSco
                         </span>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                        <div>
+                        <div className="font-medium">
                           {student.score !== undefined && student.score !== null
                             ? `${student.score}/${maxScore}`
                             : "-"}
@@ -207,7 +207,7 @@ export const SubmittedTab: React.FC<SubmittedTabProps> = ({ assignmentId, maxSco
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div>{student.termAggregatedScore}</div>
                       </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <td className="text-sm px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                         <div className="flex gap-2">
                           {(assignmentType === "online" || !assignmentType) && (
                             <CustomButton 
@@ -432,8 +432,8 @@ export const SubmittedTab: React.FC<SubmittedTabProps> = ({ assignmentId, maxSco
                     <span className="font-medium text-green-700">Score:</span>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-2xl font-bold text-green-900">{submissionDetails.data.score}</span>
-                      <span className="text-green-700">/ {submissionDetails.data.assignment?.maxScore}</span>
-                      <span className="px-2 py-1 bg-green-200 text-green-800 rounded text-sm font-medium">
+                      <span className="text-2xl text-green-700">/ {submissionDetails.data.assignment?.maxScore}</span>
+                      <span className="px-2 py-1 bg-green-200 text-green-800 rounded text-sm font-medium ml-2">
                         {Math.round((submissionDetails.data.score / (submissionDetails.data.assignment?.maxScore || 1)) * 100)}%
                       </span>
                     </div>

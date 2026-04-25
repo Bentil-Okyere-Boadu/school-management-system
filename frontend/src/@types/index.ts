@@ -637,6 +637,45 @@ export interface StudentResultsResponse {
   remarksBy: string;
 }
 
+/** One graded submission under a topic (performance analytics API) */
+export interface TopicAssignmentGradeDetail {
+  submissionId: string;
+  assignmentId: string;
+  title: string;
+  score: number;
+  maxScore: number;
+  percentage: number;
+  dueDate: string;
+  assignmentType: "online" | "offline";
+  submissionStatus: string;
+  submittedAt: string;
+  gradedAt: string;
+  classLevelName: string;
+}
+
+/** GET .../students/:id/performance-analytics — school admin & teacher (scoped) */
+export interface StudentPerformanceAnalytics {
+  academicCalendar: { id: string; name: string };
+  selectedTerm: { id: string; termName: string };
+  summary: {
+    gradedAssignmentsCount: number;
+    assignmentAveragePercent: number | null;
+  };
+  subjectAssignmentPerformance: Array<{
+    subjectCatalogId: string;
+    subjectName: string;
+    gradedCount: number;
+    averagePercent: number | null;
+    topics: Array<{
+      topicId: string;
+      topicName: string;
+      gradedCount: number;
+      averagePercent: number | null;
+      assignments: TopicAssignmentGradeDetail[];
+    }>;
+  }>;
+}
+
 export enum NotificationType {
   Admission = "admission",
   Attendance = "attendance",
