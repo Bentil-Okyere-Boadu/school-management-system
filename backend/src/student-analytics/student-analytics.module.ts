@@ -8,6 +8,7 @@ import { ClassLevel } from 'src/class-level/class-level.entity';
 import { StudentAnalyticsService } from './student-analytics.service';
 import { StudentAnalyticsAdminController } from './student-analytics-admin.controller';
 import { StudentAnalyticsTeacherController } from './student-analytics-teacher.controller';
+import { StudentAnalyticsStudentController } from './student-analytics-student.controller';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { StudentAnalyticsTeacherController } from './student-analytics-teacher.c
   controllers: [
     StudentAnalyticsAdminController,
     StudentAnalyticsTeacherController,
+    StudentAnalyticsStudentController,
   ],
   providers: [StudentAnalyticsService],
 })

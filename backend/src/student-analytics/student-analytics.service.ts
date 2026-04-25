@@ -85,7 +85,18 @@ export class StudentAnalyticsService {
       teacher.id,
       studentId,
     );
-    return this.buildPerformanceAnalytics(studentId, academicTermId, catalogIds);
+    return this.buildPerformanceAnalytics(
+      studentId,
+      academicTermId,
+      catalogIds,
+    );
+  }
+
+  async getPerformanceAnalyticsForStudent(
+    student: Student,
+    academicTermId: string,
+  ): Promise<PerformanceAnalyticsResponse> {
+    return this.buildPerformanceAnalytics(student.id, academicTermId, null);
   }
 
   private async ensureAdminCanAccessStudent(
@@ -243,10 +254,8 @@ export class StudentAnalyticsService {
     };
 
     let assignmentRows: Row[] = filteredSubs.map((sub) => {
-      const pct =
-        (Number(sub.score) / Number(sub.assignment.maxScore)) * 100;
-      const roundedPct =
-        Math.round(Math.min(100, Math.max(0, pct)) * 10) / 10;
+      const pct = (Number(sub.score) / Number(sub.assignment.maxScore)) * 100;
+      const roundedPct = Math.round(Math.min(100, Math.max(0, pct)) * 10) / 10;
       const due = sub.assignment.dueDate;
       const dueDateIso =
         due instanceof Date ? due.toISOString() : new Date(due).toISOString();
@@ -258,7 +267,7 @@ export class StudentAnalyticsService {
         maxScore: sub.assignment.maxScore,
         percentage: roundedPct,
         dueDate: dueDateIso,
-        assignmentType: sub.assignment.assignmentType as 'online' | 'offline',
+        assignmentType: sub.assignment.assignmentType,
         submissionStatus: sub.status,
         submittedAt: sub.createdAt.toISOString(),
         gradedAt: sub.updatedAt.toISOString(),
