@@ -137,7 +137,7 @@ const ViewStudentPage = () => {
           </div>
         )}
         { activeTabKey === "analytics" && (
-          <div>
+          <div className='mt-6'>
             <StudentPerformanceAnalytics
               calendars={(studentCalendars as Calendar[]) ?? []}
               calendarsLoading={calendarsLoading}

@@ -26,20 +26,20 @@ function formatTs(iso: string) {
 
 function AssignmentGradeRow({ row }: { row: TopicAssignmentGradeDetail }) {
   return (
-    <div className="rounded-lg border border-zinc-200/90 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
+    <div className="rounded-lg border border-zinc-200/90 bg-white p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="line-clamp-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          <p className="line-clamp-2 text-sm font-semibold text-zinc-900">
             {row.title}
           </p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600">
             <span className="inline-flex items-center gap-1">
               <IconCalendarEvent size={14} className="opacity-70" aria-hidden />
               Due {formatTs(row.dueDate)}
             </span>
             <span>{row.classLevelName}</span>
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600">
             <span className="inline-flex items-center gap-1">
               <IconClock size={14} className="opacity-70" aria-hidden />
               Submitted {formatTs(row.submittedAt)}
@@ -67,11 +67,9 @@ function AssignmentGradeRow({ row }: { row: TopicAssignmentGradeDetail }) {
 }
 
 const accentIconWrap: Record<string, string> = {
-  violet:
-    "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
-  indigo:
-    "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  violet: "bg-violet-100 text-violet-700",
+  cyan: "bg-cyan-100 text-cyan-700",
+  indigo: "bg-indigo-100 text-indigo-700",
 };
 
 function StatCard({
@@ -89,17 +87,17 @@ function StatCard({
 }) {
   const iconWrap = accentIconWrap[accent] ?? accentIconWrap.violet;
   return (
-    <div className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
             {title}
           </p>
-          <p className="mt-1.5 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          <p className="mt-1.5 text-2xl font-bold text-zinc-900">
             {value}
           </p>
           {subtitle ? (
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-xs text-zinc-500">
               {subtitle}
             </p>
           ) : null}
@@ -160,13 +158,13 @@ const StudentPerformanceAnalytics: React.FC<
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-[1px] shadow-lg">
-        <div className="rounded-2xl bg-white/95 px-5 py-4 dark:bg-zinc-950/95">
+        <div className="rounded-2xl bg-white/95 px-5 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+              <h2 className="text-lg font-bold text-zinc-900">
                 Performance analytics
               </h2>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="mt-1 text-sm text-zinc-600">
                 Assignment outcomes by subject and topic-level averages for one
                 academic period (term + calendar).
                 {teacherScoped
@@ -199,7 +197,7 @@ const StudentPerformanceAnalytics: React.FC<
           role="status"
           aria-label="Loading analytics"
         >
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent dark:border-indigo-400 dark:border-t-transparent" />
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
         </div>
       ) : null}
 
@@ -211,7 +209,7 @@ const StudentPerformanceAnalytics: React.FC<
               value={
                 analytics.summary.assignmentAveragePercent != null
                   ? `${analytics.summary.assignmentAveragePercent}%`
-                  : "—"
+                  : "0%"
               }
               subtitle="Graded submissions for this term"
               accent="violet"
@@ -226,20 +224,20 @@ const StudentPerformanceAnalytics: React.FC<
             />
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 className="font-bold text-zinc-900 dark:text-zinc-50">
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <h3 className="font-bold text-zinc-900">
               Assignment performance by subject
             </h3>
-            <p className="mb-4 mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mb-4 mt-1 text-sm text-zinc-600">
               Topic-linked graded work for{" "}
-              <strong className="font-semibold text-zinc-800 dark:text-zinc-200">
+              <strong className="font-semibold text-zinc-800">
                 {analytics.selectedTerm.termName}
               </strong>
               {" · "}
               {analytics.academicCalendar.name}.
             </p>
             {assignmentChartData.length === 0 ? (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm text-zinc-500">
                 No graded assignments with scores for this term yet.
               </p>
             ) : (
@@ -260,17 +258,17 @@ const StudentPerformanceAnalytics: React.FC<
             )}
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 className="font-bold text-zinc-900 dark:text-zinc-50">
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <h3 className="font-bold text-zinc-900">
               Topics & assignments
             </h3>
-            <p className="mb-4 mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mb-4 mt-1 text-sm text-zinc-600">
               Each topic lists graded assignments with title, schedule, score,
               modality, and status. Expand a subject to browse topics and
               submissions.
             </p>
             {analytics.subjectAssignmentPerformance.length === 0 ? (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm text-zinc-500">
                 No topic-linked graded work for this term yet.
               </p>
             ) : (
@@ -282,10 +280,10 @@ const StudentPerformanceAnalytics: React.FC<
                   >
                     <Accordion.Control>
                       <div className="flex w-full flex-wrap items-center justify-between gap-2 pr-2">
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                        <span className="font-semibold text-zinc-900">
                           {subj.subjectName}
                         </span>
-                        <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-300">
+                        <div className="flex items-center gap-3 text-sm text-zinc-600">
                           <span>{subj.gradedCount} graded</span>
                           <Badge variant="light" color="indigo" size="xs">
                             Avg{" "}
@@ -298,18 +296,18 @@ const StudentPerformanceAnalytics: React.FC<
                     </Accordion.Control>
                     <Accordion.Panel>
                       {subj.topics.length === 0 ? (
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        <p className="text-sm text-zinc-500">
                           No topics with scores.
                         </p>
                       ) : (
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-8">
                           {subj.topics.map((t) => (
                             <div key={t.topicId}>
                               <div className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
-                                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                                <span className="font-semibold text-zinc-900">
                                   {t.topicName}
                                 </span>
-                                <span className="text-zinc-600 dark:text-zinc-300">
+                                <span className="text-zinc-600">
                                   {t.gradedCount} graded
                                   {t.averagePercent != null
                                     ? ` · avg ${t.averagePercent}%`

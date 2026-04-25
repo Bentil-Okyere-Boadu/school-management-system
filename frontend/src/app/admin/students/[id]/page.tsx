@@ -115,7 +115,8 @@ const ViewStudentPage = () => {
         )}
         { activeTabKey === "results" && (
             <div>
-                <StudentResults 
+                <StudentResults
+                  studentData={{} as Student}
                   calendars={calendars as Calendar[]}
                   studentResults={studentResults}
                   showExportButton={false}
@@ -124,7 +125,7 @@ const ViewStudentPage = () => {
             </div>
         )}
         { activeTabKey === "analytics" && (
-            <div  className='mt-10'>
+            <div className='mt-6'>
               <StudentPerformanceAnalytics
                 calendars={(calendars as Calendar[]) ?? []}
                 calendarsLoading={calendarsLoading}
