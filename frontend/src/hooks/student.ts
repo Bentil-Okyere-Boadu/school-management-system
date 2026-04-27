@@ -1,4 +1,4 @@
-import { Calendar, Parent, Profile, Student, StudentResultsResponse, PlannerEvent, EventCategory } from "@/@types";
+import { Calendar, Parent, Profile, Student, StudentPerformanceAnalytics, StudentResultsResponse, PlannerEvent, EventCategory } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
@@ -119,6 +119,28 @@ export const useGetMyResults = (
   const resultsData = (data as { data: StudentResultsResponse })?.data || {};
 
   return { resultsData, isLoading, refetch };
+};
+
+export const useStudentPerformanceAnalytics = (
+  academicTermId: string,
+  options?: UseQueryOptions
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["studentPerformanceAnalytics", academicTermId],
+    queryFn: () => {
+      return customAPI.get(`/student/performance-analytics`, {
+        params: { academicTermId },
+      });
+    },
+    enabled: options?.enabled ?? Boolean(academicTermId),
+    refetchOnWindowFocus: true,
+    ...options,
+  });
+
+  const analytics =
+    (data as { data: StudentPerformanceAnalytics })?.data ?? null;
+
+  return { analytics, isLoading, refetch };
 };
 
 export const useGetStudentAssignments = (status: 'pending' | 'submitted' | 'graded') => {

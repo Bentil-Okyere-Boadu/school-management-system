@@ -337,6 +337,7 @@ export class StudentService {
         dueDate: a.dueDate,
         status,
         instructions: a.instructions,
+        maxScore: a.maxScore ?? null,
         attachmentPath: a.attachmentPath ?? null,
         attachmentUrl: a.attachmentUrl ?? null,
         attachmentMediaType: a.attachmentMediaType ?? null,

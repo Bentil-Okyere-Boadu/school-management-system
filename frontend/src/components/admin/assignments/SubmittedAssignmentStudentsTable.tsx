@@ -281,7 +281,7 @@ const SubmittedAssignmentStudentsTable = ({
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-2xl font-bold text-green-900">{selectedStudent.score}</span>
                       <span className="text-green-700">/ 100</span>
-                      <span className="px-2 py-1 bg-green-200 text-green-800 rounded text-sm font-medium">
+                      <span className="px-2 py-1 bg-green-200 text-green-800 rounded text-sm font-medium ml-2">
                         {Math.round((selectedStudent.score / 100) * 100)}%
                       </span>
                     </div>

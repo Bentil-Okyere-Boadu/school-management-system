@@ -19,6 +19,18 @@ export const GradedAssignmentsTab: React.FC = () => {
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentWithFeedback | null>(null);
 
+  const formatScore = (score?: number | null, maxScore?: number | null) => {
+    if (score === null || score === undefined) {
+      return "-";
+    }
+
+    if (maxScore === null || maxScore === undefined) {
+      return `${score}`;
+    }
+
+    return `${score}/${maxScore}`;
+  };
+
   const handleViewFeedbackClick = (assignment: StudentAssignment) => {
     setSelectedAssignment(assignment as AssignmentWithFeedback);
     setIsFeedbackDialogOpen(true);
@@ -128,8 +140,8 @@ export const GradedAssignmentsTab: React.FC = () => {
                     <div>{assignment.teacher}</div>
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
-                    <div className="text-purple-600 font-medium">
-                      {assignment.score  ? `${assignment.score}` : "-"}
+                    <div className="font-medium">
+                      {formatScore(assignment.score, assignment.maxScore)}
                     </div>
                   </td>
                   <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
@@ -137,7 +149,7 @@ export const GradedAssignmentsTab: React.FC = () => {
                       Graded
                     </span>
                   </td>
-                  <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                  <td className="text-sm px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
                     <CustomButton
                       text="View Feedback"
                       onClick={() => handleViewFeedbackClick(assignment)}
@@ -176,7 +188,7 @@ export const GradedAssignmentsTab: React.FC = () => {
                 <div>
                   <div className="text-sm font-medium text-gray-500">Score</div>
                   <p className="text-purple-600 font-medium text-[32px]">
-                    {selectedAssignment.score  ? `${selectedAssignment.score}` : "-"}
+                    {formatScore(selectedAssignment.score, selectedAssignment.maxScore)}
                   </p>
                 </div>
               </div>
