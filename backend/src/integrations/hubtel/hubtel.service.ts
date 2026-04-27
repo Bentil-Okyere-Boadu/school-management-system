@@ -44,31 +44,44 @@ export class HubtelService {
   async handleInteraction(
     payload: HubtelInteractionRequestDto,
   ): Promise<HubtelInteractionResponseDto> {
-    switch (payload.Type) {
-      case HubtelPushType.INITIATION:
-        return this.buildResponse(payload.SessionId, {
-          Type: HubtelResponseType.RESPONSE,
-          Message: truncateToUssdLimit(MAIN_MENU_MESSAGE),
-          Label: 'Welcome',
-          DataType: HubtelDataType.INPUT,
-          FieldType: 'text',
-          ClientState: 'awaiting_action',
-          ServiceCode: payload.ServiceCode,
-        });
+    this.logger.debug(`Hubtel interaction in: ${JSON.stringify(payload)}`);
+    try {
+      let response: HubtelInteractionResponseDto;
+      switch (payload.Type) {
+        case HubtelPushType.INITIATION:
+          response = this.buildResponse(payload.SessionId, {
+            Type: HubtelResponseType.RESPONSE,
+            Message: truncateToUssdLimit(MAIN_MENU_MESSAGE),
+            Label: 'Welcome',
+            DataType: HubtelDataType.INPUT,
+            FieldType: 'text',
+            ClientState: 'awaiting_action',
+            ServiceCode: payload.ServiceCode,
+          });
+          break;
 
-      case HubtelPushType.TIMEOUT:
-        return this.buildResponse(payload.SessionId, {
-          Type: HubtelResponseType.RELEASE,
-          Message: 'Session timed out',
-          Label: 'Timeout',
-          DataType: HubtelDataType.DISPLAY,
-          FieldType: 'text',
-          ServiceCode: payload.ServiceCode,
-        });
+        case HubtelPushType.TIMEOUT:
+          response = this.buildResponse(payload.SessionId, {
+            Type: HubtelResponseType.RELEASE,
+            Message: 'Session timed out',
+            Label: 'Timeout',
+            DataType: HubtelDataType.DISPLAY,
+            FieldType: 'text',
+            ServiceCode: payload.ServiceCode,
+          });
+          break;
 
-      case HubtelPushType.RESPONSE:
-      default:
-        return this.handleInteractiveResponse(payload);
+        case HubtelPushType.RESPONSE:
+        default:
+          response = await this.handleInteractiveResponse(payload);
+      }
+      this.logger.debug(`Hubtel interaction out: ${JSON.stringify(response)}`);
+      return response;
+    } catch (err) {
+      this.logger.debug(
+        `Hubtel interaction error: ${err instanceof Error ? (err.stack ?? err.message) : err}`,
+      );
+      throw err;
     }
   }
 
@@ -77,93 +90,121 @@ export class HubtelService {
     duplicate: boolean;
     status: PaymentTransactionStatus;
   }> {
-    const eventKey = createHash('sha256')
-      .update(
-        `${payload.OrderId}:${payload.SessionId}:${payload.OrderInfo?.Status}:${payload.OrderInfo?.Payment?.IsSuccessful}`,
-      )
-      .digest('hex');
-    const event = await this.paymentsService.createProviderEvent({
-      eventType: 'hubtel_fulfilment',
-      eventKey,
-      sessionId: payload.SessionId,
-      orderId: payload.OrderId,
-      payload: payload as unknown as Record<string, unknown>,
-    });
-
-    if (!event.created) {
-      return {
-        ok: true,
-        duplicate: true,
-        status: PaymentTransactionStatus.PAID,
-      };
-    }
-
-    const isPaid =
-      payload.OrderInfo?.Payment?.IsSuccessful === true &&
-      String(payload.OrderInfo?.Status ?? '').toLowerCase() === 'paid';
-    const mappedStatus = isPaid
-      ? PaymentTransactionStatus.PAID
-      : PaymentTransactionStatus.UNPAID;
-
-    const payment = payload.OrderInfo.Payment;
-    const hubtelTxnId =
-      payment?.TransactionId != null
-        ? String(payment.TransactionId).trim() || null
-        : null;
-    const networkTxnId =
-      payment?.ExternalTransactionId != null
-        ? String(payment.ExternalTransactionId).trim() || null
-        : null;
-
-    const subtotal = payload.OrderInfo?.Subtotal;
-    const amountAfterCharges = payment?.AmountAfterCharges;
-    let charges = 0;
-    if (
-      typeof subtotal === 'number' &&
-      typeof amountAfterCharges === 'number' &&
-      !Number.isNaN(subtotal) &&
-      !Number.isNaN(amountAfterCharges)
-    ) {
-      charges = Math.max(0, subtotal - amountAfterCharges);
-    } else {
-      charges = Math.max(
-        0,
-        (payment?.AmountPaid ?? 0) - (payment?.AmountAfterCharges ?? 0),
-      );
-    }
-
-    const updated =
-      await this.paymentsService.updateTransactionStatusFromHubtel({
+    this.logger.debug(`Hubtel fulfilment in: ${JSON.stringify(payload)}`);
+    try {
+      const eventKey = createHash('sha256')
+        .update(
+          `${payload.OrderId}:${payload.SessionId}:${payload.OrderInfo?.Status}:${payload.OrderInfo?.Payment?.IsSuccessful}`,
+        )
+        .digest('hex');
+      const event = await this.paymentsService.createProviderEvent({
+        eventType: 'hubtel_fulfilment',
+        eventKey,
         sessionId: payload.SessionId,
         orderId: payload.OrderId,
-        status: mappedStatus,
-        providerStatus: payload.OrderInfo.Status,
-        hubtelTransactionId: hubtelTxnId,
-        networkTransactionId: networkTxnId,
-        paymentMethod: payment?.PaymentType ?? null,
-        paymentDate: payment?.PaymentDate
-          ? new Date(payment.PaymentDate)
-          : null,
-        amount: payment?.AmountPaid ?? 0,
-        charges,
-        amountAfterCharges: payment?.AmountAfterCharges ?? 0,
-        rawFulfilmentPayload: payload as unknown as Record<string, unknown>,
+        payload: payload as unknown as Record<string, unknown>,
       });
 
-    if (mappedStatus === PaymentTransactionStatus.PAID) {
-      await this.paymentsService.allocatePaidTransaction(updated.id);
+      if (!event.created) {
+        this.logger.debug(
+          `Hubtel fulfilment out: ${JSON.stringify({
+            ok: true,
+            duplicate: true,
+            status: PaymentTransactionStatus.PAID,
+            sessionId: payload.SessionId,
+            orderId: payload.OrderId,
+          })}`,
+        );
+        return {
+          ok: true,
+          duplicate: true,
+          status: PaymentTransactionStatus.PAID,
+        };
+      }
+
+      const isPaid =
+        payload.OrderInfo?.Payment?.IsSuccessful === true &&
+        String(payload.OrderInfo?.Status ?? '').toLowerCase() === 'paid';
+      const mappedStatus = isPaid
+        ? PaymentTransactionStatus.PAID
+        : PaymentTransactionStatus.UNPAID;
+
+      const payment = payload.OrderInfo.Payment;
+      const hubtelTxnId =
+        payment?.TransactionId != null
+          ? String(payment.TransactionId).trim() || null
+          : null;
+      const networkTxnId =
+        payment?.ExternalTransactionId != null
+          ? String(payment.ExternalTransactionId).trim() || null
+          : null;
+
+      const subtotal = payload.OrderInfo?.Subtotal;
+      const amountAfterCharges = payment?.AmountAfterCharges;
+      let charges = 0;
+      if (
+        typeof subtotal === 'number' &&
+        typeof amountAfterCharges === 'number' &&
+        !Number.isNaN(subtotal) &&
+        !Number.isNaN(amountAfterCharges)
+      ) {
+        charges = Math.max(0, subtotal - amountAfterCharges);
+      } else {
+        charges = Math.max(
+          0,
+          (payment?.AmountPaid ?? 0) - (payment?.AmountAfterCharges ?? 0),
+        );
+      }
+
+      const updated =
+        await this.paymentsService.updateTransactionStatusFromHubtel({
+          sessionId: payload.SessionId,
+          orderId: payload.OrderId,
+          status: mappedStatus,
+          providerStatus: payload.OrderInfo.Status,
+          hubtelTransactionId: hubtelTxnId,
+          networkTransactionId: networkTxnId,
+          paymentMethod: payment?.PaymentType ?? null,
+          paymentDate: payment?.PaymentDate
+            ? new Date(payment.PaymentDate)
+            : null,
+          amount: payment?.AmountPaid ?? 0,
+          charges,
+          amountAfterCharges: payment?.AmountAfterCharges ?? 0,
+          rawFulfilmentPayload: payload as unknown as Record<string, unknown>,
+        });
+
+      if (mappedStatus === PaymentTransactionStatus.PAID) {
+        await this.paymentsService.allocatePaidTransaction(updated.id);
+      }
+
+      await this.callbackService.sendFulfilmentCallback({
+        SessionId: payload.SessionId,
+        OrderId: payload.OrderId,
+        ServiceStatus:
+          mappedStatus === PaymentTransactionStatus.PAID ? 'success' : 'failed',
+        MetaData: null,
+      });
+      await this.paymentsService.markProviderEventProcessed(event.record.id);
+
+      this.logger.debug(
+        `Hubtel fulfilment out: ${JSON.stringify({
+          ok: true,
+          duplicate: false,
+          status: mappedStatus,
+          sessionId: payload.SessionId,
+          orderId: payload.OrderId,
+          hubtelTransactionId: hubtelTxnId,
+          networkTransactionId: networkTxnId,
+        })}`,
+      );
+      return { ok: true, duplicate: false, status: mappedStatus };
+    } catch (err) {
+      this.logger.debug(
+        `Hubtel fulfilment error: ${err instanceof Error ? (err.stack ?? err.message) : err}`,
+      );
+      throw err;
     }
-
-    await this.callbackService.sendFulfilmentCallback({
-      SessionId: payload.SessionId,
-      OrderId: payload.OrderId,
-      ServiceStatus:
-        mappedStatus === PaymentTransactionStatus.PAID ? 'success' : 'failed',
-      MetaData: null,
-    });
-    await this.paymentsService.markProviderEventProcessed(event.record.id);
-
-    return { ok: true, duplicate: false, status: mappedStatus };
   }
 
   private async handleInteractiveResponse(
