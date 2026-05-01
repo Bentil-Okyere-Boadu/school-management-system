@@ -10,6 +10,7 @@ import {
   IconClock,
   IconTrendingUp,
 } from "@tabler/icons-react";
+import { HashLoader } from "react-spinners";
 import type {
   Calendar,
   StudentPerformanceAnalytics as StudentAnalyticsPayload,
@@ -197,7 +198,7 @@ const StudentPerformanceAnalytics: React.FC<
           role="status"
           aria-label="Loading analytics"
         >
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+          <HashLoader color="#AB58E7" size={40} />
         </div>
       ) : null}
 

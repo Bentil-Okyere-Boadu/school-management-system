@@ -47,6 +47,11 @@ import {
   CreatePlannerEventPayload,
   CreateEventCategoryPayload,
   VisibilityScope,
+  SchoolPaymentTransaction,
+  PaginatedSchoolPaymentsResponse,
+  SchoolPaymentReceiptDetail,
+  SchoolPaymentsListParams,
+  PostAttendancePayload,
 } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
@@ -1320,15 +1325,6 @@ export const useGetClassAttendance = (
   return { attendanceData, isLoading, refetch };
 };
 
-interface AttendanceRecord {
-  studentId: string;
-  status: "present" | "absent";
-}
-interface PostAttendancePayload {
-  date: string;
-  records: AttendanceRecord[];
-}
-
 export const usePostClassAttendance = (classLevelId: string) => {
   return useMutation({
     mutationFn: (payload: PostAttendancePayload) =>
@@ -2035,4 +2031,61 @@ export const useDeleteEventCategory = () => {
       queryClient.invalidateQueries({ queryKey: ["plannerEvents"] });
     },
   });
+};
+
+export const useGetSchoolPayments = (params: SchoolPaymentsListParams) => {
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    status = "",
+    studentId = "",
+    dateFrom = "",
+    dateTo = "",
+  } = params;
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "schoolPayments",
+      { page, limit, search, status, studentId, dateFrom, dateTo },
+    ],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+      queryBuilder.push(`page=${page}`);
+      queryBuilder.push(`limit=${limit}`);
+      if (search) queryBuilder.push(`search=${encodeURIComponent(search)}`);
+      if (status) queryBuilder.push(`status=${encodeURIComponent(status)}`);
+      if (studentId) queryBuilder.push(`studentId=${encodeURIComponent(studentId)}`);
+      if (dateFrom) queryBuilder.push(`dateFrom=${encodeURIComponent(dateFrom)}`);
+      if (dateTo) queryBuilder.push(`dateTo=${encodeURIComponent(dateTo)}`);
+      return customAPI.get(`/payments/my-school?${queryBuilder.join("&")}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const body = data?.data as PaginatedSchoolPaymentsResponse | undefined;
+  const transactions = (body?.data ?? []) as SchoolPaymentTransaction[];
+  const meta = body?.meta;
+  const summary = body?.summary;
+
+  return { transactions, meta, summary, isLoading, refetch };
+};
+
+export const useGetSchoolPaymentReceipt = (
+  transactionId: string | null,
+  enabled: boolean
+) => {
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["schoolPaymentReceipt", transactionId],
+    queryFn: () =>
+      customAPI.get(
+        `/payments/my-school/${encodeURIComponent(transactionId as string)}/receipt`
+      ),
+    enabled: Boolean(transactionId) && enabled,
+    refetchOnWindowFocus: false,
+  });
+
+  const receipt = data?.data as SchoolPaymentReceiptDetail | undefined;
+
+  return { receipt, isLoading, isFetching, error, refetch };
 };
