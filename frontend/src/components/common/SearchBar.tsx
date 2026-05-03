@@ -5,20 +5,26 @@ interface SearchBarProps {
   placeholder?: string;
   className?: string;
   onSearch?: (query: string) => void;
+  value?: string;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = "Search...",
   className = "",
   onSearch = () => {},
+  value,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const isControlled = typeof value === "string";
+  const inputValue = isControlled ? value : searchQuery;
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setSearchQuery(value);
+    if (!isControlled) {
+      setSearchQuery(value);
+    }
     onSearch(value);
   };
 
@@ -55,7 +61,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         type="text"
         className="bg-transparent w-full outline-none text-gray-700 placeholder-gray-500"
         placeholder={placeholder}
-        value={searchQuery}
+        value={inputValue}
         onChange={handleSearch}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}

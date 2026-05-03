@@ -20,10 +20,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   sidebarItems,
   isSchoolAdminDashboard
 }) => {
+  const navPtClass = isSchoolAdminDashboard ? "pt-[60px]" : "pt-[122px]";
 
   return (
     <aside className="box-border p-5 w-60 bg-[#D9CDE2] max-md:flex max-md:justify-around max-md:w-full flex flex-col">
-      <nav className="pt-[122px]">
+      <nav className={navPtClass}>
         <p className="mb-2 ml-4 text-xs text-neutral-500">MAIN MENU</p>
         {sidebarItems.map((item, index) => (
           <button
@@ -48,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         ))}
       </nav>
-      { isSchoolAdminDashboard? (<nav className="pt-[60px]">
+      { isSchoolAdminDashboard? (<nav className={navPtClass}>
         <p className="mb-2 ml-4 text-xs text-neutral-500">OTHER</p>
           <button
             key={'settings'}

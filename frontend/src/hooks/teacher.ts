@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentPerformanceAnalytics, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentPerformanceAnalytics, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload, PostAttendancePayload } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
@@ -141,16 +141,6 @@ export const useGetClassAttendance = (
   return { attendanceData, isLoading, refetch };
 };
 
-
-interface AttendanceRecord {
-  studentId: string;
-  status: 'present' | 'absent';
-}
-
-interface PostAttendancePayload {
-  date: string;
-  records: AttendanceRecord[];
-}
 
 export const usePostClassAttendance = (classLevelId: string) => {
   return useMutation({
