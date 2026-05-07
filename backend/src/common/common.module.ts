@@ -12,6 +12,7 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
 import { TenantContextService } from './tenant/tenant-context.service';
 import { TenantScopedRepositoryService } from './tenant/tenant-scoped-repository.service';
+import { EncryptionService } from './utils/encryption.util';
 
 @Global()
 @Module({
@@ -28,6 +29,7 @@ import { TenantScopedRepositoryService } from './tenant/tenant-scoped-repository
     ScheduledCleanupService,
     TenantContextService,
     TenantScopedRepositoryService,
+    EncryptionService,
   ],
   exports: [
     EmailService,
@@ -38,6 +40,7 @@ import { TenantScopedRepositoryService } from './tenant/tenant-scoped-repository
     ScheduledCleanupService,
     TenantContextService,
     TenantScopedRepositoryService,
+    EncryptionService,
   ],
 })
 export class CommonModule {}

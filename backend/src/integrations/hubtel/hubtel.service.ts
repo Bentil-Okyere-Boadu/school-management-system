@@ -1,5 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { createHash } from 'crypto';
 import { PaymentsService } from 'src/payments/payments.service';
 import {
   HubtelInteractionRequestDto,
@@ -10,10 +9,10 @@ import {
   HubtelInteractionResponseDto,
   HubtelResponseType,
 } from './dto/hubtel-interaction-response.dto';
-import { HubtelFulfilmentRequestDto } from './dto/hubtel-fulfilment-request.dto';
-import { HubtelCallbackService } from './hubtel-callback.service';
 import { PaymentTransactionStatus } from 'src/payments/entities/payment-transaction.entity';
 import { Student } from 'src/student/student.entity';
+import { HubtelDirectReceiveService } from './hubtel-direct-receive.service';
+import { resolveHubtelChannelFromUssd } from './ussd-operator.util';
 import {
   buildShortStudentDisplayName,
   buildUssdPaymentPreviewBody,
@@ -24,13 +23,20 @@ import {
   truncateWithEllipsis,
 } from './ussd-text.util';
 
-/** USSD main menu (welcome + options); kept short for ~178 char limit. */
 const MAIN_MENU_MESSAGE =
   'Welcome!\nSchool fees made easy.\n1.Pay all outstanding fees \n2.Pay specific fee\n3.Exit';
 const MSG_PAYMENT_SENT = 'Payment sent.\nApprove on your phone.';
+const MSG_PAID = 'Payment received.\nThank you.';
 const MSG_INVALID = 'Invalid choice. Try again.';
 const MSG_NO_FEES = 'No fees due.';
 const MSG_BAD_AMOUNT = 'Bad amount. Try again.';
+const MSG_PAYMENTS_PAUSED =
+  'School payments paused.\nTry again later or contact the school.';
+const MSG_UNSUPPORTED_NETWORK = 'Unsupported network. Try web payment.';
+const MSG_PAYMENT_ERROR = 'Payment error. Try again later.';
+
+const CLIENT_REFERENCE_MAX_LENGTH = 32;
+const HUBTEL_DESCRIPTION_MAX_LENGTH = 80;
 
 @Injectable()
 export class HubtelService {
@@ -38,8 +44,13 @@ export class HubtelService {
 
   constructor(
     private readonly paymentsService: PaymentsService,
-    private readonly callbackService: HubtelCallbackService,
+    private readonly hubtelDirectReceive: HubtelDirectReceiveService,
   ) {}
+
+  // Direct Receive Money is gated on a per-school active flag.
+  private schoolHubtelPaymentsEnabled(student: Student): boolean {
+    return student.school?.hubtelMerchantActive === true;
+  }
 
   async handleInteraction(
     payload: HubtelInteractionRequestDto,
@@ -85,128 +96,6 @@ export class HubtelService {
     }
   }
 
-  async handleFulfilment(payload: HubtelFulfilmentRequestDto): Promise<{
-    ok: boolean;
-    duplicate: boolean;
-    status: PaymentTransactionStatus;
-  }> {
-    this.logger.debug(`Hubtel fulfilment in: ${JSON.stringify(payload)}`);
-    try {
-      const eventKey = createHash('sha256')
-        .update(
-          `${payload.OrderId}:${payload.SessionId}:${payload.OrderInfo?.Status}:${payload.OrderInfo?.Payment?.IsSuccessful}`,
-        )
-        .digest('hex');
-      const event = await this.paymentsService.createProviderEvent({
-        eventType: 'hubtel_fulfilment',
-        eventKey,
-        sessionId: payload.SessionId,
-        orderId: payload.OrderId,
-        payload: payload as unknown as Record<string, unknown>,
-      });
-
-      if (!event.created) {
-        this.logger.debug(
-          `Hubtel fulfilment out: ${JSON.stringify({
-            ok: true,
-            duplicate: true,
-            status: PaymentTransactionStatus.PAID,
-            sessionId: payload.SessionId,
-            orderId: payload.OrderId,
-          })}`,
-        );
-        return {
-          ok: true,
-          duplicate: true,
-          status: PaymentTransactionStatus.PAID,
-        };
-      }
-
-      const isPaid =
-        payload.OrderInfo?.Payment?.IsSuccessful === true &&
-        String(payload.OrderInfo?.Status ?? '').toLowerCase() === 'paid';
-      const mappedStatus = isPaid
-        ? PaymentTransactionStatus.PAID
-        : PaymentTransactionStatus.UNPAID;
-
-      const payment = payload.OrderInfo.Payment;
-      const hubtelTxnId =
-        payment?.TransactionId != null
-          ? String(payment.TransactionId).trim() || null
-          : null;
-      const networkTxnId =
-        payment?.ExternalTransactionId != null
-          ? String(payment.ExternalTransactionId).trim() || null
-          : null;
-
-      const subtotal = payload.OrderInfo?.Subtotal;
-      const amountAfterCharges = payment?.AmountAfterCharges;
-      let charges = 0;
-      if (
-        typeof subtotal === 'number' &&
-        typeof amountAfterCharges === 'number' &&
-        !Number.isNaN(subtotal) &&
-        !Number.isNaN(amountAfterCharges)
-      ) {
-        charges = Math.max(0, subtotal - amountAfterCharges);
-      } else {
-        charges = Math.max(
-          0,
-          (payment?.AmountPaid ?? 0) - (payment?.AmountAfterCharges ?? 0),
-        );
-      }
-
-      const updated =
-        await this.paymentsService.updateTransactionStatusFromHubtel({
-          sessionId: payload.SessionId,
-          orderId: payload.OrderId,
-          status: mappedStatus,
-          providerStatus: payload.OrderInfo.Status,
-          hubtelTransactionId: hubtelTxnId,
-          networkTransactionId: networkTxnId,
-          paymentMethod: payment?.PaymentType ?? null,
-          paymentDate: payment?.PaymentDate
-            ? new Date(payment.PaymentDate)
-            : null,
-          amount: payment?.AmountPaid ?? 0,
-          charges,
-          amountAfterCharges: payment?.AmountAfterCharges ?? 0,
-          rawFulfilmentPayload: payload as unknown as Record<string, unknown>,
-        });
-
-      if (mappedStatus === PaymentTransactionStatus.PAID) {
-        await this.paymentsService.allocatePaidTransaction(updated.id);
-      }
-
-      await this.callbackService.sendFulfilmentCallback({
-        SessionId: payload.SessionId,
-        OrderId: payload.OrderId,
-        ServiceStatus:
-          mappedStatus === PaymentTransactionStatus.PAID ? 'success' : 'failed',
-        MetaData: null,
-      });
-      await this.paymentsService.markProviderEventProcessed(event.record.id);
-
-      this.logger.debug(
-        `Hubtel fulfilment out: ${JSON.stringify({
-          ok: true,
-          duplicate: false,
-          status: mappedStatus,
-          sessionId: payload.SessionId,
-          orderId: payload.OrderId,
-          hubtelTransactionId: hubtelTxnId,
-          networkTransactionId: networkTxnId,
-        })}`,
-      );
-      return { ok: true, duplicate: false, status: mappedStatus };
-    } catch (err) {
-      this.logger.debug(
-        `Hubtel fulfilment error: ${err instanceof Error ? (err.stack ?? err.message) : err}`,
-      );
-      throw err;
-    }
-  }
-
   private async handleInteractiveResponse(
     payload: HubtelInteractionRequestDto,
   ): Promise<HubtelInteractionResponseDto> {
@@ -246,10 +135,6 @@ export class HubtelService {
       );
     }
 
-    /* ClientState shape: stu:{studentId}:fee_menu
-       Example: stu:a1b2c3d4-0000-4000-8000-000000000001:fee_menu
-       user sees "Pick fee:" (up to 4 lines); userInput is 1–4 or 0. Back.
-       Regex [^:]+ is the student UUID (hyphens ok; colons would break the pattern). */
     const feeMenuStep = /^stu:([^:]+):fee_menu$/.exec(clientState);
     if (feeMenuStep) {
       const studentId = feeMenuStep[1];
@@ -376,6 +261,10 @@ export class HubtelService {
         await this.paymentsService.resolveStudentByBillingCodeOrStudentId(
           userInput,
         );
+
+      if (!this.schoolHubtelPaymentsEnabled(student)) {
+        return this.release(payload, truncateToUssdLimit(MSG_PAYMENTS_PAUSED));
+      }
 
       if (awaitingState === 'await_student:fee') {
         return this.showOutstandingFeeMenu(payload, student);
@@ -601,16 +490,16 @@ export class HubtelService {
       return this.release(payload, MSG_INVALID);
     }
 
-    await this.paymentsService.createPendingTransaction({
-      sessionId: payload.SessionId,
-      amount: paymentAmount,
-      mobile: payload.Mobile,
-      student,
-      interactionPayload: payload as unknown as Record<string, unknown>,
-      targetFeeStructureId: selectedFee.id,
-    });
+    if (!this.schoolHubtelPaymentsEnabled(student)) {
+      return this.release(payload, truncateToUssdLimit(MSG_PAYMENTS_PAUSED));
+    }
 
-    return this.respondWithHubtelAddToCart(payload, paymentAmount);
+    return this.triggerDirectReceiveAndReleaseSession(
+      payload,
+      student,
+      paymentAmount,
+      selectedFee.id,
+    );
   }
 
   private async onPayAllAmountStep(
@@ -719,36 +608,125 @@ export class HubtelService {
 
     const student = await this.paymentsService.getStudentById(studentId);
 
-    await this.paymentsService.createPendingTransaction({
-      sessionId: payload.SessionId,
+    if (!this.schoolHubtelPaymentsEnabled(student)) {
+      return this.release(payload, truncateToUssdLimit(MSG_PAYMENTS_PAUSED));
+    }
+
+    return this.triggerDirectReceiveAndReleaseSession(
+      payload,
+      student,
+      paymentAmount,
+      null,
+    );
+  }
+
+  // On final confirm, call Hubtel Direct Receive with the school's own
+  // credentials so funds settle in the school's merchant account, then
+  // RELEASE the USSD session. Final status arrives via the school-scoped
+  // PrimaryCallbackUrl.
+  private async triggerDirectReceiveAndReleaseSession(
+    payload: HubtelInteractionRequestDto,
+    student: Student,
+    paymentAmount: number,
+    targetFeeStructureId: string | null,
+  ): Promise<HubtelInteractionResponseDto> {
+    const channel = resolveHubtelChannelFromUssd(
+      payload.Operator,
+      payload.Mobile,
+    );
+    if (!channel) {
+      this.logger.warn(
+        `USSD: unable to resolve channel from Operator='${payload.Operator}' Mobile='${payload.Mobile}'`,
+      );
+      return this.release(payload, MSG_UNSUPPORTED_NETWORK);
+    }
+
+    const clientReference = this.toClientReference(payload.SessionId);
+
+    const transaction = await this.paymentsService.createPendingTransaction({
+      sessionId: clientReference,
       amount: paymentAmount,
       mobile: payload.Mobile,
       student,
       interactionPayload: payload as unknown as Record<string, unknown>,
-      targetFeeStructureId: null,
+      targetFeeStructureId,
     });
 
-    return this.respondWithHubtelAddToCart(payload, paymentAmount);
+    const description = stripNonAsciiForUssd(
+      `School fees: ${student.school?.name ?? ''}`.trim(),
+    ).slice(0, HUBTEL_DESCRIPTION_MAX_LENGTH);
+
+    try {
+      const result = await this.hubtelDirectReceive.initiate({
+        school: student.school,
+        clientReference,
+        amount: paymentAmount,
+        customerMsisdn: payload.Mobile,
+        channel,
+        description,
+        customerName: buildShortStudentDisplayName(
+          student.firstName,
+          student.lastName,
+        ),
+      });
+
+      const { outcome, hubtelTransactionId, rawResponse } = result;
+
+      if (outcome.kind === 'pending') {
+        await this.paymentsService.updateTransactionStatusFromHubtel({
+          sessionId: clientReference,
+          status: PaymentTransactionStatus.PENDING,
+          providerStatus: rawResponse.Message ?? 'Pending',
+          hubtelTransactionId,
+          charges: 0,
+          rawFulfilmentPayload: rawResponse as Record<string, unknown>,
+        });
+        return this.release(payload, MSG_PAYMENT_SENT);
+      }
+
+      if (outcome.kind === 'paid') {
+        const updated =
+          await this.paymentsService.updateTransactionStatusFromHubtel({
+            sessionId: clientReference,
+            status: PaymentTransactionStatus.PAID,
+            providerStatus: rawResponse.Message ?? 'Paid',
+            hubtelTransactionId,
+            amount: rawResponse.Data?.Amount ?? paymentAmount,
+            charges: rawResponse.Data?.Charges ?? 0,
+            amountAfterCharges:
+              rawResponse.Data?.AmountAfterCharges ?? paymentAmount,
+            rawFulfilmentPayload: rawResponse as Record<string, unknown>,
+          });
+        await this.paymentsService.allocatePaidTransaction(updated.id);
+        return this.release(payload, MSG_PAID);
+      }
+
+      await this.paymentsService.markTransactionFailed(
+        transaction.id,
+        outcome.reason,
+        rawResponse as Record<string, unknown>,
+      );
+      return this.release(
+        payload,
+        truncateToUssdLimit(`Payment failed.\n${outcome.reason}`),
+      );
+    } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : 'Hubtel call failed';
+      this.logger.error(
+        `USSD Direct Receive failure for session=${payload.SessionId} school=${student.school?.id}: ${reason}`,
+      );
+      await this.paymentsService
+        .markTransactionFailed(transaction.id, reason)
+        .catch(() => undefined);
+      return this.release(payload, MSG_PAYMENT_ERROR);
+    }
   }
 
-  /** Hubtel checkout step: add line item and prompt MoMo approval on device. */
-  private respondWithHubtelAddToCart(
-    payload: HubtelInteractionRequestDto,
-    cartPriceGhs: number,
-  ): HubtelInteractionResponseDto {
-    return this.buildResponse(payload.SessionId, {
-      Type: HubtelResponseType.ADD_TO_CART,
-      Message: MSG_PAYMENT_SENT,
-      Label: 'Pay',
-      DataType: HubtelDataType.DISPLAY,
-      FieldType: 'text',
-      ServiceCode: payload.ServiceCode,
-      Item: {
-        ItemName: 'School Fees',
-        Qty: 1,
-        Price: cartPriceGhs,
-      },
-    });
+  // Hubtel ClientReference rule: alphanumeric, max 36. We cap at 32 for safety.
+  private toClientReference(sessionId: string): string {
+    const cleaned = (sessionId ?? '').replace(/[^A-Za-z0-9]/g, '');
+    return cleaned.slice(0, CLIENT_REFERENCE_MAX_LENGTH);
   }
 
   private release(

@@ -4,6 +4,12 @@ import { HubtelStatusService } from './hubtel-status.service';
 import { PaymentsService } from 'src/payments/payments.service';
 import { PaymentTransactionStatus } from 'src/payments/entities/payment-transaction.entity';
 
+/**
+ * Periodically checks the status of stale PENDING transactions via Hubtel's
+ * Transaction Status API. Each check uses the per-school credentials of the
+ * transaction's owning school. Transactions belonging to schools without an
+ * active Hubtel merchant configuration are skipped.
+ */
 @Injectable()
 export class HubtelReconciliationScheduler {
   private readonly logger = new Logger(HubtelReconciliationScheduler.name);
@@ -30,10 +36,17 @@ export class HubtelReconciliationScheduler {
         );
       }
 
+      let skippedNoMerchant = 0;
       for (const transaction of staleTransactions) {
+        const school = transaction.school;
+        if (!school || !school.hubtelMerchantActive) {
+          skippedNoMerchant += 1;
+          continue;
+        }
+
         try {
           const statusResponse =
-            await this.hubtelStatusService.checkTransactionStatus({
+            await this.hubtelStatusService.checkTransactionStatus(school, {
               sessionId: transaction.sessionId,
               hubtelTransactionId: transaction.hubtelTransactionId,
               networkTransactionId: transaction.networkTransactionId,
@@ -41,7 +54,7 @@ export class HubtelReconciliationScheduler {
           await this.paymentsService.markStatusCheck(transaction.id);
           if (!statusResponse?.data) {
             this.logger.warn(
-              `Hubtel reconciliation: no status from Hubtel for transaction ${transaction.id} sessionId=${transaction.sessionId} (hubtelTxnId=${transaction.hubtelTransactionId ?? 'none'} networkTxnId=${transaction.networkTransactionId ?? 'none'})`,
+              `Hubtel reconciliation: no status from Hubtel for transaction ${transaction.id} schoolId=${school.id} sessionId=${transaction.sessionId} (hubtelTxnId=${transaction.hubtelTransactionId ?? 'none'} networkTxnId=${transaction.networkTransactionId ?? 'none'})`,
             );
             continue;
           }
@@ -75,17 +88,23 @@ export class HubtelReconciliationScheduler {
           }
 
           this.logger.log(
-            `Hubtel reconciliation: success transactionId=${updated.id} sessionId=${transaction.sessionId} mappedStatus=${mappedStatus} providerStatus=${statusResponse.data.status} hubtelTransactionId=${statusResponse.data.transactionId ?? 'n/a'} networkTransactionId=${statusResponse.data.externalTransactionId ?? 'n/a'}`,
+            `Hubtel reconciliation: success transactionId=${updated.id} schoolId=${school.id} sessionId=${transaction.sessionId} mappedStatus=${mappedStatus} providerStatus=${statusResponse.data.status} hubtelTransactionId=${statusResponse.data.transactionId ?? 'n/a'} networkTransactionId=${statusResponse.data.externalTransactionId ?? 'n/a'}`,
           );
         } catch (error) {
           const message =
             error instanceof Error ? error.message : String(error);
           const stack = error instanceof Error ? error.stack : undefined;
           this.logger.error(
-            `Hubtel reconciliation: failed transactionId=${transaction.id} sessionId=${transaction.sessionId}: ${message}`,
+            `Hubtel reconciliation: failed transactionId=${transaction.id} schoolId=${school.id} sessionId=${transaction.sessionId}: ${message}`,
             stack,
           );
         }
+      }
+
+      if (skippedNoMerchant > 0) {
+        this.logger.log(
+          `Hubtel reconciliation: skipped ${skippedNoMerchant} stale transaction(s) for schools without an active Hubtel merchant`,
+        );
       }
     } finally {
       this.running = false;
