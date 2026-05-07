@@ -20,6 +20,7 @@ export enum SmsTemplate {
   ADMISSION_REJECTED = 'admission_rejected',
   ADMISSION_WAITLISTED = 'admission_waitlisted',
   INTERVIEW_COMPLETED = 'interview_completed',
+  PAYMENT_OTP = 'payment_otp',
 }
 
 /**
@@ -385,6 +386,27 @@ export class SmsService {
   }
 
   /**
+   * Send a payment OTP via SMS for the public billing-code checkout flow.
+   * @param phoneNumber Customer mobile money number (international format)
+   * @param otp 4-8 digit numeric OTP code
+   * @param schoolName Name of the school being paid
+   * @param amountGhs Amount about to be charged in GHS (for confirmation)
+   */
+  async sendPaymentOtpSms(
+    phoneNumber: string,
+    otp: string,
+    schoolName: string,
+    amountGhs: number,
+  ): Promise<void> {
+    const message = this.getSmsTemplate(SmsTemplate.PAYMENT_OTP, {
+      otp,
+      school: schoolName,
+      amount: amountGhs.toFixed(2),
+    });
+    await this.sendSms(phoneNumber, message);
+  }
+
+  /**
    * Send a general notification SMS
    * @param phoneNumber The recipient's phone number
    * @param name The recipient's name
@@ -457,6 +479,9 @@ export class SmsService {
 
       case SmsTemplate.GENERAL_NOTIFICATION:
         return `Hi ${data.name}, ${data.message}`;
+
+      case SmsTemplate.PAYMENT_OTP:
+        return `Your ${data.school} school fees payment OTP is ${data.otp}. Amount: GHS ${data.amount}. Code expires in 10 mins. Do NOT share this code.`;
 
       default:
         return 'You have a new notification from School Management System.';

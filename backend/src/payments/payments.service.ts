@@ -12,6 +12,7 @@ import {
   MoreThanOrEqual,
   Repository,
 } from 'typeorm';
+import { createHash, randomBytes, randomInt, randomUUID } from 'crypto';
 import {
   PaymentProvider,
   PaymentTransaction,
@@ -20,10 +21,36 @@ import {
 import { PaymentProviderEvent } from './entities/payment-provider-event.entity';
 import { PaymentReceipt } from './entities/payment-receipt.entity';
 import { PaymentAllocation } from './entities/payment-allocation.entity';
+import { CheckoutOtp } from './entities/checkout-otp.entity';
 import { Student } from 'src/student/student.entity';
 import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
 import { TransactionUtil } from 'src/common/utils/transaction.util';
 import { PaymentQueryDto } from './dto/payment-query.dto';
+import { HubtelMobileMoneyChannel } from 'src/integrations/hubtel/dto/initiate-receive-money.dto';
+
+const OTP_TTL_MINUTES = 10;
+const OTP_MAX_ATTEMPTS = 5;
+
+export interface CreateCheckoutOtpInput {
+  student: Student;
+  msisdn: string;
+  channel: HubtelMobileMoneyChannel;
+  amount: number;
+  targetFeeStructureId: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+}
+
+export interface CreatedCheckoutOtp {
+  otpRequestId: string;
+  otpPlain: string;
+  expiresAt: Date;
+}
+
+export interface ConsumedCheckoutOtp {
+  otp: CheckoutOtp;
+  student: Student;
+}
 
 @Injectable()
 export class PaymentsService {
@@ -42,8 +69,102 @@ export class PaymentsService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(FeeStructure)
     private readonly feeStructureRepository: Repository<FeeStructure>,
+    @InjectRepository(CheckoutOtp)
+    private readonly checkoutOtpRepository: Repository<CheckoutOtp>,
     private readonly transactionUtil: TransactionUtil,
   ) {}
+
+  /**
+   * Create a one-time-password tied to a specific payment intent
+   * (student + amount + msisdn + channel + optional target fee).
+   * Returns the plaintext OTP so the caller can deliver it via SMS.
+   * Plain OTP is NEVER persisted — only a salted SHA-256 hash.
+   */
+  async createCheckoutOtp(
+    input: CreateCheckoutOtpInput,
+  ): Promise<CreatedCheckoutOtp> {
+    if (input.amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
+    if (!input.student.school) {
+      throw new BadRequestException('Student is not linked to a school');
+    }
+
+    const otpPlain = String(randomInt(100000, 1000000));
+    const salt = randomBytes(16).toString('hex');
+    const codeHash = createHash('sha256')
+      .update(`${salt}:${otpPlain}`)
+      .digest('hex');
+    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+
+    const record = this.checkoutOtpRepository.create({
+      msisdn: input.msisdn,
+      channel: input.channel,
+      amount: Math.round(input.amount * 100) / 100,
+      targetFeeStructureId: input.targetFeeStructureId ?? null,
+      customerName: input.customerName ?? null,
+      customerEmail: input.customerEmail ?? null,
+      codeHash,
+      salt,
+      attempts: 0,
+      expiresAt,
+      consumedAt: null,
+      school: input.student.school,
+      student: input.student,
+    });
+    const saved = await this.checkoutOtpRepository.save(record);
+    return { otpRequestId: saved.id, otpPlain, expiresAt };
+  }
+
+  /**
+   * Verify a previously issued OTP against (otpRequestId, otp). Increments
+   * attempts on failure; consumes (single-use) on success. Throws on expiry,
+   * too many attempts, or already-consumed.
+   */
+  async verifyAndConsumeCheckoutOtp(
+    otpRequestId: string,
+    otpPlain: string,
+  ): Promise<ConsumedCheckoutOtp> {
+    const otp = await this.checkoutOtpRepository.findOne({
+      where: { id: otpRequestId },
+      relations: ['student', 'student.school', 'student.classLevels', 'school'],
+    });
+    if (!otp) {
+      throw new NotFoundException('OTP request not found');
+    }
+    if (otp.consumedAt) {
+      throw new BadRequestException('OTP already used');
+    }
+    if (otp.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('OTP has expired');
+    }
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException('Too many OTP attempts');
+    }
+
+    const candidate = createHash('sha256')
+      .update(`${otp.salt}:${otpPlain}`)
+      .digest('hex');
+    if (candidate !== otp.codeHash) {
+      otp.attempts += 1;
+      await this.checkoutOtpRepository.save(otp);
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    otp.consumedAt = new Date();
+    const saved = await this.checkoutOtpRepository.save(otp);
+    return { otp: saved, student: otp.student };
+  }
+
+  /**
+   * Generate a fresh, alphanumeric ClientReference (max 36 chars) suitable for
+   * Hubtel's `ClientReference`. We use it as both `sessionId` on the
+   * PaymentTransaction and `ClientReference` to Hubtel.
+   */
+  generateClientReference(): string {
+    const id = randomUUID().replace(/-/g, '');
+    return id.slice(0, 32);
+  }
 
   async getStudentByBillingCode(studentBillingCode: string): Promise<Student> {
     const student = await this.studentRepository.findOne({
@@ -237,6 +358,48 @@ export class PaymentsService {
     }
 
     return lines;
+  }
+
+  /**
+   * Look up a PaymentTransaction by its ClientReference (we store it as
+   * `sessionId`), eagerly loading `student` and `school`. Used by the
+   * Direct Receive Money callback handler and the public status endpoint.
+   */
+  async findTransactionByClientReference(
+    clientReference: string,
+  ): Promise<PaymentTransaction | null> {
+    return this.paymentTransactionRepository.findOne({
+      where: { sessionId: clientReference },
+      relations: ['student', 'school', 'receipt'],
+    });
+  }
+
+  /**
+   * Mark a PENDING transaction as FAILED with a stored reason. Idempotent:
+   * if the transaction has already moved to a non-pending state, this is a no-op.
+   */
+  async markTransactionFailed(
+    transactionId: string,
+    reason: string,
+    rawPayload?: Record<string, unknown> | null,
+  ): Promise<PaymentTransaction> {
+    const transaction = await this.paymentTransactionRepository.findOne({
+      where: { id: transactionId },
+    });
+    if (!transaction) {
+      throw new NotFoundException(
+        `Payment transaction ${transactionId} not found`,
+      );
+    }
+    if (transaction.status !== PaymentTransactionStatus.PENDING) {
+      return transaction;
+    }
+    transaction.status = PaymentTransactionStatus.FAILED;
+    transaction.providerStatus = reason;
+    if (rawPayload) {
+      transaction.rawFulfilmentPayload = rawPayload;
+    }
+    return this.paymentTransactionRepository.save(transaction);
   }
 
   async createPendingTransaction(input: {

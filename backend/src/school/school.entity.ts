@@ -65,6 +65,23 @@ export class School {
   @Column({ type: 'float', default: 70 })
   examScorePercentage: number;
 
+  /**
+   * Hubtel merchant integration (per-tenant Direct Receive Money credentials).
+   * Funds settle directly into this school's Hubtel merchant account.
+   */
+  @Column({ type: 'varchar', nullable: true })
+  hubtelClientId: string | null;
+
+  /** AES-256-GCM ciphertext of the Hubtel API client secret. Never returned via API. */
+  @Column({ type: 'varchar', nullable: true })
+  hubtelClientSecretEnc: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  hubtelCollectionAccountNumber: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  hubtelMerchantActive: boolean;
+
   @OneToMany(() => SchoolAdmin, (admin) => admin.school, {
     onDelete: 'CASCADE',
   })
