@@ -1,6 +1,12 @@
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query"
 import { customAPI } from "../../config/setup"
-import { School, SuperAdminDashStats, User } from "@/@types";
+import {
+    HubtelMerchantConfigResponse,
+    School,
+    SuperAdminDashStats,
+    UpsertHubtelMerchantPayload,
+    User,
+} from "@/@types";
 
 export const useGetUsers = () => {
     const { data, isLoading } = useQuery({
@@ -164,6 +170,48 @@ export const useGetSchoolById = (id: string, options?: UseQueryOptions) => {
     const school = (data as {data: School})?.data;
     return { school, isPending }
 }
+
+export const useGetHubtelMerchantConfig = (
+    schoolId: string,
+    options?: UseQueryOptions<HubtelMerchantConfigResponse>,
+) => {
+    const { data, isPending, refetch } = useQuery<HubtelMerchantConfigResponse>({
+        queryKey: ["hubtelMerchant", schoolId],
+        queryFn: async () => {
+            const response = await customAPI.get(`/schools/${schoolId}/hubtel-merchant`);
+            return response.data;
+        },
+        enabled: options?.enabled ?? Boolean(schoolId),
+        refetchOnWindowFocus: true,
+        ...options,
+    });
+
+    const merchantConfig = data;
+    return { merchantConfig, isPending, refetch };
+};
+
+export const useUpsertHubtelMerchantConfig = (schoolId: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (payload: UpsertHubtelMerchantPayload) =>
+            customAPI.put(`/schools/${schoolId}/hubtel-merchant`, payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["hubtelMerchant", schoolId] });
+        },
+    });
+};
+
+export const useClearHubtelMerchantConfig = (schoolId: string) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => customAPI.delete(`/schools/${schoolId}/hubtel-merchant`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["hubtelMerchant", schoolId] });
+        },
+    });
+};
 
 export const useGetMe = () => {
     const { data, isPending} = useQuery({
