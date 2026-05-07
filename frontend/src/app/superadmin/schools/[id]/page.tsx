@@ -4,6 +4,7 @@ import TabBar from "@/components/common/TabBar";
 import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
 import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
+import { HubtelMerchantTabSection } from "@/components/superadmin/schools/HubtelMerchantTabSection";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import SchoolPeople from "@/components/superadmin/schools/SchoolPeople";
@@ -40,6 +41,7 @@ const SingleSchoolPage: React.FC = () => {
   const defaultNavItems: TabListItem[] = [
     { tabLabel: "School Settings", tabKey: "school-settings" },
     { tabLabel: "Configuration", tabKey: "configuration" },
+    { tabLabel: "Hubtel Merchant", tabKey: "hubtel-merchant" },
     { tabLabel: "Profile", tabKey: "profile" },
     { tabLabel: "People", tabKey: "people" },
   ];
@@ -62,6 +64,15 @@ const SingleSchoolPage: React.FC = () => {
         {activeTabKey === "configuration" && (
           <div>
             <ConfigurationTabSection calendars={school?.academicCalendars as Calendar[] || []} />
+          </div>
+        )}
+
+        {activeTabKey === "hubtel-merchant" && (
+          <div>
+            <HubtelMerchantTabSection
+              schoolId={schoolId as string}
+              schoolName={school?.name}
+            />
           </div>
         )}
 

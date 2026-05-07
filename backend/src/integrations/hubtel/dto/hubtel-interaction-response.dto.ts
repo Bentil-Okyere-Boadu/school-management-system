@@ -1,29 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNumber, IsObject, IsOptional, IsString, ValidateIf } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum HubtelResponseType {
   RESPONSE = 'response',
   RELEASE = 'release',
-  ADD_TO_CART = 'AddToCart',
 }
 
 export enum HubtelDataType {
   DISPLAY = 'display',
   INPUT = 'input',
-}
-
-export class HubtelAddToCartItemDto {
-  @ApiProperty()
-  @IsString()
-  ItemName: string;
-
-  @ApiProperty()
-  @IsNumber()
-  Qty: number;
-
-  @ApiProperty()
-  @IsNumber()
-  Price: number;
 }
 
 export class HubtelInteractionResponseDto {
@@ -65,9 +50,4 @@ export class HubtelInteractionResponseDto {
   @IsOptional()
   @IsString()
   Mask?: string;
-
-  @ApiPropertyOptional({ type: () => HubtelAddToCartItemDto })
-  @ValidateIf((obj) => obj.Type === HubtelResponseType.ADD_TO_CART)
-  @IsObject()
-  Item?: HubtelAddToCartItemDto;
 }

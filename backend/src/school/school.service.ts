@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { School } from './school.entity';
@@ -16,6 +17,18 @@ import { StudentGrade } from 'src/subject/student-grade.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { EventCategory } from 'src/planner/entities/event-category.entity';
+import { EncryptionService } from 'src/common/utils/encryption.util';
+import { UpdateHubtelMerchantDto } from './dto/update-hubtel-merchant.dto';
+import { buildReceiveMoneyPrimaryCallbackUrl } from 'src/integrations/hubtel/hubtel-callback-url.util';
+
+export type HubtelMerchantPublicView = {
+  clientId: string | null;
+  collectionAccountNumber: string | null;
+  active: boolean;
+  configured: boolean;
+  /** Full Receive Money callback URL for this school; null if HUBTEL_PRIMARY_CALLBACK_BASE_URL is unset. */
+  primaryCallbackUrl: string | null;
+};
 
 @Injectable()
 export class SchoolService {
@@ -34,7 +47,88 @@ export class SchoolService {
     @InjectRepository(EventCategory)
     private eventCategoryRepository: Repository<EventCategory>,
     private attendanceService: AttendanceService,
+    private readonly encryptionService: EncryptionService,
+    private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Look up the school by id and assert it exists. Used by SuperAdmin merchant ops.
+   */
+  private async findOrThrow(schoolId: string): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+    return school;
+  }
+
+  /**
+   * Persist (or rotate) the Hubtel merchant credentials for a school.
+   * The clientSecret is encrypted with AES-256-GCM before being stored;
+   * `active` defaults to true when not provided.
+   */
+  async setHubtelMerchant(
+    schoolId: string,
+    dto: UpdateHubtelMerchantDto,
+  ): Promise<HubtelMerchantPublicView> {
+    const school = await this.findOrThrow(schoolId);
+    if (!this.encryptionService.isConfigured()) {
+      throw new BadRequestException(
+        'Server encryption key (APP_ENCRYPTION_KEY) is not configured; cannot store Hubtel merchant secret',
+      );
+    }
+    school.hubtelClientId = dto.clientId.trim();
+    school.hubtelClientSecretEnc = this.encryptionService.encrypt(
+      dto.clientSecret,
+    );
+    school.hubtelCollectionAccountNumber = dto.collectionAccountNumber.trim();
+    school.hubtelMerchantActive = dto.active ?? true;
+    const saved = await this.schoolRepository.save(school);
+    return this.toMerchantPublicView(saved);
+  }
+
+  /**
+   * Clear the Hubtel merchant credentials for a school and deactivate.
+   */
+  async clearHubtelMerchant(
+    schoolId: string,
+  ): Promise<HubtelMerchantPublicView> {
+    const school = await this.findOrThrow(schoolId);
+    school.hubtelClientId = null;
+    school.hubtelClientSecretEnc = null;
+    school.hubtelCollectionAccountNumber = null;
+    school.hubtelMerchantActive = false;
+    const saved = await this.schoolRepository.save(school);
+    return this.toMerchantPublicView(saved);
+  }
+
+  /**
+   * Return a masked view of the school's Hubtel merchant configuration.
+   * The clientSecret is NEVER exposed.
+   */
+  async getHubtelMerchant(schoolId: string): Promise<HubtelMerchantPublicView> {
+    const school = await this.findOrThrow(schoolId);
+    return this.toMerchantPublicView(school);
+  }
+
+  private toMerchantPublicView(school: School): HubtelMerchantPublicView {
+    const base = this.configService
+      .get<string>('HUBTEL_PRIMARY_CALLBACK_BASE_URL', '')
+      .trim();
+    return {
+      clientId: school.hubtelClientId,
+      collectionAccountNumber: school.hubtelCollectionAccountNumber,
+      active: school.hubtelMerchantActive,
+      configured: Boolean(
+        school.hubtelClientId &&
+          school.hubtelClientSecretEnc &&
+          school.hubtelCollectionAccountNumber,
+      ),
+      primaryCallbackUrl: buildReceiveMoneyPrimaryCallbackUrl(base, school.id),
+    };
+  }
 
   async create(
     createSchoolDto: CreateSchoolDto,

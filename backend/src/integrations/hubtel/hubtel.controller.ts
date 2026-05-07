@@ -1,8 +1,7 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HubtelService } from './hubtel.service';
 import { HubtelInteractionRequestDto } from './dto/hubtel-interaction-request.dto';
-import { HubtelFulfilmentRequestDto } from './dto/hubtel-fulfilment-request.dto';
 
 @ApiTags('Hubtel Integrations')
 @Controller('integrations/hubtel')
@@ -14,8 +13,11 @@ export class HubtelController {
     return this.hubtelService.handleInteraction(payload);
   }
 
+  /** No-op: Hubtel "Service callback URL" may still point here; payments use Direct Receive instead. */
   @Post('fulfilment')
-  async fulfilment(@Body() payload: HubtelFulfilmentRequestDto) {
-    return this.hubtelService.handleFulfilment(payload);
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Legacy fulfilment stub (200 OK, no processing)' })
+  fulfilmentStub(@Body() _body: unknown) {
+    return { ok: true };
   }
 }

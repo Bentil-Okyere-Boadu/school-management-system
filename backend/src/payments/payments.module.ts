@@ -6,6 +6,7 @@ import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { PaymentProviderEvent } from './entities/payment-provider-event.entity';
 import { PaymentReceipt } from './entities/payment-receipt.entity';
 import { PaymentAllocation } from './entities/payment-allocation.entity';
+import { CheckoutOtp } from './entities/checkout-otp.entity';
 import { Student } from 'src/student/student.entity';
 import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
 
@@ -16,6 +17,7 @@ import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
       PaymentProviderEvent,
       PaymentReceipt,
       PaymentAllocation,
+      CheckoutOtp,
       Student,
       FeeStructure,
     ]),

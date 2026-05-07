@@ -456,6 +456,16 @@ export interface StudentAttendanceData {
   };
 }
 
+export interface AttendanceRecord {
+  studentId: string;
+  status: "present" | "absent";
+}
+
+export interface PostAttendancePayload {
+  date: string;
+  records: AttendanceRecord[];
+}
+
 export interface Payment {
   feeTitle: string;
   feeAmount: number;
@@ -464,6 +474,120 @@ export interface Payment {
   paymentMethod: string;
   paidDate: string;
   paidBy: string;
+}
+
+export type SchoolPaymentTransactionStatus =
+  | "PENDING"
+  | "PAID"
+  | "UNPAID"
+  | "FAILED"
+  | "REFUNDED"
+  | "CANCELLED";
+
+export interface SchoolPaymentFeeStructure {
+  id: string;
+  feeTitle: string | null;
+  feeType: string;
+  amount: number;
+}
+
+export interface SchoolPaymentAllocation {
+  id: string;
+  allocatedAmount: number;
+  allocationOrder: number;
+  feeStructure: SchoolPaymentFeeStructure | null;
+}
+
+export interface SchoolPaymentReceiptRow {
+  id: string;
+  receiptNumber: string;
+  amount: number;
+  issuedAt: string;
+}
+
+export interface SchoolPaymentTransaction {
+  id: string;
+  sessionId: string;
+  orderId: string | null;
+  hubtelTransactionId?: string | null;
+  networkTransactionId?: string | null;
+  provider: string;
+  status: SchoolPaymentTransactionStatus;
+  providerStatus: string | null;
+  mobile: string | null;
+  currency: string | null;
+  amount: number;
+  charges: number;
+  amountAfterCharges: number;
+  isFulfilled: boolean;
+  paymentMethod: string | null;
+  paymentDate: string | null;
+  targetFeeStructureId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  student: Student;
+  receipt: SchoolPaymentReceiptRow | null;
+  allocations: SchoolPaymentAllocation[];
+}
+
+export interface SchoolPaymentsSummary {
+  totalTransactions: number;
+  paidCount: number;
+  pendingCount: number;
+  failedCount: number;
+  totalGrossAmount: number;
+  totalNetAmount: number;
+}
+
+export interface PaginatedSchoolPaymentsResponse {
+  data: SchoolPaymentTransaction[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  summary?: SchoolPaymentsSummary;
+}
+
+export interface SchoolPaymentsListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  studentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface HubtelMerchant {
+  clientId: string | null;
+  collectionAccountNumber: string | null;
+  active: boolean;
+  configured: boolean;
+  primaryCallbackUrl: string | null;
+}
+
+export interface HubtelMerchantConfigResponse {
+  schoolId: string;
+  merchant: HubtelMerchant;
+}
+
+export interface UpsertHubtelMerchantPayload {
+  clientId: string;
+  clientSecret: string;
+  collectionAccountNumber: string;
+  active?: boolean;
+}
+
+export interface SchoolPaymentReceiptDetail {
+  id: string;
+  receiptNumber: string;
+  amount: number;
+  issuedAt: string;
+  school: School;
+  student: Student;
+  transaction: SchoolPaymentTransaction;
 }
 
 export interface Subject {

@@ -21,6 +21,7 @@ import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateCalendlyUrlDto } from './dto/update-calendly-url.dto';
 import { UpdateGradingPercentagesDto } from './dto/update-grading-percentages.dto';
+import { UpdateHubtelMerchantDto } from './dto/update-hubtel-merchant.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
@@ -163,6 +164,52 @@ export class SchoolController {
     return {
       message: 'Calendly URL updated successfully',
       school: updatedSchool,
+    };
+  }
+
+  /**
+   * SuperAdmin: read masked view of a school's Hubtel merchant configuration.
+   * The client secret is never returned.
+   */
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get(':id/hubtel-merchant')
+  @Roles(Role.SuperAdmin)
+  async getHubtelMerchant(@Param('id') id: string) {
+    const merchant = await this.schoolService.getHubtelMerchant(id);
+    return { schoolId: id, merchant };
+  }
+
+  /**
+   * SuperAdmin: set or rotate a school's Hubtel merchant credentials.
+   * The provided clientSecret is encrypted at rest (AES-256-GCM).
+   */
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put(':id/hubtel-merchant')
+  @Roles(Role.SuperAdmin)
+  async setHubtelMerchant(
+    @Param('id') id: string,
+    @Body() body: UpdateHubtelMerchantDto,
+  ) {
+    const merchant = await this.schoolService.setHubtelMerchant(id, body);
+    return {
+      message: 'Hubtel merchant configuration updated',
+      schoolId: id,
+      merchant,
+    };
+  }
+
+  /**
+   * SuperAdmin: clear a school's Hubtel merchant credentials and deactivate.
+   */
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete(':id/hubtel-merchant')
+  @Roles(Role.SuperAdmin)
+  async clearHubtelMerchant(@Param('id') id: string) {
+    const merchant = await this.schoolService.clearHubtelMerchant(id);
+    return {
+      message: 'Hubtel merchant configuration cleared',
+      schoolId: id,
+      merchant,
     };
   }
 
