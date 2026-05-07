@@ -560,6 +560,26 @@ export interface SchoolPaymentsListParams {
   dateTo?: string;
 }
 
+export interface HubtelMerchant {
+  clientId: string | null;
+  collectionAccountNumber: string | null;
+  active: boolean;
+  configured: boolean;
+  primaryCallbackUrl: string | null;
+}
+
+export interface HubtelMerchantConfigResponse {
+  schoolId: string;
+  merchant: HubtelMerchant;
+}
+
+export interface UpsertHubtelMerchantPayload {
+  clientId: string;
+  clientSecret: string;
+  collectionAccountNumber: string;
+  active?: boolean;
+}
+
 export interface SchoolPaymentReceiptDetail {
   id: string;
   receiptNumber: string;
