@@ -12,6 +12,7 @@ import {
 import { PaymentTransactionStatus } from 'src/payments/entities/payment-transaction.entity';
 import { Student } from 'src/student/student.entity';
 import { HubtelDirectReceiveService } from './hubtel-direct-receive.service';
+import { userFacingMessageForHubtelResponseCode } from './hubtel-response-codes';
 import { resolveHubtelChannelFromUssd } from './ussd-operator.util';
 import {
   buildShortStudentDisplayName,
@@ -187,7 +188,7 @@ export class HubtelService {
         this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RESPONSE,
           Message: truncateToUssdLimit(
-            'Enter student ID or billing code\n0. Back',
+            'Enter student ID or 6-digit billing code\n0. Back',
           ),
           Label: 'Student',
           DataType: HubtelDataType.INPUT,
@@ -202,7 +203,7 @@ export class HubtelService {
         this.buildResponse(payload.SessionId, {
           Type: HubtelResponseType.RESPONSE,
           Message: truncateToUssdLimit(
-            'Enter student ID or billing code\n0. Back',
+            'Enter student ID or 6-digit billing code\n0. Back',
           ),
           Label: 'Student',
           DataType: HubtelDataType.INPUT,
@@ -246,7 +247,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          'Enter student ID or billing code\n0. Back',
+          'Enter student ID or 6-digit billing code\n0. Back',
         ),
         Label: 'Student',
         DataType: HubtelDataType.INPUT,
@@ -355,7 +356,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          'Enter student ID or billing code\n0. Back',
+          'Enter student ID or 6-digit billing code\n0. Back',
         ),
         Label: 'Student',
         DataType: HubtelDataType.INPUT,
@@ -515,7 +516,7 @@ export class HubtelService {
       return this.buildResponse(payload.SessionId, {
         Type: HubtelResponseType.RESPONSE,
         Message: truncateToUssdLimit(
-          'Enter student ID or billing code\n0. Back',
+          'Enter student ID or 6-digit billing code\n0. Back',
         ),
         Label: 'Student',
         DataType: HubtelDataType.INPUT,
@@ -706,10 +707,10 @@ export class HubtelService {
         outcome.reason,
         rawResponse as Record<string, unknown>,
       );
-      return this.release(
-        payload,
-        truncateToUssdLimit(`Payment failed.\n${outcome.reason}`),
+      const userMsg = userFacingMessageForHubtelResponseCode(
+        outcome.responseCode,
       );
+      return this.release(payload, truncateToUssdLimit(userMsg));
     } catch (error) {
       const reason =
         error instanceof Error ? error.message : 'Hubtel call failed';

@@ -9,6 +9,7 @@ import { PaymentAllocation } from './entities/payment-allocation.entity';
 import { CheckoutOtp } from './entities/checkout-otp.entity';
 import { Student } from 'src/student/student.entity';
 import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
+import { School } from 'src/school/school.entity';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
       CheckoutOtp,
       Student,
       FeeStructure,
+      School,
     ]),
   ],
   controllers: [PaymentsController],
