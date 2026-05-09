@@ -235,7 +235,7 @@ export const PaymentDetailDrawer: React.FC<PaymentDetailDrawerProps> = ({
                 Advanced Details
               </span>
             </button>
-            {advancedOpen && (
+            {advancedOpen ? (
               <div className="rounded-xl bg-[#F4F7FA] px-4 py-4 text-sm">
                 <div className="space-y-3">
                   <div className="flex justify-between gap-4">
@@ -276,7 +276,10 @@ export const PaymentDetailDrawer: React.FC<PaymentDetailDrawerProps> = ({
                   </div>
                 </div>
               </div>
-            )}
+            ) : (
+              <p></p>
+            )
+            }
           </section>
         </div>
       </aside>

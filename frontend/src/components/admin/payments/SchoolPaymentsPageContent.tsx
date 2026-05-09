@@ -89,7 +89,7 @@ export const SchoolPaymentsPageContent: React.FC = () => {
     summary?.totalTransactions ?? meta?.total ?? 0;
   const paidCount = summary?.paidCount ?? 0;
   const pendingCount = summary?.pendingCount ?? 0;
-  const totalGross = summary?.totalGrossAmount ?? 0;
+  const totalGross = summary?.totalAmountGhs ?? 0;
 
   return (
     <div className="pb-8">

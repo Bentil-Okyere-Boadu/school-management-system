@@ -125,13 +125,14 @@ export const StudentMyPaymentsContent: React.FC = () => {
     setCurrentPage(1);
   }, [selectedStatus, feeFilter, debouncedSearch]);
 
-  const effectiveSearch = (feeFilter || debouncedSearch).trim();
+  const searchOnly = debouncedSearch.trim();
 
-  const { transactions, meta, summary, isLoading } = useGetMyPayments({
+  const { transactions, meta, summary, filters, isLoading } = useGetMyPayments({
     page: currentPage,
     limit: PAGE_SIZE,
-    search: effectiveSearch,
+    search: searchOnly,
     status: selectedStatus,
+    ...(feeFilter ? { feeStructureId: feeFilter } : {}),
   });
 
   const totalPages = meta?.totalPages ?? 1;
@@ -140,15 +141,13 @@ export const StudentMyPaymentsContent: React.FC = () => {
   const ussdShortCode = "*713*3088#";
 
   const feeOptions = useMemo(() => {
-    const fees = me?.school?.feeStructures ?? [];
-    const opts = fees
-      .filter((f) => f.feeTitle?.trim())
-      .map((f) => ({
-        value: f.feeTitle as string,
-        label: f.feeTitle as string,
-      }));
+    const types = filters?.feeTypes ?? [];
+    const opts = types.map((ft) => ({
+      value: ft.id,
+      label: ft.title.trim() || "Fee",
+    }));
     return [{ value: "", label: "All fees" }, ...opts];
-  }, [me?.school?.feeStructures]);
+  }, [filters?.feeTypes]);
 
   const subtitle = useMemo(() => {
     const name = `${me?.firstName ?? ""} ${me?.lastName ?? ""}`.trim();
@@ -159,7 +158,7 @@ export const StudentMyPaymentsContent: React.FC = () => {
     return `${name} · ${schoolName}`;
   }, [me]);
 
-  const totalPaidDisplay = formatGHS(summary?.totalGrossAmount ?? 0);
+  const totalPaidDisplay = formatGHS(summary?.totalPaidAmountGhs ?? 0);
   const transactionsCount = summary?.totalTransactions ?? meta?.total ?? 0;
   const pendingCount = summary?.pendingCount ?? 0;
 
@@ -210,10 +209,10 @@ export const StudentMyPaymentsContent: React.FC = () => {
           />
           <PayStepCard
             stepLabel="Step 2 — Enter when prompted"
-            subLabel="School billing code"
-            value={me?.school?.schoolCode ?? "—"}
-            copyValue={me?.school?.schoolCode ?? ""}
-            copyLabel="School billing code"
+            subLabel="Student billing code"
+            value={me?.studentBillingCode ?? "—"}
+            copyValue={me?.studentBillingCode ?? ""}
+            copyLabel="Student billing code"
             iconWellClass="bg-zinc-100 text-zinc-600"
             icon={<IconHash size={22} stroke={1.5} />}
           />
@@ -264,7 +263,7 @@ export const StudentMyPaymentsContent: React.FC = () => {
             setSearchQuery(q);
             if (q.trim()) setFeeFilter("");
           }}
-          placeholder="Search receipt, fee, or order..."
+          placeholder="Search receipt, fee..."
           className="w-[366px] ml-1"
         />
         <div>
