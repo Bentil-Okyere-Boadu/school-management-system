@@ -881,12 +881,12 @@
       "ForgotTeacherPasswordDto": {
         "type": "object",
         "properties": {
-          "email": {
+          "identifier": {
             "type": "string",
-            "example": "teacher@school.com"
+            "example": "teacher@school.com or TCH-001"
           }
         },
-        "required": ["email"]
+        "required": ["identifier"]
       },
       "UpdateProfileDto": {
         "type": "object",

@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
-  Between,
   Brackets,
+  In,
   LessThanOrEqual,
-  MoreThanOrEqual,
   Repository,
+  SelectQueryBuilder,
 } from 'typeorm';
 import { createHash, randomBytes, randomInt, randomUUID } from 'crypto';
 import {
@@ -27,9 +27,13 @@ import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
 import { TransactionUtil } from 'src/common/utils/transaction.util';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { HubtelMobileMoneyChannel } from 'src/integrations/hubtel/dto/initiate-receive-money.dto';
+import { School } from 'src/school/school.entity';
+import { PAYMENT_CONFIG_STATUS, SchoolPaymentConfig } from './payment-config';
 
 const OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
+const BILLING_CODE_PREFIX = 'SBC';
+const BILLING_CODE_DIGITS = 6;
 
 export interface CreateCheckoutOtpInput {
   student: Student;
@@ -52,6 +56,20 @@ export interface ConsumedCheckoutOtp {
   student: Student;
 }
 
+export interface SchoolPaymentsSummary {
+  totalTransactions: number;
+  paidCount: number;
+  pendingCount: number;
+  totalAmountGhs: number;
+}
+
+export interface StudentPaymentsSummary {
+  totalTransactions: number;
+  totalPaidAmountGhs: number;
+  pendingValueGhs: number;
+  pendingCount: number;
+}
+
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
@@ -69,10 +87,43 @@ export class PaymentsService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(FeeStructure)
     private readonly feeStructureRepository: Repository<FeeStructure>,
+    @InjectRepository(School)
+    private readonly schoolRepository: Repository<School>,
     @InjectRepository(CheckoutOtp)
     private readonly checkoutOtpRepository: Repository<CheckoutOtp>,
     private readonly transactionUtil: TransactionUtil,
   ) {}
+
+  async getPaymentConfigForSchool(
+    schoolId: string,
+  ): Promise<SchoolPaymentConfig> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+
+    const configured = Boolean(
+      school.hubtelClientId &&
+        school.hubtelClientSecretEnc &&
+        school.hubtelCollectionAccountNumber,
+    );
+
+    let status: SchoolPaymentConfig['status'];
+    if (!configured) {
+      status = PAYMENT_CONFIG_STATUS.NOT_ONBOARDED;
+    } else if (!school.hubtelMerchantActive) {
+      status = PAYMENT_CONFIG_STATUS.PAUSED;
+    } else {
+      status = PAYMENT_CONFIG_STATUS.READY;
+    }
+
+    return {
+      status,
+      canInitiatePayment: status === PAYMENT_CONFIG_STATUS.READY,
+    };
+  }
 
   /**
    * Create a one-time-password tied to a specific payment intent
@@ -201,8 +252,11 @@ export class PaymentsService {
       throw new NotFoundException('Student not found');
     }
 
+    const normalizedInput = q.toUpperCase().replace(/\s+/g, '');
+    const billingCandidates = this.toBillingCodeCandidates(normalizedInput);
+
     let student = await this.studentRepository.findOne({
-      where: { studentBillingCode: q },
+      where: { studentBillingCode: In(billingCandidates) },
       relations: ['school', 'classLevels'],
     });
 
@@ -227,6 +281,36 @@ export class PaymentsService {
     }
 
     return student;
+  }
+
+  private toBillingCodeCandidates(normalizedInput: string): string[] {
+    const candidates = new Set<string>();
+    candidates.add(normalizedInput);
+
+    const digitsOnly = normalizedInput.replace(/\D/g, '');
+    if (digitsOnly && digitsOnly.length <= BILLING_CODE_DIGITS) {
+      candidates.add(digitsOnly.padStart(BILLING_CODE_DIGITS, '0'));
+      candidates.add(
+        `${BILLING_CODE_PREFIX}${digitsOnly.padStart(BILLING_CODE_DIGITS, '0')}`,
+      );
+    }
+
+    if (
+      normalizedInput.startsWith(BILLING_CODE_PREFIX) &&
+      normalizedInput.length > BILLING_CODE_PREFIX.length
+    ) {
+      const suffixDigits = normalizedInput
+        .slice(BILLING_CODE_PREFIX.length)
+        .replace(/\D/g, '');
+      if (suffixDigits && suffixDigits.length <= BILLING_CODE_DIGITS) {
+        candidates.add(suffixDigits.padStart(BILLING_CODE_DIGITS, '0'));
+        candidates.add(
+          `${BILLING_CODE_PREFIX}${suffixDigits.padStart(BILLING_CODE_DIGITS, '0')}`,
+        );
+      }
+    }
+
+    return Array.from(candidates);
   }
 
   /**
@@ -790,6 +874,8 @@ export class PaymentsService {
       qb.andWhere('payment.createdAt <= :dateTo', { dateTo: query.dateTo });
     }
 
+    const summary = await this.buildSchoolPaymentsSummary(qb);
+
     qb.orderBy('payment.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
@@ -797,12 +883,36 @@ export class PaymentsService {
 
     return {
       data,
+      summary,
       meta: {
         total,
         page,
         limit,
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
+    };
+  }
+
+  private async buildSchoolPaymentsSummary(
+    qb: SelectQueryBuilder<PaymentTransaction>,
+  ): Promise<SchoolPaymentsSummary> {
+    const rows = await this.getDistinctPaymentRows(qb);
+    const paidRows = rows.filter(
+      (row) => row.status === PaymentTransactionStatus.PAID,
+    );
+    const pendingRows = rows.filter(
+      (row) => row.status === PaymentTransactionStatus.PENDING,
+    );
+    const totalAmountGhs = paidRows.reduce((sum, row) => {
+      const netAmount =
+        row.amountAfterCharges > 0 ? row.amountAfterCharges : row.amount;
+      return sum + netAmount;
+    }, 0);
+    return {
+      totalTransactions: rows.length,
+      paidCount: paidRows.length,
+      pendingCount: pendingRows.length,
+      totalAmountGhs: Math.round(totalAmountGhs * 100) / 100,
     };
   }
 
@@ -816,42 +926,67 @@ export class PaymentsService {
   ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const where: Record<string, unknown> = { student: { id: studentId } };
+    const qb = this.paymentTransactionRepository
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.receipt', 'receipt')
+      .leftJoinAndSelect('payment.allocations', 'allocations')
+      .leftJoinAndSelect('allocations.feeStructure', 'feeStructure')
+      .leftJoinAndSelect('payment.student', 'student')
+      .where('student.id = :studentId', { studentId })
+      .distinct(true);
+
     if (query.status) {
-      where.status = query.status;
+      qb.andWhere('payment.status = :status', { status: query.status });
     }
-
-    let dateCondition: Date[] | undefined;
+    if (query.feeStructureId) {
+      qb.andWhere('feeStructure.id = :feeStructureId', {
+        feeStructureId: query.feeStructureId,
+      });
+    }
+    if (query.search) {
+      qb.andWhere(
+        new Brackets((builder) => {
+          builder
+            .where('payment.sessionId ILIKE :search', {
+              search: `%${query.search}%`,
+            })
+            .orWhere('payment.orderId ILIKE :search', {
+              search: `%${query.search}%`,
+            })
+            .orWhere('receipt.receiptNumber ILIKE :search', {
+              search: `%${query.search}%`,
+            })
+            .orWhere('feeStructure.feeTitle ILIKE :search', {
+              search: `%${query.search}%`,
+            });
+        }),
+      );
+    }
     if (query.dateFrom && query.dateTo) {
-      dateCondition = [new Date(query.dateFrom), new Date(query.dateTo)];
+      qb.andWhere('payment.createdAt BETWEEN :dateFrom AND :dateTo', {
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      });
+    } else if (query.dateFrom) {
+      qb.andWhere('payment.createdAt >= :dateFrom', {
+        dateFrom: query.dateFrom,
+      });
+    } else if (query.dateTo) {
+      qb.andWhere('payment.createdAt <= :dateTo', { dateTo: query.dateTo });
     }
 
-    const [data, total] = await this.paymentTransactionRepository.findAndCount({
-      where: {
-        ...where,
-        ...(dateCondition
-          ? { createdAt: Between(dateCondition[0], dateCondition[1]) }
-          : {}),
-        ...(query.dateFrom && !query.dateTo
-          ? { createdAt: MoreThanOrEqual(new Date(query.dateFrom)) }
-          : {}),
-        ...(query.dateTo && !query.dateFrom
-          ? { createdAt: LessThanOrEqual(new Date(query.dateTo)) }
-          : {}),
-      },
-      relations: [
-        'receipt',
-        'allocations',
-        'allocations.feeStructure',
-        'student',
-      ],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const summary = await this.buildStudentPaymentsSummary(qb);
+    const feeTypes = await this.buildStudentFeeTypeFilters(studentId);
+
+    qb.orderBy('payment.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+    const [data, total] = await qb.getManyAndCount();
 
     return {
       data,
+      summary,
+      filters: { feeTypes },
       meta: {
         total,
         page,
@@ -859,6 +994,75 @@ export class PaymentsService {
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
+  }
+
+  private async buildStudentPaymentsSummary(
+    qb: SelectQueryBuilder<PaymentTransaction>,
+  ): Promise<StudentPaymentsSummary> {
+    const rows = await this.getDistinctPaymentRows(qb);
+    const paidRows = rows.filter(
+      (row) => row.status === PaymentTransactionStatus.PAID,
+    );
+    const pendingRows = rows.filter(
+      (row) => row.status === PaymentTransactionStatus.PENDING,
+    );
+    const totalPaidAmountGhs = paidRows.reduce((sum, row) => {
+      const netAmount =
+        row.amountAfterCharges > 0 ? row.amountAfterCharges : row.amount;
+      return sum + netAmount;
+    }, 0);
+    const pendingValueGhs = pendingRows.reduce((sum, row) => {
+      return sum + row.amount;
+    }, 0);
+    return {
+      totalTransactions: rows.length,
+      totalPaidAmountGhs: Math.round(totalPaidAmountGhs * 100) / 100,
+      pendingValueGhs: Math.round(pendingValueGhs * 100) / 100,
+      pendingCount: pendingRows.length,
+    };
+  }
+
+  private async buildStudentFeeTypeFilters(
+    studentId: string,
+  ): Promise<{ id: string; title: string }[]> {
+    const student = await this.getStudentById(studentId);
+    const feeStructures =
+      await this.findApplicableFeeStructuresForStudent(student);
+    return feeStructures.map((fee) => ({
+      id: fee.id,
+      title: (fee.feeTitle ?? 'Fee').trim() || 'Fee',
+    }));
+  }
+
+  private async getDistinctPaymentRows(
+    qb: SelectQueryBuilder<PaymentTransaction>,
+  ): Promise<
+    Array<{
+      id: string;
+      status: PaymentTransactionStatus;
+      amount: number;
+      amountAfterCharges: number;
+    }>
+  > {
+    const rows = await qb
+      .clone()
+      .select('payment.id', 'id')
+      .addSelect('payment.status', 'status')
+      .addSelect('payment.amount', 'amount')
+      .addSelect('payment.amountAfterCharges', 'amountAfterCharges')
+      .distinct(true)
+      .getRawMany<{
+        id: string;
+        status: PaymentTransactionStatus;
+        amount: number;
+        amountAfterCharges: number;
+      }>();
+    return rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      amount: Number(row.amount),
+      amountAfterCharges: Number(row.amountAfterCharges),
+    }));
   }
 
   async getReceiptByTransactionForSchoolAdmin(
@@ -869,13 +1073,19 @@ export class PaymentsService {
       where: {
         transaction: { id: transactionId, school: { id: schoolId } },
       },
-      relations: ['transaction', 'student', 'school'],
+      relations: [
+        'transaction',
+        'transaction.allocations',
+        'transaction.allocations.feeStructure',
+        'student',
+        'school',
+      ],
     });
 
     if (!receipt) {
       throw new NotFoundException('Receipt not found');
     }
-    return receipt;
+    return this.ensureReceiptAllocations(receipt.id);
   }
 
   async getReceiptByTransactionForStudent(
@@ -886,12 +1096,60 @@ export class PaymentsService {
       where: {
         transaction: { id: transactionId, student: { id: studentId } },
       },
-      relations: ['transaction', 'student', 'school'],
+      relations: [
+        'transaction',
+        'transaction.allocations',
+        'transaction.allocations.feeStructure',
+        'student',
+        'school',
+      ],
     });
 
     if (!receipt) {
       throw new NotFoundException('Receipt not found');
     }
+    return this.ensureReceiptAllocations(receipt.id);
+  }
+
+  private async ensureReceiptAllocations(
+    receiptId: string,
+  ): Promise<PaymentReceipt> {
+    let receipt = await this.paymentReceiptRepository.findOne({
+      where: { id: receiptId },
+      relations: [
+        'transaction',
+        'transaction.allocations',
+        'transaction.allocations.feeStructure',
+        'student',
+        'school',
+      ],
+    });
+
+    if (!receipt) {
+      throw new NotFoundException('Receipt not found');
+    }
+
+    const allocations = receipt.transaction.allocations ?? [];
+    if (
+      receipt.transaction.status === PaymentTransactionStatus.PAID &&
+      allocations.length === 0
+    ) {
+      await this.allocatePaidTransaction(receipt.transaction.id);
+      receipt = await this.paymentReceiptRepository.findOne({
+        where: { id: receiptId },
+        relations: [
+          'transaction',
+          'transaction.allocations',
+          'transaction.allocations.feeStructure',
+          'student',
+          'school',
+        ],
+      });
+      if (!receipt) {
+        throw new NotFoundException('Receipt not found');
+      }
+    }
+
     return receipt;
   }
 }

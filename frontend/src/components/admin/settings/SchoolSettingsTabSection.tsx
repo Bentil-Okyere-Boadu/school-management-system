@@ -15,7 +15,7 @@ import {
   Select,
   Switch,
 } from "@mantine/core";
-import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useSaveFeeStructure, useUpdateCalendlyUrl, useUploadSchoolLogoFile } from "@/hooks/school-admin";
+import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useGetSchoolPaymentConfig, useSaveFeeStructure, useUpdateCalendlyUrl, useUploadSchoolLogoFile } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { ClassLevel, ErrorResponse, FeeStructure, School } from "@/@types";
 import { EmailItem } from "./EmailItem";
@@ -34,6 +34,10 @@ interface SchoolSettingsTabSectionProps {
 
 
 export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> = ({schoolData, classes}) => {
+  const { config: paymentConfig } = useGetSchoolPaymentConfig();
+  const showUssdFeeSwitch =
+    paymentConfig != null && paymentConfig.status !== "not_onboarded";
+
   const [isFeeStructureDialogOpen, setIsFeeStructureDialogOpen] =
     useState(false);
   const [selectedDuration, setSelectedDuration] = useState<string>("daily");
@@ -157,7 +161,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
      feeType: selectedDuration,
      amount: amount,
      dueDate: dueDate,
-     allowUssdPayment,
+     allowUssdPayment: showUssdFeeSwitch ? allowUssdPayment : true,
      classLevelIds: classLevelIdsForApi(),
     }, {
       onSuccess: () => {
@@ -186,7 +190,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
      feeType: selectedDuration,
      amount: amount,
      dueDate: dueDate,
-     allowUssdPayment,
+     allowUssdPayment: showUssdFeeSwitch ? allowUssdPayment : true,
      classLevelIds: classLevelIdsForApi(),
     }, {
       onSuccess: () => {
@@ -511,12 +515,14 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
             withCheckIcon
           />
 
-          <Switch
-            label="Payable via USSD"
-            description="If off, this fee will not be included in mobile or USSD payments."
-            checked={allowUssdPayment}
-            onChange={(e) => setAllowUssdPayment(e.currentTarget.checked)}
-          />
+          {showUssdFeeSwitch && (
+            <Switch
+              label="Payable via USSD"
+              description="If off, this fee will not be included in mobile or USSD payments."
+              checked={allowUssdPayment}
+              onChange={(e) => setAllowUssdPayment(e.currentTarget.checked)}
+            />
+          )}
 
           <NumberInput
             label="Amount"

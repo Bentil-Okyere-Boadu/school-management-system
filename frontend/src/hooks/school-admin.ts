@@ -51,6 +51,7 @@ import {
   PaginatedSchoolPaymentsResponse,
   SchoolPaymentReceiptDetail,
   SchoolPaymentsListParams,
+  SchoolPaymentConfig,
   PostAttendancePayload,
 } from "@/@types";
 
@@ -2031,6 +2032,18 @@ export const useDeleteEventCategory = () => {
       queryClient.invalidateQueries({ queryKey: ["plannerEvents"] });
     },
   });
+};
+
+export const useGetSchoolPaymentConfig = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["schoolPaymentConfig"],
+    queryFn: () => customAPI.get("/payments/my-school/config"),
+    refetchOnWindowFocus: true,
+  });
+
+  const config = data?.data as SchoolPaymentConfig | undefined;
+
+  return { config, isLoading, refetch };
 };
 
 export const useGetSchoolPayments = (params: SchoolPaymentsListParams) => {
