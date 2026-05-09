@@ -1085,7 +1085,7 @@ export class PaymentsService {
     if (!receipt) {
       throw new NotFoundException('Receipt not found');
     }
-    return receipt;
+    return this.ensureReceiptAllocations(receipt.id);
   }
 
   async getReceiptByTransactionForStudent(
@@ -1108,6 +1108,48 @@ export class PaymentsService {
     if (!receipt) {
       throw new NotFoundException('Receipt not found');
     }
+    return this.ensureReceiptAllocations(receipt.id);
+  }
+
+  private async ensureReceiptAllocations(
+    receiptId: string,
+  ): Promise<PaymentReceipt> {
+    let receipt = await this.paymentReceiptRepository.findOne({
+      where: { id: receiptId },
+      relations: [
+        'transaction',
+        'transaction.allocations',
+        'transaction.allocations.feeStructure',
+        'student',
+        'school',
+      ],
+    });
+
+    if (!receipt) {
+      throw new NotFoundException('Receipt not found');
+    }
+
+    const allocations = receipt.transaction.allocations ?? [];
+    if (
+      receipt.transaction.status === PaymentTransactionStatus.PAID &&
+      allocations.length === 0
+    ) {
+      await this.allocatePaidTransaction(receipt.transaction.id);
+      receipt = await this.paymentReceiptRepository.findOne({
+        where: { id: receiptId },
+        relations: [
+          'transaction',
+          'transaction.allocations',
+          'transaction.allocations.feeStructure',
+          'student',
+          'school',
+        ],
+      });
+      if (!receipt) {
+        throw new NotFoundException('Receipt not found');
+      }
+    }
+
     return receipt;
   }
 }
