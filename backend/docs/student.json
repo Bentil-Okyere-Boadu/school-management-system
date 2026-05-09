@@ -296,12 +296,12 @@
       "ForgotStudentPasswordDto": {
         "type": "object",
         "properties": {
-          "email": {
+          "identifier": {
             "type": "string",
-            "example": "student@school.com"
+            "example": "student@school.com or STU-2024-001"
           }
         },
-        "required": ["email"]
+        "required": ["identifier"]
       },
       "UpdateProfileDto": {
         "type": "object",
