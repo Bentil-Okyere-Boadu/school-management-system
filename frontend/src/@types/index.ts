@@ -560,6 +560,13 @@ export interface SchoolPaymentsListParams {
   dateTo?: string;
 }
 
+export type PaymentConfigStatus = "ready" | "paused" | "not_onboarded";
+
+export interface SchoolPaymentConfig {
+  status: PaymentConfigStatus;
+  canInitiatePayment: boolean;
+}
+
 export interface HubtelMerchant {
   clientId: string | null;
   collectionAccountNumber: string | null;

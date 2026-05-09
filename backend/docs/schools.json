@@ -143,6 +143,75 @@
         "tags": ["School"]
       }
     },
+    "/api/v1/schools/{id}/hubtel-merchant": {
+      "get": {
+        "operationId": "SchoolController_getHubtelMerchant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      },
+      "put": {
+        "operationId": "SchoolController_setHubtelMerchant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHubtelMerchantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      },
+      "delete": {
+        "operationId": "SchoolController_clearHubtelMerchant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
     "/api/v1/schools/update-grading-percentages": {
       "put": {
         "operationId": "SchoolController_updateGradingPercentages",
@@ -204,6 +273,30 @@
           }
         },
         "required": ["calendlyUrl", "schoolId"]
+      },
+      "UpdateHubtelMerchantDto": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "description": "Hubtel API client id (Basic Auth username)"
+          },
+          "clientSecret": {
+            "type": "string",
+            "description": "Hubtel API client secret (Basic Auth password)"
+          },
+          "collectionAccountNumber": {
+            "type": "string",
+            "description": "School's Hubtel Collection Account Number (used in URL path; determines settlement merchant)",
+            "example": "11684"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the merchant configuration is active and may receive payments",
+            "default": true
+          }
+        },
+        "required": ["clientId", "clientSecret", "collectionAccountNumber"]
       },
       "UpdateGradingPercentagesDto": {
         "type": "object",

@@ -37,20 +37,42 @@
     },
     "/api/v1/integrations/hubtel/fulfilment": {
       "post": {
-        "operationId": "HubtelController_fulfilment",
+        "operationId": "HubtelController_fulfilmentStub",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Legacy fulfilment stub (200 OK, no processing)",
+        "tags": ["Hubtel Integrations"]
+      }
+    },
+    "/api/v1/integrations/hubtel/receive-money/callback/{schoolId}": {
+      "post": {
+        "operationId": "HubtelDirectReceiveController_receiveMoneyCallback",
+        "parameters": [
+          {
+            "name": "schoolId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HubtelFulfilmentRequestDto"
+                "$ref": "#/components/schemas/HubtelReceiveMoneyCallbackDto"
               }
             }
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": ""
           }
         },
@@ -91,6 +113,10 @@
           "Platform": {
             "type": "string",
             "enum": ["USSD", "Webstore", "Hubtel-App"]
+          },
+          "MetaData": {
+            "type": "object",
+            "nullable": true
           }
         },
         "required": [
@@ -105,129 +131,62 @@
           "Platform"
         ]
       },
-      "HubtelFulfilmentRequestDto": {
+      "HubtelReceiveMoneyCallbackDto": {
         "type": "object",
         "properties": {
-          "SessionId": {
+          "ResponseCode": {
+            "type": "string",
+            "description": "Hubtel response code (e.g. 0000, 2001)"
+          },
+          "Message": {
             "type": "string"
           },
-          "OrderId": {
-            "type": "string"
-          },
-          "ExtraData": {
-            "type": "object"
-          },
-          "OrderInfo": {
-            "$ref": "#/components/schemas/HubtelOrderInfoDto"
+          "Data": {
+            "$ref": "#/components/schemas/HubtelReceiveMoneyCallbackDataDto"
           }
         },
-        "required": ["SessionId", "OrderId", "ExtraData", "OrderInfo"]
+        "required": ["ResponseCode", "Data"]
       },
-      "HubtelOrderInfoDto": {
+      "HubtelReceiveMoneyCallbackDataDto": {
         "type": "object",
         "properties": {
-          "CustomerMobileNumber": {
-            "type": "string"
-          },
-          "CustomerEmail": {
-            "type": "object"
-          },
-          "CustomerName": {
-            "type": "string"
-          },
-          "Status": {
-            "type": "string"
-          },
-          "OrderDate": {
-            "type": "string"
-          },
-          "Currency": {
-            "type": "string"
-          },
-          "BranchName": {
-            "type": "string"
-          },
-          "IsRecurring": {
-            "type": "boolean"
-          },
-          "RecurringInvoiceId": {
-            "type": "object"
-          },
-          "Subtotal": {
+          "Amount": {
             "type": "number"
           },
-          "Items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HubtelFulfilmentItemDto"
-            }
-          },
-          "Payment": {
-            "$ref": "#/components/schemas/HubtelFulfilmentPaymentDto"
-          }
-        },
-        "required": [
-          "CustomerMobileNumber",
-          "CustomerEmail",
-          "CustomerName",
-          "Status",
-          "OrderDate",
-          "Currency",
-          "BranchName",
-          "IsRecurring",
-          "RecurringInvoiceId",
-          "Subtotal",
-          "Items",
-          "Payment"
-        ]
-      },
-      "HubtelFulfilmentItemDto": {
-        "type": "object",
-        "properties": {
-          "ItemId": {
-            "type": "string"
-          },
-          "Name": {
-            "type": "string"
-          },
-          "Quantity": {
-            "type": "number"
-          },
-          "UnitPrice": {
-            "type": "number"
-          }
-        },
-        "required": ["ItemId", "Name", "Quantity", "UnitPrice"]
-      },
-      "HubtelFulfilmentPaymentDto": {
-        "type": "object",
-        "properties": {
-          "PaymentType": {
-            "type": "string"
-          },
-          "AmountPaid": {
+          "Charges": {
             "type": "number"
           },
           "AmountAfterCharges": {
             "type": "number"
           },
+          "AmountCharged": {
+            "type": "number"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "ClientReference": {
+            "type": "string"
+          },
+          "TransactionId": {
+            "type": "string"
+          },
+          "ExternalTransactionId": {
+            "type": "string"
+          },
+          "OrderId": {
+            "type": "string"
+          },
           "PaymentDate": {
             "type": "string"
-          },
-          "PaymentDescription": {
-            "type": "string"
-          },
-          "IsSuccessful": {
-            "type": "boolean"
           }
         },
         "required": [
-          "PaymentType",
-          "AmountPaid",
+          "Amount",
+          "Charges",
           "AmountAfterCharges",
-          "PaymentDate",
-          "PaymentDescription",
-          "IsSuccessful"
+          "ClientReference",
+          "TransactionId"
         ]
       }
     }

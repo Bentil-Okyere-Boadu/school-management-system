@@ -2,13 +2,13 @@ import { INestApplication, Logger } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Student } from 'src/student/student.entity';
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 
 export async function seedStudentBillingCodes(app: INestApplication) {
   const logger = new Logger('StudentBillingCodeBackfill');
-  const studentRepository = app.get(
+  const studentRepository = app.get<Repository<Student>>(
     getRepositoryToken(Student),
-  ) as Repository<Student>;
+  );
 
   const students = await studentRepository.find({
     where: { studentBillingCode: IsNull() },
@@ -21,7 +21,8 @@ export async function seedStudentBillingCodes(app: INestApplication) {
 
   for (const student of students) {
     if (!student.studentBillingCode) {
-      student.studentBillingCode = await generateUniqueBillingCode(studentRepository);
+      student.studentBillingCode =
+        await generateUniqueBillingCode(studentRepository);
     }
   }
 
@@ -35,7 +36,7 @@ async function generateUniqueBillingCode(
   let code = '';
   let exists = true;
   while (exists) {
-    code = `SBC${randomBytes(4).toString('hex').toUpperCase()}`;
+    code = `SBC${String(randomInt(0, 1_000_000)).padStart(6, '0')}`;
     const student = await studentRepository.findOne({
       where: { studentBillingCode: code },
       select: ['id'],

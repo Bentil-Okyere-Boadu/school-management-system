@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
@@ -29,6 +29,14 @@ export class PaymentsController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SchoolAdmin)
+  @Get('my-school/config')
+  @ApiOperation({ summary: 'Hubtel payment readiness for your school' })
+  getSchoolPaymentConfig(@CurrentUser() admin: SchoolAdmin) {
+    return this.paymentsService.getPaymentConfigForSchool(admin.school.id);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.SchoolAdmin)
   @Get('my-school/:transactionId/receipt')
   getSchoolReceipt(
     @CurrentUser() admin: SchoolAdmin,
@@ -48,6 +56,14 @@ export class PaymentsController {
     @Query() query: PaymentQueryDto,
   ) {
     return this.paymentsService.listStudentPayments(student.id, query);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.Student)
+  @Get('me/config')
+  @ApiOperation({ summary: 'Hubtel payment readiness for your school' })
+  getMyPaymentConfig(@CurrentUser() student: Student) {
+    return this.paymentsService.getPaymentConfigForSchool(student.school.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)

@@ -43,6 +43,11 @@ export class PaymentQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  feeStructureId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsDateString()
   dateFrom?: string;
 

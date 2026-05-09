@@ -256,6 +256,7 @@ export const HubtelMerchantTabSection: React.FC<HubtelMerchantTabSectionProps> =
             required
             type="password"
             value={form.clientSecret}
+            autoComplete="off"
             onChange={(e) =>
               setForm((prev) => ({
                 ...prev,
@@ -292,7 +293,7 @@ export const HubtelMerchantTabSection: React.FC<HubtelMerchantTabSectionProps> =
 
           <div className="mt-5 flex justify-end">
             <CustomButton
-              text="Save & activate"
+              text="Save"
               onClick={handleSave}
               loading={saving}
               disabled={clearing || loadingConfig || !requiredFieldsPopulated}

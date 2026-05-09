@@ -12,6 +12,7 @@ import {
   HubtelDirectReceiveService,
   InitiateReceiveMoneyResult,
 } from './hubtel-direct-receive.service';
+import { userFacingMessageForHubtelResponseCode } from './hubtel-response-codes';
 import { HubtelCredentialsService } from './hubtel-credentials.service';
 import {
   StudentInitiatePaymentDto,
@@ -215,7 +216,7 @@ export class PublicPaymentService {
           ? 'MoMo prompt sent. Approve on your phone.'
           : outcome.kind === 'paid'
             ? 'Payment processed successfully.'
-            : outcome.reason,
+            : userFacingMessageForHubtelResponseCode(outcome.responseCode),
       hubtelTransactionId,
     };
   }
