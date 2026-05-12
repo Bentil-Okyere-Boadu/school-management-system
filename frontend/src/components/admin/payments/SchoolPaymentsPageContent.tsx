@@ -9,7 +9,7 @@ import {
   useGetSchoolPaymentConfig,
   useGetSchoolPayments,
 } from "@/hooks/school-admin";
-import { IconEye, IconFileText } from "@tabler/icons-react";
+import { IconAlertTriangle, IconEye, IconFileText } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { HashLoader } from "react-spinners";
@@ -108,12 +108,36 @@ export const SchoolPaymentsPageContent: React.FC = () => {
   const totalGross = summary?.totalAmountGhs ?? 0;
 
   const pageHeader = (
-    <header className="mb-6">
-      <h1 className="text-2xl font-bold text-zinc-900">All payments</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        School-wide payment transactions across all students.
-      </p>
-    </header>
+    <>
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-zinc-900">All payments</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          School-wide payment transactions across all students.
+        </p>
+      </header>
+      { paymentConfig?.status === "paused" && (
+        <div
+          role="alert"
+          className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+        >
+          <IconAlertTriangle
+            className="mt-0.5 shrink-0 text-amber-700"
+            size={22}
+            stroke={1.75}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <p className="font-semibold leading-snug">
+              Payments are temporarily paused for your school
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-amber-900/90">
+              You can still view past transactions and download receipts. New
+              payments cannot be initiated right now.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 
   if (paymentConfigLoading) {
