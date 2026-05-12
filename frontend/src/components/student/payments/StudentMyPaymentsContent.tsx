@@ -13,13 +13,19 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useDebouncer } from "@/hooks/generalHooks";
-import { useGetMyPayments, useStudentGetMe } from "@/hooks/student";
 import {
+  useGetMyPayments,
+  useGetStudentPaymentConfig,
+  useStudentGetMe,
+} from "@/hooks/student";
+import {
+  IconAlertTriangle,
   IconCircleCheck,
   IconCopy,
   IconEye,
   IconFileText,
   IconHash,
+  IconLock,
   IconPhone,
   IconSparkles,
 } from "@tabler/icons-react";
@@ -38,10 +44,15 @@ const STATUS_OPTIONS = [
 
 const PAGE_SIZE = 10;
 
-function CopyFieldButton({ value, label }: Readonly<{ value: string; label: string }>) {
+function CopyFieldButton({
+  value,
+  label,
+  disabled,
+}: Readonly<{ value: string; label: string; disabled?: boolean }>) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
+    if (disabled || !value) return;
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
@@ -55,8 +66,9 @@ function CopyFieldButton({ value, label }: Readonly<{ value: string; label: stri
     <button
       type="button"
       onClick={copy}
+      disabled={disabled || !value}
       aria-label={`Copy ${label}`}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 cursor-pointer"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 cursor-pointer disabled:pointer-events-none disabled:opacity-40"
       title={copied ? "Copied" : `Copy ${label}`}
     >
       <IconCopy size={20} stroke={1.5} />
@@ -72,6 +84,7 @@ type PayStepCardProps = {
   icon: React.ReactNode;
   iconWellClass: string;
   copyLabel: string;
+  copyDisabled?: boolean;
 };
 
 function PayStepCard({
@@ -82,9 +95,10 @@ function PayStepCard({
   icon,
   iconWellClass,
   copyLabel,
+  copyDisabled,
 }: Readonly<PayStepCardProps>) {
   return (
-    <div className="flex items-center min-h-[100px] flex-1 gap-3 rounded-xl border border-zinc-200/80 bg-white p-5">
+    <div className="flex min-h-[100px] flex-1 items-center gap-3 rounded-xl border border-zinc-200/80 bg-white p-5">
       <div
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${iconWellClass}`}
       >
@@ -99,7 +113,11 @@ function PayStepCard({
           {value}
         </p>
       </div>
-      <CopyFieldButton value={copyValue} label={copyLabel} />
+      <CopyFieldButton
+        value={copyValue}
+        label={copyLabel}
+        disabled={copyDisabled}
+      />
     </div>
   );
 }
@@ -107,6 +125,7 @@ function PayStepCard({
 export const StudentMyPaymentsContent: React.FC = () => {
   const router = useRouter();
   const { me } = useStudentGetMe();
+  const { config: paymentConfig } = useGetStudentPaymentConfig();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [feeFilter, setFeeFilter] = useState("");
@@ -170,6 +189,8 @@ export const StudentMyPaymentsContent: React.FC = () => {
     router.push(`/student/payments/receipt/${transactionId}`);
   };
 
+  const paymentPaused = paymentConfig?.status === "paused";
+
   return (
     <div className="pb-8">
       <header className="mb-6">
@@ -179,8 +200,40 @@ export const StudentMyPaymentsContent: React.FC = () => {
         )}
       </header>
 
-      <section className="mb-6 rounded-2xl border border-violet-200/80 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 py-4 shadow-sm">
-        <div className="mb-3 flex gap-3">
+      {paymentPaused && (
+        <div
+          role="alert"
+          className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+        >
+          <IconAlertTriangle
+            className="mt-0.5 shrink-0 text-amber-700"
+            size={22}
+            stroke={1.75}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <p className="font-semibold leading-snug">
+              Payments are temporarily paused for your school
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-amber-900/90">
+              You can still view past transactions and download receipts. New
+              payments cannot be initiated right now.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <section
+        className={`relative mb-6 rounded-2xl border border-violet-200/80 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 py-4 shadow-sm transition-opacity ${
+        paymentPaused ? "pointer-events-none select-none opacity-60" : ""}`}
+      >
+        {paymentPaused && (
+          <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-100/90 px-2.5 py-1 text-xs font-semibold text-amber-900">
+            <IconLock size={14} stroke={1.75} aria-hidden />
+            Disabled
+          </div>
+        )}
+        <div className={`mb-3 flex gap-3 ${paymentPaused ? "pr-24" : ""}`}>
           <IconSparkles
             className="mt-0.5 shrink-0 text-violet-600"
             size={22}
@@ -206,6 +259,7 @@ export const StudentMyPaymentsContent: React.FC = () => {
             copyLabel="USSD code"
             iconWellClass="bg-zinc-100 text-zinc-600"
             icon={<IconPhone size={22} stroke={1.5} />}
+            copyDisabled={paymentPaused}
           />
           <PayStepCard
             stepLabel="Step 2 — Enter when prompted"
@@ -215,6 +269,7 @@ export const StudentMyPaymentsContent: React.FC = () => {
             copyLabel="Student billing code"
             iconWellClass="bg-zinc-100 text-zinc-600"
             icon={<IconHash size={22} stroke={1.5} />}
+            copyDisabled={paymentPaused}
           />
           <PayStepCard
             stepLabel="Step 3 — Identifies you"
@@ -224,6 +279,7 @@ export const StudentMyPaymentsContent: React.FC = () => {
             copyLabel="Student code"
             iconWellClass="bg-violet-100 text-violet-700"
             icon={<IconCircleCheck size={22} stroke={1.5} />}
+            copyDisabled={paymentPaused}
           />
         </div>
 

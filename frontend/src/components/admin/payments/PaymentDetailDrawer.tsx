@@ -2,6 +2,7 @@
 
 import { SchoolPaymentTransaction } from "@/@types";
 import {
+  IconClock ,
   IconChevronDown,
   IconChevronUp,
   IconFileText,
@@ -131,6 +132,25 @@ export const PaymentDetailDrawer: React.FC<PaymentDetailDrawerProps> = ({
               </div>
             </div>
           </section>
+
+          {transaction.status === 'PENDING' && (
+            <div
+              role="alert"
+              className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950"
+            >
+              <IconClock 
+                className="mt-0.5 shrink-0 text-amber-700"
+                size={20}
+                stroke={1.75}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <p className="text-sm leading-relaxed text-amber-900/90">
+                  Awaiting payment confirmation from provider.
+                </p>
+              </div>
+            </div>
+          )}
 
           <section>
             <h3 className="mb-3 text-sm font-semibold text-zinc-900">

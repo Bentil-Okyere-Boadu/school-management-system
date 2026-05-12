@@ -547,6 +547,8 @@ export interface StudentPaymentsSummary {
   totalPaidAmountGhs: number;
   pendingValueGhs: number;
   pendingCount: number;
+  paidCount: number;
+  totalAmountGhs?: number;
 }
 
 export interface PaymentFeeTypeFilter {
