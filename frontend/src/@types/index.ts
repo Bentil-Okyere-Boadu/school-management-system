@@ -586,6 +586,8 @@ export type PaymentConfigStatus = "ready" | "paused" | "not_onboarded";
 export interface SchoolPaymentConfig {
   status: PaymentConfigStatus;
   canInitiatePayment: boolean;
+  paymentSetupRequestSentAt?: string | null;
+  hasRequestedPaymentSetup?: boolean;
 }
 
 export interface HubtelMerchant {

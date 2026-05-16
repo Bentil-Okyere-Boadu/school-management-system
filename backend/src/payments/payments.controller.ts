@@ -1,7 +1,17 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { PaymentQueryDto } from './dto/payment-query.dto';
+import { RequestPaymentSetupDto } from './dto/request-payment-setup.dto';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -33,6 +43,24 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Hubtel payment readiness for your school' })
   getSchoolPaymentConfig(@CurrentUser() admin: SchoolAdmin) {
     return this.paymentsService.getPaymentConfigForSchool(admin.school.id);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.SchoolAdmin)
+  @Post('my-school/request-setup')
+  @ApiOperation({
+    summary: 'Email platform team to request Hubtel / payments onboarding',
+  })
+  requestPaymentSetup(
+    @CurrentUser() admin: SchoolAdmin,
+    @Body() dto: RequestPaymentSetupDto,
+  ) {
+    return this.paymentsService.requestPaymentSetup(
+      admin.school.id,
+      admin,
+      dto,
+    );
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

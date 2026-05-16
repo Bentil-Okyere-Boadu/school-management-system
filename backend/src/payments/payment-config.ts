@@ -9,4 +9,7 @@ export const PAYMENT_CONFIG_STATUS = {
 export interface SchoolPaymentConfig {
   status: PaymentConfigStatus;
   canInitiatePayment: boolean;
+  /** ISO 8601 when a school admin last requested payment setup; null if never. */
+  paymentSetupRequestSentAt: string | null;
+  hasRequestedPaymentSetup: boolean;
 }

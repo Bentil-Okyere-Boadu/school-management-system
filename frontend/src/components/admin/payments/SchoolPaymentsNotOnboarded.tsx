@@ -1,5 +1,7 @@
 "use client";
 
+import type { SchoolPaymentConfig } from "@/@types";
+import { useRequestPaymentSetup } from "@/hooks/school-admin";
 import {
   IconCircleCheck,
   IconCreditCard,
@@ -7,7 +9,7 @@ import {
   IconSparkles,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
-// import { toast } from "react-toastify";
+import { toast } from "react-toastify";
 
 const CHECKLIST: string[] = [
   "Get a unique school billing code (SBC)",
@@ -16,35 +18,90 @@ const CHECKLIST: string[] = [
 ];
 
 export type SchoolPaymentsNotOnboardedProps = {
-  /** Prefill from the signed-in school admin account when available */
   defaultContactEmail?: string;
+  paymentConfig: SchoolPaymentConfig | undefined;
 };
 
 export const SchoolPaymentsNotOnboarded: React.FC<
   SchoolPaymentsNotOnboardedProps
-> = ({ defaultContactEmail = "" }) => {
+> = ({ defaultContactEmail = "", paymentConfig }) => {
+  const hasRequestedFromServer = Boolean(
+    paymentConfig?.hasRequestedPaymentSetup
+  );
+  const [showFormOverride, setShowFormOverride] = useState(false);
+
+  const showSuccess = hasRequestedFromServer && !showFormOverride;
+  const showForm = !hasRequestedFromServer || showFormOverride;
+
   const [contactEmail, setContactEmail] = useState("");
   const [note, setNote] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const requestSetup = useRequestPaymentSetup();
 
   useEffect(() => {
     setContactEmail((prev) => (prev ? prev : defaultContactEmail));
   }, [defaultContactEmail]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      // Placeholder until a POST endpoint (e.g. /payments/my-school/request-setup) exists
-      await new Promise((r) => window.setTimeout(r, 400));
-      // toast.success(
-      //   "Thanks — your request has been noted. The platform super admin team will follow up when payment setup is available."
-      // );
-      setNote("");
-    } finally {
-      setIsSubmitting(false);
-    }
+    requestSetup.mutate(
+      {
+        contactEmail: contactEmail.trim() || undefined,
+        note: note.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setShowFormOverride(false);
+          setNote("");
+          toast.success(
+            "Request sent. The super admin team has been notified by email."
+          );
+        },
+        onError: (err: unknown) => {
+          const msg =
+            err &&
+            typeof err === "object" &&
+            "response" in err &&
+            err.response &&
+            typeof err.response === "object" &&
+            "data" in err.response &&
+            err.response.data &&
+            typeof err.response.data === "object" &&
+            "message" in err.response.data
+            ? String(
+                (err.response.data as { message?: string | string[] }).message
+              )
+            : "Could not send request. Try again later.";
+          toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
+        },
+      }
+    );
   };
+
+  if (showSuccess) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50 via-emerald-50/80 to-white p-8 sm:p-10">
+        <div className="mx-auto max-w-md text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <IconCircleCheck size={32} stroke={2} aria-hidden />
+          </div>
+          <h2 className="mt-5 text-xl font-semibold text-zinc-900">
+            Request sent
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+            The super admin has been notified by email. We&apos;ll get back to
+            you within 1–2 business days to walk through onboarding.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowFormOverride(true)}
+            className="mt-8 inline-flex cursor-pointer items-center justify-center rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50"
+          >
+            Send another request
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white">
@@ -152,11 +209,11 @@ export const SchoolPaymentsNotOnboarded: React.FC<
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={requestSetup.isPending}
               className="inline-flex w-full items-center justify-center gap-2 cursor-pointer rounded-xl bg-[#AB58E7] px-2 py-2.5 text-sm font-semibold text-white  transition hover:bg-[#9a4dd4] disabled:cursor-not-allowed disabled:opacity-70"
             >
               <IconMail size={18} stroke={1.75} aria-hidden />
-              {isSubmitting ? "Sending…" : "Request payment setup"}
+              {requestSetup.isPending ? "Sending…" : "Request payment setup"}
             </button>
           </form>
 

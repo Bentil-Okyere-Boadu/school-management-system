@@ -8,6 +8,7 @@ import { useDebouncer } from "@/hooks/generalHooks";
 import {
   useGetSchoolPaymentConfig,
   useGetSchoolPayments,
+  useGetMe,
 } from "@/hooks/school-admin";
 import { IconAlertTriangle, IconEye, IconFileText } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
@@ -57,6 +58,7 @@ export const SchoolPaymentsPageContent: React.FC = () => {
 
   const { config: paymentConfig, isLoading: paymentConfigLoading } =
     useGetSchoolPaymentConfig();
+  const { me } = useGetMe();
 
   const effectivePaymentStatus = paymentConfig?.status ?? "not_onboarded";
   const isPaymentNotOnboarded =
@@ -156,7 +158,8 @@ export const SchoolPaymentsPageContent: React.FC = () => {
       <div className="pb-8">
         {pageHeader}
         <SchoolPaymentsNotOnboarded
-          defaultContactEmail={""}
+          defaultContactEmail={me?.email ?? ""}
+          paymentConfig={paymentConfig}
         />
       </div>
     );

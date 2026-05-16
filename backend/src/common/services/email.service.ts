@@ -879,4 +879,57 @@ export class EmailService {
       );
     }
   }
+
+  async sendPaymentSetupRequestToTeam(params: {
+    to: string;
+    schoolName: string;
+    schoolId: string;
+    adminName: string;
+    adminEmail: string;
+    contactEmail?: string;
+    note?: string;
+  }): Promise<void> {
+    const esc = (s: string) =>
+      s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    const contactBlock = params.contactEmail?.trim()
+      ? `<p><strong>Contact email (from form):</strong> ${esc(params.contactEmail.trim())}</p>`
+      : '';
+    const noteBlock = params.note?.trim()
+      ? `<p><strong>Note from school:</strong></p><pre style="white-space:pre-wrap;font-family:inherit">${esc(params.note.trim())}</pre>`
+      : '';
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: params.to,
+        replyTo: params.contactEmail?.trim() || params.adminEmail,
+        subject: `Payment setup requested — ${params.schoolName}`,
+        html: `<p>A school admin requested Hubtel / payments onboarding.</p>
+<ul>
+  <li><strong>School:</strong> ${esc(params.schoolName)}</li>
+  <li><strong>School ID:</strong> ${esc(params.schoolId)}</li>
+  <li><strong>Admin:</strong> ${esc(params.adminName)}</li>
+  <li><strong>Admin email:</strong> ${esc(params.adminEmail)}</li>
+</ul>
+${contactBlock}
+${noteBlock}
+<p style="margin-top:16px;color:#555;font-size:13px">This message was sent from the school management system.</p>`,
+      });
+      this.logger.log(
+        `Payment setup request email sent for schoolId=${params.schoolId} to=${params.to}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send payment setup request for school ${params.schoolId}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send payment setup request: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
