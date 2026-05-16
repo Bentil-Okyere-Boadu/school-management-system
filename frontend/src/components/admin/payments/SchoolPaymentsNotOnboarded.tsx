@@ -31,7 +31,6 @@ export const SchoolPaymentsNotOnboarded: React.FC<
   const [showFormOverride, setShowFormOverride] = useState(false);
 
   const showSuccess = hasRequestedFromServer && !showFormOverride;
-  const showForm = !hasRequestedFromServer || showFormOverride;
 
   const [contactEmail, setContactEmail] = useState("");
   const [note, setNote] = useState("");
