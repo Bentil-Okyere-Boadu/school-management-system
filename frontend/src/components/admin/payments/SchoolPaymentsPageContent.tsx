@@ -5,12 +5,17 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useDebouncer } from "@/hooks/generalHooks";
-import { useGetSchoolPayments } from "@/hooks/school-admin";
-import { IconEye, IconFileText } from "@tabler/icons-react";
+import {
+  useGetSchoolPaymentConfig,
+  useGetSchoolPayments,
+  useGetMe,
+} from "@/hooks/school-admin";
+import { IconAlertTriangle, IconEye, IconFileText } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { HashLoader } from "react-spinners";
 import { PaymentDetailDrawer } from "./PaymentDetailDrawer";
+import { SchoolPaymentsNotOnboarded } from "./SchoolPaymentsNotOnboarded";
 import {
   allocatedToPreview,
   formatGHS,
@@ -51,14 +56,27 @@ export const SchoolPaymentsPageContent: React.FC = () => {
     setCurrentPage(1);
   }, [debouncedSearch]);
 
-  const { transactions, meta, summary, isLoading } = useGetSchoolPayments({
+  const { config: paymentConfig, isLoading: paymentConfigLoading } =
+    useGetSchoolPaymentConfig();
+  const { me } = useGetMe();
+
+  const effectivePaymentStatus = paymentConfig?.status ?? "not_onboarded";
+  const isPaymentNotOnboarded =
+    !paymentConfigLoading && effectivePaymentStatus === "not_onboarded";
+  const paymentsQueryEnabled =
+    !paymentConfigLoading && effectivePaymentStatus !== "not_onboarded";
+
+  const { transactions, meta, summary, isLoading } = useGetSchoolPayments(
+    {
       page: currentPage,
       limit: PAGE_SIZE,
       search: debouncedSearch,
       status: selectedStatus,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
-    });
+    },
+    paymentsQueryEnabled
+  );
 
   const totalPages = meta?.totalPages ?? 1;
   const resultCount = meta?.total ?? 0;
@@ -89,16 +107,67 @@ export const SchoolPaymentsPageContent: React.FC = () => {
     summary?.totalTransactions ?? meta?.total ?? 0;
   const paidCount = summary?.paidCount ?? 0;
   const pendingCount = summary?.pendingCount ?? 0;
-  const totalGross = summary?.totalGrossAmount ?? 0;
+  const totalGross = summary?.totalAmountGhs ?? 0;
 
-  return (
-    <div className="pb-8">
+  const pageHeader = (
+    <>
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-zinc-900">All payments</h1>
         <p className="mt-1 text-sm text-zinc-500">
           School-wide payment transactions across all students.
         </p>
       </header>
+      { paymentConfig?.status === "paused" && (
+        <div
+          role="alert"
+          className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+        >
+          <IconAlertTriangle
+            className="mt-0.5 shrink-0 text-amber-700"
+            size={22}
+            stroke={1.75}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <p className="font-semibold leading-snug">
+              Payments are temporarily paused for your school
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-amber-900/90">
+              You can still view past transactions and download receipts. New
+              payments cannot be initiated right now.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  if (paymentConfigLoading) {
+    return (
+      <div className="pb-8">
+        {pageHeader}
+        <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-zinc-200 bg-white">
+          <HashLoader color="#AB58E7" size={40} />
+        </div>
+      </div>
+    );
+  }
+
+  if (isPaymentNotOnboarded) {
+    return (
+      <div className="pb-8">
+        {pageHeader}
+        <SchoolPaymentsNotOnboarded
+          defaultContactEmail={me?.email ?? ""}
+          paymentConfig={paymentConfig}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-8">
+      {pageHeader}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3 mx-1">
         <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">

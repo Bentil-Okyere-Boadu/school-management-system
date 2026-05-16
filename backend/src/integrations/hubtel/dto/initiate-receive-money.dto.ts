@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   Min,
@@ -52,6 +53,14 @@ export class StudentInitiatePaymentDto {
   @IsOptional()
   @IsString()
   targetFeeStructureId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional student fee obligation id (specific period line); takes precedence for allocation',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  targetStudentFeeObligationId?: string;
 
   @ApiPropertyOptional({ description: 'Optional payer display name' })
   @IsOptional()

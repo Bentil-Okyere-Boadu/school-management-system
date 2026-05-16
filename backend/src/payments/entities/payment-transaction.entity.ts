@@ -105,6 +105,10 @@ export class PaymentTransaction {
   @Column({ type: 'varchar', nullable: true })
   targetFeeStructureId: string | null;
 
+  /** When set, allocation prioritises this obligation first (specific line / period). */
+  @Column({ type: 'varchar', nullable: true })
+  targetStudentFeeObligationId: string | null;
+
   @ManyToOne(() => School, { onDelete: 'CASCADE', eager: true })
   @JoinColumn()
   school: School;

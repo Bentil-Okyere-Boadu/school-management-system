@@ -249,7 +249,7 @@ const StudentPerformanceAnalytics: React.FC<
                 series={[
                   {
                     name: "Average",
-                    color: "rgba(79, 70, 229, 0.75)",
+                    color: 'rgba(237, 148, 146, 0.7)',
                   },
                 ]}
                 tickLine="y"

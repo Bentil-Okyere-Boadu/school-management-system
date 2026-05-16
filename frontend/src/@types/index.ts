@@ -49,6 +49,7 @@ export interface Student extends User {
   classLevels: ClassLevel[];
   isInvitationAccepted: boolean;
   isArchived: boolean;
+  studentBillingCode?: string;
 }
 
 export interface Teacher extends User {
@@ -537,6 +538,22 @@ export interface SchoolPaymentsSummary {
   failedCount: number;
   totalGrossAmount: number;
   totalNetAmount: number;
+  totalAmountGhs?: number;
+  totalPaidAmountGhs?: number;
+}
+
+export interface StudentPaymentsSummary {
+  totalTransactions: number;
+  totalPaidAmountGhs: number;
+  pendingValueGhs: number;
+  pendingCount: number;
+  paidCount: number;
+  totalAmountGhs?: number;
+}
+
+export interface PaymentFeeTypeFilter {
+  id: string;
+  title: string;
 }
 
 export interface PaginatedSchoolPaymentsResponse {
@@ -547,7 +564,10 @@ export interface PaginatedSchoolPaymentsResponse {
     limit: number;
     totalPages: number;
   };
-  summary?: SchoolPaymentsSummary;
+  summary?: SchoolPaymentsSummary | StudentPaymentsSummary;
+  filters?: {
+    feeTypes: PaymentFeeTypeFilter[];
+  };
 }
 
 export interface SchoolPaymentsListParams {
@@ -556,6 +576,7 @@ export interface SchoolPaymentsListParams {
   search?: string;
   status?: string;
   studentId?: string;
+  feeStructureId?: string;
   dateFrom?: string;
   dateTo?: string;
 }
@@ -565,6 +586,8 @@ export type PaymentConfigStatus = "ready" | "paused" | "not_onboarded";
 export interface SchoolPaymentConfig {
   status: PaymentConfigStatus;
   canInitiatePayment: boolean;
+  paymentSetupRequestSentAt?: string | null;
+  hasRequestedPaymentSetup?: boolean;
 }
 
 export interface HubtelMerchant {

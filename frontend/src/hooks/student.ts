@@ -8,6 +8,7 @@ import {
   PlannerEvent,
   EventCategory,
   PaginatedSchoolPaymentsResponse,
+  SchoolPaymentConfig,
   SchoolPaymentReceiptDetail,
   SchoolPaymentsListParams,
 } from "@/@types";
@@ -262,6 +263,18 @@ export const useGetStudentEventCategories = () => {
   return { categories, isLoading, refetch };
 };
 
+export const useGetStudentPaymentConfig = () => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["studentPaymentConfig"],
+    queryFn: () => customAPI.get("/payments/me/config"),
+    refetchOnWindowFocus: true,
+  });
+
+  const config = data?.data as SchoolPaymentConfig | undefined;
+
+  return { config, isLoading, refetch };
+};
+
 export const useGetMyPayments = (params: SchoolPaymentsListParams) => {
   const {
     page = 1,
@@ -269,6 +282,7 @@ export const useGetMyPayments = (params: SchoolPaymentsListParams) => {
     search = "",
     status = "",
     studentId = "",
+    feeStructureId = "",
     dateFrom = "",
     dateTo = "",
   } = params;
@@ -276,7 +290,16 @@ export const useGetMyPayments = (params: SchoolPaymentsListParams) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
       "myPayments",
-      { page, limit, search, status, studentId, dateFrom, dateTo },
+      {
+        page,
+        limit,
+        search,
+        status,
+        studentId,
+        feeStructureId,
+        dateFrom,
+        dateTo,
+      },
     ],
     queryFn: () => {
       const queryBuilder: string[] = [];
@@ -286,6 +309,10 @@ export const useGetMyPayments = (params: SchoolPaymentsListParams) => {
       if (status) queryBuilder.push(`status=${encodeURIComponent(status)}`);
       if (studentId)
         queryBuilder.push(`studentId=${encodeURIComponent(studentId)}`);
+      if (feeStructureId)
+        queryBuilder.push(
+          `feeStructureId=${encodeURIComponent(feeStructureId)}`
+        );
       if (dateFrom)
         queryBuilder.push(`dateFrom=${encodeURIComponent(dateFrom)}`);
       if (dateTo) queryBuilder.push(`dateTo=${encodeURIComponent(dateTo)}`);
@@ -298,8 +325,9 @@ export const useGetMyPayments = (params: SchoolPaymentsListParams) => {
   const transactions = body?.data ?? [];
   const meta = body?.meta;
   const summary = body?.summary;
+  const filters = body?.filters;
 
-  return { transactions, meta, summary, isLoading, refetch };
+  return { transactions, meta, summary, filters, isLoading, refetch };
 };
 
 export const useGetMyPaymentReceipt = (

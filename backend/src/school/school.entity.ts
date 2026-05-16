@@ -82,6 +82,10 @@ export class School {
   @Column({ type: 'boolean', default: false })
   hubtelMerchantActive: boolean;
 
+  /** Last time a school admin requested payments / Hubtel onboarding (email to platform). */
+  @Column({ type: 'timestamptz', nullable: true })
+  paymentSetupRequestedAt: Date | null;
+
   @OneToMany(() => SchoolAdmin, (admin) => admin.school, {
     onDelete: 'CASCADE',
   })

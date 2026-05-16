@@ -2046,7 +2046,19 @@ export const useGetSchoolPaymentConfig = () => {
   return { config, isLoading, refetch };
 };
 
-export const useGetSchoolPayments = (params: SchoolPaymentsListParams) => {
+export const useRequestPaymentSetup = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: { contactEmail?: string; note?: string }) =>
+      customAPI.post("/payments/my-school/request-setup", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schoolPaymentConfig"] });
+    },
+  });
+};
+
+export const useGetSchoolPayments = (params: SchoolPaymentsListParams, queryEnabled: boolean = true) => {
   const {
     page = 1,
     limit = 10,
@@ -2073,6 +2085,7 @@ export const useGetSchoolPayments = (params: SchoolPaymentsListParams) => {
       if (dateTo) queryBuilder.push(`dateTo=${encodeURIComponent(dateTo)}`);
       return customAPI.get(`/payments/my-school?${queryBuilder.join("&")}`);
     },
+    enabled: queryEnabled,
     refetchOnWindowFocus: true,
   });
 
