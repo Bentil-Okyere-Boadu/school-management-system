@@ -9,6 +9,7 @@ import {
 import { PaymentTransaction } from './payment-transaction.entity';
 import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
 import { Student } from 'src/student/student.entity';
+import { StudentFeeObligation } from './student-fee-obligation.entity';
 
 @Entity()
 export class PaymentAllocation {
@@ -36,6 +37,13 @@ export class PaymentAllocation {
   })
   @JoinColumn()
   feeStructure: FeeStructure | null;
+
+  @ManyToOne(() => StudentFeeObligation, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  obligation: StudentFeeObligation | null;
 
   @Column('float')
   allocatedAmount: number;

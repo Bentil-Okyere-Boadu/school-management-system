@@ -142,31 +142,33 @@ export class HubtelService {
       return this.onSpecificFeeMenuSelection(payload, studentId, userInput);
     }
 
-    const specificFeeAmountStep = /^stu:([^:]+):feeamt:(\d+)$/.exec(
-      clientState,
-    );
+    const specificFeeAmountStep =
+      /^stu:([^:]+):feeamt:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
+        clientState,
+      );
     if (specificFeeAmountStep) {
       const studentId = specificFeeAmountStep[1];
-      const feeListIndex = parseInt(specificFeeAmountStep[2], 10);
+      const obligationId = specificFeeAmountStep[2];
       return this.onSpecificFeeAmountStep(
         payload,
         studentId,
-        feeListIndex,
+        obligationId,
         userInput,
       );
     }
 
-    const specificFeeConfirmStep = /^feecnf:([^:]+):(\d+):(.+)$/.exec(
-      clientState,
-    );
+    const specificFeeConfirmStep =
+      /^feecnf:([^:]+):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(.+)$/i.exec(
+        clientState,
+      );
     if (specificFeeConfirmStep) {
       const studentId = specificFeeConfirmStep[1];
-      const feeListIndex = parseInt(specificFeeConfirmStep[2], 10);
+      const obligationId = specificFeeConfirmStep[2];
       const confirmAmount = Number(specificFeeConfirmStep[3]);
       return this.onSpecificFeeConfirmStep(
         payload,
         studentId,
-        feeListIndex,
+        obligationId,
         confirmAmount,
         userInput,
       );
@@ -326,9 +328,10 @@ export class HubtelService {
     const menuLines: string[] = ['Pick fee:'];
     const feesShownOnMenu = outstandingFees.slice(0, 4);
     feesShownOnMenu.forEach((feeOption, index) => {
-      const optionLabel = truncateWithEllipsis(feeOption.feeTitle, 14);
+      const period = truncateWithEllipsis(feeOption.periodLabel, 10);
+      const optionLabel = truncateWithEllipsis(feeOption.feeTitle, 10);
       const amountLabel = formatGhsAmount(feeOption.outstanding);
-      menuLines.push(`${index + 1}.${optionLabel} ${amountLabel}`);
+      menuLines.push(`${index + 1}.${optionLabel}.${period} ${amountLabel}`);
     });
     menuLines.push('0. Back');
 
@@ -376,12 +379,12 @@ export class HubtelService {
     return this.buildResponse(payload.SessionId, {
       Type: HubtelResponseType.RESPONSE,
       Message: truncateToUssdLimit(
-        `${truncateWithEllipsis(selectedFee.feeTitle, 16)}\nMax GHS ${formatGhsAmount(selectedFee.outstanding)}\nEnter amount\n0. Back`,
+        `${truncateWithEllipsis(selectedFee.feeTitle, 14)} ${truncateWithEllipsis(selectedFee.periodLabel, 12)}\nMax GHS ${formatGhsAmount(selectedFee.outstanding)}\nEnter amount\n0. Back`,
       ),
       Label: 'Amount',
       DataType: HubtelDataType.INPUT,
       FieldType: 'decimal',
-      ClientState: `stu:${studentId}:feeamt:${selectedIndex}`,
+      ClientState: `stu:${studentId}:feeamt:${selectedFee.id}`,
       ServiceCode: payload.ServiceCode,
     });
   }
@@ -389,7 +392,7 @@ export class HubtelService {
   private async onSpecificFeeAmountStep(
     payload: HubtelInteractionRequestDto,
     studentId: string,
-    feeListIndex: number,
+    obligationId: string,
     userInput: string,
   ): Promise<HubtelInteractionResponseDto> {
     const student = await this.paymentsService.getStudentById(studentId);
@@ -400,7 +403,7 @@ export class HubtelService {
       return this.showOutstandingFeeMenu(payload, student);
     }
 
-    const selectedFee = outstandingFees[feeListIndex];
+    const selectedFee = outstandingFees.find((f) => f.id === obligationId);
     if (!selectedFee) {
       return this.showOutstandingFeeMenu(payload, student);
     }
@@ -415,7 +418,7 @@ export class HubtelService {
         Label: 'Amount',
         DataType: HubtelDataType.INPUT,
         FieldType: 'decimal',
-        ClientState: `stu:${studentId}:feeamt:${feeListIndex}`,
+        ClientState: `stu:${studentId}:feeamt:${obligationId}`,
         ServiceCode: payload.ServiceCode,
       });
     }
@@ -423,8 +426,8 @@ export class HubtelService {
     const allocationPreview =
       await this.paymentsService.previewAllocationForSpecificFee(
         studentId,
-        selectedFee.id,
         paymentAmount,
+        { obligationId },
       );
     const previewMessage = buildUssdPaymentPreviewBody(
       paymentAmount,
@@ -438,7 +441,7 @@ export class HubtelService {
       Label: 'Confirm',
       DataType: HubtelDataType.INPUT,
       FieldType: 'text',
-      ClientState: `feecnf:${studentId}:${feeListIndex}:${formatGhsAmount(paymentAmount)}`,
+      ClientState: `feecnf:${studentId}:${obligationId}:${formatGhsAmount(paymentAmount)}`,
       ServiceCode: payload.ServiceCode,
     });
   }
@@ -446,7 +449,7 @@ export class HubtelService {
   private async onSpecificFeeConfirmStep(
     payload: HubtelInteractionRequestDto,
     studentId: string,
-    feeListIndex: number,
+    obligationId: string,
     paymentAmount: number,
     userInput: string,
   ): Promise<HubtelInteractionResponseDto> {
@@ -457,15 +460,15 @@ export class HubtelService {
       const student = await this.paymentsService.getStudentById(studentId);
       const outstandingFees =
         await this.paymentsService.getOutstandingFees(student);
-      const selectedFee = outstandingFees[feeListIndex];
+      const selectedFee = outstandingFees.find((f) => f.id === obligationId);
       if (!selectedFee) {
         return this.release(payload, MSG_INVALID);
       }
       const allocationPreview =
         await this.paymentsService.previewAllocationForSpecificFee(
           studentId,
-          selectedFee.id,
           paymentAmount,
+          { obligationId },
         );
       const previewMessage = buildUssdPaymentPreviewBody(
         paymentAmount,
@@ -478,7 +481,7 @@ export class HubtelService {
         Label: 'Confirm',
         DataType: HubtelDataType.INPUT,
         FieldType: 'text',
-        ClientState: `feecnf:${studentId}:${feeListIndex}:${formatGhsAmount(paymentAmount)}`,
+        ClientState: `feecnf:${studentId}:${obligationId}:${formatGhsAmount(paymentAmount)}`,
         ServiceCode: payload.ServiceCode,
       });
     }
@@ -486,7 +489,7 @@ export class HubtelService {
     const student = await this.paymentsService.getStudentById(studentId);
     const outstandingFees =
       await this.paymentsService.getOutstandingFees(student);
-    const selectedFee = outstandingFees[feeListIndex];
+    const selectedFee = outstandingFees.find((f) => f.id === obligationId);
     if (!selectedFee) {
       return this.release(payload, MSG_INVALID);
     }
@@ -499,6 +502,7 @@ export class HubtelService {
       payload,
       student,
       paymentAmount,
+      selectedFee.feeStructureId,
       selectedFee.id,
     );
   }
@@ -618,6 +622,7 @@ export class HubtelService {
       student,
       paymentAmount,
       null,
+      null,
     );
   }
 
@@ -630,6 +635,7 @@ export class HubtelService {
     student: Student,
     paymentAmount: number,
     targetFeeStructureId: string | null,
+    targetStudentFeeObligationId: string | null,
   ): Promise<HubtelInteractionResponseDto> {
     const channel = resolveHubtelChannelFromUssd(
       payload.Operator,
@@ -651,6 +657,7 @@ export class HubtelService {
       student,
       interactionPayload: payload as unknown as Record<string, unknown>,
       targetFeeStructureId,
+      targetStudentFeeObligationId,
     });
 
     const description = stripNonAsciiForUssd(

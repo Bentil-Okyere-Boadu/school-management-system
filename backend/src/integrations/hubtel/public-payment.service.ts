@@ -63,26 +63,56 @@ export class PublicPaymentService {
     // Verify the school's Hubtel merchant is configured/active before SMS
     this.credentialsService.fromSchool(student.school);
 
-    // Validate the amount against outstanding fees
-    if (dto.targetFeeStructureId) {
-      const outstandingFees =
-        await this.paymentsService.getOutstandingFees(student);
-      const targetFee = outstandingFees.find(
-        (f) => f.id === dto.targetFeeStructureId,
+    const outstandingFees = await this.paymentsService.getOutstandingFees(
+      student,
+      { ussdEligibleOnly: false },
+    );
+
+    let targetFeeStructureId: string | null = dto.targetFeeStructureId ?? null;
+    let targetObligationId: string | null =
+      dto.targetStudentFeeObligationId ?? null;
+
+    if (targetObligationId) {
+      const line = outstandingFees.find((f) => f.id === targetObligationId);
+      if (!line) {
+        throw new BadRequestException(
+          'Target fee line is not applicable or already paid',
+        );
+      }
+      if (
+        targetFeeStructureId &&
+        line.feeStructureId !== targetFeeStructureId
+      ) {
+        throw new BadRequestException(
+          'Target obligation does not match target fee structure',
+        );
+      }
+      targetFeeStructureId = line.feeStructureId;
+      if (dto.amount > line.outstanding + 0.001) {
+        throw new BadRequestException(
+          `Amount exceeds outstanding for this line (max GHS ${line.outstanding.toFixed(2)})`,
+        );
+      }
+    } else if (targetFeeStructureId) {
+      const forFee = outstandingFees.filter(
+        (f) => f.feeStructureId === targetFeeStructureId,
       );
-      if (!targetFee) {
+      const maxForFee = forFee.reduce((s, f) => s + f.outstanding, 0);
+      if (forFee.length === 0) {
         throw new BadRequestException(
           'Target fee is not applicable or already paid',
         );
       }
-      if (dto.amount > targetFee.outstanding + 0.001) {
+      if (dto.amount > maxForFee + 0.001) {
         throw new BadRequestException(
-          `Amount exceeds outstanding for this fee (max GHS ${targetFee.outstanding.toFixed(2)})`,
+          `Amount exceeds outstanding for this fee (max GHS ${maxForFee.toFixed(2)})`,
         );
       }
     } else {
       const totalOutstanding =
-        await this.paymentsService.getTotalOutstandingForStudent(student);
+        await this.paymentsService.getTotalOutstandingForStudent(student, {
+          ussdEligibleOnly: false,
+        });
       if (totalOutstanding <= 0) {
         throw new BadRequestException(
           'No outstanding balance for this student',
@@ -100,7 +130,8 @@ export class PublicPaymentService {
       msisdn: dto.mobileNumber,
       channel: dto.channel,
       amount: dto.amount,
-      targetFeeStructureId: dto.targetFeeStructureId ?? null,
+      targetFeeStructureId,
+      targetStudentFeeObligationId: targetObligationId,
       customerName: dto.customerName ?? null,
       customerEmail: dto.customerEmail ?? null,
     });
@@ -166,6 +197,7 @@ export class PublicPaymentService {
         channel: otp.channel,
       },
       targetFeeStructureId: otp.targetFeeStructureId,
+      targetStudentFeeObligationId: otp.targetStudentFeeObligationId,
     });
 
     let initiateResult: InitiateReceiveMoneyResult;

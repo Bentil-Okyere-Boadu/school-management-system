@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Brackets,
@@ -29,6 +30,10 @@ import { PaymentQueryDto } from './dto/payment-query.dto';
 import { HubtelMobileMoneyChannel } from 'src/integrations/hubtel/dto/initiate-receive-money.dto';
 import { School } from 'src/school/school.entity';
 import { PAYMENT_CONFIG_STATUS, SchoolPaymentConfig } from './payment-config';
+import { EmailService } from 'src/common/services/email.service';
+import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { RequestPaymentSetupDto } from './dto/request-payment-setup.dto';
+import { FeeObligationService } from './fee-obligation.service';
 
 const OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
@@ -41,6 +46,7 @@ export interface CreateCheckoutOtpInput {
   channel: HubtelMobileMoneyChannel;
   amount: number;
   targetFeeStructureId: string | null;
+  targetStudentFeeObligationId?: string | null;
   customerName?: string | null;
   customerEmail?: string | null;
 }
@@ -92,18 +98,12 @@ export class PaymentsService {
     @InjectRepository(CheckoutOtp)
     private readonly checkoutOtpRepository: Repository<CheckoutOtp>,
     private readonly transactionUtil: TransactionUtil,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
+    private readonly feeObligationService: FeeObligationService,
   ) {}
 
-  async getPaymentConfigForSchool(
-    schoolId: string,
-  ): Promise<SchoolPaymentConfig> {
-    const school = await this.schoolRepository.findOne({
-      where: { id: schoolId },
-    });
-    if (!school) {
-      throw new NotFoundException(`School with ID ${schoolId} not found`);
-    }
-
+  private buildPaymentConfigFromSchool(school: School): SchoolPaymentConfig {
     const configured = Boolean(
       school.hubtelClientId &&
         school.hubtelClientSecretEnc &&
@@ -119,10 +119,81 @@ export class PaymentsService {
       status = PAYMENT_CONFIG_STATUS.READY;
     }
 
+    const sentAt = school.paymentSetupRequestedAt;
     return {
       status,
       canInitiatePayment: status === PAYMENT_CONFIG_STATUS.READY,
+      paymentSetupRequestSentAt: sentAt ? sentAt.toISOString() : null,
+      hasRequestedPaymentSetup: Boolean(sentAt),
     };
+  }
+
+  async getPaymentConfigForSchool(
+    schoolId: string,
+  ): Promise<SchoolPaymentConfig> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+
+    return this.buildPaymentConfigFromSchool(school);
+  }
+
+  async requestPaymentSetup(
+    schoolId: string,
+    admin: SchoolAdmin,
+    dto: RequestPaymentSetupDto,
+  ): Promise<SchoolPaymentConfig> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+
+    const configured = Boolean(
+      school.hubtelClientId &&
+        school.hubtelClientSecretEnc &&
+        school.hubtelCollectionAccountNumber,
+    );
+    if (configured) {
+      throw new BadRequestException(
+        'Your school is already set up for payments.',
+      );
+    }
+
+    const notifyTo =
+      this.configService
+        .get<string>('PAYMENT_SETUP_NOTIFY_EMAIL', '')
+        ?.trim() ||
+      this.configService.get<string>('MAIL_USER', '')?.trim() ||
+      this.configService.get<string>('MAIL_FROM', '')?.trim();
+    if (!notifyTo) {
+      throw new BadRequestException(
+        'Payment setup requests are not configured. Set PAYMENT_SETUP_NOTIFY_EMAIL, MAIL_USER, or MAIL_FROM.',
+      );
+    }
+
+    const adminName =
+      [admin.firstName, admin.lastName].filter(Boolean).join(' ').trim() ||
+      'School admin';
+
+    await this.emailService.sendPaymentSetupRequestToTeam({
+      to: notifyTo,
+      schoolName: school.name,
+      schoolId: school.id,
+      adminName,
+      adminEmail: admin.email,
+      contactEmail: dto.contactEmail,
+      note: dto.note,
+    });
+
+    school.paymentSetupRequestedAt = new Date();
+    await this.schoolRepository.save(school);
+
+    return this.buildPaymentConfigFromSchool(school);
   }
 
   /**
@@ -153,6 +224,7 @@ export class PaymentsService {
       channel: input.channel,
       amount: Math.round(input.amount * 100) / 100,
       targetFeeStructureId: input.targetFeeStructureId ?? null,
+      targetStudentFeeObligationId: input.targetStudentFeeObligationId ?? null,
       customerName: input.customerName ?? null,
       customerEmail: input.customerEmail ?? null,
       codeHash,
@@ -316,46 +388,50 @@ export class PaymentsService {
   /**
    * Sum of outstanding school fee amounts for the student (matches allocation logic).
    */
-  async getTotalOutstandingForStudent(student: Student): Promise<number> {
+  async getTotalOutstandingForStudent(
+    student: Student,
+    options?: { ussdEligibleOnly?: boolean },
+  ): Promise<number> {
+    const ussdOnly = options?.ussdEligibleOnly ?? true;
     const fees = await this.findApplicableFeeStructuresForStudent(student, {
-      ussdEligibleOnly: true,
+      ussdEligibleOnly: ussdOnly,
     });
-    let total = 0;
-    for (const fee of fees) {
-      const paid = await this.sumPaidAllocationsForStudentFee(
-        student.id,
-        fee.id,
-      );
-      total += Math.max(0, fee.amount - paid);
-    }
-    return Math.round(total * 100) / 100;
+    return this.feeObligationService.getTotalOutstanding(student, fees, {
+      ussdEligibleOnly: ussdOnly,
+    });
   }
 
   /**
-   * USSD: fees with positive outstanding, oldest due first (same order as allocation).
+   * Lines with positive outstanding (id = StudentFeeObligation id). USSD-eligible only by default.
    */
   async getOutstandingFees(
     student: Student,
-  ): Promise<{ id: string; feeTitle: string; outstanding: number }[]> {
+    options?: { ussdEligibleOnly?: boolean },
+  ): Promise<
+    {
+      id: string;
+      feeTitle: string;
+      outstanding: number;
+      periodLabel: string;
+      feeStructureId: string;
+    }[]
+  > {
+    const ussdOnly = options?.ussdEligibleOnly ?? true;
     const fees = await this.findApplicableFeeStructuresForStudent(student, {
-      ussdEligibleOnly: true,
+      ussdEligibleOnly: ussdOnly,
     });
-    const rows: { id: string; feeTitle: string; outstanding: number }[] = [];
-    for (const fee of fees) {
-      const paid = await this.sumPaidAllocationsForStudentFee(
-        student.id,
-        fee.id,
-      );
-      const outstanding = Math.max(0, fee.amount - paid);
-      if (outstanding > 0) {
-        rows.push({
-          id: fee.id,
-          feeTitle: (fee.feeTitle ?? 'Fee').trim() || 'Fee',
-          outstanding: Math.round(outstanding * 100) / 100,
-        });
-      }
-    }
-    return rows;
+    const lines = await this.feeObligationService.getOutstandingLines(
+      student,
+      fees,
+      { ussdEligibleOnly: ussdOnly },
+    );
+    return lines.map((l) => ({
+      id: l.id,
+      feeTitle: l.feeTitle,
+      outstanding: l.outstanding,
+      periodLabel: l.periodLabel,
+      feeStructureId: l.feeStructureId,
+    }));
   }
 
   /**
@@ -372,67 +448,96 @@ export class PaymentsService {
   }
 
   /**
-   * Simulate pay-specific-fee first, then remainder auto-allocated.
+   * Simulate pay-specific obligation (or fee) first, then remainder auto-allocated.
    */
   async previewAllocationForSpecificFee(
     studentId: string,
-    feeStructureId: string,
     amount: number,
+    target: { obligationId: string } | { feeStructureId: string },
   ): Promise<{ feeName: string; amount: number }[]> {
     const student = await this.getStudentById(studentId);
-    const fees = await this.getOutstandingFees(student);
-    if (!fees.some((f) => f.id === feeStructureId)) {
-      throw new BadRequestException('Fee not applicable or already paid');
+    const fees = await this.findApplicableFeeStructuresForStudent(student, {
+      ussdEligibleOnly: true,
+    });
+    const outstanding = await this.feeObligationService.getOutstandingLines(
+      student,
+      fees,
+      { ussdEligibleOnly: true },
+    );
+
+    let prioritizeObligationId: string | null = null;
+    let prioritizeFeeStructureId: string | null = null;
+
+    if ('obligationId' in target) {
+      if (!outstanding.some((l) => l.id === target.obligationId)) {
+        throw new BadRequestException('Fee not applicable or already paid');
+      }
+      prioritizeObligationId = target.obligationId;
+    } else {
+      if (
+        !outstanding.some((l) => l.feeStructureId === target.feeStructureId)
+      ) {
+        throw new BadRequestException('Fee not applicable or already paid');
+      }
+      prioritizeFeeStructureId = target.feeStructureId;
     }
+
     return this.simulateAllocationLines(student, amount, {
       ussdOnly: true,
-      prioritizeFeeId: feeStructureId,
+      prioritizeObligationId,
+      prioritizeFeeStructureId,
     });
   }
 
   private async simulateAllocationLines(
     student: Student,
     amount: number,
-    opts?: { ussdOnly?: boolean; prioritizeFeeId?: string | null },
+    opts?: {
+      ussdOnly?: boolean;
+      prioritizeObligationId?: string | null;
+      prioritizeFeeStructureId?: string | null;
+    },
   ): Promise<{ feeName: string; amount: number }[]> {
     const ussdOnly = opts?.ussdOnly ?? false;
     const fees = await this.findApplicableFeeStructuresForStudent(student, {
       ussdEligibleOnly: ussdOnly,
     });
 
-    const virtualOut = new Map<string, number>();
-    for (const fee of fees) {
-      const paid = await this.sumPaidAllocationsForStudentFee(
-        student.id,
-        fee.id,
+    const ordered =
+      await this.feeObligationService.getOrderedOutstandingObligations(
+        student,
+        fees,
+        {
+          ussdEligibleOnly: ussdOnly,
+          prioritizeObligationId: opts?.prioritizeObligationId,
+          prioritizeFeeStructureId: opts?.prioritizeFeeStructureId,
+        },
       );
-      virtualOut.set(fee.id, Math.max(0, fee.amount - paid));
-    }
 
-    let ordered: FeeStructure[] = [...fees];
-    if (opts?.prioritizeFeeId) {
-      const t = ordered.find((f) => f.id === opts.prioritizeFeeId);
-      ordered = t ? [t, ...ordered.filter((f) => f.id !== t.id)] : ordered;
+    const virtualOut = new Map<string, number>();
+    for (const row of ordered) {
+      virtualOut.set(row.obligation.id, row.outstanding);
     }
 
     let remaining = Math.round(amount * 100) / 100;
     const lines: { feeName: string; amount: number }[] = [];
 
-    for (const fee of ordered) {
+    for (const row of ordered) {
       if (remaining <= 0) {
         break;
       }
-      const out = virtualOut.get(fee.id) ?? 0;
+      const out = virtualOut.get(row.obligation.id) ?? 0;
       if (out <= 0) {
         continue;
       }
       const take = Math.round(Math.min(remaining, out) * 100) / 100;
       if (take > 0) {
+        const feeName = `${(row.fee.feeTitle ?? 'Fee').trim() || 'Fee'} · ${row.periodLabel}`;
         lines.push({
-          feeName: (fee.feeTitle ?? 'Fee').trim() || 'Fee',
+          feeName,
           amount: take,
         });
-        virtualOut.set(fee.id, Math.round((out - take) * 100) / 100);
+        virtualOut.set(row.obligation.id, Math.round((out - take) * 100) / 100);
         remaining = Math.round((remaining - take) * 100) / 100;
       }
     }
@@ -493,6 +598,7 @@ export class PaymentsService {
     mobile: string;
     interactionPayload: Record<string, unknown>;
     targetFeeStructureId?: string | null;
+    targetStudentFeeObligationId?: string | null;
   }): Promise<PaymentTransaction> {
     if (input.amount <= 0) {
       throw new BadRequestException('Payment amount must be greater than zero');
@@ -514,6 +620,7 @@ export class PaymentsService {
       rawInteractionPayload: input.interactionPayload,
       status: PaymentTransactionStatus.PENDING,
       targetFeeStructureId: input.targetFeeStructureId ?? null,
+      targetStudentFeeObligationId: input.targetStudentFeeObligationId ?? null,
     });
 
     return this.paymentTransactionRepository.save(transaction);
@@ -661,26 +768,6 @@ export class PaymentsService {
     });
   }
 
-  private async sumPaidAllocationsForStudentFee(
-    studentId: string,
-    feeId: string,
-  ): Promise<number> {
-    const paidAgainstFee = await this.paymentAllocationRepository
-      .createQueryBuilder('allocation')
-      .leftJoin('allocation.feeStructure', 'fee')
-      .leftJoin('allocation.student', 'student')
-      .leftJoin('allocation.transaction', 'transaction')
-      .where('fee.id = :feeId', { feeId })
-      .andWhere('student.id = :studentId', { studentId })
-      .andWhere('transaction.status = :status', {
-        status: PaymentTransactionStatus.PAID,
-      })
-      .select('COALESCE(SUM(allocation.allocatedAmount), 0)', 'sum')
-      .getRawOne<{ sum: string }>();
-
-    return Number(paidAgainstFee?.sum ?? 0);
-  }
-
   /**
    * Prioritize a fee then auto-allocate remainder (same as fulfilment when
    * `targetFeeStructureId` is set on the transaction). Updates target and runs allocation.
@@ -690,6 +777,7 @@ export class PaymentsService {
     transactionId: string,
     feeStructureId: string,
     expectedAmount?: number,
+    obligationId?: string | null,
   ): Promise<void> {
     if (expectedAmount !== undefined) {
       const tx = await this.paymentTransactionRepository.findOne({
@@ -707,12 +795,47 @@ export class PaymentsService {
     }
     await this.paymentTransactionRepository.update(
       { id: transactionId },
-      { targetFeeStructureId: feeStructureId },
+      {
+        targetFeeStructureId: feeStructureId,
+        targetStudentFeeObligationId: obligationId ?? null,
+      },
     );
     await this.allocatePaidTransaction(transactionId);
   }
 
   async allocatePaidTransaction(transactionId: string): Promise<void> {
+    const txPreview = await this.paymentTransactionRepository.findOne({
+      where: { id: transactionId },
+      relations: ['student', 'student.classLevels', 'school'],
+    });
+
+    if (!txPreview) {
+      throw new NotFoundException('Transaction not found for allocation');
+    }
+
+    if (txPreview.status !== PaymentTransactionStatus.PAID) {
+      return;
+    }
+
+    const existingCount = await this.paymentAllocationRepository.count({
+      where: { transaction: { id: transactionId } },
+    });
+    if (existingCount > 0) {
+      return;
+    }
+
+    const ussdOnly = txPreview.provider === PaymentProvider.HUBTEL;
+    const filteredFees = await this.findApplicableFeeStructuresForStudent(
+      txPreview.student,
+      {
+        ussdEligibleOnly: ussdOnly,
+      },
+    );
+    await this.feeObligationService.ensureObligationsForStudent(
+      txPreview.student,
+      filteredFees,
+    );
+
     await this.transactionUtil.executeInTransaction(async (manager) => {
       const transactionRepo = manager.getRepository(PaymentTransaction);
       const allocationRepo = manager.getRepository(PaymentAllocation);
@@ -744,48 +867,55 @@ export class PaymentsService {
         return;
       }
 
-      const ussdOnly = transaction.provider === PaymentProvider.HUBTEL;
-      const filteredFees = await this.findApplicableFeeStructuresForStudent(
-        transaction.student,
-        {
+      const filteredFeesInner =
+        await this.findApplicableFeeStructuresForStudent(transaction.student, {
           ussdEligibleOnly: ussdOnly,
-        },
-      );
+        });
 
-      let feeOrder: FeeStructure[] = [...filteredFees];
-      if (transaction.targetFeeStructureId) {
-        const t = feeOrder.find(
-          (f) => f.id === transaction.targetFeeStructureId,
+      const ordered =
+        await this.feeObligationService.getOrderedOutstandingObligations(
+          transaction.student,
+          filteredFeesInner,
+          {
+            ussdEligibleOnly: ussdOnly,
+            prioritizeObligationId:
+              transaction.targetStudentFeeObligationId ?? null,
+            prioritizeFeeStructureId: transaction.targetStudentFeeObligationId
+              ? null
+              : transaction.targetFeeStructureId,
+          },
         );
-        feeOrder = t ? [t, ...feeOrder.filter((f) => f.id !== t.id)] : feeOrder;
+
+      const virtualOut = new Map<string, number>();
+      for (const row of ordered) {
+        virtualOut.set(row.obligation.id, row.outstanding);
       }
 
       let remaining = transaction.amountAfterCharges || transaction.amount;
       let order = 1;
 
-      for (const fee of feeOrder) {
+      for (const row of ordered) {
         if (remaining <= 0) {
           break;
         }
-
-        const alreadyPaid = await this.sumPaidAllocationsForStudentFee(
-          transaction.student.id,
-          fee.id,
-        );
-        const outstanding = Math.max(0, fee.amount - alreadyPaid);
-        if (outstanding <= 0) {
+        const out = virtualOut.get(row.obligation.id) ?? 0;
+        if (out <= 0) {
           continue;
         }
-
-        const allocationAmount = Math.min(remaining, outstanding);
+        const allocationAmount = Math.min(remaining, out);
         await allocationRepo.save(
           allocationRepo.create({
             transaction,
             student: transaction.student,
-            feeStructure: fee,
+            feeStructure: row.fee,
+            obligation: row.obligation,
             allocatedAmount: allocationAmount,
             allocationOrder: order++,
           }),
+        );
+        virtualOut.set(
+          row.obligation.id,
+          Math.round((out - allocationAmount) * 100) / 100,
         );
         remaining -= allocationAmount;
       }
@@ -796,6 +926,7 @@ export class PaymentsService {
             transaction,
             student: transaction.student,
             feeStructure: null,
+            obligation: null,
             allocatedAmount: remaining,
             allocationOrder: order,
           }),

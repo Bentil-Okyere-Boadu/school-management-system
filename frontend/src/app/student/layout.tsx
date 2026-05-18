@@ -1,10 +1,10 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
 import { ProfileIcon, ResultsIcon, AttendanceIcon, ClipboardIcon, PlannerIcon, PaymentsIcon } from "@/utils/icons";
-import { useStudentGetMe } from "@/hooks/student";
+import { useGetStudentPaymentConfig, useStudentGetMe } from "@/hooks/student";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -15,33 +15,26 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [isOverviewPage, setIsOverviewPage] = useState(true);
 
   const {me} = useStudentGetMe();
+  const { config: paymentConfig, isLoading: paymentConfigLoading } =
+    useGetStudentPaymentConfig();
 
-  const sidebarItems = [
-    {
-      icon: ProfileIcon,
-      label: "Profile",
-    },
-    {
-      icon: AttendanceIcon,      
-      label: "Attendance",
-    },
-    {
-      icon: ResultsIcon,      
-      label: "Results",
-    },
-    {
-      icon: ClipboardIcon,      
-      label: "My Assignments",
-    },
-    {
-      icon: PlannerIcon,      
-      label: "Planner",
-    },
-    {
-      icon: PaymentsIcon,
-      label: "My Payments",
-    },
-  ];
+  const paymentsNotOnboarded =
+    !paymentConfigLoading &&
+    (paymentConfig?.status ?? "not_onboarded") === "not_onboarded";
+
+  const sidebarItems = useMemo(() => {
+    const base = [
+      { icon: ProfileIcon, label: "Profile" },
+      { icon: AttendanceIcon, label: "Attendance" },
+      { icon: ResultsIcon, label: "Results" },
+      { icon: ClipboardIcon, label: "My Assignments" },
+      { icon: PlannerIcon, label: "Planner" },
+    ];
+    if (paymentsNotOnboarded) {
+      return base;
+    }
+    return [...base, { icon: PaymentsIcon, label: "My Payments" }];
+  }, [paymentsNotOnboarded]);
 
 
   useEffect(() => {
@@ -74,6 +67,16 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(false);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    if (!paymentsNotOnboarded) return;
+    if (
+      pathname === "/student/payments" ||
+      pathname.startsWith("/student/payments/")
+    ) {
+      router.replace("/student/profile");
+    }
+  }, [paymentsNotOnboarded, pathname, router]);
 
   const handleSidebarClick = (item: string) => {
     switch (item) {

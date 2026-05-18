@@ -38,9 +38,8 @@ export function formatPaymentDateTime(iso: string | null | undefined): string {
 }
 
 export function maskMobile(mobile: string | null | undefined): string {
-  if (!mobile || mobile.length < 4) return "—";
-  const start = mobile.slice(0, 3);
-  return `${start}XXXXXXX`;
+  if (!mobile) return "$233XXXXXXX`";
+  return mobile;
 }
 
 export function statusBadgeClass(

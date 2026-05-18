@@ -37,6 +37,9 @@ export class CheckoutOtp {
   targetFeeStructureId: string | null;
 
   @Column({ type: 'varchar', nullable: true })
+  targetStudentFeeObligationId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
   customerName: string | null;
 
   @Column({ type: 'varchar', nullable: true })

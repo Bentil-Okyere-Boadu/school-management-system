@@ -15,6 +15,10 @@ import { useGetSchoolById } from "@/hooks/super-admin";
 import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById, useGetNotifications } from "@/hooks/school-admin";
 import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
 import { useLogout } from "@/hooks/auth";
+import {
+  SchoolAdminPaymentStatusTag,
+  StudentPaymentStatusTag,
+} from "@/components/payments/PaymentStatusTag";
 
 interface HeaderSectionProps {
   activeMenuItem: string;
@@ -31,13 +35,21 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   const schoolId = params.id;
   const classId = params.classId as string | undefined;
 
-  const getSignedInRole = () => {
-    if(pathName.startsWith('/admin')) {
+  const getSignedInRole = (): Roles | undefined => {
+    if (pathName.startsWith("/student")) {
+      return Roles.STUDENT;
+    }
+    if (pathName.startsWith("/admin")) {
       return Roles.SCHOOL_ADMIN;
-    } else if(pathName.startsWith('/superadmin')) {
+    }
+    if (pathName.startsWith("/superadmin")) {
       return Roles.SUPER_ADMIN;
     }
-  }
+    if (pathName.startsWith("/teacher")) {
+      return Roles.TEACHER;
+    }
+    return undefined;
+  };
 
   const isStudentDetailPage = pathName.includes(`/admin/students/${params.id}`);
   const {schoolUser} = useGetSchoolUserById(params.id as string, {
@@ -74,6 +86,13 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
   })
 
   const signedInRole = getSignedInRole();
+
+  const isStudentPaymentView =
+    pathName === "/student/payments" ||
+    pathName.startsWith("/student/payments/");
+  const isAdminPaymentView =
+    pathName === "/admin/payments" ||
+    pathName.startsWith("/admin/payments/");
 
   const { mutate: logoutMutation } = useLogout();
 
@@ -211,15 +230,22 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
         </div>
 
         <div className="flex items-center flex-wrap gap-3">
+          {signedInRole === Roles.STUDENT && isStudentPaymentView && (
+            <StudentPaymentStatusTag />
+          )}
+
           {signedInRole === Roles.SCHOOL_ADMIN && (
-            <div className="relative mr-1">
-              <IconBell className="cursor-pointer size-6" onClick={onNotificationClick} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] px-1">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </div>
+            <>
+              {isAdminPaymentView && <SchoolAdminPaymentStatusTag />}
+              <div className="relative mr-1">
+                <IconBell className="cursor-pointer size-6" onClick={onNotificationClick} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+            </>
           )}
 
           <Menu shadow="md" width={200}>
