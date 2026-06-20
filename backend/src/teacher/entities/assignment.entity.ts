@@ -42,6 +42,9 @@ export class Assignment {
   @Column({ nullable: true })
   attachmentMediaType?: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  plannerEventId?: string | null;
+
   @ManyToOne(() => Topic, { eager: true, nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'topic_id' })
   topic: Topic;

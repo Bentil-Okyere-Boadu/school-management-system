@@ -36,6 +36,12 @@ import { QueryString } from 'src/common/api-features/api-features';
 import { APIFeatures } from 'src/common/api-features/api-features';
 import { ProfileService } from 'src/profile/profile.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
+import {
+  Event as PlannerEvent,
+  VisibilityScope,
+} from 'src/planner/entities/event.entity';
+import { EventCategory } from 'src/planner/entities/event-category.entity';
+import { School } from 'src/school/school.entity';
 
 @Injectable()
 export class TeacherService {
@@ -353,6 +359,54 @@ export class TeacherService {
     return topicRepository.save(topic);
   }
 
+  private async findClassAssignmentCategory(
+    schoolId: string,
+  ): Promise<EventCategory | null> {
+    const manager = this.teacherRepository.manager;
+    const categoryRepository = manager.getRepository(EventCategory);
+    const category = await categoryRepository.findOne({
+      where: { name: 'Class Assignment', school: { id: schoolId } },
+    });
+    if (!category) {
+      this.logger.warn(
+        `"Class Assignment" event category not found for school ${schoolId}. Skipping planner event creation.`,
+      );
+    }
+    return category;
+  }
+
+  private async createAssignmentPlannerEvent(
+    assignment: Assignment,
+    teacher: Teacher,
+    school: School,
+  ): Promise<string | null> {
+    const category = await this.findClassAssignmentCategory(school.id);
+    if (!category) return null;
+
+    const manager = this.teacherRepository.manager;
+    const eventRepository = manager.getRepository(PlannerEvent);
+
+    const event = eventRepository.create({
+      title: `[Assignment Due] ${assignment.title}`,
+      description: assignment.instructions ?? null,
+      startDate: assignment.dueDate,
+      endDate: assignment.dueDate,
+      isAllDay: true,
+      sendNotifications: false,
+      location: null,
+      visibilityScope: VisibilityScope.CLASS_LEVEL,
+      category,
+      school,
+      createdByTeacherId: teacher.id,
+      createdByAdminId: null,
+      targetClassLevels: [assignment.classLevel],
+      targetSubjects: [],
+    });
+
+    const saved = await eventRepository.save(event);
+    return saved.id;
+  }
+
   async createAssignment(
     teacher: Teacher,
     dto: CreateAssignmentDto,
@@ -454,6 +508,22 @@ export class TeacherService {
 
     if (savedAssignment.state === 'published') {
       this.notifyParentsAboutAssignment(savedAssignment, classLevel, topic);
+
+      try {
+        const eventId = await this.createAssignmentPlannerEvent(
+          savedAssignment,
+          teacherWithSchool,
+          teacherWithSchool.school,
+        );
+        if (eventId) {
+          savedAssignment.plannerEventId = eventId;
+          await assignmentRepository.save(savedAssignment);
+        }
+      } catch (e) {
+        this.logger.error(
+          `Failed to create planner event for assignment ${savedAssignment.id}: ${e}`,
+        );
+      }
     }
 
     return savedAssignment;
@@ -822,6 +892,69 @@ export class TeacherService {
           savedAssignment.topic,
         );
       }
+
+      try {
+        const eventId = await this.createAssignmentPlannerEvent(
+          savedAssignment,
+          teacherWithSchool,
+          teacherWithSchool.school,
+        );
+        if (eventId) {
+          savedAssignment.plannerEventId = eventId;
+          await assignmentRepository.save(savedAssignment);
+        }
+      } catch (e) {
+        this.logger.error(
+          `Failed to create planner event on publish for assignment ${savedAssignment.id}: ${e}`,
+        );
+      }
+    } else if (
+      previousState === 'published' &&
+      savedAssignment.state === 'draft'
+    ) {
+      if (savedAssignment.plannerEventId) {
+        try {
+          await manager
+            .getRepository(PlannerEvent)
+            .delete(savedAssignment.plannerEventId);
+          savedAssignment.plannerEventId = null;
+          await assignmentRepository.save(savedAssignment);
+        } catch (e) {
+          this.logger.error(
+            `Failed to delete planner event ${savedAssignment.plannerEventId} on unpublish: ${e}`,
+          );
+        }
+      }
+    } else if (
+      previousState === 'published' &&
+      savedAssignment.state === 'published' &&
+      savedAssignment.plannerEventId
+    ) {
+      const titleChanged = dto.title !== undefined;
+      const dueDateChanged = dto.dueDate !== undefined;
+
+      if (titleChanged || dueDateChanged) {
+        try {
+          const eventRepository = manager.getRepository(PlannerEvent);
+          const event = await eventRepository.findOne({
+            where: { id: savedAssignment.plannerEventId },
+          });
+          if (event) {
+            if (titleChanged) {
+              event.title = `[Assignment Due] ${savedAssignment.title}`;
+            }
+            if (dueDateChanged) {
+              event.startDate = savedAssignment.dueDate;
+              event.endDate = savedAssignment.dueDate;
+            }
+            await eventRepository.save(event);
+          }
+        } catch (e) {
+          this.logger.error(
+            `Failed to sync planner event ${savedAssignment.plannerEventId} after update: ${e}`,
+          );
+        }
+      }
     }
 
     return savedAssignment;
@@ -852,6 +985,18 @@ export class TeacherService {
       } catch (error) {
         // Log error but don't fail the deletion
         console.error('Failed to delete assignment attachment:', error);
+      }
+    }
+
+    if (assignment.plannerEventId) {
+      try {
+        await manager
+          .getRepository(PlannerEvent)
+          .delete(assignment.plannerEventId);
+      } catch (e) {
+        this.logger.error(
+          `Failed to delete planner event ${assignment.plannerEventId} for assignment ${assignment.id}: ${e}`,
+        );
       }
     }
 
