@@ -57,6 +57,11 @@ async function seedDefaultEventCategories(app: INestApplication) {
       color: '#10b981',
       description: 'School-wide events and activities',
     },
+    {
+      name: 'Class Assignment',
+      color: '#f59e0b',
+      description: 'Assignment due dates for class levels',
+    },
   ];
 
   // Get all schools

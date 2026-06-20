@@ -28,6 +28,7 @@ import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jw
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Role } from 'src/auth/enums/role.enum';
+import { SkipTenantScope } from 'src/common/tenant/skip-tenant-scope.decorator';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Teacher } from 'src/teacher/teacher.entity';
@@ -55,6 +56,7 @@ export class SchoolController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('/create')
   @Roles(Role.SchoolAdmin)
+  @SkipTenantScope()
   create(
     @Body() createSchoolDto: CreateSchoolDto,
     @CurrentUser() user: SchoolAdmin,
