@@ -21,6 +21,7 @@ interface AdminClassResultsCardProps {
   onLockToggle: (item: ClassLevel) => void;
   onEditClick?: (item: ClassLevel) => void;
   onDeleteClick?: (id: string) => void;
+  onCardClick?: (item: ClassLevel) => void;
   lockTooltip?: string;
   busy?: boolean;
 }
@@ -33,11 +34,25 @@ export const AdminClassResultsCard: React.FC<AdminClassResultsCardProps> = ({
   onLockToggle,
   onEditClick,
   onDeleteClick,
+  onCardClick,
   lockTooltip = "",
   busy = false,
 }) => {
   return (
-    <div className="relative bg-white rounded-xl shadow-sm p-4 w-full border border-gray-100 flex flex-col min-h-[220px]">
+    <div
+      role={onCardClick ? "button" : undefined}
+      tabIndex={onCardClick ? 0 : undefined}
+      onClick={() => onCardClick?.(classData)}
+      onKeyDown={(e) => {
+        if (onCardClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onCardClick(classData);
+        }
+      }}
+      className={`relative bg-white rounded-xl shadow-sm p-4 w-full border border-gray-100 flex flex-col min-h-[220px] ${
+        onCardClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""
+      }`}
+    >
       {busy && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 rounded-xl">
           <HashLoader color="#AB58E7" size={30} />
@@ -67,20 +82,30 @@ export const AdminClassResultsCard: React.FC<AdminClassResultsCardProps> = ({
               Unlocked
             </Badge>
           )}
-          {onEditClick && onDeleteClick && (
+          {(onEditClick || onDeleteClick) && (
             <div className="flex gap-1">
-              <IconEdit
-                size={18}
-                onClick={() => onEditClick(classData)}
-                className="text-blue-600 cursor-pointer"
-                aria-label="Edit class"
-              />
-              <IconTrash
-                size={18}
-                onClick={() => onDeleteClick(classData?.id)}
-                className="text-red-500 cursor-pointer"
-                aria-label="Delete class"
-              />
+              {onEditClick && (
+                <IconEdit
+                  size={18}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditClick(classData);
+                  }}
+                  className="text-blue-600 cursor-pointer"
+                  aria-label="Edit class"
+                />
+              )}
+              {onDeleteClick && (
+                <IconTrash
+                  size={18}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteClick(classData?.id);
+                  }}
+                  className="text-red-500 cursor-pointer"
+                  aria-label="Delete class"
+                />
+              )}
             </div>
           )}
         </div>
@@ -125,7 +150,10 @@ export const AdminClassResultsCard: React.FC<AdminClassResultsCardProps> = ({
         >
           <button
             type="button"
-            onClick={() => onLockToggle(classData)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLockToggle(classData);
+            }}
             className={`w-full flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
               isAdminLocked
                 ? "border-green-200 text-green-800 bg-green-50 hover:bg-green-100"

@@ -569,6 +569,21 @@ export const useEditClassLevel = (id: string) => {
   });
 };
 
+export const useGetClassLevelById = (
+  classId: string,
+  options?: { enabled?: boolean }
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["classLevel", classId],
+    queryFn: () => customAPI.get(`/class-level/${classId}`),
+    enabled: !!classId && (options?.enabled ?? true),
+    refetchOnWindowFocus: true,
+  });
+
+  const classLevel = (data?.data as ClassLevel) ?? null;
+  return { classLevel, isLoading, refetch };
+};
+
 /**
  * CURRICULUM CRUD
  */
