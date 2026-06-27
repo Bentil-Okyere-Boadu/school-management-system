@@ -195,7 +195,7 @@ export class SchoolAdminService {
     const studentsFeatures = new APIFeatures(studentsQuery, queryString)
       .filter()
       .sort()
-      .search(['firstName', 'lastName', 'email'])
+      .search(['firstName', 'lastName', 'email', 'studentId'])
       .limitFields();
 
     const students = await studentsFeatures.getQuery().getMany();
