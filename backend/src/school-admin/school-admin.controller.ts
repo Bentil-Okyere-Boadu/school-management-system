@@ -31,6 +31,7 @@ import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sa
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { SchoolAdminSchoolGuard } from './guards/school-admin-school.guard';
+import { SkipTenantScope } from 'src/common/tenant/skip-tenant-scope.decorator';
 import { AdmissionService } from 'src/admission/admission.service';
 import { UpdateAdmissionStatusDto } from 'src/admission/dto/create-admission-student-info.dto';
 import {
@@ -52,6 +53,7 @@ export class SchoolAdminController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(SchoolAdminLocalAuthGuard)
   @Post('login')
+  @SkipTenantScope()
   login(@Request() req: { user: SchoolAdmin }) {
     return this.schoolAdminAuthService.login(req.user);
   }

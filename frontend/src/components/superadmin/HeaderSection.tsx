@@ -12,7 +12,7 @@ import NoProfileImg from '@/images/no-profile-img.png'
 import { Roles, User } from "@/@types";
 import { getCookieNameForPath } from "@/utils/auth";
 import { useGetSchoolById } from "@/hooks/super-admin";
-import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById, useGetNotifications } from "@/hooks/school-admin";
+import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById, useGetNotifications, useGetClassLevelById } from "@/hooks/school-admin";
 import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
 import { useLogout } from "@/hooks/auth";
 import {
@@ -79,6 +79,12 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
     queryKey: ['teacherClass', classId]
   });
 
+  const isAdminClassDetailPage =
+    !!classId && pathName.startsWith("/admin/classes/") && pathName !== "/admin/classes";
+  const { classLevel: adminClassLevel } = useGetClassLevelById(classId ?? "", {
+    enabled: isAdminClassDetailPage,
+  });
+
   const isTeacherStudentDetailPage = pathName.includes(`/teacher/students/${params.id}`);
   const {studentData} = useGetStudentById(params.id as string, {
     enabled: isTeacherStudentDetailPage,
@@ -120,6 +126,10 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
       return classData.name;
     }
 
+    if (adminClassLevel?.name) {
+      return adminClassLevel.name;
+    }
+
     if(studentData) {
       return `${studentData?.firstName ?? ''} ${studentData?.lastName ?? ''}`;
     }
@@ -134,7 +144,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
 
     // Default fallback (e.g., teacher, student)
     return `${user?.firstName ?? ''} ${user?.lastName ?? ''}`;
-  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData, classData, studentData]);
+  }, [isOverviewPage, signedInRole, user, school, schoolUser, mySchool, admissionData, classData, adminClassLevel, studentData]);
 
   const onHandleBreadCrumbPress = (event: any) => {
     const oEventTarget = (event.currentTarget ?? event.target) as HTMLElement;

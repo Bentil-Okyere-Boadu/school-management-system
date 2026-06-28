@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter } from "next/navigation";
 import { AdminClassResultsCard } from '@/components/admin/classes/AdminClassResultsCard';
 import CustomButton from '@/components/Button';
 import { Dialog } from '@/components/common/Dialog';
@@ -7,27 +8,25 @@ import { SearchBar } from '@/components/common/SearchBar';
 import InputField from '@/components/InputField';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
 import { ErrorResponse, ClassLevel, User } from "@/@types";
-import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useEditClassLevel, useGetCalendars, useGetClassLevels, useGetSchoolUsers, useGetStudentsForClassAssignment } from "@/hooks/school-admin";
+import { useAdminApproveClassResults, useCreateClassLevel, useDeleteClassLevel, useGetCalendars, useGetClassLevels, useGetSchoolUsers } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
 import { Badge, Combobox, Select } from '@mantine/core';
 import { useDebouncer } from '@/hooks/generalHooks';
-import StudentSelectionTable from '@/components/admin/classes/StudentSelectionTable';
 import { getSortedSchoolTerms } from '@/utils/schoolTerms';
 import { IconLock, IconLockOpen, IconSchool } from '@tabler/icons-react';
 
 
 const ClassesPage = () => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const [isConfirmDeleteClassLevelDialogOpen, setIsConfirmDeleteClassLevelDialogOpen] = useState(false);
   const [isClassLevelDialogOpen, setIsClassLevelDialogOpen] = useState(false);
   const [classLevelName, setClassLevelName] = useState('');
   const [classLevelDescription, setClassLevelDescription] = useState('');
-  const [editMode, setEditMode] = useState(false);
   const [classLevelId, setClassLevelId] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState<string>();
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
@@ -100,7 +99,6 @@ const ClassesPage = () => {
     () => classLevels.filter((c) => !c.schoolAdminApproved).length,
     [classLevels]
   );
-  const { mutate: editMutation, isPending: pendingEdit } = useEditClassLevel(classLevelId);
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteClassLevel();
   const { mutate: createMutation, isPending: pendingCreate } = useCreateClassLevel();
   const { schoolUsers: schoolTeachers } = useGetSchoolUsers(
@@ -116,63 +114,27 @@ const ClassesPage = () => {
     value: teacher.id,
     label: `${teacher.firstName} ${teacher.lastName}`,
   }));
-  
-
-  const { students: schoolStudents } = useGetStudentsForClassAssignment(
-    "",
-    true, // Only get students without classes (or in the current class if editing)
-    editMode && classLevelId ? classLevelId : undefined // When editing, include students already in this class
-  );
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
   };
 
-  const onEditClassLevelClick = (data: Partial<ClassLevel>) => {
-    setEditMode(true);
-    setClassLevelId(data.id as string);
-    setIsClassLevelDialogOpen(true);
-    setClassLevelName(data.name as string);
-    setClassLevelDescription(data.description as string);
-    setSelectedTeacher(data.classTeacher?.id || '');
-
-    const students = (data.students) as User[];
-    setSelectedStudents(students?.map((item) => item.id) || []);
-  }
-
-  const editClassLevel = () => {
-    editMutation(
-      { name: classLevelName, 
-        description: classLevelDescription,
-        // teacherIds: selectedTeacher ? [selectedTeacher] : [],
-        classTeacherId: selectedTeacher,
-        studentIds: selectedStudents
-      }, {
-      onSuccess: () => {
-        toast.success('Successfully updated class.')
-        setIsClassLevelDialogOpen(false);
-        refetch();
-      },
-      onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-      }
-    })
-  }
-
   const createClassLevel = () => {
     createMutation(
       { 
         name: classLevelName, 
         description: classLevelDescription, 
-        // teacherIds: selectedTeacher ? [selectedTeacher] : [], 
         classTeacherId: selectedTeacher,
-        studentIds: selectedStudents
       }, {
-      onSuccess: () => {
+      onSuccess: (response) => {
         toast.success('Successfully created class.')
         setIsClassLevelDialogOpen(false);
         refetch();
+        const newId = response?.data?.id as string | undefined;
+        if (newId) {
+          router.push(`/admin/classes/${newId}`);
+        }
       },
       onError: (error: unknown) => {
           toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -202,10 +164,8 @@ const ClassesPage = () => {
     setIsClassLevelDialogOpen(true)
     setClassLevelName('');
     setClassLevelDescription('');
-    setEditMode(false);
     setClassLevelId('');
     setSelectedTeacher('');
-    setSelectedStudents([]);
   }
 
   const handleTeacherChange = (event: string) => {
@@ -467,7 +427,7 @@ const ClassesPage = () => {
               isAdminLocked={!!data?.schoolAdminApproved}
               teacherSubmitted={!!data?.isApproved}
               onLockToggle={onApproveOrDisApproveClassResult}
-              onEditClick={() => onEditClassLevelClick(data)}
+              onCardClick={(data) => router.push(`/admin/classes/${data.id}`)}
               onDeleteClick={() => onDeleteButtonClick(data.id)}
               lockTooltip={
                 data?.schoolAdminApproved
@@ -483,14 +443,14 @@ const ClassesPage = () => {
         )}
       </div>
 
-      {/* Creating/Editing Class Dialog */}
+      {/* Create Class Dialog */}
       <Dialog 
         isOpen={isClassLevelDialogOpen}
-        busy={editMode? pendingEdit : pendingCreate}
-        dialogTitle={`${editMode ? 'Edit' : 'Add New'} Class`}
+        busy={pendingCreate}
+        dialogTitle="Add New Class"
         saveButtonText="Save"
         onClose={() => setIsClassLevelDialogOpen(false)} 
-        onSave={editMode? editClassLevel : createClassLevel }
+        onSave={createClassLevel}
       >
         <div className="my-3 flex flex-col gap-4">
           <InputField
@@ -517,15 +477,6 @@ const ClassesPage = () => {
             onChange={(e) => handleTeacherChange(e as string)}
             searchable
           />
-          <div>
-            <p className="text-xs text-[#52525c] mb-1">Students</p>
-            <StudentSelectionTable
-              students={schoolStudents || []}
-              selectedStudents={selectedStudents}
-              onChange={setSelectedStudents}
-            /> 
-          </div>
-
         </div>
       </Dialog>
   

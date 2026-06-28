@@ -40,6 +40,27 @@ export class PlannerScheduler {
     private readonly smsService: SmsService,
   ) {}
 
+  @Cron('0 2 * * *')
+  async cleanupExpiredAssignmentEvents() {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 1);
+
+    const stale = await this.eventRepository
+      .createQueryBuilder('event')
+      .select('event.id')
+      .innerJoin('event.category', 'category')
+      .where('category.name = :name', { name: 'Class Assignment' })
+      .andWhere('event.startDate <= :cutoff', { cutoff })
+      .getMany();
+
+    if (stale.length === 0) return;
+
+    await this.eventRepository.delete(stale.map((e) => e.id));
+    this.logger.log(
+      `Cleaned up ${stale.length} expired assignment planner events`,
+    );
+  }
+
   @Cron(process.env.EVENT_REMINDER_CRON ?? '0 */5 * * * *')
   async checkEventReminders() {
     if (this.running) return;
