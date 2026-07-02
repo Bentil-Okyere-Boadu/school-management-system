@@ -42,8 +42,9 @@ export class PlannerScheduler {
 
   @Cron('0 2 * * *')
   async cleanupExpiredAssignmentEvents() {
+    // Keep assignment reminders for 7 days after they occur
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 1);
+    cutoff.setDate(cutoff.getDate() - 7);
 
     const stale = await this.eventRepository
       .createQueryBuilder('event')
