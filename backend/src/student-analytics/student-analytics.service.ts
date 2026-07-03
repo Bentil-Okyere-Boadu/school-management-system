@@ -13,6 +13,62 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 
+export type ClusterName =
+  | 'Below Expectations'
+  | 'Developing'
+  | 'On Track'
+  | 'Meeting Expectations';
+
+export type ClassSubjectPerformanceResponse = {
+  classLevel: { id: string; name: string };
+  academicTerm: { id: string; termName: string };
+  subject: { id: string; name: string };
+  summary: {
+    totalStudents: number;
+    classAverage: number | null;
+    medianScore: number | null;
+    highestScore: number | null;
+    lowestScore: number | null;
+  };
+  clusterDistribution: {
+    belowExpectations: number;
+    developing: number;
+    onTrack: number;
+    meetingExpectations: number;
+  };
+  students: Array<{
+    studentId: string;
+    studentName: string;
+    classLevelName: string;
+    subjectName: string;
+    aggregatedScore: number | null;
+    rank: number;
+    cluster: ClusterName | null;
+  }>;
+};
+
+export type StudentTopicPerformanceResponse = {
+  student: {
+    id: string;
+    name: string;
+    classLevelName: string;
+    overallAveragePercent: number | null;
+    cluster: ClusterName | null;
+  };
+  academicTerm: { id: string; termName: string };
+  subject: { id: string; name: string };
+  topics: Array<{
+    topicId: string;
+    topicName: string;
+    studentAggregatedScore: number | null;
+    classAverage: number | null;
+    range: { min: number | null; max: number | null };
+    median: number | null;
+    testCount: number;
+    cluster: ClusterName | null;
+  }>;
+};
+
 /** One graded submission row under a curriculum topic */
 export type TopicAssignmentGradeDetail = {
   submissionId: string;
@@ -392,6 +448,417 @@ export class StudentAnalyticsService {
         assignmentAveragePercent: assignmentAvg,
       },
       subjectAssignmentPerformance,
+    };
+  }
+
+  // ─── Cluster / stats helpers ────────────────────────────────────────────────
+
+  private round1(n: number): number {
+    return Math.round(n * 10) / 10;
+  }
+
+  private computeMedian(sortedAsc: number[]): number | null {
+    if (!sortedAsc.length) return null;
+    const mid = Math.floor(sortedAsc.length / 2);
+    return sortedAsc.length % 2 === 0
+      ? this.round1((sortedAsc[mid - 1] + sortedAsc[mid]) / 2)
+      : sortedAsc[mid];
+  }
+
+  private computePercentileRank(rank: number, total: number): number {
+    if (total <= 1) return 100;
+    return Math.round(((total - rank) / (total - 1)) * 100);
+  }
+
+  private assignCluster(percentile: number): ClusterName {
+    if (percentile <= 25) return 'Below Expectations';
+    if (percentile <= 50) return 'Developing';
+    if (percentile <= 75) return 'On Track';
+    return 'Meeting Expectations';
+  }
+
+  // ─── Class-level subject performance (Screen 1) ─────────────────────────────
+
+  async getClassSubjectPerformance(
+    admin: SchoolAdmin,
+    classLevelId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+    filters: {
+      cluster?: ClusterName;
+      scoreRangeMin?: number;
+      scoreRangeMax?: number;
+    } = {},
+  ): Promise<ClassSubjectPerformanceResponse> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId, school: { id: admin.school.id } },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) {
+      throw new NotFoundException('Class not found');
+    }
+
+    const termEntity = await this.academicTermRepository.findOne({
+      where: { id: academicTermId },
+      relations: ['academicCalendar'],
+    });
+    if (!termEntity) {
+      throw new NotFoundException('Academic term not found');
+    }
+
+    const allSubs = await this.submissionRepository
+      .createQueryBuilder('sub')
+      .innerJoinAndSelect('sub.assignment', 'assignment')
+      .innerJoinAndSelect('assignment.classLevel', 'assClass')
+      .innerJoinAndSelect('assignment.topic', 'topic')
+      .innerJoinAndSelect('topic.subjectCatalog', 'catalog')
+      .innerJoin('catalog.school', 'catalogSchool')
+      .leftJoinAndSelect('topic.academicTerm', 'topicTerm')
+      .innerJoinAndSelect('sub.student', 'student')
+      .where('assClass.id = :classLevelId', { classLevelId })
+      .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
+      .andWhere('catalogSchool.id = :schoolId', { schoolId: admin.school.id })
+      .andWhere('sub.score IS NOT NULL')
+      .andWhere('assignment.maxScore > 0')
+      .getMany();
+
+    const subjectName = allSubs[0]?.assignment.topic.subjectCatalog.name ?? '';
+
+    const termSubs = allSubs.filter(
+      (sub) => sub.assignment.topic.academicTerm?.id === academicTermId,
+    );
+
+    // Aggregate per-student average
+    const studentScoreMap = new Map<string, number[]>();
+    for (const sub of termSubs) {
+      const pct = this.round1(
+        Math.min(
+          100,
+          Math.max(
+            0,
+            (Number(sub.score) / Number(sub.assignment.maxScore)) * 100,
+          ),
+        ),
+      );
+      const arr = studentScoreMap.get(sub.student.id) ?? [];
+      arr.push(pct);
+      studentScoreMap.set(sub.student.id, arr);
+    }
+
+    type Entry = {
+      studentId: string;
+      studentName: string;
+      avgScore: number | null;
+    };
+
+    const allEntries: Entry[] = classLevel.students.map((s) => {
+      const scores = studentScoreMap.get(s.id);
+      const avg = scores?.length
+        ? this.round1(scores.reduce((a, b) => a + b, 0) / scores.length)
+        : null;
+      return {
+        studentId: s.id,
+        studentName: `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim(),
+        avgScore: avg,
+      };
+    });
+
+    const withScores = allEntries
+      .filter((e) => e.avgScore !== null)
+      .sort((a, b) => b.avgScore! - a.avgScore!);
+    const withoutScores = allEntries.filter((e) => e.avgScore === null);
+
+    const total = withScores.length;
+    type RankedEntry = Entry & { rank: number; cluster: ClusterName | null };
+
+    const ranked: RankedEntry[] = [
+      ...withScores.map((e, idx) => {
+        const rank = idx + 1;
+        const percentile = this.computePercentileRank(rank, total);
+        return { ...e, rank, cluster: this.assignCluster(percentile) };
+      }),
+      ...withoutScores.map((e, idx) => ({
+        ...e,
+        rank: total + idx + 1,
+        cluster: null as ClusterName | null,
+      })),
+    ];
+
+    // Summary stats (scored students only)
+    const sortedScores = withScores
+      .map((e) => e.avgScore!)
+      .sort((a, b) => a - b);
+    const classAverage = sortedScores.length
+      ? this.round1(
+          sortedScores.reduce((a, b) => a + b, 0) / sortedScores.length,
+        )
+      : null;
+    const medianScore = this.computeMedian(sortedScores);
+    const highestScore = sortedScores.length
+      ? sortedScores[sortedScores.length - 1]
+      : null;
+    const lowestScore = sortedScores.length ? sortedScores[0] : null;
+
+    // Cluster distribution
+    const clusterDistribution = {
+      belowExpectations: 0,
+      developing: 0,
+      onTrack: 0,
+      meetingExpectations: 0,
+    };
+    for (const r of ranked) {
+      if (r.cluster === 'Below Expectations')
+        clusterDistribution.belowExpectations++;
+      else if (r.cluster === 'Developing') clusterDistribution.developing++;
+      else if (r.cluster === 'On Track') clusterDistribution.onTrack++;
+      else if (r.cluster === 'Meeting Expectations')
+        clusterDistribution.meetingExpectations++;
+    }
+
+    // Apply optional filters
+    let result = ranked;
+    if (filters.cluster) {
+      result = result.filter((r) => r.cluster === filters.cluster);
+    }
+    if (filters.scoreRangeMin !== undefined) {
+      result = result.filter(
+        (r) => r.avgScore !== null && r.avgScore >= filters.scoreRangeMin!,
+      );
+    }
+    if (filters.scoreRangeMax !== undefined) {
+      result = result.filter(
+        (r) => r.avgScore !== null && r.avgScore <= filters.scoreRangeMax!,
+      );
+    }
+
+    return {
+      classLevel: { id: classLevel.id, name: classLevel.name },
+      academicTerm: { id: termEntity.id, termName: termEntity.termName },
+      subject: { id: subjectCatalogId, name: subjectName },
+      summary: {
+        totalStudents: classLevel.students.length,
+        classAverage,
+        medianScore,
+        highestScore,
+        lowestScore,
+      },
+      clusterDistribution,
+      students: result.map((r) => ({
+        studentId: r.studentId,
+        studentName: r.studentName,
+        classLevelName: classLevel.name,
+        subjectName,
+        aggregatedScore: r.avgScore,
+        rank: r.rank,
+        cluster: r.cluster,
+      })),
+    };
+  }
+
+  // ─── Student topic breakdown (Screen 2 detail) ──────────────────────────────
+
+  async getStudentTopicPerformance(
+    admin: SchoolAdmin,
+    studentId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+  ): Promise<StudentTopicPerformanceResponse> {
+    await this.ensureAdminCanAccessStudent(admin, studentId);
+
+    const student = await this.studentRepository.findOne({
+      where: { id: studentId },
+      relations: ['classLevels'],
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
+    const termEntity = await this.academicTermRepository.findOne({
+      where: { id: academicTermId },
+      relations: ['academicCalendar'],
+    });
+    if (!termEntity) throw new NotFoundException('Academic term not found');
+
+    const studentClassIds = student.classLevels.map((cl) => cl.id);
+
+    const emptyResponse = (
+      classLevelName: string,
+    ): StudentTopicPerformanceResponse => ({
+      student: {
+        id: student.id,
+        name: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
+        classLevelName,
+        overallAveragePercent: null,
+        cluster: null,
+      },
+      academicTerm: { id: termEntity.id, termName: termEntity.termName },
+      subject: { id: subjectCatalogId, name: '' },
+      topics: [],
+    });
+
+    if (!studentClassIds.length) return emptyResponse('');
+
+    // Fetch all submissions for the student's class(es) for this subject/term
+    const allSubs = await this.submissionRepository
+      .createQueryBuilder('sub')
+      .innerJoinAndSelect('sub.assignment', 'assignment')
+      .innerJoinAndSelect('assignment.topic', 'topic')
+      .innerJoinAndSelect('topic.subjectCatalog', 'catalog')
+      .leftJoinAndSelect('topic.academicTerm', 'topicTerm')
+      .innerJoinAndSelect('assignment.classLevel', 'assClass')
+      .innerJoinAndSelect('sub.student', 'subStudent')
+      .where('assignment.classLevel.id IN (:...classLevelIds)', {
+        classLevelIds: studentClassIds,
+      })
+      .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
+      .andWhere('catalog.school.id = :schoolId', { schoolId: admin.school.id })
+      .andWhere('sub.score IS NOT NULL')
+      .andWhere('assignment.maxScore > 0')
+      .getMany();
+
+    const termSubs = allSubs.filter(
+      (sub) => sub.assignment.topic.academicTerm?.id === academicTermId,
+    );
+
+    const subjectName = termSubs[0]?.assignment.topic.subjectCatalog.name ?? '';
+    const classLevelName =
+      termSubs.find((s) => s.student.id === studentId)?.assignment.classLevel
+        .name ?? '';
+
+    if (!termSubs.length) return emptyResponse(classLevelName);
+
+    // Group by topic → per-student averages
+    type TopicAccum = {
+      topicName: string;
+      assignmentIds: Set<string>;
+      perStudentScores: Map<string, number[]>;
+    };
+
+    const topicMap = new Map<string, TopicAccum>();
+
+    for (const sub of termSubs) {
+      const topicId = sub.assignment.topic.id;
+      let td = topicMap.get(topicId);
+      if (!td) {
+        td = {
+          topicName: sub.assignment.topic.name,
+          assignmentIds: new Set(),
+          perStudentScores: new Map(),
+        };
+        topicMap.set(topicId, td);
+      }
+      td.assignmentIds.add(sub.assignment.id);
+      const pct = this.round1(
+        Math.min(
+          100,
+          Math.max(
+            0,
+            (Number(sub.score) / Number(sub.assignment.maxScore)) * 100,
+          ),
+        ),
+      );
+      const arr = td.perStudentScores.get(sub.student.id) ?? [];
+      arr.push(pct);
+      td.perStudentScores.set(sub.student.id, arr);
+    }
+
+    const topics: StudentTopicPerformanceResponse['topics'] = [];
+
+    for (const [topicId, td] of topicMap) {
+      // Per-student averages for this topic
+      const studentTopicAvgs: number[] = [];
+      let thisStudentAvg: number | null = null;
+
+      for (const [sid, scores] of td.perStudentScores) {
+        const avg = this.round1(
+          scores.reduce((a, b) => a + b, 0) / scores.length,
+        );
+        studentTopicAvgs.push(avg);
+        if (sid === studentId) thisStudentAvg = avg;
+      }
+
+      const sorted = [...studentTopicAvgs].sort((a, b) => a - b);
+      const classAverage = sorted.length
+        ? this.round1(sorted.reduce((a, b) => a + b, 0) / sorted.length)
+        : null;
+      const median = this.computeMedian(sorted);
+      const range = sorted.length
+        ? { min: sorted[0], max: sorted[sorted.length - 1] }
+        : { min: null, max: null };
+
+      let cluster: ClusterName | null = null;
+      if (thisStudentAvg !== null && sorted.length > 0) {
+        const rank = sorted.filter((s) => s > thisStudentAvg!).length + 1;
+        const percentile = this.computePercentileRank(rank, sorted.length);
+        cluster = this.assignCluster(percentile);
+      }
+
+      topics.push({
+        topicId,
+        topicName: td.topicName,
+        studentAggregatedScore: thisStudentAvg,
+        classAverage,
+        range,
+        median,
+        testCount: td.assignmentIds.size,
+        cluster,
+      });
+    }
+
+    topics.sort((a, b) => a.topicName.localeCompare(b.topicName));
+
+    // Overall subject average and cluster for this student
+    const studentTopicScores = topics
+      .filter((t) => t.studentAggregatedScore !== null)
+      .map((t) => t.studentAggregatedScore!);
+    const overallAvg = studentTopicScores.length
+      ? this.round1(
+          studentTopicScores.reduce((a, b) => a + b, 0) /
+            studentTopicScores.length,
+        )
+      : null;
+
+    // Compare student's overall avg vs all students' overall subject avgs
+    const allStudentIds = new Set(termSubs.map((s) => s.student.id));
+    const allStudentSubjectAvgs: number[] = [];
+    for (const sid of allStudentIds) {
+      const subs = termSubs.filter((s) => s.student.id === sid);
+      if (subs.length) {
+        const avg = this.round1(
+          subs.reduce((a, s) => {
+            return (
+              a +
+              Math.min(
+                100,
+                Math.max(
+                  0,
+                  (Number(s.score) / Number(s.assignment.maxScore)) * 100,
+                ),
+              )
+            );
+          }, 0) / subs.length,
+        );
+        allStudentSubjectAvgs.push(avg);
+      }
+    }
+
+    let overallCluster: ClusterName | null = null;
+    if (overallAvg !== null && allStudentSubjectAvgs.length > 0) {
+      const sortedAll = [...allStudentSubjectAvgs].sort((a, b) => a - b);
+      const rank = sortedAll.filter((s) => s > overallAvg!).length + 1;
+      const percentile = this.computePercentileRank(rank, sortedAll.length);
+      overallCluster = this.assignCluster(percentile);
+    }
+
+    return {
+      student: {
+        id: student.id,
+        name: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
+        classLevelName,
+        overallAveragePercent: overallAvg,
+        cluster: overallCluster,
+      },
+      academicTerm: { id: termEntity.id, termName: termEntity.termName },
+      subject: { id: subjectCatalogId, name: subjectName },
+      topics,
     };
   }
 }
