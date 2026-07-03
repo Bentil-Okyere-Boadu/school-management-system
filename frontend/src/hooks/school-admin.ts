@@ -1052,7 +1052,6 @@ export const useSubmitAdmissionForm = () => {
       formData.append("studentPhone", studentData.phone);
       formData.append("studentStreetAddress", studentData.streetAddress);
       formData.append("studentBoxAddress", studentData.boxAddress);
-      formData.append("academicYear", studentData.academicYear);
       formData.append("forClassId", studentData.classFor);
       studentData.languagesSpoken.forEach((lang) => {
         formData.append("studentLanguages[]", lang); // format for sending a array of strings
