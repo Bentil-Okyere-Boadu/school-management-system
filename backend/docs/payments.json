@@ -111,6 +111,29 @@
         "tags": ["Payments"]
       }
     },
+    "/api/v1/payments/my-school/request-setup": {
+      "post": {
+        "operationId": "PaymentsController_requestPaymentSetup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPaymentSetupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Email platform team to request Hubtel / payments onboarding",
+        "tags": ["Payments"]
+      }
+    },
     "/api/v1/payments/my-school/{transactionId}/receipt": {
       "get": {
         "operationId": "PaymentsController_getSchoolReceipt",
@@ -337,6 +360,19 @@
   },
   "components": {
     "schemas": {
+      "RequestPaymentSetupDto": {
+        "type": "object",
+        "properties": {
+          "contactEmail": {
+            "type": "string",
+            "description": "Reply-to contact (optional)"
+          },
+          "note": {
+            "type": "string",
+            "description": "Message for the platform team (optional)"
+          }
+        }
+      },
       "StudentInitiatePaymentDto": {
         "type": "object",
         "properties": {
@@ -357,6 +393,10 @@
           "targetFeeStructureId": {
             "type": "string",
             "description": "Optional fee structure id to prioritise during allocation when payment is fulfilled"
+          },
+          "targetStudentFeeObligationId": {
+            "type": "string",
+            "description": "Optional student fee obligation id (specific period line); takes precedence for allocation"
           },
           "customerName": {
             "type": "string",

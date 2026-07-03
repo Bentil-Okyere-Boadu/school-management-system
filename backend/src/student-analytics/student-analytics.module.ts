@@ -9,6 +9,7 @@ import { StudentAnalyticsService } from './student-analytics.service';
 import { StudentAnalyticsAdminController } from './student-analytics-admin.controller';
 import { StudentAnalyticsTeacherController } from './student-analytics-teacher.controller';
 import { StudentAnalyticsStudentController } from './student-analytics-student.controller';
+import { StudentAnalyticsClassController } from './student-analytics-class.controller';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { StudentAnalyticsStudentController } from './student-analytics-student.c
     StudentAnalyticsAdminController,
     StudentAnalyticsTeacherController,
     StudentAnalyticsStudentController,
+    StudentAnalyticsClassController,
   ],
   providers: [StudentAnalyticsService],
 })

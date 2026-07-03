@@ -589,6 +589,171 @@
         },
         "tags": ["School Admin"]
       }
+    },
+    "/api/v1/school-admin/students/{studentId}/performance-analytics": {
+      "get": {
+        "description": "Returns subject → topic → assignment breakdown of a student's graded submission percentages for a given academic term.",
+        "operationId": "StudentAnalyticsAdminController_getPerformanceAnalytics",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "description": "UUID of the student",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the academic term",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get assignment-level performance analytics for a student",
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/students/{studentId}/topic-performance": {
+      "get": {
+        "description": "Returns topic-level aggregated scores, class-wide average/range/median, test count, and cluster assignment for a student in one subject for a given term. Used for the student detail page in Performance Breakdown.",
+        "operationId": "StudentAnalyticsAdminController_getTopicPerformance",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "description": "UUID of the student",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the academic term",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectCatalogId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the subject catalog entry",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get per-topic performance breakdown for a student in a subject",
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/classes/{classLevelId}/subject-performance": {
+      "get": {
+        "description": "Returns every student in the class with their aggregated assignment score, rank, and cluster for a given subject and term. Also includes summary stats (average, median, highest, lowest) and cluster distribution counts. Supports optional filtering by cluster name and score range.",
+        "operationId": "StudentAnalyticsClassController_getClassSubjectPerformance",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "description": "UUID of the class level",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the academic term",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectCatalogId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the subject catalog entry",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scoreRangeMax",
+            "required": false,
+            "in": "query",
+            "description": "Maximum aggregated score % (0–100)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "scoreRangeMin",
+            "required": false,
+            "in": "query",
+            "description": "Minimum aggregated score % (0–100)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "cluster",
+            "required": false,
+            "in": "query",
+            "description": "Filter by cluster name",
+            "schema": {
+              "enum": [
+                "Below Expectations",
+                "Developing",
+                "On Track",
+                "Meeting Expectations"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get subject performance breakdown for all students in a class",
+        "tags": ["School Admin"]
+      }
     }
   },
   "components": {
