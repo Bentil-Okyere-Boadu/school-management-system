@@ -213,3 +213,31 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+Backend docker-compose setup for generating the image and container
+- Replace the content of the docker-compose with this and execute "npm run db:up"
+---------------------------------------------------------------------------------
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15
+    container_name: school_db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: school_management_4os8
+      POSTGRES_USER: school_management_4os8_user
+      POSTGRES_PASSWORD: HOmHYc0DAiqFRjzU0YNJJPEsMWGFYicL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-network
+
+volumes:
+  postgres_data:
+
+networks:
+  backend-network:
