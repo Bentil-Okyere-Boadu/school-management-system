@@ -346,6 +346,7 @@ const PerformanceAnalyticsPage = () => {
           </p>
           <div className="mt-4">
             <ScoreDistributionChart
+              key={`${selectedClassId}-${selectedTermId}-${selectedSubjectId}-${selectedCluster}-${selectedScoreRange}`}
               students={students}
               median={summary?.medianScore ?? null}
               classAverage={summary?.classAverage ?? null}
