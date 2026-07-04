@@ -830,6 +830,69 @@ export interface StudentPerformanceAnalytics {
   }>;
 }
 
+/** Performance cluster buckets used across the analytics endpoints */
+export type PerformanceCluster =
+  | "Below Expectations"
+  | "Developing"
+  | "On Track"
+  | "Meeting Expectations";
+
+/** One ranked student row in the class subject-performance breakdown */
+export interface ClassSubjectPerformanceStudent {
+  studentId: string;
+  studentName: string;
+  classLevelName: string;
+  subjectName: string;
+  aggregatedScore: number | null;
+  rank: number;
+  cluster: PerformanceCluster | null;
+}
+
+export interface ClassSubjectPerformanceResponse {
+  classLevel: { id: string; name: string };
+  academicTerm: { id: string; termName: string };
+  subject: { id: string; name: string };
+  summary: {
+    totalStudents: number;
+    classAverage: number | null;
+    medianScore: number | null;
+    highestScore: number | null;
+    lowestScore: number | null;
+  };
+  clusterDistribution: {
+    belowExpectations: number;
+    developing: number;
+    onTrack: number;
+    meetingExpectations: number;
+  };
+  students: ClassSubjectPerformanceStudent[];
+}
+
+/** One topic row in the student topic-performance breakdown */
+export interface StudentTopicPerformanceTopic {
+  topicId: string;
+  topicName: string;
+  studentAggregatedScore: number | null;
+  classAverage: number | null;
+  range: { min: number | null; max: number | null };
+  median: number | null;
+  testCount: number;
+  cluster: PerformanceCluster | null;
+}
+
+export interface StudentTopicPerformanceResponse {
+  student: {
+    id: string;
+    name: string;
+    classLevelName: string;
+    overallAveragePercent: number | null;
+    cluster: PerformanceCluster | null;
+  };
+  academicTerm: { id: string; termName: string };
+  subject: { id: string; name: string };
+  topics: StudentTopicPerformanceTopic[];
+}
+
 export enum NotificationType {
   Admission = "admission",
   Attendance = "attendance",
