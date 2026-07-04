@@ -12,6 +12,8 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { GradingSystem } from 'src/grading-system/grading-system.entity';
+import { GradingSystemService } from 'src/grading-system/grading-system.service';
 
 export type ClusterName =
   | 'Below Expectations'
@@ -120,6 +122,7 @@ export class StudentAnalyticsService {
     private readonly academicTermRepository: Repository<AcademicTerm>,
     @InjectRepository(ClassLevel)
     private readonly classLevelRepository: Repository<ClassLevel>,
+    private readonly gradingSystemService: GradingSystemService,
   ) {}
 
   async getPerformanceAnalyticsForSchoolAdmin(
@@ -465,16 +468,62 @@ export class StudentAnalyticsService {
       : sortedAsc[mid];
   }
 
-  private computePercentileRank(rank: number, total: number): number {
-    if (total <= 1) return 100;
-    return Math.round(((total - rank) / (total - 1)) * 100);
+  private submissionPercent(score: number, maxScore: number): number {
+    return this.round1(
+      Math.min(100, Math.max(0, (Number(score) / Number(maxScore)) * 100)),
+    );
   }
 
-  private assignCluster(percentile: number): ClusterName {
-    if (percentile <= 25) return 'Below Expectations';
-    if (percentile <= 50) return 'Developing';
-    if (percentile <= 75) return 'On Track';
-    return 'Meeting Expectations';
+  private averageSubmissionPercents(percents: number[]): number | null {
+    if (!percents.length) return null;
+    return this.round1(
+      percents.reduce((a, b) => a + b, 0) / percents.length,
+    );
+  }
+
+  private async loadGradingBands(schoolId: string): Promise<GradingSystem[]> {
+    const bands = await this.gradingSystemService.findAllBySchool(schoolId);
+    if (bands.length) return bands;
+
+    return [
+      { grade: 'A', minRange: 80, maxRange: 100 },
+      { grade: 'B', minRange: 70, maxRange: 79 },
+      { grade: 'C', minRange: 60, maxRange: 69 },
+      { grade: 'D', minRange: 50, maxRange: 59 },
+      { grade: 'E', minRange: 45, maxRange: 49 },
+      { grade: 'F', minRange: 0, maxRange: 44 },
+    ] as GradingSystem[];
+  }
+
+  private gradeLetterToCluster(grade: string): ClusterName | null {
+    const normalized = grade.trim().toUpperCase();
+    if (['F', 'E'].includes(normalized)) return 'Below Expectations';
+    if (normalized === 'D') return 'Developing';
+    if (normalized === 'C') return 'On Track';
+    if (['B', 'A'].includes(normalized)) return 'Meeting Expectations';
+    return null;
+  }
+
+  /** Fallback for custom grade labels not in the standard A–F map. */
+  private clusterFromBandMinRange(minRange: number): ClusterName {
+    if (minRange >= 70) return 'Meeting Expectations';
+    if (minRange >= 60) return 'On Track';
+    if (minRange >= 50) return 'Developing';
+    return 'Below Expectations';
+  }
+
+  private assignClusterByScore(
+    score: number,
+    gradingBands: GradingSystem[],
+  ): ClusterName | null {
+    const band = gradingBands.find(
+      (gs) => score >= gs.minRange && score <= gs.maxRange,
+    );
+    if (!band) return null;
+    return (
+      this.gradeLetterToCluster(band.grade) ??
+      this.clusterFromBandMinRange(band.minRange)
+    );
   }
 
   // ─── Class-level subject performance (Screen 1) ─────────────────────────────
@@ -506,6 +555,8 @@ export class StudentAnalyticsService {
       throw new NotFoundException('Academic term not found');
     }
 
+    const gradingBands = await this.loadGradingBands(admin.school.id);
+
     const allSubs = await this.submissionRepository
       .createQueryBuilder('sub')
       .innerJoinAndSelect('sub.assignment', 'assignment')
@@ -531,14 +582,9 @@ export class StudentAnalyticsService {
     // Aggregate per-student average
     const studentScoreMap = new Map<string, number[]>();
     for (const sub of termSubs) {
-      const pct = this.round1(
-        Math.min(
-          100,
-          Math.max(
-            0,
-            (Number(sub.score) / Number(sub.assignment.maxScore)) * 100,
-          ),
-        ),
+      const pct = this.submissionPercent(
+        Number(sub.score),
+        Number(sub.assignment.maxScore),
       );
       const arr = studentScoreMap.get(sub.student.id) ?? [];
       arr.push(pct);
@@ -553,9 +599,7 @@ export class StudentAnalyticsService {
 
     const allEntries: Entry[] = classLevel.students.map((s) => {
       const scores = studentScoreMap.get(s.id);
-      const avg = scores?.length
-        ? this.round1(scores.reduce((a, b) => a + b, 0) / scores.length)
-        : null;
+      const avg = this.averageSubmissionPercents(scores ?? []);
       return {
         studentId: s.id,
         studentName: `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim(),
@@ -572,11 +616,11 @@ export class StudentAnalyticsService {
     type RankedEntry = Entry & { rank: number; cluster: ClusterName | null };
 
     const ranked: RankedEntry[] = [
-      ...withScores.map((e, idx) => {
-        const rank = idx + 1;
-        const percentile = this.computePercentileRank(rank, total);
-        return { ...e, rank, cluster: this.assignCluster(percentile) };
-      }),
+      ...withScores.map((e, idx) => ({
+        ...e,
+        rank: idx + 1,
+        cluster: this.assignClusterByScore(e.avgScore!, gradingBands),
+      })),
       ...withoutScores.map((e, idx) => ({
         ...e,
         rank: total + idx + 1,
@@ -696,20 +740,23 @@ export class StudentAnalyticsService {
 
     if (!studentClassIds.length) return emptyResponse('');
 
+    const gradingBands = await this.loadGradingBands(admin.school.id);
+
     // Fetch all submissions for the student's class(es) for this subject/term
     const allSubs = await this.submissionRepository
       .createQueryBuilder('sub')
       .innerJoinAndSelect('sub.assignment', 'assignment')
       .innerJoinAndSelect('assignment.topic', 'topic')
       .innerJoinAndSelect('topic.subjectCatalog', 'catalog')
+      .innerJoin('catalog.school', 'catalogSchool')
       .leftJoinAndSelect('topic.academicTerm', 'topicTerm')
       .innerJoinAndSelect('assignment.classLevel', 'assClass')
       .innerJoinAndSelect('sub.student', 'subStudent')
-      .where('assignment.classLevel.id IN (:...classLevelIds)', {
+      .where('assClass.id IN (:...classLevelIds)', {
         classLevelIds: studentClassIds,
       })
       .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
-      .andWhere('catalog.school.id = :schoolId', { schoolId: admin.school.id })
+      .andWhere('catalogSchool.id = :schoolId', { schoolId: admin.school.id })
       .andWhere('sub.score IS NOT NULL')
       .andWhere('assignment.maxScore > 0')
       .getMany();
@@ -746,14 +793,9 @@ export class StudentAnalyticsService {
         topicMap.set(topicId, td);
       }
       td.assignmentIds.add(sub.assignment.id);
-      const pct = this.round1(
-        Math.min(
-          100,
-          Math.max(
-            0,
-            (Number(sub.score) / Number(sub.assignment.maxScore)) * 100,
-          ),
-        ),
+      const pct = this.submissionPercent(
+        Number(sub.score),
+        Number(sub.assignment.maxScore),
       );
       const arr = td.perStudentScores.get(sub.student.id) ?? [];
       arr.push(pct);
@@ -768,9 +810,7 @@ export class StudentAnalyticsService {
       let thisStudentAvg: number | null = null;
 
       for (const [sid, scores] of td.perStudentScores) {
-        const avg = this.round1(
-          scores.reduce((a, b) => a + b, 0) / scores.length,
-        );
+        const avg = this.averageSubmissionPercents(scores)!;
         studentTopicAvgs.push(avg);
         if (sid === studentId) thisStudentAvg = avg;
       }
@@ -785,10 +825,8 @@ export class StudentAnalyticsService {
         : { min: null, max: null };
 
       let cluster: ClusterName | null = null;
-      if (thisStudentAvg !== null && sorted.length > 0) {
-        const rank = sorted.filter((s) => s > thisStudentAvg!).length + 1;
-        const percentile = this.computePercentileRank(rank, sorted.length);
-        cluster = this.assignCluster(percentile);
+      if (thisStudentAvg !== null) {
+        cluster = this.assignClusterByScore(thisStudentAvg, gradingBands);
       }
 
       topics.push({
@@ -805,48 +843,15 @@ export class StudentAnalyticsService {
 
     topics.sort((a, b) => a.topicName.localeCompare(b.topicName));
 
-    // Overall subject average and cluster for this student
-    const studentTopicScores = topics
-      .filter((t) => t.studentAggregatedScore !== null)
-      .map((t) => t.studentAggregatedScore!);
-    const overallAvg = studentTopicScores.length
-      ? this.round1(
-          studentTopicScores.reduce((a, b) => a + b, 0) /
-            studentTopicScores.length,
-        )
-      : null;
-
-    // Compare student's overall avg vs all students' overall subject avgs
-    const allStudentIds = new Set(termSubs.map((s) => s.student.id));
-    const allStudentSubjectAvgs: number[] = [];
-    for (const sid of allStudentIds) {
-      const subs = termSubs.filter((s) => s.student.id === sid);
-      if (subs.length) {
-        const avg = this.round1(
-          subs.reduce((a, s) => {
-            return (
-              a +
-              Math.min(
-                100,
-                Math.max(
-                  0,
-                  (Number(s.score) / Number(s.assignment.maxScore)) * 100,
-                ),
-              )
-            );
-          }, 0) / subs.length,
-        );
-        allStudentSubjectAvgs.push(avg);
-      }
-    }
-
-    let overallCluster: ClusterName | null = null;
-    if (overallAvg !== null && allStudentSubjectAvgs.length > 0) {
-      const sortedAll = [...allStudentSubjectAvgs].sort((a, b) => a - b);
-      const rank = sortedAll.filter((s) => s > overallAvg!).length + 1;
-      const percentile = this.computePercentileRank(rank, sortedAll.length);
-      overallCluster = this.assignCluster(percentile);
-    }
+    const studentSubs = termSubs.filter((s) => s.student.id === studentId);
+    const overallPercents = studentSubs.map((s) =>
+      this.submissionPercent(Number(s.score), Number(s.assignment.maxScore)),
+    );
+    const overallAvg = this.averageSubmissionPercents(overallPercents);
+    const overallCluster =
+      overallAvg !== null
+        ? this.assignClusterByScore(overallAvg, gradingBands)
+        : null;
 
     return {
       student: {
