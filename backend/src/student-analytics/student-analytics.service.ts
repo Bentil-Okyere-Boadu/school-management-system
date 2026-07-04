@@ -512,13 +512,38 @@ export class StudentAnalyticsService {
     return 'Below Expectations';
   }
 
+  /**
+   * Resolve a score to a grading band. Handles decimal averages that fall in
+   * gaps between integer band boundaries (e.g. 79.2 between B max 79 and A min 80).
+   */
+  private findGradingBandForScore(
+    score: number,
+    gradingBands: GradingSystem[],
+  ): GradingSystem | null {
+    if (!gradingBands.length) return null;
+
+    const clamped = Math.min(100, Math.max(0, score));
+
+    const exact = gradingBands.find(
+      (gs) => clamped >= gs.minRange && clamped <= gs.maxRange,
+    );
+    if (exact) return exact;
+
+    // Score sits in a gap — use the band with the highest minRange still <= score
+    const byMinDesc = [...gradingBands].sort((a, b) => b.minRange - a.minRange);
+    const lowerBand = byMinDesc.find((gs) => clamped >= gs.minRange);
+    if (lowerBand) return lowerBand;
+
+    // Below every band (should not happen when bands start at 0)
+    const byMinAsc = [...gradingBands].sort((a, b) => a.minRange - b.minRange);
+    return byMinAsc[0] ?? null;
+  }
+
   private assignClusterByScore(
     score: number,
     gradingBands: GradingSystem[],
   ): ClusterName | null {
-    const band = gradingBands.find(
-      (gs) => score >= gs.minRange && score <= gs.maxRange,
-    );
+    const band = this.findGradingBandForScore(score, gradingBands);
     if (!band) return null;
     return (
       this.gradeLetterToCluster(band.grade) ??
