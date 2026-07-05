@@ -39,7 +39,7 @@ export class StudentAnalyticsClassController {
   @ApiOperation({
     summary: 'Get subject performance breakdown for all students in a class',
     description:
-      'Returns every student in the class with their aggregated assignment score, rank, and cluster for a given subject and term. Also includes summary stats (average, median, highest, lowest) and cluster distribution counts. Supports optional filtering by cluster name and score range.',
+      'Returns every student in the class with their aggregated assignment score, rank, and performance cluster for a given subject and term. Clusters are derived from the school grading system bands (not class rank). Also includes summary stats (average, median, highest, lowest) and cluster distribution counts. Supports optional filtering by cluster name and score range.',
   })
   @ApiParam({ name: 'classLevelId', description: 'UUID of the class level' })
   @ApiQuery({

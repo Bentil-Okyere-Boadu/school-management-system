@@ -65,7 +65,7 @@ export class StudentAnalyticsAdminController {
   @ApiOperation({
     summary: 'Get per-topic performance breakdown for a student in a subject',
     description:
-      'Returns topic-level aggregated scores, class-wide average/range/median, test count, and cluster assignment for a student in one subject for a given term. Used for the student detail page in Performance Breakdown.',
+      'Returns topic-level aggregated scores, class-wide average/range/median, test count, and performance cluster for a student in one subject for a given term. Clusters are derived from the school grading system bands. Used for the student detail page in Performance Breakdown.',
   })
   @ApiParam({ name: 'studentId', description: 'UUID of the student' })
   @ApiQuery({

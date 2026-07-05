@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, PaymentsIcon, SubjectIcon, AssignmentIcon, PlannerIcon } from "@/utils/icons";
+import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, PaymentsIcon, SubjectIcon, AssignmentIcon, PlannerIcon, PerformanceIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
 import NotificationCard from "@/components/common/NotificationCard";
@@ -59,7 +59,11 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     {
       icon: PlannerIcon,
       label: "Planner"
-    }
+    },
+    {
+      icon: PerformanceIcon,
+      label: "Performance Analytics"
+    },
   ];
 
   useEffect(() => {
@@ -97,6 +101,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/admin/assignments" || pathname.startsWith("/admin/assignments/")) {
       setActiveMenuItem("Assignments");
+      setIsOverviewPage(true);
+    } else if (pathname === "/admin/performance-analytics" || pathname.startsWith("/admin/performance-analytics/")) {
+      setActiveMenuItem("Performance Analytics");
       setIsOverviewPage(true);
     } else if (pathname === "/admin/notifications") {
       setActiveMenuItem("Notifications");
@@ -170,6 +177,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Assignments":
         router.push("/admin/assignments");
+        break;
+      case "Performance Analytics":
+        router.push("/admin/performance-analytics");
         break;
       case "Planner":
         router.push("/admin/planner");

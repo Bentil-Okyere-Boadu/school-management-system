@@ -140,12 +140,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData }) => {
                     value={studentData.phone}
                 />
                 <InputField
-                    label="Anticipated Academic Year"
-                    isTransulent={true}
-                    readOnly={true}
-                    value={studentData.academicYear}
-                />
-                <InputField
                     label="For Class"
                     required
                     isTransulent={true}

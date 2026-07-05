@@ -32,14 +32,6 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
         }));
     }, []);
 
-  // Generates year options based on current year plus/minus 3
-  const currentYear = new Date().getFullYear();
-  const range = 3;
-  const academicYearOptions = Array.from({ length: range * 2 + 1 }, (_, i) => {
-  const year = currentYear - range + i;
-    return { value: String(year), label: String(year) };
-  });
-
   const classLevelOptions = classLevels?.map((cl) => ({
     value: cl.id,
     label: cl.name
@@ -220,12 +212,6 @@ const StudentInformationStep: React.FC<StudentInfoProps> = ({ data, setData, cla
                     required
                     isTransulent={false}
                     value={data.phone} onChange={(e) => handleChange('phone', e.target.value)}
-                />
-                <Select
-                    label="Anticipated Academic Year"
-                    data={academicYearOptions}
-                    value={data.academicYear}
-                    onChange={(value) =>  handleChange('academicYear', value ?? '')}
                 />
                 <div>
                     <Select
