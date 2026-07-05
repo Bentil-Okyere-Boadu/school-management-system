@@ -12,6 +12,64 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { GradingSystem } from 'src/grading-system/grading-system.entity';
+import { GradingSystemService } from 'src/grading-system/grading-system.service';
+
+export type ClusterName =
+  | 'Below Expectations'
+  | 'Developing'
+  | 'On Track'
+  | 'Meeting Expectations';
+
+export type ClassSubjectPerformanceResponse = {
+  classLevel: { id: string; name: string };
+  academicTerm: { id: string; termName: string };
+  subject: { id: string; name: string };
+  summary: {
+    totalStudents: number;
+    classAverage: number | null;
+    medianScore: number | null;
+    highestScore: number | null;
+    lowestScore: number | null;
+  };
+  clusterDistribution: {
+    belowExpectations: number;
+    developing: number;
+    onTrack: number;
+    meetingExpectations: number;
+  };
+  students: Array<{
+    studentId: string;
+    studentName: string;
+    classLevelName: string;
+    subjectName: string;
+    aggregatedScore: number | null;
+    rank: number;
+    cluster: ClusterName | null;
+  }>;
+};
+
+export type StudentTopicPerformanceResponse = {
+  student: {
+    id: string;
+    name: string;
+    classLevelName: string;
+    overallAveragePercent: number | null;
+    cluster: ClusterName | null;
+  };
+  academicTerm: { id: string; termName: string };
+  subject: { id: string; name: string };
+  topics: Array<{
+    topicId: string;
+    topicName: string;
+    studentAggregatedScore: number | null;
+    classAverage: number | null;
+    range: { min: number | null; max: number | null };
+    median: number | null;
+    testCount: number;
+    cluster: ClusterName | null;
+  }>;
+};
 
 /** One graded submission row under a curriculum topic */
 export type TopicAssignmentGradeDetail = {
@@ -64,6 +122,7 @@ export class StudentAnalyticsService {
     private readonly academicTermRepository: Repository<AcademicTerm>,
     @InjectRepository(ClassLevel)
     private readonly classLevelRepository: Repository<ClassLevel>,
+    private readonly gradingSystemService: GradingSystemService,
   ) {}
 
   async getPerformanceAnalyticsForSchoolAdmin(
@@ -392,6 +451,444 @@ export class StudentAnalyticsService {
         assignmentAveragePercent: assignmentAvg,
       },
       subjectAssignmentPerformance,
+    };
+  }
+
+  // ─── Cluster / stats helpers ────────────────────────────────────────────────
+
+  private round1(n: number): number {
+    return Math.round(n * 10) / 10;
+  }
+
+  private computeMedian(sortedAsc: number[]): number | null {
+    if (!sortedAsc.length) return null;
+    const mid = Math.floor(sortedAsc.length / 2);
+    return sortedAsc.length % 2 === 0
+      ? this.round1((sortedAsc[mid - 1] + sortedAsc[mid]) / 2)
+      : sortedAsc[mid];
+  }
+
+  private submissionPercent(score: number, maxScore: number): number {
+    return this.round1(
+      Math.min(100, Math.max(0, (Number(score) / Number(maxScore)) * 100)),
+    );
+  }
+
+  private averageSubmissionPercents(percents: number[]): number | null {
+    if (!percents.length) return null;
+    return this.round1(
+      percents.reduce((a, b) => a + b, 0) / percents.length,
+    );
+  }
+
+  private async loadGradingBands(schoolId: string): Promise<GradingSystem[]> {
+    const bands = await this.gradingSystemService.findAllBySchool(schoolId);
+    if (bands.length) return bands;
+
+    return [
+      { grade: 'A', minRange: 80, maxRange: 100 },
+      { grade: 'B', minRange: 70, maxRange: 79 },
+      { grade: 'C', minRange: 60, maxRange: 69 },
+      { grade: 'D', minRange: 50, maxRange: 59 },
+      { grade: 'E', minRange: 45, maxRange: 49 },
+      { grade: 'F', minRange: 0, maxRange: 44 },
+    ] as GradingSystem[];
+  }
+
+  private gradeLetterToCluster(grade: string): ClusterName | null {
+    const normalized = grade.trim().toUpperCase();
+    if (['F', 'E'].includes(normalized)) return 'Below Expectations';
+    if (normalized === 'D') return 'Developing';
+    if (normalized === 'C') return 'On Track';
+    if (['B', 'A'].includes(normalized)) return 'Meeting Expectations';
+    return null;
+  }
+
+  /** Fallback for custom grade labels not in the standard A–F map. */
+  private clusterFromBandMinRange(minRange: number): ClusterName {
+    if (minRange >= 70) return 'Meeting Expectations';
+    if (minRange >= 60) return 'On Track';
+    if (minRange >= 50) return 'Developing';
+    return 'Below Expectations';
+  }
+
+  /**
+   * Resolve a score to a grading band. Handles decimal averages that fall in
+   * gaps between integer band boundaries (e.g. 79.2 between B max 79 and A min 80).
+   */
+  private findGradingBandForScore(
+    score: number,
+    gradingBands: GradingSystem[],
+  ): GradingSystem | null {
+    if (!gradingBands.length) return null;
+
+    const clamped = Math.min(100, Math.max(0, score));
+
+    const exact = gradingBands.find(
+      (gs) => clamped >= gs.minRange && clamped <= gs.maxRange,
+    );
+    if (exact) return exact;
+
+    // Score sits in a gap — use the band with the highest minRange still <= score
+    const byMinDesc = [...gradingBands].sort((a, b) => b.minRange - a.minRange);
+    const lowerBand = byMinDesc.find((gs) => clamped >= gs.minRange);
+    if (lowerBand) return lowerBand;
+
+    // Below every band (should not happen when bands start at 0)
+    const byMinAsc = [...gradingBands].sort((a, b) => a.minRange - b.minRange);
+    return byMinAsc[0] ?? null;
+  }
+
+  private assignClusterByScore(
+    score: number,
+    gradingBands: GradingSystem[],
+  ): ClusterName | null {
+    const band = this.findGradingBandForScore(score, gradingBands);
+    if (!band) return null;
+    return (
+      this.gradeLetterToCluster(band.grade) ??
+      this.clusterFromBandMinRange(band.minRange)
+    );
+  }
+
+  // ─── Class-level subject performance (Screen 1) ─────────────────────────────
+
+  async getClassSubjectPerformance(
+    admin: SchoolAdmin,
+    classLevelId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+    filters: {
+      cluster?: ClusterName;
+      scoreRangeMin?: number;
+      scoreRangeMax?: number;
+    } = {},
+  ): Promise<ClassSubjectPerformanceResponse> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId, school: { id: admin.school.id } },
+      relations: ['students', 'school'],
+    });
+    if (!classLevel) {
+      throw new NotFoundException('Class not found');
+    }
+
+    const termEntity = await this.academicTermRepository.findOne({
+      where: { id: academicTermId },
+      relations: ['academicCalendar'],
+    });
+    if (!termEntity) {
+      throw new NotFoundException('Academic term not found');
+    }
+
+    const gradingBands = await this.loadGradingBands(admin.school.id);
+
+    const allSubs = await this.submissionRepository
+      .createQueryBuilder('sub')
+      .innerJoinAndSelect('sub.assignment', 'assignment')
+      .innerJoinAndSelect('assignment.classLevel', 'assClass')
+      .innerJoinAndSelect('assignment.topic', 'topic')
+      .innerJoinAndSelect('topic.subjectCatalog', 'catalog')
+      .innerJoin('catalog.school', 'catalogSchool')
+      .leftJoinAndSelect('topic.academicTerm', 'topicTerm')
+      .innerJoinAndSelect('sub.student', 'student')
+      .where('assClass.id = :classLevelId', { classLevelId })
+      .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
+      .andWhere('catalogSchool.id = :schoolId', { schoolId: admin.school.id })
+      .andWhere('sub.score IS NOT NULL')
+      .andWhere('assignment.maxScore > 0')
+      .getMany();
+
+    const subjectName = allSubs[0]?.assignment.topic.subjectCatalog.name ?? '';
+
+    const termSubs = allSubs.filter(
+      (sub) => sub.assignment.topic.academicTerm?.id === academicTermId,
+    );
+
+    // Aggregate per-student average
+    const studentScoreMap = new Map<string, number[]>();
+    for (const sub of termSubs) {
+      const pct = this.submissionPercent(
+        Number(sub.score),
+        Number(sub.assignment.maxScore),
+      );
+      const arr = studentScoreMap.get(sub.student.id) ?? [];
+      arr.push(pct);
+      studentScoreMap.set(sub.student.id, arr);
+    }
+
+    type Entry = {
+      studentId: string;
+      studentName: string;
+      avgScore: number | null;
+    };
+
+    const allEntries: Entry[] = classLevel.students.map((s) => {
+      const scores = studentScoreMap.get(s.id);
+      const avg = this.averageSubmissionPercents(scores ?? []);
+      return {
+        studentId: s.id,
+        studentName: `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim(),
+        avgScore: avg,
+      };
+    });
+
+    const withScores = allEntries
+      .filter((e) => e.avgScore !== null)
+      .sort((a, b) => b.avgScore! - a.avgScore!);
+    const withoutScores = allEntries.filter((e) => e.avgScore === null);
+
+    const total = withScores.length;
+    type RankedEntry = Entry & { rank: number; cluster: ClusterName | null };
+
+    const ranked: RankedEntry[] = [
+      ...withScores.map((e, idx) => ({
+        ...e,
+        rank: idx + 1,
+        cluster: this.assignClusterByScore(e.avgScore!, gradingBands),
+      })),
+      ...withoutScores.map((e, idx) => ({
+        ...e,
+        rank: total + idx + 1,
+        cluster: null as ClusterName | null,
+      })),
+    ];
+
+    // Summary stats (scored students only)
+    const sortedScores = withScores
+      .map((e) => e.avgScore!)
+      .sort((a, b) => a - b);
+    const classAverage = sortedScores.length
+      ? this.round1(
+          sortedScores.reduce((a, b) => a + b, 0) / sortedScores.length,
+        )
+      : null;
+    const medianScore = this.computeMedian(sortedScores);
+    const highestScore = sortedScores.length
+      ? sortedScores[sortedScores.length - 1]
+      : null;
+    const lowestScore = sortedScores.length ? sortedScores[0] : null;
+
+    // Cluster distribution
+    const clusterDistribution = {
+      belowExpectations: 0,
+      developing: 0,
+      onTrack: 0,
+      meetingExpectations: 0,
+    };
+    for (const r of ranked) {
+      if (r.cluster === 'Below Expectations')
+        clusterDistribution.belowExpectations++;
+      else if (r.cluster === 'Developing') clusterDistribution.developing++;
+      else if (r.cluster === 'On Track') clusterDistribution.onTrack++;
+      else if (r.cluster === 'Meeting Expectations')
+        clusterDistribution.meetingExpectations++;
+    }
+
+    // Apply optional filters
+    let result = ranked;
+    if (filters.cluster) {
+      result = result.filter((r) => r.cluster === filters.cluster);
+    }
+    if (filters.scoreRangeMin !== undefined) {
+      result = result.filter(
+        (r) => r.avgScore !== null && r.avgScore >= filters.scoreRangeMin!,
+      );
+    }
+    if (filters.scoreRangeMax !== undefined) {
+      result = result.filter(
+        (r) => r.avgScore !== null && r.avgScore <= filters.scoreRangeMax!,
+      );
+    }
+
+    return {
+      classLevel: { id: classLevel.id, name: classLevel.name },
+      academicTerm: { id: termEntity.id, termName: termEntity.termName },
+      subject: { id: subjectCatalogId, name: subjectName },
+      summary: {
+        totalStudents: classLevel.students.length,
+        classAverage,
+        medianScore,
+        highestScore,
+        lowestScore,
+      },
+      clusterDistribution,
+      students: result.map((r) => ({
+        studentId: r.studentId,
+        studentName: r.studentName,
+        classLevelName: classLevel.name,
+        subjectName,
+        aggregatedScore: r.avgScore,
+        rank: r.rank,
+        cluster: r.cluster,
+      })),
+    };
+  }
+
+  // ─── Student topic breakdown (Screen 2 detail) ──────────────────────────────
+
+  async getStudentTopicPerformance(
+    admin: SchoolAdmin,
+    studentId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+  ): Promise<StudentTopicPerformanceResponse> {
+    await this.ensureAdminCanAccessStudent(admin, studentId);
+
+    const student = await this.studentRepository.findOne({
+      where: { id: studentId },
+      relations: ['classLevels'],
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
+    const termEntity = await this.academicTermRepository.findOne({
+      where: { id: academicTermId },
+      relations: ['academicCalendar'],
+    });
+    if (!termEntity) throw new NotFoundException('Academic term not found');
+
+    const studentClassIds = student.classLevels.map((cl) => cl.id);
+
+    const emptyResponse = (
+      classLevelName: string,
+    ): StudentTopicPerformanceResponse => ({
+      student: {
+        id: student.id,
+        name: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
+        classLevelName,
+        overallAveragePercent: null,
+        cluster: null,
+      },
+      academicTerm: { id: termEntity.id, termName: termEntity.termName },
+      subject: { id: subjectCatalogId, name: '' },
+      topics: [],
+    });
+
+    if (!studentClassIds.length) return emptyResponse('');
+
+    const gradingBands = await this.loadGradingBands(admin.school.id);
+
+    // Fetch all submissions for the student's class(es) for this subject/term
+    const allSubs = await this.submissionRepository
+      .createQueryBuilder('sub')
+      .innerJoinAndSelect('sub.assignment', 'assignment')
+      .innerJoinAndSelect('assignment.topic', 'topic')
+      .innerJoinAndSelect('topic.subjectCatalog', 'catalog')
+      .innerJoin('catalog.school', 'catalogSchool')
+      .leftJoinAndSelect('topic.academicTerm', 'topicTerm')
+      .innerJoinAndSelect('assignment.classLevel', 'assClass')
+      .innerJoinAndSelect('sub.student', 'subStudent')
+      .where('assClass.id IN (:...classLevelIds)', {
+        classLevelIds: studentClassIds,
+      })
+      .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
+      .andWhere('catalogSchool.id = :schoolId', { schoolId: admin.school.id })
+      .andWhere('sub.score IS NOT NULL')
+      .andWhere('assignment.maxScore > 0')
+      .getMany();
+
+    const termSubs = allSubs.filter(
+      (sub) => sub.assignment.topic.academicTerm?.id === academicTermId,
+    );
+
+    const subjectName = termSubs[0]?.assignment.topic.subjectCatalog.name ?? '';
+    const classLevelName =
+      termSubs.find((s) => s.student.id === studentId)?.assignment.classLevel
+        .name ?? '';
+
+    if (!termSubs.length) return emptyResponse(classLevelName);
+
+    // Group by topic → per-student averages
+    type TopicAccum = {
+      topicName: string;
+      assignmentIds: Set<string>;
+      perStudentScores: Map<string, number[]>;
+    };
+
+    const topicMap = new Map<string, TopicAccum>();
+
+    for (const sub of termSubs) {
+      const topicId = sub.assignment.topic.id;
+      let td = topicMap.get(topicId);
+      if (!td) {
+        td = {
+          topicName: sub.assignment.topic.name,
+          assignmentIds: new Set(),
+          perStudentScores: new Map(),
+        };
+        topicMap.set(topicId, td);
+      }
+      td.assignmentIds.add(sub.assignment.id);
+      const pct = this.submissionPercent(
+        Number(sub.score),
+        Number(sub.assignment.maxScore),
+      );
+      const arr = td.perStudentScores.get(sub.student.id) ?? [];
+      arr.push(pct);
+      td.perStudentScores.set(sub.student.id, arr);
+    }
+
+    const topics: StudentTopicPerformanceResponse['topics'] = [];
+
+    for (const [topicId, td] of topicMap) {
+      // Per-student averages for this topic
+      const studentTopicAvgs: number[] = [];
+      let thisStudentAvg: number | null = null;
+
+      for (const [sid, scores] of td.perStudentScores) {
+        const avg = this.averageSubmissionPercents(scores)!;
+        studentTopicAvgs.push(avg);
+        if (sid === studentId) thisStudentAvg = avg;
+      }
+
+      const sorted = [...studentTopicAvgs].sort((a, b) => a - b);
+      const classAverage = sorted.length
+        ? this.round1(sorted.reduce((a, b) => a + b, 0) / sorted.length)
+        : null;
+      const median = this.computeMedian(sorted);
+      const range = sorted.length
+        ? { min: sorted[0], max: sorted[sorted.length - 1] }
+        : { min: null, max: null };
+
+      let cluster: ClusterName | null = null;
+      if (thisStudentAvg !== null) {
+        cluster = this.assignClusterByScore(thisStudentAvg, gradingBands);
+      }
+
+      topics.push({
+        topicId,
+        topicName: td.topicName,
+        studentAggregatedScore: thisStudentAvg,
+        classAverage,
+        range,
+        median,
+        testCount: td.assignmentIds.size,
+        cluster,
+      });
+    }
+
+    topics.sort((a, b) => a.topicName.localeCompare(b.topicName));
+
+    const studentSubs = termSubs.filter((s) => s.student.id === studentId);
+    const overallPercents = studentSubs.map((s) =>
+      this.submissionPercent(Number(s.score), Number(s.assignment.maxScore)),
+    );
+    const overallAvg = this.averageSubmissionPercents(overallPercents);
+    const overallCluster =
+      overallAvg !== null
+        ? this.assignClusterByScore(overallAvg, gradingBands)
+        : null;
+
+    return {
+      student: {
+        id: student.id,
+        name: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
+        classLevelName,
+        overallAveragePercent: overallAvg,
+        cluster: overallCluster,
+      },
+      academicTerm: { id: termEntity.id, termName: termEntity.termName },
+      subject: { id: subjectCatalogId, name: subjectName },
+      topics,
     };
   }
 }

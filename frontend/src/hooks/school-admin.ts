@@ -24,6 +24,9 @@ import {
   Subject,
   AssignSubjectTeacherPayload,
   StudentPerformanceAnalytics,
+  ClassSubjectPerformanceResponse,
+  StudentTopicPerformanceResponse,
+  PerformanceCluster,
   StudentResultsResponse,
   Notification,
   Reminder,
@@ -1052,7 +1055,6 @@ export const useSubmitAdmissionForm = () => {
       formData.append("studentPhone", studentData.phone);
       formData.append("studentStreetAddress", studentData.streetAddress);
       formData.append("studentBoxAddress", studentData.boxAddress);
-      formData.append("academicYear", studentData.academicYear);
       formData.append("forClassId", studentData.classFor);
       studentData.languagesSpoken.forEach((lang) => {
         formData.append("studentLanguages[]", lang); // format for sending a array of strings
@@ -1497,6 +1499,89 @@ export const useAdminStudentPerformanceAnalytics = (
     (data as { data: StudentPerformanceAnalytics })?.data ?? null;
 
   return { analytics, isLoading, refetch };
+};
+
+export type ClassSubjectPerformanceFilters = {
+  classLevelId: string;
+  academicTermId: string;
+  subjectCatalogId: string;
+  cluster?: PerformanceCluster;
+  scoreRangeMin?: number;
+  scoreRangeMax?: number;
+};
+
+export const useGetClassSubjectPerformance = (
+  filters: ClassSubjectPerformanceFilters,
+  options?: { enabled?: boolean }
+) => {
+  const {
+    classLevelId,
+    academicTermId,
+    subjectCatalogId,
+    cluster,
+    scoreRangeMin,
+    scoreRangeMax,
+  } = filters;
+
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["classSubjectPerformance", filters],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("academicTermId", academicTermId);
+      params.set("subjectCatalogId", subjectCatalogId);
+      if (cluster) params.set("cluster", cluster);
+      if (scoreRangeMin !== undefined)
+        params.set("scoreRangeMin", String(scoreRangeMin));
+      if (scoreRangeMax !== undefined)
+        params.set("scoreRangeMax", String(scoreRangeMax));
+
+      return customAPI.get(
+        `/school-admin/classes/${classLevelId}/subject-performance?${params.toString()}`
+      );
+    },
+    enabled:
+      (options?.enabled ?? true) &&
+      Boolean(classLevelId && academicTermId && subjectCatalogId),
+    refetchOnWindowFocus: true,
+  });
+
+  const performance =
+    (data?.data as ClassSubjectPerformanceResponse) ?? null;
+
+  return { performance, isLoading, isFetching, refetch };
+};
+
+export const useGetStudentTopicPerformance = (
+  studentId: string,
+  academicTermId: string,
+  subjectCatalogId: string,
+  options?: { enabled?: boolean }
+) => {
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: [
+      "studentTopicPerformance",
+      studentId,
+      academicTermId,
+      subjectCatalogId,
+    ],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("academicTermId", academicTermId);
+      params.set("subjectCatalogId", subjectCatalogId);
+      return customAPI.get(
+        `/school-admin/students/${studentId}/topic-performance?${params.toString()}`
+      );
+    },
+    enabled:
+      (options?.enabled ?? true) &&
+      Boolean(studentId && academicTermId && subjectCatalogId),
+    refetchOnWindowFocus: true,
+  });
+
+  const topicPerformance =
+    (data?.data as StudentTopicPerformanceResponse) ?? null;
+
+  return { topicPerformance, isLoading, isFetching, refetch };
 };
 
 export const useGetNotifications = (

@@ -5,10 +5,12 @@ import { AssignmentSubmission } from 'src/student/entities/assignment-submission
 import { Subject } from 'src/subject/subject.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { GradingSystemModule } from 'src/grading-system/grading-system.module';
 import { StudentAnalyticsService } from './student-analytics.service';
 import { StudentAnalyticsAdminController } from './student-analytics-admin.controller';
 import { StudentAnalyticsTeacherController } from './student-analytics-teacher.controller';
 import { StudentAnalyticsStudentController } from './student-analytics-student.controller';
+import { StudentAnalyticsClassController } from './student-analytics-class.controller';
 
 @Module({
   imports: [
@@ -19,11 +21,13 @@ import { StudentAnalyticsStudentController } from './student-analytics-student.c
       AcademicTerm,
       ClassLevel,
     ]),
+    GradingSystemModule,
   ],
   controllers: [
     StudentAnalyticsAdminController,
     StudentAnalyticsTeacherController,
     StudentAnalyticsStudentController,
+    StudentAnalyticsClassController,
   ],
   providers: [StudentAnalyticsService],
 })

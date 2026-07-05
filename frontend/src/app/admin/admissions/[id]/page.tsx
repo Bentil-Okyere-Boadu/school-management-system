@@ -207,12 +207,6 @@ const SingleAdmissionPage: React.FC = () => {
           />
 
           <InputField
-              label="Anticipated Academic Year"
-              isTransulent={true}
-              readOnly={true}
-              value={admissionData?.academicYear}
-          />
-          <InputField
               label="For Class"
               isTransulent={true}
               readOnly={true}
