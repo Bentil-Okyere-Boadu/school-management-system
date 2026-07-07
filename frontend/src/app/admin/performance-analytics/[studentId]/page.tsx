@@ -30,6 +30,12 @@ const formatRange = (min: number | null, max: number | null) => {
   return `${Math.round(min)}%–${Math.round(max)}%`;
 };
 
+function sanitizeReturnPath(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/admin/performance-analytics")) return null;
+  if (raw.includes("//") || raw.includes("://")) return null;
+  return raw;
+}
+
 const StudentPerformanceDetailPage = () => {
   const router = useRouter();
   const params = useParams();
@@ -38,6 +44,9 @@ const StudentPerformanceDetailPage = () => {
   const studentId = params.studentId as string;
   const academicTermId = searchParams.get("academicTermId") ?? "";
   const subjectCatalogId = searchParams.get("subjectCatalogId") ?? "";
+  const backHref =
+    sanitizeReturnPath(searchParams.get("returnPath")) ??
+    "/admin/performance-analytics";
 
   const paramsReady = Boolean(studentId && academicTermId && subjectCatalogId);
 
@@ -67,7 +76,7 @@ const StudentPerformanceDetailPage = () => {
   const backButton = (
     <button
       type="button"
-      onClick={() => router.back()}
+      onClick={() => router.push(backHref)}
       className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:underline transition-colors cursor-pointer mb-4"
     >
       <IconArrowLeft size={16} className="mt-1" />

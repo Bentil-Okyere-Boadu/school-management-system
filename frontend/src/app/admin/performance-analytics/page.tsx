@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge, Combobox, Select } from "@mantine/core";
 import {
   IconActivity,
@@ -81,16 +81,65 @@ const filterIcon = (
   <IconFilter size={16} className="text-zinc-400" aria-hidden />
 );
 
+const PA = {
+  classLevel: "classLevelId",
+  term: "academicTermId",
+  subject: "subjectCatalogId",
+  cluster: "cluster",
+  scoreRange: "scoreRange",
+} as const;
+
+type PerformanceFilters = {
+  selectedClassId: string | null;
+  selectedTermId: string | null;
+  selectedSubjectId: string | null;
+  selectedCluster: string;
+  selectedScoreRange: string;
+};
+
+function buildFilterSearchParams(filters: PerformanceFilters): URLSearchParams {
+  const p = new URLSearchParams();
+  if (filters.selectedClassId) p.set(PA.classLevel, filters.selectedClassId);
+  if (filters.selectedTermId) p.set(PA.term, filters.selectedTermId);
+  if (filters.selectedSubjectId) p.set(PA.subject, filters.selectedSubjectId);
+  if (filters.selectedCluster) p.set(PA.cluster, filters.selectedCluster);
+  if (filters.selectedScoreRange) p.set(PA.scoreRange, filters.selectedScoreRange);
+  return p;
+}
+
+function filtersMatchUrl(
+  filters: PerformanceFilters,
+  searchParams: URLSearchParams
+): boolean {
+  return (
+    (searchParams.get(PA.classLevel) ?? "") === (filters.selectedClassId ?? "") &&
+    (searchParams.get(PA.term) ?? "") === (filters.selectedTermId ?? "") &&
+    (searchParams.get(PA.subject) ?? "") === (filters.selectedSubjectId ?? "") &&
+    (searchParams.get(PA.cluster) ?? "") === filters.selectedCluster &&
+    (searchParams.get(PA.scoreRange) ?? "") === filters.selectedScoreRange
+  );
+}
+
 const PerformanceAnalyticsPage = () => {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-  const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(
-    null
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(
+    () => searchParams.get(PA.classLevel) || null
   );
-  const [selectedCluster, setSelectedCluster] = useState<string>("");
-  const [selectedScoreRange, setSelectedScoreRange] = useState<string>("");
+  const [selectedTermId, setSelectedTermId] = useState<string | null>(
+    () => searchParams.get(PA.term) || null
+  );
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(
+    () => searchParams.get(PA.subject) || null
+  );
+  const [selectedCluster, setSelectedCluster] = useState<string>(
+    () => searchParams.get(PA.cluster) ?? ""
+  );
+  const [selectedScoreRange, setSelectedScoreRange] = useState<string>(
+    () => searchParams.get(PA.scoreRange) ?? ""
+  );
 
   const { classLevels } = useGetClassLevels("");
   const { subjects } = useGetAllSubjects();
@@ -102,13 +151,84 @@ const PerformanceAnalyticsPage = () => {
   );
   const latestTermId = sortedTerms[0]?.id;
 
-  // Default the term to the latest available term.
+  const currentFilters = useMemo<PerformanceFilters>(
+    () => ({
+      selectedClassId,
+      selectedTermId,
+      selectedSubjectId,
+      selectedCluster,
+      selectedScoreRange,
+    }),
+    [
+      selectedClassId,
+      selectedTermId,
+      selectedSubjectId,
+      selectedCluster,
+      selectedScoreRange,
+    ]
+  );
+
+  const replaceFiltersUrl = useCallback(
+    (next: PerformanceFilters) => {
+      if (filtersMatchUrl(next, searchParams)) return;
+      const queryString = buildFilterSearchParams(next).toString();
+      router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const updateFilters = useCallback(
+    (partial: Partial<PerformanceFilters>) => {
+      const next = { ...currentFilters, ...partial };
+      if (partial.selectedClassId !== undefined)
+        setSelectedClassId(partial.selectedClassId);
+      if (partial.selectedTermId !== undefined)
+        setSelectedTermId(partial.selectedTermId);
+      if (partial.selectedSubjectId !== undefined)
+        setSelectedSubjectId(partial.selectedSubjectId);
+      if (partial.selectedCluster !== undefined)
+        setSelectedCluster(partial.selectedCluster);
+      if (partial.selectedScoreRange !== undefined)
+        setSelectedScoreRange(partial.selectedScoreRange);
+      
+      replaceFiltersUrl(next);
+    },
+    [currentFilters, replaceFiltersUrl]
+  );
+
+  useEffect(() => {
+    setSelectedClassId(searchParams.get(PA.classLevel) || null);
+    setSelectedTermId(searchParams.get(PA.term) || null);
+    setSelectedSubjectId(searchParams.get(PA.subject) || null);
+    setSelectedCluster(searchParams.get(PA.cluster) ?? "");
+    setSelectedScoreRange(searchParams.get(PA.scoreRange) ?? "");
+  }, [searchParams]);
+
+  const buildOverviewUrl = useCallback(() => {
+    const queryString = buildFilterSearchParams(currentFilters).toString();
+    return `${pathname}${queryString ? `?${queryString}` : ""}`;
+  }, [currentFilters, pathname]);
+
+  // Default the term to the latest available term when URL/state has no valid term.
   useEffect(() => {
     if (sortedTerms.length === 0) return;
-    setSelectedTermId((prev) => {
-      if (prev && sortedTerms.some((t) => t.id === prev)) return prev;
-      return sortedTerms[0].id;
-    });
+
+    const urlTerm = searchParams.get(PA.term) ?? "";
+    let nextTerm = "";
+    if (urlTerm && sortedTerms.some((t) => t.id === urlTerm)) {
+      nextTerm = urlTerm;
+    } else if (
+      selectedTermId &&
+      sortedTerms.some((t) => t.id === selectedTermId)
+    ) {
+      nextTerm = selectedTermId;
+    } else {
+      nextTerm = sortedTerms[0].id;
+    }
+
+    const next = { ...currentFilters, selectedTermId: nextTerm };
+    if (nextTerm !== selectedTermId) setSelectedTermId(nextTerm);
+    replaceFiltersUrl(next);
   }, [sortedTerms]);
 
   const classOptions = useMemo(
@@ -128,22 +248,48 @@ const PerformanceAnalyticsPage = () => {
     [subjects]
   );
 
-  // Default the class to the first available class.
+  // Default the class to the first available class when URL/state has no valid class.
   useEffect(() => {
     if (classOptions.length === 0) return;
-    setSelectedClassId((prev) => {
-      if (prev && classOptions.some((c) => c.value === prev)) return prev;
-      return classOptions[0].value;
-    });
+
+    const urlClass = searchParams.get(PA.classLevel) ?? "";
+    let nextClass: string;
+    if (urlClass && classOptions.some((c) => c.value === urlClass)) {
+      nextClass = urlClass;
+    } else if (
+      selectedClassId &&
+      classOptions.some((c) => c.value === selectedClassId)
+    ) {
+      nextClass = selectedClassId;
+    } else {
+      nextClass = classOptions[0].value;
+    }
+
+    const next = { ...currentFilters, selectedClassId: nextClass };
+    if (nextClass !== selectedClassId) setSelectedClassId(nextClass);
+    replaceFiltersUrl(next);
   }, [classOptions]);
 
-  // Default the subject to the first available subject.
+  // Default the subject to the first available subject when URL/state has no valid subject.
   useEffect(() => {
     if (subjectOptions.length === 0) return;
-    setSelectedSubjectId((prev) => {
-      if (prev && subjectOptions.some((s) => s.value === prev)) return prev;
-      return subjectOptions[0].value;
-    });
+
+    const urlSubject = searchParams.get(PA.subject) ?? "";
+    let nextSubject: string;
+    if (urlSubject && subjectOptions.some((s) => s.value === urlSubject)) {
+      nextSubject = urlSubject;
+    } else if (
+      selectedSubjectId &&
+      subjectOptions.some((s) => s.value === selectedSubjectId)
+    ) {
+      nextSubject = selectedSubjectId;
+    } else {
+      nextSubject = subjectOptions[0].value;
+    }
+
+    const next = { ...currentFilters, selectedSubjectId: nextSubject };
+    if (nextSubject !== selectedSubjectId) setSelectedSubjectId(nextSubject);
+    replaceFiltersUrl(next);
   }, [subjectOptions]);
 
   const termSelectData = useMemo(
@@ -360,10 +506,13 @@ const PerformanceAnalyticsPage = () => {
             isLoading={isFetching && !isLoading}
             onRowAction={(studentId) => {
               const params = new URLSearchParams();
-              if (selectedTermId)
+              if (selectedTermId){
                 params.set("academicTermId", selectedTermId);
-              if (selectedSubjectId)
+              }
+              if (selectedSubjectId){
                 params.set("subjectCatalogId", selectedSubjectId);
+              }
+              params.set("returnPath", buildOverviewUrl());
               router.push(
                 `/admin/performance-analytics/${studentId}?${params.toString()}`
               );
@@ -394,7 +543,7 @@ const PerformanceAnalyticsPage = () => {
               placeholder="Select class"
               data={classOptions}
               value={selectedClassId}
-              onChange={setSelectedClassId}
+              onChange={(v) => updateFilters({ selectedClassId: v })}
               searchable
               nothingFoundMessage="No classes"
             />
@@ -407,7 +556,7 @@ const PerformanceAnalyticsPage = () => {
               }
               data={termSelectData}
               value={selectedTermId}
-              onChange={setSelectedTermId}
+              onChange={(v) => updateFilters({ selectedTermId: v })}
               searchable
               disabled={sortedTerms.length === 0}
               rightSection={termSelectRightSection}
@@ -420,7 +569,7 @@ const PerformanceAnalyticsPage = () => {
               placeholder="Select subject"
               data={subjectOptions}
               value={selectedSubjectId}
-              onChange={setSelectedSubjectId}
+              onChange={(v) => updateFilters({ selectedSubjectId: v })}
               searchable
               nothingFoundMessage="No subjects"
             />
@@ -430,7 +579,7 @@ const PerformanceAnalyticsPage = () => {
               label="Cluster"
               data={CLUSTER_OPTIONS}
               value={selectedCluster}
-              onChange={(v) => setSelectedCluster(v ?? "")}
+              onChange={(v) => updateFilters({ selectedCluster: v ?? "" })}
               leftSection={filterIcon}
               allowDeselect={false}
             />
@@ -443,7 +592,7 @@ const PerformanceAnalyticsPage = () => {
                 label: o.label,
               }))}
               value={selectedScoreRange}
-              onChange={(v) => setSelectedScoreRange(v ?? "")}
+              onChange={(v) => updateFilters({ selectedScoreRange: v ?? "" })}
               leftSection={filterIcon}
               allowDeselect={false}
             />
