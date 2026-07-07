@@ -171,13 +171,13 @@ const PerformanceAnalyticsPage = () => {
   const replaceFiltersUrl = useCallback(
     (next: PerformanceFilters) => {
       if (filtersMatchUrl(next, searchParams)) return;
-      const qs = buildFilterSearchParams(next).toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      const queryString = buildFilterSearchParams(next).toString();
+      router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, { scroll: false });
     },
     [pathname, router, searchParams]
   );
 
-  const patch = useCallback(
+  const updateFilters = useCallback(
     (partial: Partial<PerformanceFilters>) => {
       const next = { ...currentFilters, ...partial };
       if (partial.selectedClassId !== undefined)
@@ -205,8 +205,8 @@ const PerformanceAnalyticsPage = () => {
   }, [searchParams]);
 
   const buildOverviewUrl = useCallback(() => {
-    const qs = buildFilterSearchParams(currentFilters).toString();
-    return `${pathname}${qs ? `?${qs}` : ""}`;
+    const queryString = buildFilterSearchParams(currentFilters).toString();
+    return `${pathname}${queryString ? `?${queryString}` : ""}`;
   }, [currentFilters, pathname]);
 
   // Default the term to the latest available term when URL/state has no valid term.
@@ -543,7 +543,7 @@ const PerformanceAnalyticsPage = () => {
               placeholder="Select class"
               data={classOptions}
               value={selectedClassId}
-              onChange={(v) => patch({ selectedClassId: v })}
+              onChange={(v) => updateFilters({ selectedClassId: v })}
               searchable
               nothingFoundMessage="No classes"
             />
@@ -556,7 +556,7 @@ const PerformanceAnalyticsPage = () => {
               }
               data={termSelectData}
               value={selectedTermId}
-              onChange={(v) => patch({ selectedTermId: v })}
+              onChange={(v) => updateFilters({ selectedTermId: v })}
               searchable
               disabled={sortedTerms.length === 0}
               rightSection={termSelectRightSection}
@@ -569,7 +569,7 @@ const PerformanceAnalyticsPage = () => {
               placeholder="Select subject"
               data={subjectOptions}
               value={selectedSubjectId}
-              onChange={(v) => patch({ selectedSubjectId: v })}
+              onChange={(v) => updateFilters({ selectedSubjectId: v })}
               searchable
               nothingFoundMessage="No subjects"
             />
@@ -579,7 +579,7 @@ const PerformanceAnalyticsPage = () => {
               label="Cluster"
               data={CLUSTER_OPTIONS}
               value={selectedCluster}
-              onChange={(v) => patch({ selectedCluster: v ?? "" })}
+              onChange={(v) => updateFilters({ selectedCluster: v ?? "" })}
               leftSection={filterIcon}
               allowDeselect={false}
             />
@@ -592,7 +592,7 @@ const PerformanceAnalyticsPage = () => {
                 label: o.label,
               }))}
               value={selectedScoreRange}
-              onChange={(v) => patch({ selectedScoreRange: v ?? "" })}
+              onChange={(v) => updateFilters({ selectedScoreRange: v ?? "" })}
               leftSection={filterIcon}
               allowDeselect={false}
             />
