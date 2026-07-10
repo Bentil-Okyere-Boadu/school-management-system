@@ -4,7 +4,6 @@ import { StudentController } from './student.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Student } from './student.entity';
 import { Role } from '../role/role.entity';
-import { EmailModule } from '../common/modules/email.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StudentLocalStrategy } from './strategies/student-local.strategy';
@@ -14,7 +13,6 @@ import { AuthService } from 'src/auth/auth.service';
 import { StudentJwtStrategy } from './strategies/student-jwt.strategy';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { School } from 'src/school/school.entity';
-import { EmailService } from 'src/common/services/email.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Profile } from 'src/profile/profile.entity';
@@ -52,7 +50,6 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
       Assignment,
       RefreshToken,
     ]),
-    EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -68,7 +65,6 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
   providers: [
     StudentService,
     AuthService,
-    EmailService,
     ProfileService,
     InvitationService,
     ObjectStorageServiceService,

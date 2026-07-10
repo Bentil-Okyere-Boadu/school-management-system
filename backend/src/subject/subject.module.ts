@@ -18,7 +18,6 @@ import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
 import { TeacherService } from 'src/teacher/teacher.service';
 import { InvitationService } from 'src/invitation/invitation.service';
-import { EmailService } from 'src/common/services/email.service';
 import { ProfileService } from 'src/profile/profile.service';
 import { Role } from 'src/role/role.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
@@ -55,7 +54,6 @@ import { Notification } from 'src/notification';
     AcademicCalendarService,
     TeacherService,
     InvitationService,
-    EmailService,
     ProfileService,
     NotificationService,
     ObjectStorageServiceService,
