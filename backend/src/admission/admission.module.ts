@@ -7,7 +7,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Admission } from './admission.entity';
 import { School } from 'src/school/school.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
-import { EmailService } from 'src/common/services/email.service';
 import { PreviousSchoolResult } from './previous-school-result.entity';
 import { Student } from 'src/student/student.entity';
 import { Profile } from 'src/profile/profile.entity';
@@ -36,11 +35,6 @@ import { Parent } from 'src/parent/parent.entity';
     ]),
   ],
   controllers: [AdmissionController],
-  providers: [
-    AdmissionService,
-    ObjectStorageServiceService,
-    EmailService,
-    InvitationService,
-  ],
+  providers: [AdmissionService, ObjectStorageServiceService, InvitationService],
 })
 export class AdmissionModule {}
