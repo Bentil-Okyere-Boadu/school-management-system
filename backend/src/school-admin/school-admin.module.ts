@@ -9,7 +9,6 @@ import { SchoolAdminAuthService } from './school-admin-auth.service';
 import { SchoolAdminService } from './school-admin.service';
 import { SchoolAdmin } from './school-admin.entity';
 import { School } from '../school/school.entity';
-import { EmailModule } from '../common/modules/email.module';
 import { SchoolAdminLocalStrategy } from './strategies/school-admin-local.strategy';
 import { SchoolAdminJwtStrategy } from './strategies/school-admin-jwt.strategy';
 import { AuthService } from 'src/auth/auth.service';
@@ -67,7 +66,6 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
         signOptions: { expiresIn: '1d' },
       }),
     }),
-    EmailModule,
   ],
   controllers: [SchoolAdminController],
   providers: [

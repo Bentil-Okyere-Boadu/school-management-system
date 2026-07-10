@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpStatus, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { EmailException } from '../exceptions/email.exception';
@@ -32,14 +32,14 @@ export enum EmailTemplate {
  * Email service for sending various types of emails
  */
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
   private transporter: nodemailer.Transporter;
   private readonly logger = new Logger(EmailService.name);
   private readonly frontendUrl: string;
   private readonly fromEmail: string;
 
   constructor(private configService: ConfigService) {
-    this.initializeTransporter();
+    this.transporter = this.createTransporter();
     this.frontendUrl = this.configService.get<string>(
       'FRONTEND_URL',
       'http://localhost:3000',
@@ -50,23 +50,28 @@ export class EmailService {
     );
   }
 
-  private initializeTransporter(): void {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('MAIL_HOST', 'smtp.example.com'),
-      port: this.configService.get<number>('MAIL_PORT', 587),
-      secure: this.configService.get<boolean>('MAIL_SECURE', false),
-      auth: {
-        user: this.configService.get<string>('MAIL_USER', ''),
-        pass: this.configService.get<string>('MAIL_PASSWORD', ''),
-      },
-    });
-
+  onModuleInit(): void {
     this.transporter.verify((error) => {
       if (error) {
         this.logger.error('Email service configuration error:', error);
       } else {
         this.logger.log('Email service is ready to send messages');
       }
+    });
+  }
+
+  private createTransporter(): nodemailer.Transporter {
+    const mailSecure = this.configService.get<string>('MAIL_SECURE', 'false');
+    const mailPort = Number(this.configService.get<string>('MAIL_PORT', '587'));
+
+    return nodemailer.createTransport({
+      host: this.configService.get<string>('MAIL_HOST', 'smtp.example.com'),
+      port: mailPort,
+      secure: mailSecure === 'true' || mailPort === 465,
+      auth: {
+        user: this.configService.get<string>('MAIL_USER', ''),
+        pass: this.configService.get<string>('MAIL_PASSWORD', ''),
+      },
     });
   }
 

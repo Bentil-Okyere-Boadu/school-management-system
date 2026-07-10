@@ -4,7 +4,6 @@ import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
 import { InvitationService } from './invitation.service';
 import { InvitationController } from './invitation.controller';
-import { EmailModule } from '../common/modules/email.module';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { StudentModule } from 'src/student/student.module';
 import { Student } from 'src/student/student.entity';
@@ -17,7 +16,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { Teacher } from 'src/teacher/teacher.entity';
-import { EmailService } from 'src/common/services/email.service';
 import { TeacherService } from 'src/teacher/teacher.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { AttendanceService } from 'src/attendance/attendance.service';
@@ -60,14 +58,12 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
         signOptions: { expiresIn: '1d' },
       }),
     }),
-    EmailModule,
     StudentModule,
   ],
   providers: [
     InvitationService,
     TeacherService,
     SchoolAdminService,
-    EmailService,
     ObjectStorageServiceService,
     ProfileService,
     SchoolAdminAuthService,
