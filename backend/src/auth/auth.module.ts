@@ -7,7 +7,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Role } from 'src/role/role.entity';
 import { School } from 'src/school/school.entity';
-import { EmailService } from 'src/common/services/email.service';
 import { InvitationModule } from 'src/invitation/invitation.module';
 import { SchoolAdminModule } from '../school-admin/school-admin.module';
 import { SuperAdminModule } from '../super-admin/super-admin.module';
@@ -48,7 +47,7 @@ import { SuperAdmin } from '../super-admin/super-admin.entity';
     ConfigModule,
     InvitationModule,
   ],
-  providers: [AuthService, ConfigService, EmailService],
+  providers: [AuthService, ConfigService],
   controllers: [AuthController],
   exports: [AuthService],
 })

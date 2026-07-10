@@ -12,10 +12,8 @@ import { TeacherJwtStrategy } from './strategies/teacher-jwt.strategy';
 import { TeacherJwtAuthGuard } from './guards/teacher-jwt-auth.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { EmailModule } from '../common/modules/email.module';
 import { InvitationService } from 'src/invitation/invitation.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
-import { EmailService } from 'src/common/services/email.service';
 import { Student } from 'src/student/student.entity';
 import { School } from 'src/school/school.entity';
 import { Profile } from 'src/profile/profile.entity';
@@ -60,7 +58,6 @@ import { CurriculumModule } from 'src/curriculum/curriculum.module';
       Subject,
       RefreshToken,
     ]),
-    EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -75,7 +72,6 @@ import { CurriculumModule } from 'src/curriculum/curriculum.module';
   providers: [
     TeacherService,
     AuthService,
-    EmailService,
     ProfileService,
     ObjectStorageServiceService,
     TeacherAuthService,
