@@ -5,7 +5,7 @@ import { Tooltip } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import type { ClassSubjectPerformanceStudent } from "@/@types";
 import { CLUSTER_STYLES } from "./performanceClusters";
-import { formatPercent, roundPercent } from "@/utils/formatPercent";
+import { formatPercent } from "@/utils/formatPercent";
 
 const DOT_W = 18; // dot width (px)
 const DOT_H = 18; // dot height (px)
