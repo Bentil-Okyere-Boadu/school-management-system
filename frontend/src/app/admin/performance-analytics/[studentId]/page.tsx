@@ -16,19 +16,16 @@ import {
   CLUSTER_STYLES,
   initialsFromName,
 } from "@/components/admin/performance/performanceClusters";
+import {
+  formatPercent,
+  formatPercentRange,
+  roundPercent,
+} from "@/utils/formatPercent";
 
 const headerCell =
   "px-6 py-3.5 text-xs font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap border-b border-solid border-b-[#EAECF0] text-left max-md:px-5";
 const bodyCell =
   "px-6 py-4 border-b border-solid border-b-[#EAECF0] whitespace-nowrap max-md:px-5";
-
-const fmtPercent = (value: number | null | undefined) =>
-  value === null || value === undefined ? "—" : `${Math.round(value)}%`;
-
-const formatRange = (min: number | null, max: number | null) => {
-  if (min === null || max === null) return "—";
-  return `${Math.round(min)}%–${Math.round(max)}%`;
-};
 
 function sanitizeReturnPath(raw: string | null): string | null {
   if (!raw || !raw.startsWith("/admin/performance-analytics")) return null;
@@ -156,14 +153,14 @@ const StudentPerformanceDetailPage = () => {
               </p>
               <div className="mt-2 flex items-center gap-3">
                 <Progress
-                  value={student.overallAveragePercent ?? 0}
+                  value={roundPercent(student.overallAveragePercent ?? 0)}
                   color={overallProgressColor}
                   radius="xl"
                   size="md"
                   className="flex-1"
                 />
                 <span className="text-lg font-bold text-neutral-800 tabular-nums w-14 text-right">
-                  {fmtPercent(student.overallAveragePercent)}
+                  {formatPercent(student.overallAveragePercent)}
                 </span>
               </div>
             </div>
@@ -214,22 +211,22 @@ const StudentPerformanceDetailPage = () => {
                         <td
                           className={`${bodyCell} text-sm font-semibold text-zinc-900 tabular-nums`}
                         >
-                          {fmtPercent(topic.studentAggregatedScore)}
+                          {formatPercent(topic.studentAggregatedScore)}
                         </td>
                         <td
                           className={`${bodyCell} text-sm text-zinc-600 tabular-nums`}
                         >
-                          {fmtPercent(topic.classAverage)}
+                          {formatPercent(topic.classAverage)}
                         </td>
                         <td
                           className={`${bodyCell} text-sm text-zinc-600 tabular-nums`}
                         >
-                          {formatRange(topic.range.min, topic.range.max)}
+                          {formatPercentRange(topic.range.min, topic.range.max)}
                         </td>
                         <td
                           className={`${bodyCell} text-sm text-zinc-600 tabular-nums`}
                         >
-                          {fmtPercent(topic.median)}
+                          {formatPercent(topic.median)}
                         </td>
                         <td
                           className={`${bodyCell} text-sm text-zinc-600 tabular-nums`}

@@ -19,6 +19,7 @@ import type {
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 import { TermFilterCard } from "@/components/common/TermFilterCard";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
+import { formatPercent, roundPercent } from "@/utils/formatPercent";
 
 function formatTs(iso: string) {
   const d = dayjs(iso);
@@ -51,7 +52,7 @@ function AssignmentGradeRow({ row }: { row: TopicAssignmentGradeDetail }) {
         <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
           <Badge variant="filled" color="violet" size="lg" radius="sm">
             {row.score} / {row.maxScore}{" "}
-            <span className="opacity-90">({row.percentage}%)</span>
+            <span className="opacity-90">({formatPercent(row.percentage, "")})</span>
           </Badge>
           <div className="flex flex-wrap justify-end gap-1.5">
             <Badge variant="outline" color="gray" size="xs">
@@ -152,7 +153,7 @@ const StudentPerformanceAnalytics: React.FC<
           s.subjectName.length > 22
             ? `${s.subjectName.slice(0, 20)}…`
             : s.subjectName,
-        Average: s.averagePercent as number,
+        Average: roundPercent(s.averagePercent as number),
       }));
   }, [analytics]);
 
@@ -209,7 +210,7 @@ const StudentPerformanceAnalytics: React.FC<
               title="Assignments average"
               value={
                 analytics.summary.assignmentAveragePercent != null
-                  ? `${analytics.summary.assignmentAveragePercent}%`
+                  ? formatPercent(analytics.summary.assignmentAveragePercent)
                   : "0%"
               }
               subtitle="Graded submissions for this term"
@@ -288,9 +289,7 @@ const StudentPerformanceAnalytics: React.FC<
                           <span>{subj.gradedCount} graded</span>
                           <Badge variant="light" color="indigo" size="xs">
                             Avg{" "}
-                            {subj.averagePercent != null
-                              ? `${subj.averagePercent}%`
-                              : "—"}
+                            {formatPercent(subj.averagePercent)}
                           </Badge>
                         </div>
                       </div>
@@ -311,12 +310,12 @@ const StudentPerformanceAnalytics: React.FC<
                                 <span className="text-zinc-600">
                                   {t.gradedCount} graded
                                   {t.averagePercent != null
-                                    ? ` · avg ${t.averagePercent}%`
+                                    ? ` · avg ${formatPercent(t.averagePercent)}`
                                     : ""}
                                 </span>
                               </div>
                               <Progress
-                                value={t.averagePercent ?? 0}
+                                value={roundPercent(t.averagePercent ?? 0)}
                                 color="violet"
                                 radius="xl"
                                 size="sm"

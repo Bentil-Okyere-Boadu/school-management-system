@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Badge, Combobox, Select } from "@mantine/core";
+import { Badge, Combobox, Select, TextInput } from "@mantine/core";
 import {
   IconActivity,
+  IconCalendar,
   IconDownload,
   IconFilter,
   IconTrendingDown,
@@ -12,6 +13,7 @@ import {
   IconTrophy,
   IconUsers,
 } from "@tabler/icons-react";
+import dayjs from "dayjs";
 import { HashLoader } from "react-spinners";
 import { toast } from "react-toastify";
 
@@ -22,7 +24,9 @@ import {
   useGetClassSubjectPerformance,
 } from "@/hooks/school-admin";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
+import { formatPercent, roundPercent } from "@/utils/formatPercent";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
+import { Pagination } from "@/components/common/Pagination";
 import PerformanceBreakdownTable from "@/components/admin/performance/PerformanceBreakdownTable";
 import ScoreDistributionChart from "@/components/admin/performance/ScoreDistributionChart";
 import {
@@ -81,12 +85,34 @@ const filterIcon = (
   <IconFilter size={16} className="text-zinc-400" aria-hidden />
 );
 
+/** Match Select filter styling from mantineTheme.ts */
+const filterFieldClassNames = {
+  label: "!text-xs !text-zinc-600 !font-normal mb-0",
+  input:
+    "!py-4 !border-solid !border-[0.5px] !border-zinc-500 text-zinc-800",
+} as const;
+
+const PERFORMANCE_STUDENTS_PAGE_SIZE = 10;
+
+function getTodayDateInputValue(): string {
+  return dayjs().format("YYYY-MM-DD");
+}
+
+function isValidDateInput(value: string): boolean {
+  return dayjs(value, "YYYY-MM-DD", true).isValid();
+}
+
+function formatAggregatedAsOfLabel(dateInput: string): string {
+  return dayjs(dateInput).format("D MMM YYYY");
+}
+
 const PA = {
   classLevel: "classLevelId",
   term: "academicTermId",
   subject: "subjectCatalogId",
   cluster: "cluster",
   scoreRange: "scoreRange",
+  aggregatedAsOf: "aggregatedAsOf",
 } as const;
 
 type PerformanceFilters = {
@@ -95,6 +121,7 @@ type PerformanceFilters = {
   selectedSubjectId: string | null;
   selectedCluster: string;
   selectedScoreRange: string;
+  aggregatedAsOf: string;
 };
 
 function buildFilterSearchParams(filters: PerformanceFilters): URLSearchParams {
@@ -104,6 +131,7 @@ function buildFilterSearchParams(filters: PerformanceFilters): URLSearchParams {
   if (filters.selectedSubjectId) p.set(PA.subject, filters.selectedSubjectId);
   if (filters.selectedCluster) p.set(PA.cluster, filters.selectedCluster);
   if (filters.selectedScoreRange) p.set(PA.scoreRange, filters.selectedScoreRange);
+  if (filters.aggregatedAsOf) p.set(PA.aggregatedAsOf, filters.aggregatedAsOf);
   return p;
 }
 
@@ -116,7 +144,9 @@ function filtersMatchUrl(
     (searchParams.get(PA.term) ?? "") === (filters.selectedTermId ?? "") &&
     (searchParams.get(PA.subject) ?? "") === (filters.selectedSubjectId ?? "") &&
     (searchParams.get(PA.cluster) ?? "") === filters.selectedCluster &&
-    (searchParams.get(PA.scoreRange) ?? "") === filters.selectedScoreRange
+    (searchParams.get(PA.scoreRange) ?? "") === filters.selectedScoreRange &&
+    (searchParams.get(PA.aggregatedAsOf) ?? getTodayDateInputValue()) ===
+      filters.aggregatedAsOf
   );
 }
 
@@ -140,6 +170,13 @@ const PerformanceAnalyticsPage = () => {
   const [selectedScoreRange, setSelectedScoreRange] = useState<string>(
     () => searchParams.get(PA.scoreRange) ?? ""
   );
+  const [aggregatedAsOf, setAggregatedAsOf] = useState<string>(() => {
+    const fromUrl = searchParams.get(PA.aggregatedAsOf) ?? "";
+    return fromUrl && isValidDateInput(fromUrl)
+      ? fromUrl
+      : getTodayDateInputValue();
+  });
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { classLevels } = useGetClassLevels("");
   const { subjects } = useGetAllSubjects();
@@ -158,6 +195,7 @@ const PerformanceAnalyticsPage = () => {
       selectedSubjectId,
       selectedCluster,
       selectedScoreRange,
+      aggregatedAsOf,
     }),
     [
       selectedClassId,
@@ -165,6 +203,7 @@ const PerformanceAnalyticsPage = () => {
       selectedSubjectId,
       selectedCluster,
       selectedScoreRange,
+      aggregatedAsOf,
     ]
   );
 
@@ -190,7 +229,9 @@ const PerformanceAnalyticsPage = () => {
         setSelectedCluster(partial.selectedCluster);
       if (partial.selectedScoreRange !== undefined)
         setSelectedScoreRange(partial.selectedScoreRange);
-      
+      if (partial.aggregatedAsOf !== undefined)
+        setAggregatedAsOf(partial.aggregatedAsOf);
+
       replaceFiltersUrl(next);
     },
     [currentFilters, replaceFiltersUrl]
@@ -202,6 +243,10 @@ const PerformanceAnalyticsPage = () => {
     setSelectedSubjectId(searchParams.get(PA.subject) || null);
     setSelectedCluster(searchParams.get(PA.cluster) ?? "");
     setSelectedScoreRange(searchParams.get(PA.scoreRange) ?? "");
+    const urlAsOf = searchParams.get(PA.aggregatedAsOf) ?? "";
+    setAggregatedAsOf(
+      urlAsOf && isValidDateInput(urlAsOf) ? urlAsOf : getTodayDateInputValue()
+    );
   }, [searchParams]);
 
   const buildOverviewUrl = useCallback(() => {
@@ -292,6 +337,16 @@ const PerformanceAnalyticsPage = () => {
     replaceFiltersUrl(next);
   }, [subjectOptions]);
 
+  // Default aggregated-as-of to today when URL has no valid date.
+  useEffect(() => {
+    const urlAsOf = searchParams.get(PA.aggregatedAsOf) ?? "";
+    const nextAsOf =
+      urlAsOf && isValidDateInput(urlAsOf) ? urlAsOf : getTodayDateInputValue();
+    const next = { ...currentFilters, aggregatedAsOf: nextAsOf };
+    if (nextAsOf !== aggregatedAsOf) setAggregatedAsOf(nextAsOf);
+    replaceFiltersUrl(next);
+  }, [searchParams]);
+
   const termSelectData = useMemo(
     () =>
       sortedTerms.map((t) => {
@@ -344,6 +399,7 @@ const PerformanceAnalyticsPage = () => {
       cluster: (selectedCluster || undefined) as PerformanceCluster | undefined,
       scoreRangeMin: scoreRange?.min,
       scoreRangeMax: scoreRange?.max,
+      aggregatedAsOf,
     },
     { enabled: filtersReady }
   );
@@ -352,8 +408,42 @@ const PerformanceAnalyticsPage = () => {
   const distribution = performance?.clusterDistribution;
   const students = performance?.students ?? [];
 
-  const fmtPercent = (value: number | null | undefined) =>
-    value === null || value === undefined ? "—" : `${Math.round(value)}%`;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    selectedClassId,
+    selectedTermId,
+    selectedSubjectId,
+    selectedCluster,
+    selectedScoreRange,
+    aggregatedAsOf,
+  ]);
+
+  const totalStudentPages = Math.max(
+    1,
+    Math.ceil(students.length / PERFORMANCE_STUDENTS_PAGE_SIZE),
+  );
+
+  useEffect(() => {
+    if (currentPage > totalStudentPages) {
+      setCurrentPage(totalStudentPages);
+    }
+  }, [currentPage, totalStudentPages]);
+
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * PERFORMANCE_STUDENTS_PAGE_SIZE;
+    return students.slice(start, start + PERFORMANCE_STUDENTS_PAGE_SIZE);
+  }, [students, currentPage]);
+
+  const studentRangeLabel = useMemo(() => {
+    if (students.length === 0) return null;
+    const start = (currentPage - 1) * PERFORMANCE_STUDENTS_PAGE_SIZE + 1;
+    const end = Math.min(
+      currentPage * PERFORMANCE_STUDENTS_PAGE_SIZE,
+      students.length,
+    );
+    return `Showing ${start}–${end} of ${students.length} students`;
+  }, [students.length, currentPage]);
 
   const handleExportCsv = () => {
     if (!performance || students.length === 0) {
@@ -375,7 +465,9 @@ const PerformanceAnalyticsPage = () => {
         s.studentName,
         s.classLevelName,
         s.subjectName,
-        s.aggregatedScore === null ? "" : String(s.aggregatedScore),
+        s.aggregatedScore === null
+          ? ""
+          : String(roundPercent(s.aggregatedScore)),
         s.cluster ?? "",
       ]
         .map(escape)
@@ -437,25 +529,25 @@ const PerformanceAnalyticsPage = () => {
           />
           <StatCard
             title="Class Average"
-            value={fmtPercent(summary?.classAverage)}
+            value={formatPercent(summary?.classAverage)}
             accent="cyan"
             icon={<IconTrendingUp size={22} stroke={1.75} />}
           />
           <StatCard
             title="Median Score"
-            value={fmtPercent(summary?.medianScore)}
+            value={formatPercent(summary?.medianScore)}
             accent="indigo"
             icon={<IconActivity size={22} stroke={1.75} />}
           />
           <StatCard
             title="Highest Score"
-            value={fmtPercent(summary?.highestScore)}
+            value={formatPercent(summary?.highestScore)}
             accent="emerald"
             icon={<IconTrophy size={22} stroke={1.75} />}
           />
           <StatCard
             title="Lowest Score"
-            value={fmtPercent(summary?.lowestScore)}
+            value={formatPercent(summary?.lowestScore)}
             accent="rose"
             icon={<IconTrendingDown size={22} stroke={1.75} />}
           />
@@ -492,7 +584,7 @@ const PerformanceAnalyticsPage = () => {
           </p>
           <div className="mt-4">
             <ScoreDistributionChart
-              key={`${selectedClassId}-${selectedTermId}-${selectedSubjectId}-${selectedCluster}-${selectedScoreRange}`}
+              key={`${selectedClassId}-${selectedTermId}-${selectedSubjectId}-${selectedCluster}-${selectedScoreRange}-${aggregatedAsOf}`}
               students={students}
               median={summary?.medianScore ?? null}
               classAverage={summary?.classAverage ?? null}
@@ -501,23 +593,35 @@ const PerformanceAnalyticsPage = () => {
         </div>
 
           {/* Ranked breakdown table */}
-          <PerformanceBreakdownTable
-            students={students}
-            isLoading={isFetching && !isLoading}
-            onRowAction={(studentId) => {
-              const params = new URLSearchParams();
-              if (selectedTermId){
-                params.set("academicTermId", selectedTermId);
-              }
-              if (selectedSubjectId){
-                params.set("subjectCatalogId", selectedSubjectId);
-              }
-              params.set("returnPath", buildOverviewUrl());
-              router.push(
-                `/admin/performance-analytics/${studentId}?${params.toString()}`
-              );
-            }}
-          />
+          <div className="flex flex-col gap-1">
+            {studentRangeLabel ? (
+              <p className="text-xs text-zinc-500 px-1">{studentRangeLabel}</p>
+            ) : null}
+            <PerformanceBreakdownTable
+              students={paginatedStudents}
+              isLoading={isFetching && !isLoading}
+              onRowAction={(studentId) => {
+                const params = new URLSearchParams();
+                if (selectedTermId) {
+                  params.set("academicTermId", selectedTermId);
+                }
+                if (selectedSubjectId) {
+                  params.set("subjectCatalogId", selectedSubjectId);
+                }
+                params.set("returnPath", buildOverviewUrl());
+                router.push(
+                  `/admin/performance-analytics/${studentId}?${params.toString()}`
+                );
+              }}
+            />
+            {students.length > PERFORMANCE_STUDENTS_PAGE_SIZE ? (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalStudentPages}
+                onPageChange={setCurrentPage}
+              />
+            ) : null}
+          </div>
       </div>
     );
   };
@@ -532,6 +636,17 @@ const PerformanceAnalyticsPage = () => {
         <p className="text-sm text-zinc-500 mt-0.5">
           Compare student outcomes across classes, terms, and subjects.
         </p>
+        {filtersReady && aggregatedAsOf ? (
+          <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-zinc-600">
+            <IconCalendar size={16} className="shrink-0 text-zinc-400" aria-hidden />
+            <span>
+              Aggregated from tests up to{" "}
+              <strong className="font-semibold text-zinc-800">
+                {formatAggregatedAsOfLabel(aggregatedAsOf)}
+              </strong>
+            </span>
+          </p>
+        ) : null}
       </div>
 
       {/* Filters */}
@@ -595,6 +710,20 @@ const PerformanceAnalyticsPage = () => {
               onChange={(v) => updateFilters({ selectedScoreRange: v ?? "" })}
               leftSection={filterIcon}
               allowDeselect={false}
+            />
+          </div>
+          <div className="flex-1 min-w-[170px]">
+            <TextInput
+              label="Aggregated As Of"
+              type="date"
+              value={aggregatedAsOf}
+              max={getTodayDateInputValue()}
+              classNames={filterFieldClassNames}
+              onChange={(e) => {
+                const next = e.currentTarget.value;
+                if (!next || !isValidDateInput(next)) return;
+                updateFilters({ aggregatedAsOf: next });
+              }}
             />
           </div>
           <button

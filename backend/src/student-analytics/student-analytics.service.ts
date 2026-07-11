@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -25,6 +26,11 @@ export type ClassSubjectPerformanceResponse = {
   classLevel: { id: string; name: string };
   academicTerm: { id: string; termName: string };
   subject: { id: string; name: string };
+  aggregation: {
+    asOfDate: string;
+    latestGradedAt: string | null;
+    gradedAssignmentsCount: number;
+  };
   summary: {
     totalStudents: number;
     classAverage: number | null;
@@ -308,13 +314,14 @@ export class StudentAnalyticsService {
       catalogName: string;
       topicId: string;
       topicName: string;
-      percent: number;
       detail: TopicAssignmentGradeDetail;
     };
 
     let assignmentRows: Row[] = filteredSubs.map((sub) => {
-      const pct = (Number(sub.score) / Number(sub.assignment.maxScore)) * 100;
-      const roundedPct = Math.round(Math.min(100, Math.max(0, pct)) * 10) / 10;
+      const roundedPct = this.submissionPercent(
+        Number(sub.score),
+        Number(sub.assignment.maxScore),
+      );
       const due = sub.assignment.dueDate;
       const dueDateIso =
         due instanceof Date ? due.toISOString() : new Date(due).toISOString();
@@ -337,7 +344,6 @@ export class StudentAnalyticsService {
         catalogName: sub.assignment.topic.subjectCatalog.name,
         topicId: sub.assignment.topic.id,
         topicName: sub.assignment.topic.name,
-        percent: roundedPct,
         detail,
       };
     });
@@ -348,25 +354,25 @@ export class StudentAnalyticsService {
     }
 
     const gradedAssignmentsCount = assignmentRows.length;
-    const assignmentAvg =
-      gradedAssignmentsCount > 0
-        ? Math.round(
-            (assignmentRows.reduce((a, r) => a + r.percent, 0) /
-              gradedAssignmentsCount) *
-              10,
-          ) / 10
-        : null;
+    const assignmentAvg = this.weightedAveragePercent(
+      assignmentRows.map((r) => ({
+        score: r.detail.score,
+        maxScore: r.detail.maxScore,
+      })),
+    );
+
+    type ScoreMaxPair = { score: number; maxScore: number };
 
     const bySubject = new Map<
       string,
       {
         subjectName: string;
-        percents: number[];
+        scorePairs: ScoreMaxPair[];
         topics: Map<
           string,
           {
             topicName: string;
-            percents: number[];
+            scorePairs: ScoreMaxPair[];
             assignments: TopicAssignmentGradeDetail[];
           }
         >;
@@ -374,39 +380,33 @@ export class StudentAnalyticsService {
     >();
 
     for (const row of assignmentRows) {
+      const pair = { score: row.detail.score, maxScore: row.detail.maxScore };
       let subj = bySubject.get(row.catalogId);
       if (!subj) {
         subj = {
           subjectName: row.catalogName,
-          percents: [],
+          scorePairs: [],
           topics: new Map(),
         };
         bySubject.set(row.catalogId, subj);
       }
-      subj.percents.push(row.percent);
+      subj.scorePairs.push(pair);
       let top = subj.topics.get(row.topicId);
       if (!top) {
         top = {
           topicName: row.topicName,
-          percents: [],
+          scorePairs: [],
           assignments: [],
         };
         subj.topics.set(row.topicId, top);
       }
-      top.percents.push(row.percent);
+      top.scorePairs.push(pair);
       top.assignments.push(row.detail);
     }
 
     const subjectAssignmentPerformance: PerformanceAnalyticsResponse['subjectAssignmentPerformance'] =
       [...bySubject.entries()].map(([subjectCatalogId, data]) => {
-        const avg =
-          data.percents.length > 0
-            ? Math.round(
-                (data.percents.reduce((a, b) => a + b, 0) /
-                  data.percents.length) *
-                  10,
-              ) / 10
-            : null;
+        const avg = this.weightedAveragePercent(data.scorePairs);
         const topics = [...data.topics.entries()].map(([topicId, t]) => {
           const assignments = [...t.assignments].sort((x, y) =>
             y.dueDate.localeCompare(x.dueDate),
@@ -414,15 +414,8 @@ export class StudentAnalyticsService {
           return {
             topicId,
             topicName: t.topicName,
-            gradedCount: t.percents.length,
-            averagePercent:
-              t.percents.length > 0
-                ? Math.round(
-                    (t.percents.reduce((a, b) => a + b, 0) /
-                      t.percents.length) *
-                      10,
-                  ) / 10
-                : null,
+            gradedCount: t.scorePairs.length,
+            averagePercent: this.weightedAveragePercent(t.scorePairs),
             assignments,
           };
         });
@@ -430,7 +423,7 @@ export class StudentAnalyticsService {
         return {
           subjectCatalogId,
           subjectName: data.subjectName,
-          gradedCount: data.percents.length,
+          gradedCount: data.scorePairs.length,
           averagePercent: avg,
           topics,
         };
@@ -456,29 +449,65 @@ export class StudentAnalyticsService {
 
   // ─── Cluster / stats helpers ────────────────────────────────────────────────
 
-  private round1(n: number): number {
-    return Math.round(n * 10) / 10;
+  private roundPercent(n: number): number {
+    return Math.round(n);
+  }
+
+  /** End of calendar day UTC for YYYY-MM-DD (inclusive graded-through date). */
+  private parseAggregatedAsOfDate(isoDate: string): string | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate.trim());
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const probe = new Date(Date.UTC(year, month - 1, day));
+    if (
+      probe.getUTCFullYear() !== year ||
+      probe.getUTCMonth() !== month - 1 ||
+      probe.getUTCDate() !== day
+    ) {
+      return null;
+    }
+    return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+
+  private gradedDateKey(sub: AssignmentSubmission): string {
+    const d = this.submissionGradedAt(sub);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  private submissionGradedAt(sub: AssignmentSubmission): Date {
+    return sub.updatedAt instanceof Date
+      ? sub.updatedAt
+      : new Date(sub.updatedAt);
   }
 
   private computeMedian(sortedAsc: number[]): number | null {
     if (!sortedAsc.length) return null;
     const mid = Math.floor(sortedAsc.length / 2);
     return sortedAsc.length % 2 === 0
-      ? this.round1((sortedAsc[mid - 1] + sortedAsc[mid]) / 2)
+      ? this.roundPercent((sortedAsc[mid - 1] + sortedAsc[mid]) / 2)
       : sortedAsc[mid];
   }
 
   private submissionPercent(score: number, maxScore: number): number {
-    return this.round1(
+    return this.roundPercent(
       Math.min(100, Math.max(0, (Number(score) / Number(maxScore)) * 100)),
     );
   }
 
-  private averageSubmissionPercents(percents: number[]): number | null {
-    if (!percents.length) return null;
-    return this.round1(
-      percents.reduce((a, b) => a + b, 0) / percents.length,
-    );
+  /** Total earned ÷ total possible, as a percentage (point-weighted average). */
+  private weightedAveragePercent(
+    items: Array<{ score: number; maxScore: number }>,
+  ): number | null {
+    if (!items.length) return null;
+    const totalScore = items.reduce((sum, i) => sum + Number(i.score), 0);
+    const totalMax = items.reduce((sum, i) => sum + Number(i.maxScore), 0);
+    if (totalMax <= 0) return null;
+    return this.roundPercent((totalScore / totalMax) * 100);
   }
 
   private async loadGradingBands(schoolId: string): Promise<GradingSystem[]> {
@@ -562,6 +591,7 @@ export class StudentAnalyticsService {
       cluster?: ClusterName;
       scoreRangeMin?: number;
       scoreRangeMax?: number;
+      aggregatedAsOf?: string;
     } = {},
   ): Promise<ClassSubjectPerformanceResponse> {
     const classLevel = await this.classLevelRepository.findOne({
@@ -604,15 +634,39 @@ export class StudentAnalyticsService {
       (sub) => sub.assignment.topic.academicTerm?.id === academicTermId,
     );
 
-    // Aggregate per-student average
-    const studentScoreMap = new Map<string, number[]>();
-    for (const sub of termSubs) {
-      const pct = this.submissionPercent(
-        Number(sub.score),
-        Number(sub.assignment.maxScore),
+    const asOfDateKey = filters.aggregatedAsOf
+      ? this.parseAggregatedAsOfDate(filters.aggregatedAsOf)
+      : null;
+    if (filters.aggregatedAsOf && !asOfDateKey) {
+      throw new BadRequestException(
+        'aggregatedAsOf must be a valid date (YYYY-MM-DD)',
       );
+    }
+
+    const includedSubs = asOfDateKey
+      ? termSubs.filter((sub) => this.gradedDateKey(sub) <= asOfDateKey)
+      : termSubs;
+
+    let latestGradedAt: string | null = null;
+    for (const sub of includedSubs) {
+      const gradedAt = this.submissionGradedAt(sub).toISOString();
+      if (!latestGradedAt || gradedAt > latestGradedAt) {
+        latestGradedAt = gradedAt;
+      }
+    }
+
+    // Aggregate per-student point-weighted average
+    const studentScoreMap = new Map<
+      string,
+      Array<{ score: number; maxScore: number }>
+    >();
+    for (const sub of includedSubs) {
+      const pair = {
+        score: Number(sub.score),
+        maxScore: Number(sub.assignment.maxScore),
+      };
       const arr = studentScoreMap.get(sub.student.id) ?? [];
-      arr.push(pct);
+      arr.push(pair);
       studentScoreMap.set(sub.student.id, arr);
     }
 
@@ -623,8 +677,8 @@ export class StudentAnalyticsService {
     };
 
     const allEntries: Entry[] = classLevel.students.map((s) => {
-      const scores = studentScoreMap.get(s.id);
-      const avg = this.averageSubmissionPercents(scores ?? []);
+      const scorePairs = studentScoreMap.get(s.id);
+      const avg = this.weightedAveragePercent(scorePairs ?? []);
       return {
         studentId: s.id,
         studentName: `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim(),
@@ -658,7 +712,7 @@ export class StudentAnalyticsService {
       .map((e) => e.avgScore!)
       .sort((a, b) => a - b);
     const classAverage = sortedScores.length
-      ? this.round1(
+      ? this.roundPercent(
           sortedScores.reduce((a, b) => a + b, 0) / sortedScores.length,
         )
       : null;
@@ -704,6 +758,11 @@ export class StudentAnalyticsService {
       classLevel: { id: classLevel.id, name: classLevel.name },
       academicTerm: { id: termEntity.id, termName: termEntity.termName },
       subject: { id: subjectCatalogId, name: subjectName },
+      aggregation: {
+        asOfDate: asOfDateKey ?? '',
+        latestGradedAt,
+        gradedAssignmentsCount: includedSubs.length,
+      },
       summary: {
         totalStudents: classLevel.students.length,
         classAverage,
@@ -801,7 +860,7 @@ export class StudentAnalyticsService {
     type TopicAccum = {
       topicName: string;
       assignmentIds: Set<string>;
-      perStudentScores: Map<string, number[]>;
+      perStudentScores: Map<string, Array<{ score: number; maxScore: number }>>;
     };
 
     const topicMap = new Map<string, TopicAccum>();
@@ -818,31 +877,32 @@ export class StudentAnalyticsService {
         topicMap.set(topicId, td);
       }
       td.assignmentIds.add(sub.assignment.id);
-      const pct = this.submissionPercent(
-        Number(sub.score),
-        Number(sub.assignment.maxScore),
-      );
+      const pair = {
+        score: Number(sub.score),
+        maxScore: Number(sub.assignment.maxScore),
+      };
       const arr = td.perStudentScores.get(sub.student.id) ?? [];
-      arr.push(pct);
+      arr.push(pair);
       td.perStudentScores.set(sub.student.id, arr);
     }
 
     const topics: StudentTopicPerformanceResponse['topics'] = [];
 
     for (const [topicId, td] of topicMap) {
-      // Per-student averages for this topic
+      // Per-student point-weighted averages for this topic
       const studentTopicAvgs: number[] = [];
       let thisStudentAvg: number | null = null;
 
-      for (const [sid, scores] of td.perStudentScores) {
-        const avg = this.averageSubmissionPercents(scores)!;
+      for (const [sid, scorePairs] of td.perStudentScores) {
+        const avg = this.weightedAveragePercent(scorePairs);
+        if (avg === null) continue;
         studentTopicAvgs.push(avg);
         if (sid === studentId) thisStudentAvg = avg;
       }
 
       const sorted = [...studentTopicAvgs].sort((a, b) => a - b);
       const classAverage = sorted.length
-        ? this.round1(sorted.reduce((a, b) => a + b, 0) / sorted.length)
+        ? this.roundPercent(sorted.reduce((a, b) => a + b, 0) / sorted.length)
         : null;
       const median = this.computeMedian(sorted);
       const range = sorted.length
@@ -869,10 +929,12 @@ export class StudentAnalyticsService {
     topics.sort((a, b) => a.topicName.localeCompare(b.topicName));
 
     const studentSubs = termSubs.filter((s) => s.student.id === studentId);
-    const overallPercents = studentSubs.map((s) =>
-      this.submissionPercent(Number(s.score), Number(s.assignment.maxScore)),
+    const overallAvg = this.weightedAveragePercent(
+      studentSubs.map((s) => ({
+        score: Number(s.score),
+        maxScore: Number(s.assignment.maxScore),
+      })),
     );
-    const overallAvg = this.averageSubmissionPercents(overallPercents);
     const overallCluster =
       overallAvg !== null
         ? this.assignClusterByScore(overallAvg, gradingBands)

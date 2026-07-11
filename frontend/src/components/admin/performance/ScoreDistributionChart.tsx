@@ -5,6 +5,7 @@ import { Tooltip } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import type { ClassSubjectPerformanceStudent } from "@/@types";
 import { CLUSTER_STYLES } from "./performanceClusters";
+import { formatPercent, roundPercent } from "@/utils/formatPercent";
 
 const DOT_W = 18; // dot width (px)
 const DOT_H = 18; // dot height (px)
@@ -104,7 +105,7 @@ export default function ScoreDistributionChart({
               className="absolute -translate-x-1/2 whitespace-nowrap text-xs font-medium text-violet-600"
               style={{ left: xFor(median), top: 0 }}
             >
-              Median {Math.round(median)}%
+              Median {formatPercent(median, "")}
             </div>
           </>
         )}
@@ -133,7 +134,7 @@ export default function ScoreDistributionChart({
               label={
                 <div className="text-xs leading-relaxed">
                   <p className="font-semibold">{student.studentName}</p>
-                  <p>Score: {student.aggregatedScore}%</p>
+                  <p>Score: {formatPercent(student.aggregatedScore)}</p>
                   <p>{student.cluster ?? "Unranked"}</p>
                 </div>
               }
@@ -162,7 +163,7 @@ export default function ScoreDistributionChart({
           <span>
             Class average:{" "}
             <span className="font-semibold text-zinc-700">
-              {Math.round(classAverage)}%
+              {formatPercent(classAverage)}
             </span>
           </span>
         )}
