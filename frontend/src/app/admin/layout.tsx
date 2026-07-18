@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, PaymentsIcon, SubjectIcon, AssignmentIcon, PlannerIcon, PerformanceIcon } from "@/utils/icons";
+import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, PaymentsIcon, SubjectIcon, ScoreIcon, PlannerIcon, PerformanceIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe } from "@/hooks/school-admin";
 import NotificationCard from "@/components/common/NotificationCard";
@@ -25,20 +25,8 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Dashboard",
     },
     {
-      icon: UsersIcon,      
-      label: "All Users",
-    },
-    {
       icon: StudentsIcon,      
       label: "Students",
-    },
-    {
-      icon: PaymentsIcon,
-      label: "Payments",
-    },
-    {
-      icon: AdmissionsIcon,      
-      label: "Admissions",
     },
     {
       icon: AttendanceIcon,      
@@ -49,20 +37,32 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Classes",
     },
     {
-      icon: SubjectIcon,
-      label: "Curriculum",
+      icon: ScoreIcon,
+      label: "Scores"
     },
     {
-      icon: AssignmentIcon,
-      label: "Assignments"
+      icon: PerformanceIcon,
+      label: "Performance Analytics"
+    },
+    {
+      icon: AdmissionsIcon,      
+      label: "Admissions",
+    },
+    {
+      icon: PaymentsIcon,
+      label: "Payments",
+    },
+    {
+      icon: SubjectIcon,
+      label: "Curriculum",
     },
     {
       icon: PlannerIcon,
       label: "Planner"
     },
     {
-      icon: PerformanceIcon,
-      label: "Performance Analytics"
+      icon: UsersIcon,      
+      label: "All Users",
     },
   ];
 
@@ -100,7 +100,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setActiveMenuItem("Curriculum");
       setIsOverviewPage(true);
     } else if (pathname === "/admin/assignments" || pathname.startsWith("/admin/assignments/")) {
-      setActiveMenuItem("Assignments");
+      setActiveMenuItem("Scores");
       setIsOverviewPage(true);
     } else if (pathname === "/admin/performance-analytics" || pathname.startsWith("/admin/performance-analytics/")) {
       setActiveMenuItem("Performance Analytics");
@@ -175,7 +175,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       case "Curriculum":
         router.push("/admin/subjects");
         break;
-      case "Assignments":
+      case "Scores":
         router.push("/admin/assignments");
         break;
       case "Performance Analytics":
