@@ -36,7 +36,7 @@ export class StudentAnalyticsAdminController {
   @ApiOperation({
     summary: 'Get assignment-level performance analytics for a student',
     description:
-      "Returns subject → topic → assignment breakdown of a student's graded submission percentages for a given academic term.",
+      "Returns subject → topic → assignment breakdown of a student's graded submissions for a given academic term. Subject, topic, and overall averages use total points earned ÷ total points possible.",
   })
   @ApiParam({ name: 'studentId', description: 'UUID of the student' })
   @ApiQuery({
@@ -65,7 +65,7 @@ export class StudentAnalyticsAdminController {
   @ApiOperation({
     summary: 'Get per-topic performance breakdown for a student in a subject',
     description:
-      'Returns topic-level aggregated scores, class-wide average/range/median, test count, and performance cluster for a student in one subject for a given term. Clusters are derived from the school grading system bands. Used for the student detail page in Performance Breakdown.',
+      'Returns topic-level point-weighted aggregated scores (total earned ÷ total possible), class-wide average/range/median, test count, and performance cluster for a student in one subject for a given term. Clusters are derived from the school grading system bands. Used for the student detail page in Performance Breakdown.',
   })
   @ApiParam({ name: 'studentId', description: 'UUID of the student' })
   @ApiQuery({

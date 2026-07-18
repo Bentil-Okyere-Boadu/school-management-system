@@ -11,6 +11,7 @@ import {
   ordinal,
 } from "./performanceClusters";
 import ClusterBadge from "./ClusterBadge";
+import { formatPercent, roundPercent } from "@/utils/formatPercent";
 
 interface PerformanceBreakdownTableProps {
   students: ClassSubjectPerformanceStudent[];
@@ -94,14 +95,14 @@ export const PerformanceBreakdownTable: React.FC<
             ) : (
               <div className="flex items-center gap-3">
                 <Progress
-                  value={score}
+                  value={roundPercent(score)}
                   color={clusterStyle?.progressColor ?? "violet"}
                   radius="xl"
                   size="sm"
                   className="w-24 shrink-0"
                 />
                 <span className="text-sm font-semibold text-zinc-800 tabular-nums w-10 text-right">
-                  {Math.round(score)}%
+                  {formatPercent(score)}
                 </span>
               </div>
             )}

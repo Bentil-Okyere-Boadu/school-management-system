@@ -1508,6 +1508,7 @@ export type ClassSubjectPerformanceFilters = {
   cluster?: PerformanceCluster;
   scoreRangeMin?: number;
   scoreRangeMax?: number;
+  aggregatedAsOf?: string;
 };
 
 export const useGetClassSubjectPerformance = (
@@ -1521,6 +1522,7 @@ export const useGetClassSubjectPerformance = (
     cluster,
     scoreRangeMin,
     scoreRangeMax,
+    aggregatedAsOf,
   } = filters;
 
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -1534,6 +1536,7 @@ export const useGetClassSubjectPerformance = (
         params.set("scoreRangeMin", String(scoreRangeMin));
       if (scoreRangeMax !== undefined)
         params.set("scoreRangeMax", String(scoreRangeMax));
+      if (aggregatedAsOf) params.set("aggregatedAsOf", aggregatedAsOf);
 
       return customAPI.get(
         `/school-admin/classes/${classLevelId}/subject-performance?${params.toString()}`

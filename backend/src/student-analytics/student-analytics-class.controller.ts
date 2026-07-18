@@ -39,7 +39,7 @@ export class StudentAnalyticsClassController {
   @ApiOperation({
     summary: 'Get subject performance breakdown for all students in a class',
     description:
-      'Returns every student in the class with their aggregated assignment score, rank, and performance cluster for a given subject and term. Clusters are derived from the school grading system bands (not class rank). Also includes summary stats (average, median, highest, lowest) and cluster distribution counts. Supports optional filtering by cluster name and score range.',
+      'Returns every student in the class with their point-weighted aggregated assignment score (total earned ÷ total possible), rank, and performance cluster for a given subject and term. Only assignments graded on or before aggregatedAsOf (YYYY-MM-DD) are included when that query param is set. Clusters are derived from the school grading system bands (not class rank). Also includes summary stats (average, median, highest, lowest), aggregation metadata, and cluster distribution counts. Supports optional filtering by cluster name and score range.',
   })
   @ApiParam({ name: 'classLevelId', description: 'UUID of the class level' })
   @ApiQuery({
@@ -75,6 +75,13 @@ export class StudentAnalyticsClassController {
     required: false,
     type: Number,
   })
+  @ApiQuery({
+    name: 'aggregatedAsOf',
+    description:
+      'Inclusive cutoff date (YYYY-MM-DD). Only assignments graded on or before this date are included in term-to-date progress.',
+    required: false,
+    type: String,
+  })
   async getClassSubjectPerformance(
     @Param('classLevelId') classLevelId: string,
     @Query('academicTermId') academicTermId: string,
@@ -82,6 +89,7 @@ export class StudentAnalyticsClassController {
     @Query('cluster') cluster: string | undefined,
     @Query('scoreRangeMin') scoreRangeMin: string | undefined,
     @Query('scoreRangeMax') scoreRangeMax: string | undefined,
+    @Query('aggregatedAsOf') aggregatedAsOf: string | undefined,
     @CurrentUser() admin: SchoolAdmin,
   ) {
     if (!academicTermId?.trim()) {
@@ -119,6 +127,7 @@ export class StudentAnalyticsClassController {
           minFilter !== undefined && !isNaN(minFilter) ? minFilter : undefined,
         scoreRangeMax:
           maxFilter !== undefined && !isNaN(maxFilter) ? maxFilter : undefined,
+        aggregatedAsOf: aggregatedAsOf?.trim() || undefined,
       },
     );
   }
