@@ -13,9 +13,21 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const pathname = usePathname();
 
   const [activeMenuItem, setActiveMenuItem] = useState("Dashboard");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
+
+  const handleToggleSidebar = () => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 768px)").matches
+    ) {
+      setIsDesktopSidebarOpen((open) => !open);
+      return;
+    }
+    setIsMobileSidebarOpen((open) => !open);
+  };
 
   const {me} = useGetMe();
 
@@ -185,34 +197,67 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         router.push("/admin/planner");
         break;
     }
-    setIsSidebarOpen(false);
+    setIsMobileSidebarOpen(false);
   };
 
   return (
     <div className="flex flex-row mx-auto w-full min-h-screen max-w-none bg-zinc-100 max-md:flex-col max-md:max-w-[991px] max-sm:max-w-screen-sm">
-      {/* Sidebar for large screens */}
-      <div className="hidden h-screen md:flex sticky top-0 overflow-y-auto bg-[#D9CDE2]">
-        <Sidebar activeItem={activeMenuItem} sidebarItems={sidebarItems} onItemChange={handleSidebarClick}  isSchoolAdminDashboard={true}/>
+      {/* Sidebar for large screens — slides in/out and shifts main content */}
+      <div
+        className={`hidden md:block h-screen sticky top-0 overflow-hidden bg-[#D9CDE2] shrink-0 transition-[width] duration-300 ease-in-out ${
+          isDesktopSidebarOpen ? "w-60" : "w-0"
+        }`}
+        aria-hidden={!isDesktopSidebarOpen}
+      >
+        <div className="w-60 h-full overflow-y-auto overflow-x-hidden">
+          <Sidebar
+            activeItem={activeMenuItem}
+            sidebarItems={sidebarItems}
+            onItemChange={handleSidebarClick}
+            isSchoolAdminDashboard={true}
+          />
+        </div>
       </div>
 
       {/* Sidebar Overlay for small screens */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-50 flex min-h-[100%]">
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex min-h-[100%] md:hidden">
           <div className="bg-[#D9CDE2] w-64 h-full shadow-lg overflow-y-auto">
-            <Sidebar activeItem={activeMenuItem} sidebarItems={sidebarItems} onItemChange={handleSidebarClick} isSchoolAdminDashboard={true}/>
+            <Sidebar
+              activeItem={activeMenuItem}
+              sidebarItems={sidebarItems}
+              onItemChange={handleSidebarClick}
+              isSchoolAdminDashboard={true}
+            />
           </div>
           {/* Backdrop */}
-          <div className="flex-1 bg-black/50" onClick={() => setIsSidebarOpen(false)} />
+          <div
+            className="flex-1 bg-black/50"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
         </div>
       )}
 
-      <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden relative">
-        <HeaderSection user={me} isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} 
-        onToggleSidebar={() => setIsSidebarOpen(true)}
-        onNotificationClick={() => {setShowNotification(!showNotification)}} />
+      <section className="box-border flex-1 min-w-0 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden relative transition-[width] duration-300 ease-in-out">
+        <HeaderSection
+          user={me}
+          isOverviewPage={isOverviewPage}
+          activeMenuItem={activeMenuItem}
+          onToggleSidebar={handleToggleSidebar}
+          isSidebarExpanded={isDesktopSidebarOpen}
+          showSidebarToggleOnDesktop
+          onNotificationClick={() => {
+            setShowNotification(!showNotification);
+          }}
+        />
         <main className="flex-1 pt-8 overflow-auto">
           {children}
-          {(showNotification && me.role.name === Roles.SCHOOL_ADMIN) && <NotificationCard user={me} onClose={() => setShowNotification(false)} />}
+          {showNotification && me.role.name === Roles.SCHOOL_ADMIN && (
+            <NotificationCard
+              user={me}
+              onClose={() => setShowNotification(false)}
+            />
+          )}
         </main>
       </section>
     </div>

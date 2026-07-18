@@ -24,11 +24,21 @@ interface HeaderSectionProps {
   activeMenuItem: string;
   isOverviewPage?: boolean;
   onToggleSidebar?: () => void;
+  showSidebarToggleOnDesktop?: boolean;
+  isSidebarExpanded?: boolean;
   user: User;
   onNotificationClick?: () => void;
 }
 
-export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, isOverviewPage, onToggleSidebar, user, onNotificationClick }) => {
+export const HeaderSection: React.FC<HeaderSectionProps> = ({
+  activeMenuItem,
+  isOverviewPage,
+  onToggleSidebar,
+  showSidebarToggleOnDesktop = false,
+  isSidebarExpanded,
+  user,
+  onNotificationClick,
+}) => {
   const router = useRouter();
   const pathName = usePathname();
   const params = useParams();
@@ -199,11 +209,17 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({ activeMenuItem, is
       {/* Top row: greeting + user info */}
       <div className="flex justify-between items-center flex-wrap gap-4 w-full">
         <div className="flex items-center gap-3">
-          {/* Mobile menu button */}
+          {/* Sidebar toggle — mobile overlay; optionally also desktop collapse */}
           <button
+            type="button"
             onClick={onToggleSidebar}
-            className="md:hidden block p-2 cursor-pointer"
+            className={`p-2 cursor-pointer ${
+              showSidebarToggleOnDesktop ? "block" : "md:hidden block"
+            }`}
             aria-label="Toggle Sidebar"
+            aria-expanded={
+              showSidebarToggleOnDesktop ? isSidebarExpanded : undefined
+            }
           >
             <svg
               className="w-6 h-6 text-gray-700"
