@@ -27,7 +27,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       { icon: ProfileIcon, label: "Profile" },
       { icon: AttendanceIcon, label: "Attendance" },
       { icon: ResultsIcon, label: "Results" },
-      { icon: ClipboardIcon, label: "My Assignments" },
+      { icon: ClipboardIcon, label: "My Scores" },
       { icon: PlannerIcon, label: "Planner" },
     ];
     if (paymentsNotOnboarded) {
@@ -49,7 +49,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setActiveMenuItem("Results");
       setIsOverviewPage(true);
     } else if (pathname === "/student/assignments") {
-      setActiveMenuItem("My Assignments");
+      setActiveMenuItem("My Scores");
       setIsOverviewPage(true);
     } else if (pathname === "/student/planner") {
       setActiveMenuItem("Planner");
@@ -89,7 +89,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       case "Results":
         router.push("/student/results");
         break;
-      case "My Assignments":
+      case "My Scores":
         router.push("/student/assignments");
         break;
       case "Planner":
