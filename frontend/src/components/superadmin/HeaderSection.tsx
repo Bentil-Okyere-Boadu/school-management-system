@@ -242,7 +242,12 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 )
                 }
                 
-                <p className="text-base text-zinc-600">Welcome to {activeMenuItem} Overview</p>
+                <p className="text-base text-zinc-600">
+                  Welcome to {activeMenuItem} Overview
+                  {signedInRole === Roles.TEACHER && user?.school?.name
+                    ? `, ${user.school.name}`
+                    : ""}
+                </p>
               </div>
             ) : (
               <div className="flex flex-col">
