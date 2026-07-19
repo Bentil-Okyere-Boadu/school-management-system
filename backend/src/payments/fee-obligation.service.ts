@@ -38,6 +38,32 @@ type AcademicContext = {
   /** Envelope for the school year containing today (min/max term dates in that group). */
   envelopeStart: string;
   envelopeEnd: string;
+  /** Start of the academic term containing today (fallback: envelopeStart). */
+  currentTermStart: string;
+};
+
+export type FinanceObligationLine = {
+  obligationId: string;
+  feeStructureId: string;
+  feeTitle: string;
+  periodLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  amountDue: number;
+  paid: number;
+  outstanding: number;
+  isArrear: boolean;
+  dueDate: string | null;
+};
+
+export type StudentFinanceTotals = {
+  totalPayable: number;
+  totalPaid: number;
+  outstanding: number;
+  arrears: number;
+  prepayment: number;
+  netBalance: number;
+  nextDueDate: string | null;
 };
 
 @Injectable()
@@ -510,6 +536,136 @@ export class FeeObligationService {
     return ob.periodStart;
   }
 
+  /**
+   * Start of the current academic term for arrears classification.
+   * Arrears = outstanding on obligations with periodEnd &lt; this date.
+   */
+  async getArrearsCutoffDate(schoolId: string): Promise<string | null> {
+    const ctx = await this.resolveAcademicContext(schoolId);
+    return ctx?.currentTermStart ?? null;
+  }
+
+  /**
+   * All obligation lines for finance (including fully paid), with arrears flags.
+   */
+  async getFinanceLinesForStudent(
+    student: Student,
+    applicableFees: FeeStructure[],
+    options?: { ensure?: boolean; prepayment?: number },
+  ): Promise<{ lines: FinanceObligationLine[]; totals: StudentFinanceTotals }> {
+    if (options?.ensure !== false) {
+      await this.ensureObligationsForStudent(student, applicableFees);
+    }
+
+    const feeIds = new Set(applicableFees.map((f) => f.id));
+    const feeById = new Map(applicableFees.map((f) => [f.id, f]));
+    const arrearsCutoff = student.school?.id
+      ? await this.getArrearsCutoffDate(student.school.id)
+      : null;
+
+    const obligations = await this.obligationRepository.find({
+      where: { student: { id: student.id } },
+      relations: ['feeStructure', 'feeStructure.classLevels', 'academicTerm'],
+    });
+
+    const lines: FinanceObligationLine[] = [];
+    for (const ob of obligations) {
+      const fee = ob.feeStructure;
+      if (!fee || !feeIds.has(fee.id)) {
+        continue;
+      }
+      const paid = await this.sumPaidForObligation(student.id, ob.id);
+      const outstanding = Math.max(
+        0,
+        Math.round((ob.amountDue - paid) * 100) / 100,
+      );
+      const isArrear =
+        outstanding > 0 &&
+        !!arrearsCutoff &&
+        this.cmpIso(ob.periodEnd, arrearsCutoff) < 0;
+
+      lines.push({
+        obligationId: ob.id,
+        feeStructureId: fee.id,
+        feeTitle: (fee.feeTitle ?? 'Fee').trim() || 'Fee',
+        periodLabel: this.formatPeriodLabel(ob),
+        periodStart: ob.periodStart,
+        periodEnd: ob.periodEnd,
+        amountDue: Math.round(ob.amountDue * 100) / 100,
+        paid: Math.round(paid * 100) / 100,
+        outstanding,
+        isArrear,
+        dueDate: fee.dueDate ?? null,
+      });
+    }
+
+    lines.sort((a, b) => {
+      const c1 = this.cmpIso(a.periodEnd, b.periodEnd);
+      if (c1 !== 0) {
+        return c1;
+      }
+      const c2 = this.cmpIso(a.periodStart, b.periodStart);
+      if (c2 !== 0) {
+        return c2;
+      }
+      return a.feeStructureId.localeCompare(b.feeStructureId);
+    });
+
+    const totalPayable = Math.round(
+      lines.reduce((s, l) => s + l.amountDue, 0) * 100,
+    ) / 100;
+    const totalPaid = Math.round(
+      lines.reduce((s, l) => s + l.paid, 0) * 100,
+    ) / 100;
+    const outstanding = Math.round(
+      lines.reduce((s, l) => s + l.outstanding, 0) * 100,
+    ) / 100;
+    const arrears = Math.round(
+      lines.filter((l) => l.isArrear).reduce((s, l) => s + l.outstanding, 0) *
+        100,
+    ) / 100;
+    const prepayment = Math.round((options?.prepayment ?? 0) * 100) / 100;
+    const netBalance = Math.round((outstanding - prepayment) * 100) / 100;
+
+    const today = this.todayIso();
+    let nextDueDate: string | null = null;
+    for (const l of lines) {
+      if (l.outstanding <= 0 || !l.dueDate) {
+        continue;
+      }
+      if (this.cmpIso(l.dueDate, today) < 0) {
+        continue;
+      }
+      if (!nextDueDate || this.cmpIso(l.dueDate, nextDueDate) < 0) {
+        nextDueDate = l.dueDate;
+      }
+    }
+    // If all due dates are past but still outstanding, use earliest dueDate among open lines
+    if (!nextDueDate) {
+      for (const l of lines) {
+        if (l.outstanding <= 0 || !l.dueDate) {
+          continue;
+        }
+        if (!nextDueDate || this.cmpIso(l.dueDate, nextDueDate) < 0) {
+          nextDueDate = l.dueDate;
+        }
+      }
+    }
+
+    return {
+      lines,
+      totals: {
+        totalPayable,
+        totalPaid,
+        outstanding,
+        arrears,
+        prepayment,
+        netBalance,
+        nextDueDate,
+      },
+    };
+  }
+
   private async resolveAcademicContext(
     schoolId: string,
   ): Promise<AcademicContext | null> {
@@ -587,11 +743,23 @@ export class FeeObligationService {
       return null;
     }
 
+    let currentTermStart = groupWithToday.start;
+    for (const term of chosen.terms ?? []) {
+      if (
+        this.cmpIso(term.startDate, today) <= 0 &&
+        this.cmpIso(today, term.endDate) <= 0
+      ) {
+        currentTermStart = term.startDate;
+        break;
+      }
+    }
+
     return {
       calendar: chosen,
       legacyCutover: groupWithToday.start,
       envelopeStart: groupWithToday.start,
       envelopeEnd: groupWithToday.end,
+      currentTermStart,
     };
   }
 

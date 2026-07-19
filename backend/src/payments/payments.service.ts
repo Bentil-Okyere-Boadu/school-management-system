@@ -34,6 +34,7 @@ import { EmailService } from 'src/common/services/email.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { RequestPaymentSetupDto } from './dto/request-payment-setup.dto';
 import { FeeObligationService } from './fee-obligation.service';
+import { StudentCreditService } from './student-credit.service';
 
 const OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
@@ -101,6 +102,7 @@ export class PaymentsService {
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly feeObligationService: FeeObligationService,
+    private readonly studentCreditService: StudentCreditService,
   ) {}
 
   private buildPaymentConfigFromSchool(school: School): SchoolPaymentConfig {
@@ -543,7 +545,7 @@ export class PaymentsService {
     }
 
     if (remaining > 0) {
-      lines.push({ feeName: 'Unallocated', amount: remaining });
+      lines.push({ feeName: 'Prepayment (credit)', amount: remaining });
     }
 
     return lines;
@@ -734,6 +736,17 @@ export class PaymentsService {
     );
   }
 
+  /**
+   * Fee structures applicable to a student (optionally USSD-eligible only).
+   * Used by Finance and payment allocation.
+   */
+  async getApplicableFeeStructuresForStudent(
+    student: Student,
+    options?: { ussdEligibleOnly?: boolean },
+  ): Promise<FeeStructure[]> {
+    return this.findApplicableFeeStructuresForStudent(student, options);
+  }
+
   private async findApplicableFeeStructuresForStudent(
     student: Student,
     options?: { ussdEligibleOnly?: boolean },
@@ -817,6 +830,11 @@ export class PaymentsService {
       return;
     }
 
+    // Internal credit applications already carry their own allocations.
+    if (txPreview.provider === PaymentProvider.INTERNAL_CREDIT) {
+      return;
+    }
+
     const existingCount = await this.paymentAllocationRepository.count({
       where: { transaction: { id: transactionId } },
     });
@@ -834,6 +852,17 @@ export class PaymentsService {
     await this.feeObligationService.ensureObligationsForStudent(
       txPreview.student,
       filteredFees,
+    );
+
+    // Apply existing wallet credit before new cash (all fees).
+    const allFees = await this.findApplicableFeeStructuresForStudent(
+      txPreview.student,
+      { ussdEligibleOnly: false },
+    );
+    await this.studentCreditService.applyAvailableCredit(
+      txPreview.student,
+      allFees,
+      { ussdEligibleOnly: false },
     );
 
     await this.transactionUtil.executeInTransaction(async (manager) => {
@@ -921,15 +950,22 @@ export class PaymentsService {
       }
 
       if (remaining > 0) {
+        const surplus = Math.round(remaining * 100) / 100;
         await allocationRepo.save(
           allocationRepo.create({
             transaction,
             student: transaction.student,
             feeStructure: null,
             obligation: null,
-            allocatedAmount: remaining,
+            allocatedAmount: surplus,
             allocationOrder: order,
           }),
+        );
+        await this.studentCreditService.addCredit(
+          transaction.student,
+          transaction.school,
+          surplus,
+          manager,
         );
       }
 
@@ -961,7 +997,10 @@ export class PaymentsService {
       .leftJoinAndSelect('payment.receipt', 'receipt')
       .leftJoinAndSelect('payment.allocations', 'allocations')
       .leftJoinAndSelect('allocations.feeStructure', 'feeStructure')
-      .where('payment.school.id = :schoolId', { schoolId });
+      .where('payment.school.id = :schoolId', { schoolId })
+      .andWhere('payment.provider != :internalCredit', {
+        internalCredit: PaymentProvider.INTERNAL_CREDIT,
+      });
 
     if (query.status) {
       qb.andWhere('payment.status = :status', { status: query.status });
@@ -1064,6 +1103,9 @@ export class PaymentsService {
       .leftJoinAndSelect('allocations.feeStructure', 'feeStructure')
       .leftJoinAndSelect('payment.student', 'student')
       .where('student.id = :studentId', { studentId })
+      .andWhere('payment.provider != :internalCredit', {
+        internalCredit: PaymentProvider.INTERNAL_CREDIT,
+      })
       .distinct(true);
 
     if (query.status) {
