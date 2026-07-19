@@ -4,6 +4,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { Menu } from '@mantine/core';
 import {
   IconBell,
+  IconCircleX,
   IconLogout2,
 } from '@tabler/icons-react';
 import Cookies from "js-cookie";
@@ -213,23 +214,40 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
           <button
             type="button"
             onClick={onToggleSidebar}
-            className={`p-2 cursor-pointer ${
+            className={`p-1 cursor-pointer ${
               showSidebarToggleOnDesktop ? "block" : "md:hidden block"
             }`}
-            aria-label="Toggle Sidebar"
+            aria-label={
+              showSidebarToggleOnDesktop && isSidebarExpanded
+                ? "Close Sidebar"
+                : "Toggle Sidebar"
+            }
             aria-expanded={
               showSidebarToggleOnDesktop ? isSidebarExpanded : undefined
             }
           >
+            {/* Mobile: always hamburger. Desktop: close icon when sidebar is open. */}
             <svg
-              className="w-6 h-6 text-gray-700"
+              className={`w-6 h-6 text-gray-700 ${
+                showSidebarToggleOnDesktop && isSidebarExpanded
+                  ? "md:hidden"
+                  : ""
+              }`}
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
+            {showSidebarToggleOnDesktop && isSidebarExpanded && (
+              <IconCircleX
+                className="hidden md:block w-8 h-8 text-gray-500"
+                stroke={1.75}
+                aria-hidden="true"
+              />
+            )}
           </button>
           {/* Conditionally render Overview Left Header Section or Detail view Left Header Section */}
           { isOverviewPage ? 
