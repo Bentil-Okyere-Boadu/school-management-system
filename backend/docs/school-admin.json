@@ -630,7 +630,7 @@
     },
     "/api/v1/school-admin/students/{studentId}/topic-performance": {
       "get": {
-        "description": "Returns topic-level aggregated scores, class-wide average/range/median, test count, and cluster assignment for a student in one subject for a given term. Used for the student detail page in Performance Breakdown.",
+        "description": "Returns topic-level aggregated scores, class-wide average/range/median, test count, and performance cluster for a student in one subject for a given term. Clusters are derived from the school grading system bands. Used for the student detail page in Performance Breakdown.",
         "operationId": "StudentAnalyticsAdminController_getTopicPerformance",
         "parameters": [
           {
@@ -677,7 +677,7 @@
     },
     "/api/v1/school-admin/classes/{classLevelId}/subject-performance": {
       "get": {
-        "description": "Returns every student in the class with their aggregated assignment score, rank, and cluster for a given subject and term. Also includes summary stats (average, median, highest, lowest) and cluster distribution counts. Supports optional filtering by cluster name and score range.",
+        "description": "Returns every student in the class with their aggregated assignment score, rank, and performance cluster for a given subject and term. Clusters are derived from the school grading system bands (not class rank). Also includes summary stats (average, median, highest, lowest) and cluster distribution counts. Supports optional filtering by cluster name and score range.",
         "operationId": "StudentAnalyticsClassController_getClassSubjectPerformance",
         "parameters": [
           {

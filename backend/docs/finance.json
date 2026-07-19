@@ -1,0 +1,115 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Finance",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/finance/my-school/students": {
+      "get": {
+        "operationId": "FinanceController_listStudents",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Student name or student code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "classLevelId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by class level UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "balanceStatus",
+            "required": false,
+            "in": "query",
+            "description": "owing: netBalance > 0; clear: netBalance === 0 and prepayment === 0; prepaid: prepayment > 0",
+            "schema": {
+              "type": "string",
+              "enum": ["all", "owing", "clear", "prepaid"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Student finance ledger: total payable, paid, outstanding, arrears, prepayment, net balance",
+        "tags": ["Finance"]
+      }
+    },
+    "/api/v1/finance/my-school/classes": {
+      "get": {
+        "operationId": "FinanceController_listClasses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Class-level finance rollups",
+        "tags": ["Finance"]
+      }
+    },
+    "/api/v1/finance/my-school/students/{studentId}": {
+      "get": {
+        "operationId": "FinanceController_getStudentDetail",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Student finance detail: fee lines, totals, recent Hubtel payments",
+        "tags": ["Finance"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "finance"
+    }
+  ]
+}
