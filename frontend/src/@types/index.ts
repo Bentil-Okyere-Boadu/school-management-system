@@ -852,6 +852,11 @@ export interface ClassSubjectPerformanceResponse {
   classLevel: { id: string; name: string };
   academicTerm: { id: string; termName: string };
   subject: { id: string; name: string };
+  aggregation: {
+    asOfDate: string;
+    latestGradedAt: string | null;
+    gradedAssignmentsCount: number;
+  };
   summary: {
     totalStudents: number;
     classAverage: number | null;

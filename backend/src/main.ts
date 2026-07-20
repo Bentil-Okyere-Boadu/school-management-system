@@ -14,6 +14,7 @@ import { seedSubtopicCompletionClassLevels } from './curriculum/subtopic-complet
 import { seedTopicAcademicTerms } from './curriculum/topic-academic-term.backfill';
 import { seedStudentBillingCodes } from './payments/student-billing-code.backfill';
 import { seedFeeObligationLegacyBackfill } from './payments/fee-obligation-legacy.backfill';
+import { seedStudentCreditBalanceBackfill } from './payments/student-credit-balance.backfill';
 
 async function seedRoles(app: INestApplication) {
   const logger = new Logger('Seeder');
@@ -236,6 +237,7 @@ async function bootstrap() {
   await seedTopicAcademicTerms(app);
   await seedStudentBillingCodes(app);
   await seedFeeObligationLegacyBackfill(app);
+  await seedStudentCreditBalanceBackfill(app);
 
   await app.listen(process.env.PORT ?? 5000);
 }

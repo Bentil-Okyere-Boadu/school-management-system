@@ -17,6 +17,8 @@ import { PaymentReceipt } from './payment-receipt.entity';
 
 export enum PaymentProvider {
   HUBTEL = 'hubtel',
+  /** Internal: prepayment credit applied to fee obligations (not a Hubtel cash payment). */
+  INTERNAL_CREDIT = 'internal_credit',
 }
 
 export enum PaymentTransactionStatus {

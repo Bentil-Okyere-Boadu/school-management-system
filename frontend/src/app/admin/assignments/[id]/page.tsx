@@ -61,7 +61,7 @@ const AssignmentDetailPage = () => {
         className="flex items-center gap-2 text-purple-600 hover:text-purple-800 cursor-pointer mb-6 transition-colors font-extrabold"
       >
         <IconArrowLeft size={20} />
-        <span>Back to Assignments</span>
+        <span>Back to Overview</span>
       </button>
       
       <TabBar 
