@@ -874,6 +874,209 @@
         },
         "tags": ["Teacher"]
       }
+    },
+    "/api/v1/teacher/students/{studentId}/performance-analytics": {
+      "get": {
+        "description": "Returns subject → topic → assignment breakdown of a student's graded submissions for a given academic term, restricted to subjects the teacher teaches for that student (class teachers still only see subjects they teach in this assignment-level endpoint).",
+        "operationId": "StudentAnalyticsTeacherController_getPerformanceAnalytics",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "description": "UUID of the student",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the academic term",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get assignment-level performance analytics for a student",
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/students/{studentId}/topic-performance": {
+      "get": {
+        "description": "Teacher-scoped mirror of the school-admin topic-performance endpoint. Class teachers of an overlapping class may query any subject; subject teachers may only query subjects they teach in an overlapping class. Used for the student detail page in Performance Breakdown.",
+        "operationId": "StudentAnalyticsTeacherController_getTopicPerformance",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "description": "UUID of the student",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the academic term",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectCatalogId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the subject catalog entry",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get per-topic performance breakdown for a student in a subject",
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{classLevelId}/analytics-subjects": {
+      "get": {
+        "description": "Class teachers receive every subject offered in the class. Subject teachers receive only the subject catalogs they are assigned to teach in that class.",
+        "operationId": "StudentAnalyticsTeacherClassController_getAnalyticsSubjects",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "description": "UUID of the class level",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List subjects available for Performance Analytics filters in a class",
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{classLevelId}/subject-performance": {
+      "get": {
+        "description": "Teacher-scoped mirror of the school-admin class subject-performance endpoint. Class teachers may query any subject in the class; subject teachers may only query subjects they teach in that class. Returns every student with point-weighted aggregated score, rank, and performance cluster for a given subject and term.",
+        "operationId": "StudentAnalyticsTeacherClassController_getClassSubjectPerformance",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "description": "UUID of the class level",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the academic term",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectCatalogId",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the subject catalog entry",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "aggregatedAsOf",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive cutoff date (YYYY-MM-DD). Only assignments graded on or before this date are included in term-to-date progress.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scoreRangeMax",
+            "required": false,
+            "in": "query",
+            "description": "Maximum aggregated score % (0–100)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "scoreRangeMin",
+            "required": false,
+            "in": "query",
+            "description": "Minimum aggregated score % (0–100)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "cluster",
+            "required": false,
+            "in": "query",
+            "description": "Filter by cluster name",
+            "schema": {
+              "enum": [
+                "Below Expectations",
+                "Developing",
+                "On Track",
+                "Meeting Expectations"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get subject performance breakdown for all students in a class",
+        "tags": ["Teacher"]
+      }
     }
   },
   "components": {
