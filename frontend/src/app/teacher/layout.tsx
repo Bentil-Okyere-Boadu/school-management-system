@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { usePathname, useRouter } from "next/navigation";
-import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon, ClipboardIcon, PlannerIcon } from "@/utils/icons";
+import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon, ClipboardIcon, PlannerIcon, PerformanceIcon } from "@/utils/icons";
 
 import { useTeacherGetMe } from "@/hooks/teacher";
 
@@ -40,6 +40,10 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       label: "Planner",
     },
     {
+      icon: PerformanceIcon,
+      label: "Performance Analytics",
+    },
+    {
       icon: ProfileIcon,      
       label: "Profile",
     },
@@ -65,6 +69,12 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/teacher/planner") {
       setActiveMenuItem("Planner");
+      setIsOverviewPage(true);
+    } else if (
+      pathname === "/teacher/performance-analytics" ||
+      pathname.startsWith("/teacher/performance-analytics/")
+    ) {
+      setActiveMenuItem("Performance Analytics");
       setIsOverviewPage(true);
     }
 
@@ -111,6 +121,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         break;
       case "Planner":
         router.push("/teacher/planner");
+        break;
+      case "Performance Analytics":
+        router.push("/teacher/performance-analytics");
         break;
     }
     setIsSidebarOpen(false);

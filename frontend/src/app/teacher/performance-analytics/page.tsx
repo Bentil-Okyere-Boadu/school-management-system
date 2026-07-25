@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge, Combobox, Select, TextInput } from "@mantine/core";
 import {
@@ -18,11 +18,11 @@ import { HashLoader } from "react-spinners";
 import { toast } from "react-toastify";
 
 import {
-  useGetAllSubjects,
   useGetCalendars,
-  useGetClassLevels,
-  useGetClassSubjectPerformance,
-} from "@/hooks/school-admin";
+  useGetTeacherAnalyticsSubjects,
+  useGetTeacherClasses,
+  useGetTeacherClassSubjectPerformance,
+} from "@/hooks/teacher";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 import { formatPercent, roundPercent } from "@/utils/formatPercent";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
@@ -35,7 +35,7 @@ import {
   CLUSTER_STYLES,
   SCORE_RANGE_OPTIONS,
 } from "@/components/admin/performance/performanceClusters";
-import type { ClassLevel, PerformanceCluster, Subject } from "@/@types";
+import type { ClassLevel, PerformanceCluster } from "@/@types";
 
 type StatAccent = "violet" | "cyan" | "indigo" | "emerald" | "rose";
 
@@ -177,10 +177,14 @@ const PerformanceAnalyticsPage = () => {
       : getTodayDateInputValue();
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const pendingFilterQueryRef = useRef<string | null>(null);
 
-  const { classLevels } = useGetClassLevels("");
-  const { subjects } = useGetAllSubjects();
-  const { calendars } = useGetCalendars();
+  const { classLevels } = useGetTeacherClasses("");
+  const { studentCalendars: calendars } = useGetCalendars();
+  const { subjects, isLoading: subjectsLoading } =
+    useGetTeacherAnalyticsSubjects(selectedClassId ?? "", {
+      enabled: Boolean(selectedClassId),
+    });
 
   const sortedTerms = useMemo(
     () => getSortedSchoolTerms(calendars),
@@ -200,8 +204,8 @@ const PerformanceAnalyticsPage = () => {
   const subjectOptions = useMemo(
     () =>
       (subjects ?? [])
-        .filter((s: Subject) => Boolean(s.id))
-        .map((s: Subject) => ({ value: s.id as string, label: s.name })),
+        .filter((s) => Boolean(s.id))
+        .map((s) => ({ value: s.id, label: s.name })),
     [subjects]
   );
 
@@ -226,8 +230,12 @@ const PerformanceAnalyticsPage = () => {
 
   const replaceFiltersUrl = useCallback(
     (next: PerformanceFilters) => {
-      if (filtersMatchUrl(next, searchParams)) return;
+      if (filtersMatchUrl(next, searchParams)) {
+        pendingFilterQueryRef.current = null;
+        return;
+      }
       const queryString = buildFilterSearchParams(next).toString();
+      pendingFilterQueryRef.current = queryString;
       router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, {
         scroll: false,
       });
@@ -260,43 +268,54 @@ const PerformanceAnalyticsPage = () => {
     return `${pathname}${queryString ? `?${queryString}` : ""}`;
   }, [currentFilters, pathname]);
 
-  // Single hydrate/default pass — avoids competing router.replace loops on reload.
   useEffect(() => {
-    if (
-      classOptions.length === 0 ||
-      sortedTerms.length === 0 ||
-      subjectOptions.length === 0
-    ) {
-      return;
-    }
+    if (classOptions.length === 0 || sortedTerms.length === 0) return;
 
     const urlClass = searchParams.get(PA.classLevel) ?? "";
     const urlTerm = searchParams.get(PA.term) ?? "";
     const urlSubject = searchParams.get(PA.subject) ?? "";
     const urlAsOf = searchParams.get(PA.aggregatedAsOf) ?? "";
 
-    const nextClass =
-      (urlClass && classOptions.some((c) => c.value === urlClass) && urlClass) ||
-      (selectedClassId &&
-        classOptions.some((c) => c.value === selectedClassId) &&
-        selectedClassId) ||
-      classOptions[0].value;
+    if (pendingFilterQueryRef.current !== null) {
+      const pending = new URLSearchParams(pendingFilterQueryRef.current);
+      const pendingFilters: PerformanceFilters = {
+        selectedClassId: pending.get(PA.classLevel),
+        selectedTermId: pending.get(PA.term),
+        selectedSubjectId: pending.get(PA.subject),
+        selectedCluster: pending.get(PA.cluster) ?? "",
+        selectedScoreRange: pending.get(PA.scoreRange) ?? "",
+        aggregatedAsOf:
+          pending.get(PA.aggregatedAsOf) ?? getTodayDateInputValue(),
+      };
+      if (filtersMatchUrl(pendingFilters, searchParams)) {
+        pendingFilterQueryRef.current = null;
+      }
+    }
+    const urlWritePending = pendingFilterQueryRef.current !== null;
 
-    const nextTerm =
-      (urlTerm && sortedTerms.some((t) => t.id === urlTerm) && urlTerm) ||
-      (selectedTermId &&
-        sortedTerms.some((t) => t.id === selectedTermId) &&
-        selectedTermId) ||
-      sortedTerms[0].id;
+    const selectedClassValid =
+      selectedClassId && classOptions.some((c) => c.value === selectedClassId)
+        ? selectedClassId
+        : null;
+    const urlClassValid =
+      urlClass && classOptions.some((c) => c.value === urlClass)
+        ? urlClass
+        : null;
 
-    const nextSubject =
-      (urlSubject &&
-        subjectOptions.some((s) => s.value === urlSubject) &&
-        urlSubject) ||
-      (selectedSubjectId &&
-        subjectOptions.some((s) => s.value === selectedSubjectId) &&
-        selectedSubjectId) ||
-      subjectOptions[0].value;
+    const nextClass = urlWritePending
+      ? selectedClassValid || urlClassValid || classOptions[0].value
+      : urlClassValid || selectedClassValid || classOptions[0].value;
+
+    const selectedTermValid =
+      selectedTermId && sortedTerms.some((t) => t.id === selectedTermId)
+        ? selectedTermId
+        : null;
+    const urlTermValid =
+      urlTerm && sortedTerms.some((t) => t.id === urlTerm) ? urlTerm : null;
+
+    const nextTerm = urlWritePending
+      ? selectedTermValid || urlTermValid || sortedTerms[0].id
+      : urlTermValid || selectedTermValid || sortedTerms[0].id;
 
     const nextAsOf =
       urlAsOf && isValidDateInput(urlAsOf)
@@ -305,12 +324,44 @@ const PerformanceAnalyticsPage = () => {
           ? aggregatedAsOf
           : getTodayDateInputValue();
 
+    const nextCluster = urlWritePending
+      ? selectedCluster
+      : (searchParams.get(PA.cluster) ?? selectedCluster);
+    const nextScoreRange = urlWritePending
+      ? selectedScoreRange
+      : (searchParams.get(PA.scoreRange) ?? selectedScoreRange);
+
+    const subjectsReadyForClass =
+      selectedClassId === nextClass && !subjectsLoading;
+
+    let nextSubject: string | null = selectedSubjectId;
+    if (selectedClassId !== nextClass) {
+      nextSubject = null;
+    } else if (subjectsReadyForClass) {
+      if (subjectOptions.length === 0) {
+        nextSubject = null;
+      } else if (
+        !urlWritePending &&
+        urlSubject &&
+        subjectOptions.some((s) => s.value === urlSubject)
+      ) {
+        nextSubject = urlSubject;
+      } else if (
+        selectedSubjectId &&
+        subjectOptions.some((s) => s.value === selectedSubjectId)
+      ) {
+        nextSubject = selectedSubjectId;
+      } else {
+        nextSubject = subjectOptions[0].value;
+      }
+    }
+
     const next: PerformanceFilters = {
       selectedClassId: nextClass,
       selectedTermId: nextTerm,
       selectedSubjectId: nextSubject,
-      selectedCluster: searchParams.get(PA.cluster) ?? selectedCluster,
-      selectedScoreRange: searchParams.get(PA.scoreRange) ?? selectedScoreRange,
+      selectedCluster: nextCluster,
+      selectedScoreRange: nextScoreRange,
       aggregatedAsOf: nextAsOf,
     };
 
@@ -329,6 +380,7 @@ const PerformanceAnalyticsPage = () => {
     classOptions,
     sortedTerms,
     subjectOptions,
+    subjectsLoading,
     searchParams,
     selectedClassId,
     selectedTermId,
@@ -383,18 +435,19 @@ const PerformanceAnalyticsPage = () => {
     selectedClassId && selectedTermId && selectedSubjectId
   );
 
-  const { performance, isLoading, isFetching } = useGetClassSubjectPerformance(
-    {
-      classLevelId: selectedClassId ?? "",
-      academicTermId: selectedTermId ?? "",
-      subjectCatalogId: selectedSubjectId ?? "",
-      cluster: (selectedCluster || undefined) as PerformanceCluster | undefined,
-      scoreRangeMin: scoreRange?.min,
-      scoreRangeMax: scoreRange?.max,
-      aggregatedAsOf,
-    },
-    { enabled: filtersReady }
-  );
+  const { performance, isLoading, isFetching } =
+    useGetTeacherClassSubjectPerformance(
+      {
+        classLevelId: selectedClassId ?? "",
+        academicTermId: selectedTermId ?? "",
+        subjectCatalogId: selectedSubjectId ?? "",
+        cluster: (selectedCluster || undefined) as PerformanceCluster | undefined,
+        scoreRangeMin: scoreRange?.min,
+        scoreRangeMax: scoreRange?.max,
+        aggregatedAsOf,
+      },
+      { enabled: filtersReady }
+    );
 
   const summary = performance?.summary;
   const distribution = performance?.clusterDistribution;
@@ -602,7 +655,7 @@ const PerformanceAnalyticsPage = () => {
                 }
                 params.set("returnPath", buildOverviewUrl());
                 router.push(
-                  `/admin/performance-analytics/${studentId}?${params.toString()}`
+                  `/teacher/performance-analytics/${studentId}?${params.toString()}`
                 );
               }}
             />
@@ -650,7 +703,9 @@ const PerformanceAnalyticsPage = () => {
               placeholder="Select class"
               data={classOptions}
               value={selectedClassId}
-              onChange={(v) => updateFilters({ selectedClassId: v })}
+              onChange={(v) =>
+                updateFilters({ selectedClassId: v, selectedSubjectId: null })
+              }
               searchable
               nothingFoundMessage="No classes"
             />
@@ -673,11 +728,14 @@ const PerformanceAnalyticsPage = () => {
           <div className="flex-1 min-w-[160px]">
             <Select
               label="Subject"
-              placeholder="Select subject"
+              placeholder={
+                subjectOptions.length ? "Select subject" : "No subjects available"
+              }
               data={subjectOptions}
               value={selectedSubjectId}
               onChange={(v) => updateFilters({ selectedSubjectId: v })}
               searchable
+              disabled={!selectedClassId || subjectOptions.length === 0}
               nothingFoundMessage="No subjects"
             />
           </div>
