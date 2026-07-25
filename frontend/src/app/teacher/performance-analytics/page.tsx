@@ -18,11 +18,11 @@ import { HashLoader } from "react-spinners";
 import { toast } from "react-toastify";
 
 import {
-  useGetAllSubjects,
   useGetCalendars,
-  useGetClassLevels,
-  useGetClassSubjectPerformance,
-} from "@/hooks/school-admin";
+  useGetTeacherAnalyticsSubjects,
+  useGetTeacherClasses,
+  useGetTeacherClassSubjectPerformance,
+} from "@/hooks/teacher";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 import { formatPercent, roundPercent } from "@/utils/formatPercent";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
@@ -35,7 +35,7 @@ import {
   CLUSTER_STYLES,
   SCORE_RANGE_OPTIONS,
 } from "@/components/admin/performance/performanceClusters";
-import type { ClassLevel, PerformanceCluster, Subject } from "@/@types";
+import type { ClassLevel, PerformanceCluster } from "@/@types";
 
 type StatAccent = "violet" | "cyan" | "indigo" | "emerald" | "rose";
 
@@ -178,9 +178,12 @@ const PerformanceAnalyticsPage = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { classLevels } = useGetClassLevels("");
-  const { subjects } = useGetAllSubjects();
-  const { calendars } = useGetCalendars();
+  const { classLevels } = useGetTeacherClasses("");
+  const { studentCalendars: calendars } = useGetCalendars();
+  const { subjects, isLoading: subjectsLoading } =
+    useGetTeacherAnalyticsSubjects(selectedClassId ?? "", {
+      enabled: Boolean(selectedClassId),
+    });
 
   const sortedTerms = useMemo(
     () => getSortedSchoolTerms(calendars),
@@ -200,8 +203,8 @@ const PerformanceAnalyticsPage = () => {
   const subjectOptions = useMemo(
     () =>
       (subjects ?? [])
-        .filter((s: Subject) => Boolean(s.id))
-        .map((s: Subject) => ({ value: s.id as string, label: s.name })),
+        .filter((s) => Boolean(s.id))
+        .map((s) => ({ value: s.id, label: s.name })),
     [subjects]
   );
 
@@ -262,13 +265,7 @@ const PerformanceAnalyticsPage = () => {
 
   // Single hydrate/default pass — avoids competing router.replace loops on reload.
   useEffect(() => {
-    if (
-      classOptions.length === 0 ||
-      sortedTerms.length === 0 ||
-      subjectOptions.length === 0
-    ) {
-      return;
-    }
+    if (classOptions.length === 0 || sortedTerms.length === 0) return;
 
     const urlClass = searchParams.get(PA.classLevel) ?? "";
     const urlTerm = searchParams.get(PA.term) ?? "";
@@ -289,15 +286,6 @@ const PerformanceAnalyticsPage = () => {
         selectedTermId) ||
       sortedTerms[0].id;
 
-    const nextSubject =
-      (urlSubject &&
-        subjectOptions.some((s) => s.value === urlSubject) &&
-        urlSubject) ||
-      (selectedSubjectId &&
-        subjectOptions.some((s) => s.value === selectedSubjectId) &&
-        selectedSubjectId) ||
-      subjectOptions[0].value;
-
     const nextAsOf =
       urlAsOf && isValidDateInput(urlAsOf)
         ? urlAsOf
@@ -305,12 +293,41 @@ const PerformanceAnalyticsPage = () => {
           ? aggregatedAsOf
           : getTodayDateInputValue();
 
+    const nextCluster = searchParams.get(PA.cluster) ?? selectedCluster;
+    const nextScoreRange =
+      searchParams.get(PA.scoreRange) ?? selectedScoreRange;
+
+    // Subjects are fetched for selectedClassId; wait until that matches nextClass.
+    const subjectsReadyForClass =
+      selectedClassId === nextClass && !subjectsLoading;
+
+    let nextSubject: string | null = selectedSubjectId;
+    if (selectedClassId !== nextClass) {
+      nextSubject = null;
+    } else if (subjectsReadyForClass) {
+      if (subjectOptions.length === 0) {
+        nextSubject = null;
+      } else if (
+        urlSubject &&
+        subjectOptions.some((s) => s.value === urlSubject)
+      ) {
+        nextSubject = urlSubject;
+      } else if (
+        selectedSubjectId &&
+        subjectOptions.some((s) => s.value === selectedSubjectId)
+      ) {
+        nextSubject = selectedSubjectId;
+      } else {
+        nextSubject = subjectOptions[0].value;
+      }
+    }
+
     const next: PerformanceFilters = {
       selectedClassId: nextClass,
       selectedTermId: nextTerm,
       selectedSubjectId: nextSubject,
-      selectedCluster: searchParams.get(PA.cluster) ?? selectedCluster,
-      selectedScoreRange: searchParams.get(PA.scoreRange) ?? selectedScoreRange,
+      selectedCluster: nextCluster,
+      selectedScoreRange: nextScoreRange,
       aggregatedAsOf: nextAsOf,
     };
 
@@ -329,6 +346,7 @@ const PerformanceAnalyticsPage = () => {
     classOptions,
     sortedTerms,
     subjectOptions,
+    subjectsLoading,
     searchParams,
     selectedClassId,
     selectedTermId,
@@ -383,18 +401,19 @@ const PerformanceAnalyticsPage = () => {
     selectedClassId && selectedTermId && selectedSubjectId
   );
 
-  const { performance, isLoading, isFetching } = useGetClassSubjectPerformance(
-    {
-      classLevelId: selectedClassId ?? "",
-      academicTermId: selectedTermId ?? "",
-      subjectCatalogId: selectedSubjectId ?? "",
-      cluster: (selectedCluster || undefined) as PerformanceCluster | undefined,
-      scoreRangeMin: scoreRange?.min,
-      scoreRangeMax: scoreRange?.max,
-      aggregatedAsOf,
-    },
-    { enabled: filtersReady }
-  );
+  const { performance, isLoading, isFetching } =
+    useGetTeacherClassSubjectPerformance(
+      {
+        classLevelId: selectedClassId ?? "",
+        academicTermId: selectedTermId ?? "",
+        subjectCatalogId: selectedSubjectId ?? "",
+        cluster: (selectedCluster || undefined) as PerformanceCluster | undefined,
+        scoreRangeMin: scoreRange?.min,
+        scoreRangeMax: scoreRange?.max,
+        aggregatedAsOf,
+      },
+      { enabled: filtersReady }
+    );
 
   const summary = performance?.summary;
   const distribution = performance?.clusterDistribution;
@@ -602,7 +621,7 @@ const PerformanceAnalyticsPage = () => {
                 }
                 params.set("returnPath", buildOverviewUrl());
                 router.push(
-                  `/admin/performance-analytics/${studentId}?${params.toString()}`
+                  `/teacher/performance-analytics/${studentId}?${params.toString()}`
                 );
               }}
             />
@@ -650,7 +669,9 @@ const PerformanceAnalyticsPage = () => {
               placeholder="Select class"
               data={classOptions}
               value={selectedClassId}
-              onChange={(v) => updateFilters({ selectedClassId: v })}
+              onChange={(v) =>
+                updateFilters({ selectedClassId: v, selectedSubjectId: null })
+              }
               searchable
               nothingFoundMessage="No classes"
             />
@@ -673,11 +694,14 @@ const PerformanceAnalyticsPage = () => {
           <div className="flex-1 min-w-[160px]">
             <Select
               label="Subject"
-              placeholder="Select subject"
+              placeholder={
+                subjectOptions.length ? "Select subject" : "No subjects available"
+              }
               data={subjectOptions}
               value={selectedSubjectId}
               onChange={(v) => updateFilters({ selectedSubjectId: v })}
               searchable
+              disabled={!selectedClassId || subjectOptions.length === 0}
               nothingFoundMessage="No subjects"
             />
           </div>

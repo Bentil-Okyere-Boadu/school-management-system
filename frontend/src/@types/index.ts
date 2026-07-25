@@ -898,6 +898,12 @@ export interface StudentTopicPerformanceResponse {
   topics: StudentTopicPerformanceTopic[];
 }
 
+export interface TeacherAnalyticsSubjectsResponse {
+  classLevelId: string;
+  isClassTeacher: boolean;
+  subjects: Array<{ id: string; name: string }>;
+}
+
 export enum NotificationType {
   Admission = "admission",
   Attendance = "attendance",
