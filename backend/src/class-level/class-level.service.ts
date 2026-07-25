@@ -15,6 +15,7 @@ import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { Subject } from 'src/subject/subject.entity';
 
 @Injectable()
 export class ClassLevelService {
@@ -30,6 +31,8 @@ export class ClassLevelService {
     private classLevelResultApprovalRepository: Repository<ClassLevelResultApproval>,
     @InjectRepository(AcademicTerm)
     private academicTermRepository: Repository<AcademicTerm>,
+    @InjectRepository(Subject)
+    private readonly subjectRepository: Repository<Subject>,
   ) {}
 
   async create(
@@ -345,13 +348,25 @@ export class ClassLevelService {
       approvalTermId = latestTerm.id;
     }
 
+    const associatedClassLevelIds =
+      await this.getAssociatedClassLevelIdsForTeacher(teacherId);
+
+    if (associatedClassLevelIds.length === 0) {
+      return [];
+    }
+
     const classes = await this.classLevelRepository
       .createQueryBuilder('classLevel')
       .leftJoinAndSelect('classLevel.students', 'student')
       .leftJoinAndSelect('classLevel.teachers', 'teacher')
       .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
-      .where('teacher.id = :teacherId', { teacherId })
-      .orWhere('classTeacher.id = :teacherId', { teacherId })
+      .innerJoin('classLevel.school', 'school')
+      .where('classLevel.id IN (:...associatedClassLevelIds)', {
+        associatedClassLevelIds,
+      })
+      .andWhere('school.id = :schoolId', {
+        schoolId: teacher.school.id,
+      })
       .loadRelationCountAndMap('classLevel.studentCount', 'classLevel.students')
       .getMany();
 
@@ -399,6 +414,40 @@ export class ClassLevelService {
     }
 
     return results;
+  }
+
+  private async getAssociatedClassLevelIdsForTeacher(
+    teacherId: string,
+  ): Promise<string[]> {
+    const assignedClassLevels = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .innerJoin('classLevel.teachers', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
+
+    const classesAsClassTeacher = await this.classLevelRepository
+      .createQueryBuilder('classLevel')
+      .innerJoin('classLevel.classTeacher', 'classTeacher')
+      .where('classTeacher.id = :teacherId', { teacherId })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
+
+    const classesViaSubject = await this.subjectRepository
+      .createQueryBuilder('subject')
+      .innerJoin('subject.classLevels', 'classLevel')
+      .innerJoin('subject.teacher', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
+
+    return [
+      ...new Set([
+        ...assignedClassLevels.map((r) => r.id),
+        ...classesAsClassTeacher.map((r) => r.id),
+        ...classesViaSubject.map((r) => r.id),
+      ]),
+    ];
   }
 
   async getClassesWhereTeacherIsClassTeacher(

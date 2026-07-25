@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge, Combobox, Select, TextInput } from "@mantine/core";
 import {
@@ -177,6 +177,7 @@ const PerformanceAnalyticsPage = () => {
       : getTodayDateInputValue();
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const pendingFilterQueryRef = useRef<string | null>(null);
 
   const { classLevels } = useGetTeacherClasses("");
   const { studentCalendars: calendars } = useGetCalendars();
@@ -229,8 +230,12 @@ const PerformanceAnalyticsPage = () => {
 
   const replaceFiltersUrl = useCallback(
     (next: PerformanceFilters) => {
-      if (filtersMatchUrl(next, searchParams)) return;
+      if (filtersMatchUrl(next, searchParams)) {
+        pendingFilterQueryRef.current = null;
+        return;
+      }
       const queryString = buildFilterSearchParams(next).toString();
+      pendingFilterQueryRef.current = queryString;
       router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, {
         scroll: false,
       });
@@ -263,7 +268,6 @@ const PerformanceAnalyticsPage = () => {
     return `${pathname}${queryString ? `?${queryString}` : ""}`;
   }, [currentFilters, pathname]);
 
-  // Single hydrate/default pass — avoids competing router.replace loops on reload.
   useEffect(() => {
     if (classOptions.length === 0 || sortedTerms.length === 0) return;
 
@@ -272,19 +276,46 @@ const PerformanceAnalyticsPage = () => {
     const urlSubject = searchParams.get(PA.subject) ?? "";
     const urlAsOf = searchParams.get(PA.aggregatedAsOf) ?? "";
 
-    const nextClass =
-      (urlClass && classOptions.some((c) => c.value === urlClass) && urlClass) ||
-      (selectedClassId &&
-        classOptions.some((c) => c.value === selectedClassId) &&
-        selectedClassId) ||
-      classOptions[0].value;
+    if (pendingFilterQueryRef.current !== null) {
+      const pending = new URLSearchParams(pendingFilterQueryRef.current);
+      const pendingFilters: PerformanceFilters = {
+        selectedClassId: pending.get(PA.classLevel),
+        selectedTermId: pending.get(PA.term),
+        selectedSubjectId: pending.get(PA.subject),
+        selectedCluster: pending.get(PA.cluster) ?? "",
+        selectedScoreRange: pending.get(PA.scoreRange) ?? "",
+        aggregatedAsOf:
+          pending.get(PA.aggregatedAsOf) ?? getTodayDateInputValue(),
+      };
+      if (filtersMatchUrl(pendingFilters, searchParams)) {
+        pendingFilterQueryRef.current = null;
+      }
+    }
+    const urlWritePending = pendingFilterQueryRef.current !== null;
 
-    const nextTerm =
-      (urlTerm && sortedTerms.some((t) => t.id === urlTerm) && urlTerm) ||
-      (selectedTermId &&
-        sortedTerms.some((t) => t.id === selectedTermId) &&
-        selectedTermId) ||
-      sortedTerms[0].id;
+    const selectedClassValid =
+      selectedClassId && classOptions.some((c) => c.value === selectedClassId)
+        ? selectedClassId
+        : null;
+    const urlClassValid =
+      urlClass && classOptions.some((c) => c.value === urlClass)
+        ? urlClass
+        : null;
+
+    const nextClass = urlWritePending
+      ? selectedClassValid || urlClassValid || classOptions[0].value
+      : urlClassValid || selectedClassValid || classOptions[0].value;
+
+    const selectedTermValid =
+      selectedTermId && sortedTerms.some((t) => t.id === selectedTermId)
+        ? selectedTermId
+        : null;
+    const urlTermValid =
+      urlTerm && sortedTerms.some((t) => t.id === urlTerm) ? urlTerm : null;
+
+    const nextTerm = urlWritePending
+      ? selectedTermValid || urlTermValid || sortedTerms[0].id
+      : urlTermValid || selectedTermValid || sortedTerms[0].id;
 
     const nextAsOf =
       urlAsOf && isValidDateInput(urlAsOf)
@@ -293,11 +324,13 @@ const PerformanceAnalyticsPage = () => {
           ? aggregatedAsOf
           : getTodayDateInputValue();
 
-    const nextCluster = searchParams.get(PA.cluster) ?? selectedCluster;
-    const nextScoreRange =
-      searchParams.get(PA.scoreRange) ?? selectedScoreRange;
+    const nextCluster = urlWritePending
+      ? selectedCluster
+      : (searchParams.get(PA.cluster) ?? selectedCluster);
+    const nextScoreRange = urlWritePending
+      ? selectedScoreRange
+      : (searchParams.get(PA.scoreRange) ?? selectedScoreRange);
 
-    // Subjects are fetched for selectedClassId; wait until that matches nextClass.
     const subjectsReadyForClass =
       selectedClassId === nextClass && !subjectsLoading;
 
@@ -308,6 +341,7 @@ const PerformanceAnalyticsPage = () => {
       if (subjectOptions.length === 0) {
         nextSubject = null;
       } else if (
+        !urlWritePending &&
         urlSubject &&
         subjectOptions.some((s) => s.value === urlSubject)
       ) {
