@@ -34,11 +34,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
     <div
-      className={`flex items-center px-4 py-2 rounded-lg bg-[#fff] ${className} ${
+      className={`flex items-center px-4 py-2 rounded-lg bg-[#fff] transition-all duration-200 cursor-text ${
         isFocused
           ? "ring-2 ring-purple-500 ring-opacity-50"
           : "border border-transparent"
-      } transition-all duration-200 cursor-text`}
+      } ${className}`}
       onClick={handleContainerClick}
     >
       <svg
