@@ -35,7 +35,7 @@ export const CustomSelectTag: React.FC<SelectTagProps> = ({options, value, optio
       </select>
       <div
         className="relative pointer-events-none"
-        style={{ marginLeft: "-28px" }}
+        style={{ marginLeft: "-30px" }}
       >
         <IconChevronDown className="object-contain w-5 aspect-square pr-1 bg-white" />
       </div>

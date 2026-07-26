@@ -56,6 +56,12 @@ import {
   SchoolPaymentsListParams,
   SchoolPaymentConfig,
   PostAttendancePayload,
+  FinanceStudentsListParams,
+  PaginatedFinanceStudentsResponse,
+  FinanceStudentRow,
+  FinanceClassesResponse,
+  FinanceClassRow,
+  FinanceStudentDetailResponse,
 } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
@@ -2217,4 +2223,82 @@ export const useGetSchoolPaymentReceipt = (
   const receipt = data?.data as SchoolPaymentReceiptDetail | undefined;
 
   return { receipt, isLoading, isFetching, error, refetch };
+};
+
+export const useGetFinanceStudents = (
+  params: FinanceStudentsListParams,
+  queryEnabled: boolean = true
+) => {
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    classLevelId = "",
+    balanceStatus = "all",
+  } = params;
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [
+      "financeStudents",
+      { page, limit, search, classLevelId, balanceStatus },
+    ],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+      queryBuilder.push(`page=${page}`);
+      queryBuilder.push(`limit=${limit}`);
+      if (search) queryBuilder.push(`search=${encodeURIComponent(search)}`);
+      if (classLevelId)
+        queryBuilder.push(`classLevelId=${encodeURIComponent(classLevelId)}`);
+      if (balanceStatus && balanceStatus !== "all") {
+        queryBuilder.push(
+          `balanceStatus=${encodeURIComponent(balanceStatus)}`
+        );
+      }
+      return customAPI.get(
+        `/finance/my-school/students?${queryBuilder.join("&")}`
+      );
+    },
+    enabled: queryEnabled,
+    refetchOnWindowFocus: true,
+  });
+
+  const body = data?.data as PaginatedFinanceStudentsResponse | undefined;
+  const students = (body?.data ?? []) as FinanceStudentRow[];
+  const meta = body?.meta;
+  const summary = body?.summary;
+
+  return { students, meta, summary, isLoading, refetch };
+};
+
+export const useGetFinanceClasses = (queryEnabled: boolean = true) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["financeClasses"],
+    queryFn: () => customAPI.get("/finance/my-school/classes"),
+    enabled: queryEnabled,
+    refetchOnWindowFocus: true,
+  });
+
+  const body = data?.data as FinanceClassesResponse | undefined;
+  const classes = (body?.data ?? []) as FinanceClassRow[];
+
+  return { classes, isLoading, refetch };
+};
+
+export const useGetFinanceStudentDetail = (
+  studentId: string | null,
+  enabled: boolean = true
+) => {
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["financeStudentDetail", studentId],
+    queryFn: () =>
+      customAPI.get(
+        `/finance/my-school/students/${encodeURIComponent(studentId as string)}`
+      ),
+    enabled: Boolean(studentId) && enabled,
+    refetchOnWindowFocus: false,
+  });
+
+  const detail = data?.data as FinanceStudentDetailResponse | undefined;
+
+  return { detail, isLoading, isFetching, error, refetch };
 };

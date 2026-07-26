@@ -620,6 +620,113 @@ export interface SchoolPaymentReceiptDetail {
   transaction: SchoolPaymentTransaction;
 }
 
+export type FinanceBalanceStatus = "all" | "owing" | "clear" | "prepaid";
+
+export interface FinanceMoneyTotals {
+  totalPayable: number;
+  totalPaid: number;
+  outstanding: number;
+  arrears: number;
+  prepayment: number;
+  netBalance: number;
+}
+
+export interface FinanceSchoolSummary {
+  totalPayable: number;
+  totalPaid: number;
+  outstanding: number;
+  arrears: number;
+  prepayment: number;
+  owingCount: number;
+  prepaidCount: number;
+}
+
+export interface FinanceStudentRow extends FinanceMoneyTotals {
+  studentId: string;
+  studentCode: string;
+  firstName: string;
+  lastName: string;
+  classLevelId: string | null;
+  className: string | null;
+  nextDueDate: string | null;
+  hasPendingBalance: boolean;
+}
+
+export interface FinanceClassRow extends FinanceMoneyTotals {
+  classLevelId: string;
+  className: string;
+  studentCount: number;
+}
+
+export interface FinanceStudentsListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  classLevelId?: string;
+  balanceStatus?: FinanceBalanceStatus;
+}
+
+export interface PaginatedFinanceStudentsResponse {
+  data: FinanceStudentRow[];
+  summary: FinanceSchoolSummary;
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface FinanceClassesResponse {
+  data: FinanceClassRow[];
+}
+
+export interface FinanceStudentIdentity {
+  studentId: string;
+  studentCode: string;
+  firstName: string;
+  lastName: string;
+  classLevelId: string | null;
+  className: string | null;
+}
+
+export interface FinanceFeeLine {
+  obligationId: string;
+  feeStructureId: string;
+  feeTitle: string;
+  periodLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  amountDue: number;
+  paid: number;
+  outstanding: number;
+  isArrear: boolean;
+  dueDate: string | null;
+}
+
+export interface FinanceRecentPayment {
+  id: string;
+  date: string;
+  amount: number;
+  status: SchoolPaymentTransactionStatus | string;
+  channel: string | null;
+  studentName: string;
+  studentCode: string;
+  sessionId: string;
+}
+
+export interface FinanceStudentDetailTotals extends FinanceMoneyTotals {
+  nextDueDate?: string | null;
+  hasPendingBalance: boolean;
+}
+
+export interface FinanceStudentDetailResponse {
+  student: FinanceStudentIdentity;
+  totals: FinanceStudentDetailTotals;
+  feeLines: FinanceFeeLine[];
+  recentPayments: FinanceRecentPayment[];
+}
+
 export interface Subject {
   id?: string;
   name: string;
@@ -896,6 +1003,12 @@ export interface StudentTopicPerformanceResponse {
   academicTerm: { id: string; termName: string };
   subject: { id: string; name: string };
   topics: StudentTopicPerformanceTopic[];
+}
+
+export interface TeacherAnalyticsSubjectsResponse {
+  classLevelId: string;
+  isClassTeacher: boolean;
+  subjects: Array<{ id: string; name: string }>;
 }
 
 export enum NotificationType {

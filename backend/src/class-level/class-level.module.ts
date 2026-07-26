@@ -11,6 +11,7 @@ import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.enti
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { School } from 'src/school/school.entity';
+import { Subject } from 'src/subject/subject.entity';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { School } from 'src/school/school.entity';
       Holiday,
       School,
       ClassLevelResultApproval,
+      Subject,
     ]),
   ],
   providers: [ClassLevelService, AcademicCalendarService],

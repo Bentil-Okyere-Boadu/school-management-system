@@ -77,6 +77,19 @@ export type StudentTopicPerformanceResponse = {
   }>;
 };
 
+export type TeacherAnalyticsSubjectsResponse = {
+  classLevelId: string;
+  isClassTeacher: boolean;
+  subjects: Array<{ id: string; name: string }>;
+};
+
+export type ClassSubjectPerformanceFilters = {
+  cluster?: ClusterName;
+  scoreRangeMin?: number;
+  scoreRangeMax?: number;
+  aggregatedAsOf?: string;
+};
+
 /** One graded submission row under a curriculum topic */
 export type TopicAssignmentGradeDetail = {
   submissionId: string;
@@ -221,11 +234,198 @@ export class StudentAnalyticsService {
       .select('classLevel.id', 'id')
       .getRawMany<{ id: string }>();
 
+    const classesViaSubject = await this.subjectRepository
+      .createQueryBuilder('subject')
+      .innerJoin('subject.classLevels', 'classLevel')
+      .innerJoin('subject.teacher', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId })
+      .select('classLevel.id', 'id')
+      .getRawMany<{ id: string }>();
+
     const ids = [
       ...assignedClassLevels.map((r) => r.id),
       ...classesAsClassTeacher.map((r) => r.id),
+      ...classesViaSubject.map((r) => r.id),
     ];
     return [...new Set(ids)];
+  }
+
+  private async isTeacherClassTeacherOfClass(
+    teacherId: string,
+    classLevelId: string,
+  ): Promise<boolean> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['classTeacher'],
+    });
+    return classLevel?.classTeacher?.id === teacherId;
+  }
+
+  private async teacherTeachesSubjectInClass(
+    teacherId: string,
+    classLevelId: string,
+    subjectCatalogId: string,
+  ): Promise<boolean> {
+    const count = await this.subjectRepository
+      .createQueryBuilder('subject')
+      .innerJoin('subject.classLevels', 'classLevel')
+      .innerJoin('subject.subjectCatalog', 'catalog')
+      .innerJoin('subject.teacher', 'teacher')
+      .where('teacher.id = :teacherId', { teacherId })
+      .andWhere('classLevel.id = :classLevelId', { classLevelId })
+      .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
+      .getCount();
+    return count > 0;
+  }
+
+  private async ensureTeacherCanAccessClassForAnalytics(
+    teacher: Teacher,
+    classLevelId: string,
+  ): Promise<ClassLevel> {
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id: classLevelId },
+      relations: ['school', 'classTeacher', 'students'],
+    });
+    if (!classLevel) {
+      throw new NotFoundException('Class not found');
+    }
+    if (classLevel.school.id !== teacher.school.id) {
+      throw new ForbiddenException('You cannot access this class');
+    }
+
+    const associatedIds = await this.getTeacherAssociatedClassLevelIds(
+      teacher.id,
+    );
+    if (!associatedIds.includes(classLevelId)) {
+      throw new ForbiddenException('You cannot access this class');
+    }
+    return classLevel;
+  }
+
+  private async ensureTeacherCanAccessSubjectInClass(
+    teacher: Teacher,
+    classLevelId: string,
+    subjectCatalogId: string,
+  ): Promise<void> {
+    await this.ensureTeacherCanAccessClassForAnalytics(teacher, classLevelId);
+
+    const isClassTeacher = await this.isTeacherClassTeacherOfClass(
+      teacher.id,
+      classLevelId,
+    );
+    if (isClassTeacher) return;
+
+    const teaches = await this.teacherTeachesSubjectInClass(
+      teacher.id,
+      classLevelId,
+      subjectCatalogId,
+    );
+    if (!teaches) {
+      throw new ForbiddenException(
+        'You cannot access performance analytics for this subject',
+      );
+    }
+  }
+
+  private async ensureTeacherCanAccessTopicPerformance(
+    teacher: Teacher,
+    studentId: string,
+    subjectCatalogId: string,
+  ): Promise<void> {
+    await this.ensureTeacherCanAccessStudent(teacher, studentId);
+
+    const student = await this.studentRepository.findOne({
+      where: { id: studentId },
+      relations: ['classLevels'],
+    });
+    if (!student?.classLevels?.length) {
+      throw new ForbiddenException('You cannot access this student');
+    }
+
+    const studentClassIds = student.classLevels.map((cl) => cl.id);
+    const teacherClassIds = await this.getTeacherAssociatedClassLevelIds(
+      teacher.id,
+    );
+    const overlapIds = studentClassIds.filter((id) =>
+      teacherClassIds.includes(id),
+    );
+
+    for (const classLevelId of overlapIds) {
+      const isClassTeacher = await this.isTeacherClassTeacherOfClass(
+        teacher.id,
+        classLevelId,
+      );
+      if (isClassTeacher) return;
+
+      const teaches = await this.teacherTeachesSubjectInClass(
+        teacher.id,
+        classLevelId,
+        subjectCatalogId,
+      );
+      if (teaches) return;
+    }
+
+    throw new ForbiddenException(
+      'You cannot access performance analytics for this subject',
+    );
+  }
+
+  async getTeacherAnalyticsSubjectsForClass(
+    teacher: Teacher,
+    classLevelId: string,
+  ): Promise<TeacherAnalyticsSubjectsResponse> {
+    await this.ensureTeacherCanAccessClassForAnalytics(teacher, classLevelId);
+
+    const isClassTeacher = await this.isTeacherClassTeacherOfClass(
+      teacher.id,
+      classLevelId,
+    );
+
+    let subjects: Subject[];
+    if (isClassTeacher) {
+      subjects = await this.subjectRepository
+        .createQueryBuilder('subject')
+        .innerJoinAndSelect('subject.subjectCatalog', 'catalog')
+        .innerJoin('subject.classLevels', 'classLevel')
+        .innerJoin('subject.school', 'school')
+        .where('classLevel.id = :classLevelId', { classLevelId })
+        .andWhere('school.id = :schoolId', {
+          schoolId: teacher.school.id,
+        })
+        .orderBy('catalog.name', 'ASC')
+        .getMany();
+    } else {
+      subjects = await this.subjectRepository
+        .createQueryBuilder('subject')
+        .innerJoinAndSelect('subject.subjectCatalog', 'catalog')
+        .innerJoin('subject.classLevels', 'classLevel')
+        .innerJoin('subject.teacher', 'assignedTeacher')
+        .innerJoin('subject.school', 'school')
+        .where('classLevel.id = :classLevelId', { classLevelId })
+        .andWhere('assignedTeacher.id = :teacherId', {
+          teacherId: teacher.id,
+        })
+        .andWhere('school.id = :schoolId', {
+          schoolId: teacher.school.id,
+        })
+        .orderBy('catalog.name', 'ASC')
+        .getMany();
+    }
+
+    const seen = new Set<string>();
+    const catalogSubjects: Array<{ id: string; name: string }> = [];
+    for (const subject of subjects) {
+      const catalog = subject.subjectCatalog;
+      if (!catalog || seen.has(catalog.id)) continue;
+      seen.add(catalog.id);
+      catalogSubjects.push({ id: catalog.id, name: catalog.name });
+    }
+
+    return {
+      classLevelId,
+      isClassTeacher,
+      subjects: catalogSubjects,
+    };
   }
 
   private async getTeacherSubjectCatalogIdsForStudent(
@@ -587,15 +787,47 @@ export class StudentAnalyticsService {
     classLevelId: string,
     academicTermId: string,
     subjectCatalogId: string,
-    filters: {
-      cluster?: ClusterName;
-      scoreRangeMin?: number;
-      scoreRangeMax?: number;
-      aggregatedAsOf?: string;
-    } = {},
+    filters: ClassSubjectPerformanceFilters = {},
+  ): Promise<ClassSubjectPerformanceResponse> {
+    return this.buildClassSubjectPerformance(
+      admin.school.id,
+      classLevelId,
+      academicTermId,
+      subjectCatalogId,
+      filters,
+    );
+  }
+
+  async getClassSubjectPerformanceForTeacher(
+    teacher: Teacher,
+    classLevelId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+    filters: ClassSubjectPerformanceFilters = {},
+  ): Promise<ClassSubjectPerformanceResponse> {
+    await this.ensureTeacherCanAccessSubjectInClass(
+      teacher,
+      classLevelId,
+      subjectCatalogId,
+    );
+    return this.buildClassSubjectPerformance(
+      teacher.school.id,
+      classLevelId,
+      academicTermId,
+      subjectCatalogId,
+      filters,
+    );
+  }
+
+  private async buildClassSubjectPerformance(
+    schoolId: string,
+    classLevelId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+    filters: ClassSubjectPerformanceFilters = {},
   ): Promise<ClassSubjectPerformanceResponse> {
     const classLevel = await this.classLevelRepository.findOne({
-      where: { id: classLevelId, school: { id: admin.school.id } },
+      where: { id: classLevelId, school: { id: schoolId } },
       relations: ['students', 'school'],
     });
     if (!classLevel) {
@@ -610,7 +842,7 @@ export class StudentAnalyticsService {
       throw new NotFoundException('Academic term not found');
     }
 
-    const gradingBands = await this.loadGradingBands(admin.school.id);
+    const gradingBands = await this.loadGradingBands(schoolId);
 
     const allSubs = await this.submissionRepository
       .createQueryBuilder('sub')
@@ -623,7 +855,7 @@ export class StudentAnalyticsService {
       .innerJoinAndSelect('sub.student', 'student')
       .where('assClass.id = :classLevelId', { classLevelId })
       .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
-      .andWhere('catalogSchool.id = :schoolId', { schoolId: admin.school.id })
+      .andWhere('catalogSchool.id = :schoolId', { schoolId })
       .andWhere('sub.score IS NOT NULL')
       .andWhere('assignment.maxScore > 0')
       .getMany();
@@ -792,7 +1024,39 @@ export class StudentAnalyticsService {
     subjectCatalogId: string,
   ): Promise<StudentTopicPerformanceResponse> {
     await this.ensureAdminCanAccessStudent(admin, studentId);
+    return this.buildStudentTopicPerformance(
+      admin.school.id,
+      studentId,
+      academicTermId,
+      subjectCatalogId,
+    );
+  }
 
+  async getStudentTopicPerformanceForTeacher(
+    teacher: Teacher,
+    studentId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+  ): Promise<StudentTopicPerformanceResponse> {
+    await this.ensureTeacherCanAccessTopicPerformance(
+      teacher,
+      studentId,
+      subjectCatalogId,
+    );
+    return this.buildStudentTopicPerformance(
+      teacher.school.id,
+      studentId,
+      academicTermId,
+      subjectCatalogId,
+    );
+  }
+
+  private async buildStudentTopicPerformance(
+    schoolId: string,
+    studentId: string,
+    academicTermId: string,
+    subjectCatalogId: string,
+  ): Promise<StudentTopicPerformanceResponse> {
     const student = await this.studentRepository.findOne({
       where: { id: studentId },
       relations: ['classLevels'],
@@ -824,7 +1088,7 @@ export class StudentAnalyticsService {
 
     if (!studentClassIds.length) return emptyResponse('');
 
-    const gradingBands = await this.loadGradingBands(admin.school.id);
+    const gradingBands = await this.loadGradingBands(schoolId);
 
     // Fetch all submissions for the student's class(es) for this subject/term
     const allSubs = await this.submissionRepository
@@ -840,7 +1104,7 @@ export class StudentAnalyticsService {
         classLevelIds: studentClassIds,
       })
       .andWhere('catalog.id = :subjectCatalogId', { subjectCatalogId })
-      .andWhere('catalogSchool.id = :schoolId', { schoolId: admin.school.id })
+      .andWhere('catalogSchool.id = :schoolId', { schoolId })
       .andWhere('sub.score IS NOT NULL')
       .andWhere('assignment.maxScore > 0')
       .getMany();

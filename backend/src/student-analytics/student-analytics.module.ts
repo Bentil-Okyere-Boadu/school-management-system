@@ -9,6 +9,7 @@ import { GradingSystemModule } from 'src/grading-system/grading-system.module';
 import { StudentAnalyticsService } from './student-analytics.service';
 import { StudentAnalyticsAdminController } from './student-analytics-admin.controller';
 import { StudentAnalyticsTeacherController } from './student-analytics-teacher.controller';
+import { StudentAnalyticsTeacherClassController } from './student-analytics-teacher-class.controller';
 import { StudentAnalyticsStudentController } from './student-analytics-student.controller';
 import { StudentAnalyticsClassController } from './student-analytics-class.controller';
 
@@ -26,6 +27,7 @@ import { StudentAnalyticsClassController } from './student-analytics-class.contr
   controllers: [
     StudentAnalyticsAdminController,
     StudentAnalyticsTeacherController,
+    StudentAnalyticsTeacherClassController,
     StudentAnalyticsStudentController,
     StudentAnalyticsClassController,
   ],

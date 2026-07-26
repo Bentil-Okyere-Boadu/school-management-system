@@ -592,7 +592,7 @@
     },
     "/api/v1/school-admin/students/{studentId}/performance-analytics": {
       "get": {
-        "description": "Returns subject → topic → assignment breakdown of a student's graded submission percentages for a given academic term.",
+        "description": "Returns subject → topic → assignment breakdown of a student's graded submissions for a given academic term. Subject, topic, and overall averages use total points earned ÷ total points possible.",
         "operationId": "StudentAnalyticsAdminController_getPerformanceAnalytics",
         "parameters": [
           {
@@ -630,7 +630,7 @@
     },
     "/api/v1/school-admin/students/{studentId}/topic-performance": {
       "get": {
-        "description": "Returns topic-level aggregated scores, class-wide average/range/median, test count, and performance cluster for a student in one subject for a given term. Clusters are derived from the school grading system bands. Used for the student detail page in Performance Breakdown.",
+        "description": "Returns topic-level point-weighted aggregated scores (total earned ÷ total possible), class-wide average/range/median, test count, and performance cluster for a student in one subject for a given term. Clusters are derived from the school grading system bands. Used for the student detail page in Performance Breakdown.",
         "operationId": "StudentAnalyticsAdminController_getTopicPerformance",
         "parameters": [
           {
@@ -677,7 +677,7 @@
     },
     "/api/v1/school-admin/classes/{classLevelId}/subject-performance": {
       "get": {
-        "description": "Returns every student in the class with their aggregated assignment score, rank, and performance cluster for a given subject and term. Clusters are derived from the school grading system bands (not class rank). Also includes summary stats (average, median, highest, lowest) and cluster distribution counts. Supports optional filtering by cluster name and score range.",
+        "description": "Returns every student in the class with their point-weighted aggregated assignment score (total earned ÷ total possible), rank, and performance cluster for a given subject and term. Only assignments graded on or before aggregatedAsOf (YYYY-MM-DD) are included when that query param is set. Clusters are derived from the school grading system bands (not class rank). Also includes summary stats (average, median, highest, lowest), aggregation metadata, and cluster distribution counts. Supports optional filtering by cluster name and score range.",
         "operationId": "StudentAnalyticsClassController_getClassSubjectPerformance",
         "parameters": [
           {
@@ -703,6 +703,15 @@
             "required": true,
             "in": "query",
             "description": "UUID of the subject catalog entry",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "aggregatedAsOf",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive cutoff date (YYYY-MM-DD). Only assignments graded on or before this date are included in term-to-date progress.",
             "schema": {
               "type": "string"
             }

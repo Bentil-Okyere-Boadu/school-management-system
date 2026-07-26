@@ -62,7 +62,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     },
     {
       icon: PaymentsIcon,
-      label: "Payments",
+      label: "Payments & Finance",
     },
     {
       icon: SubjectIcon,
@@ -92,7 +92,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/payments" ||
       pathname.startsWith("/admin/payments/receipt")
     ) {
-      setActiveMenuItem("Payments");
+      setActiveMenuItem("Payments & Finance");
       setIsOverviewPage(true);
     } else if (pathname === "/admin/admissions") {
       setActiveMenuItem("Admissions");
@@ -169,7 +169,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       case "Students":
         router.push("/admin/students");
         break;
-      case "Payments":
+      case "Payments & Finance":
         router.push("/admin/payments");
         break;
       case "Admissions":

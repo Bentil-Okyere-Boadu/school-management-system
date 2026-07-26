@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { FindOptionsWhere, In, LessThan, Repository } from 'typeorm';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
+import { Attendance } from 'src/attendance/attendance.entity';
 
 /**
  * Service for cleaning up orphaned users and expired invitations
@@ -34,7 +35,6 @@ export class CleanupService {
 
     this.logger.log('Starting cleanup of orphaned users...');
 
-    // Clean up orphaned admins using delete (faster, avoids loading entities)
     const deletedAdminsResult = await this.adminRepository.delete({
       status: 'pending',
       createdAt: LessThan(sevenDaysAgo),
@@ -42,20 +42,16 @@ export class CleanupService {
     const deletedAdmins = deletedAdminsResult.affected || 0;
     this.logger.log(`Deleted ${deletedAdmins} orphaned admin users`);
 
-    // Clean up orphaned teachers using delete (faster, avoids loading entities)
-    const deletedTeachersResult = await this.teacherRepository.delete({
+    const deletedTeachers = await this.deletePendingTeachers({
       status: 'pending',
       createdAt: LessThan(sevenDaysAgo),
     });
-    const deletedTeachers = deletedTeachersResult.affected || 0;
     this.logger.log(`Deleted ${deletedTeachers} orphaned teacher users`);
 
-    // Clean up orphaned students using delete (faster, avoids loading entities)
-    const deletedStudentsResult = await this.studentRepository.delete({
+    const deletedStudents = await this.deletePendingStudents({
       status: 'pending',
       createdAt: LessThan(sevenDaysAgo),
     });
-    const deletedStudents = deletedStudentsResult.affected || 0;
     this.logger.log(`Deleted ${deletedStudents} orphaned student users`);
 
     return {
@@ -77,7 +73,6 @@ export class CleanupService {
 
     this.logger.log('Starting cleanup of expired invitation tokens...');
 
-    // Clean up expired admin tokens using delete (faster, avoids loading entities)
     const deletedExpiredAdminsResult = await this.adminRepository.delete({
       status: 'pending',
       invitationExpires: LessThan(now),
@@ -85,20 +80,16 @@ export class CleanupService {
     const expiredAdmins = deletedExpiredAdminsResult.affected || 0;
     this.logger.log(`Deleted ${expiredAdmins} admins with expired tokens`);
 
-    // Clean up expired teacher tokens using delete (faster, avoids loading entities)
-    const deletedExpiredTeachersResult = await this.teacherRepository.delete({
+    const expiredTeachers = await this.deletePendingTeachers({
       status: 'pending',
       invitationExpires: LessThan(now),
     });
-    const expiredTeachers = deletedExpiredTeachersResult.affected || 0;
     this.logger.log(`Deleted ${expiredTeachers} teachers with expired tokens`);
 
-    // Clean up expired student tokens using delete (faster, avoids loading entities)
-    const deletedExpiredStudentsResult = await this.studentRepository.delete({
+    const expiredStudents = await this.deletePendingStudents({
       status: 'pending',
       invitationExpires: LessThan(now),
     });
-    const expiredStudents = deletedExpiredStudentsResult.affected || 0;
     this.logger.log(`Deleted ${expiredStudents} students with expired tokens`);
 
     return {
@@ -157,5 +148,59 @@ export class CleanupService {
       pendingStudents,
       expiredTokens,
     };
+  }
+
+  private async deletePendingStudents(
+    where: FindOptionsWhere<Student>,
+  ): Promise<number> {
+    const students = await this.studentRepository.find({
+      where,
+      select: ['id'],
+    });
+    if (students.length === 0) {
+      return 0;
+    }
+
+    const ids = students.map((s) => s.id);
+    const manager = this.studentRepository.manager;
+
+    await manager
+      .createQueryBuilder()
+      .delete()
+      .from('class_level_students')
+      .where('student_id IN (:...ids)', { ids })
+      .execute();
+
+    await manager.getRepository(Attendance).delete({
+      student: { id: In(ids) },
+    });
+
+    const result = await this.studentRepository.delete({ id: In(ids) });
+    return result.affected || 0;
+  }
+
+  private async deletePendingTeachers(
+    where: FindOptionsWhere<Teacher>,
+  ): Promise<number> {
+    const teachers = await this.teacherRepository.find({
+      where,
+      select: ['id'],
+    });
+    if (teachers.length === 0) {
+      return 0;
+    }
+
+    const ids = teachers.map((t) => t.id);
+    const manager = this.teacherRepository.manager;
+
+    await manager
+      .createQueryBuilder()
+      .delete()
+      .from('class_level_teachers')
+      .where('teacher_id IN (:...ids)', { ids })
+      .execute();
+
+    const result = await this.teacherRepository.delete({ id: In(ids) });
+    return result.affected || 0;
   }
 }

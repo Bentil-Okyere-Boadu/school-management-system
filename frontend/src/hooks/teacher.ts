@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentPerformanceAnalytics, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload, PostAttendancePayload } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentPerformanceAnalytics, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload, PostAttendancePayload, ClassSubjectPerformanceResponse, StudentTopicPerformanceResponse, PerformanceCluster, TeacherAnalyticsSubjectsResponse } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
@@ -749,6 +749,121 @@ export const useTeacherStudentPerformanceAnalytics = (
     (data as { data: StudentPerformanceAnalytics })?.data ?? null;
 
   return { analytics, isLoading, refetch };
+};
+
+const EMPTY_ANALYTICS_SUBJECTS: TeacherAnalyticsSubjectsResponse["subjects"] =
+  [];
+
+export const useGetTeacherAnalyticsSubjects = (
+  classLevelId: string,
+  options?: { enabled?: boolean }
+) => {
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["teacherAnalyticsSubjects", classLevelId],
+    queryFn: () =>
+      customAPI.get(`/teacher/classes/${classLevelId}/analytics-subjects`),
+    enabled: (options?.enabled ?? true) && Boolean(classLevelId),
+    refetchOnWindowFocus: true,
+  });
+
+  const analyticsSubjects =
+    (data?.data as TeacherAnalyticsSubjectsResponse) ?? null;
+  const subjects = analyticsSubjects?.subjects ?? EMPTY_ANALYTICS_SUBJECTS;
+
+  return {
+    analyticsSubjects,
+    subjects,
+    isClassTeacher: analyticsSubjects?.isClassTeacher ?? false,
+    isLoading,
+    isFetching,
+    refetch,
+  };
+};
+
+export type TeacherClassSubjectPerformanceFilters = {
+  classLevelId: string;
+  academicTermId: string;
+  subjectCatalogId: string;
+  cluster?: PerformanceCluster;
+  scoreRangeMin?: number;
+  scoreRangeMax?: number;
+  aggregatedAsOf?: string;
+};
+
+export const useGetTeacherClassSubjectPerformance = (
+  filters: TeacherClassSubjectPerformanceFilters,
+  options?: { enabled?: boolean }
+) => {
+  const {
+    classLevelId,
+    academicTermId,
+    subjectCatalogId,
+    cluster,
+    scoreRangeMin,
+    scoreRangeMax,
+    aggregatedAsOf,
+  } = filters;
+
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["teacherClassSubjectPerformance", filters],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("academicTermId", academicTermId);
+      params.set("subjectCatalogId", subjectCatalogId);
+      if (cluster) params.set("cluster", cluster);
+      if (scoreRangeMin !== undefined)
+        params.set("scoreRangeMin", String(scoreRangeMin));
+      if (scoreRangeMax !== undefined)
+        params.set("scoreRangeMax", String(scoreRangeMax));
+      if (aggregatedAsOf) params.set("aggregatedAsOf", aggregatedAsOf);
+
+      return customAPI.get(
+        `/teacher/classes/${classLevelId}/subject-performance?${params.toString()}`
+      );
+    },
+    enabled:
+      (options?.enabled ?? true) &&
+      Boolean(classLevelId && academicTermId && subjectCatalogId),
+    refetchOnWindowFocus: true,
+  });
+
+  const performance =
+    (data?.data as ClassSubjectPerformanceResponse) ?? null;
+
+  return { performance, isLoading, isFetching, refetch };
+};
+
+export const useGetTeacherStudentTopicPerformance = (
+  studentId: string,
+  academicTermId: string,
+  subjectCatalogId: string,
+  options?: { enabled?: boolean }
+) => {
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: [
+      "teacherStudentTopicPerformance",
+      studentId,
+      academicTermId,
+      subjectCatalogId,
+    ],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("academicTermId", academicTermId);
+      params.set("subjectCatalogId", subjectCatalogId);
+      return customAPI.get(
+        `/teacher/students/${studentId}/topic-performance?${params.toString()}`
+      );
+    },
+    enabled:
+      (options?.enabled ?? true) &&
+      Boolean(studentId && academicTermId && subjectCatalogId),
+    refetchOnWindowFocus: true,
+  });
+
+  const topicPerformance =
+    (data?.data as StudentTopicPerformanceResponse) ?? null;
+
+  return { topicPerformance, isLoading, isFetching, refetch };
 };
 
 

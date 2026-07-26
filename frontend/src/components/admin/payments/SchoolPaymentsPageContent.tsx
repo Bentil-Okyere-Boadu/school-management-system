@@ -1,6 +1,7 @@
 "use client";
 
 import { SchoolPaymentTransaction } from "@/@types";
+import TabBar, { TabListItem } from "@/components/common/TabBar";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
@@ -11,9 +12,10 @@ import {
   useGetMe,
 } from "@/hooks/school-admin";
 import { IconAlertTriangle, IconEye, IconFileText } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { HashLoader } from "react-spinners";
+import { FinanceTabSection } from "./FinanceTabSection";
 import { PaymentDetailDrawer } from "./PaymentDetailDrawer";
 import { SchoolPaymentsNotOnboarded } from "./SchoolPaymentsNotOnboarded";
 import {
@@ -36,7 +38,93 @@ const STATUS_OPTIONS = [
 
 const PAGE_SIZE = 10;
 
+const PAYMENTS_TABS: TabListItem[] = [
+  { tabLabel: "All payments", tabKey: "all-payments" },
+  { tabLabel: "Finance", tabKey: "finance" },
+];
+
 export const SchoolPaymentsPageContent: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTabKey, setActiveTabKey] = useState(
+    tabFromUrl === "finance" ? "finance" : "all-payments"
+  );
+
+  const { config: paymentConfig, isLoading: paymentConfigLoading } =
+    useGetSchoolPaymentConfig();
+  const { me } = useGetMe();
+
+  const effectivePaymentStatus = paymentConfig?.status ?? "not_onboarded";
+  const isPaymentNotOnboarded =
+    !paymentConfigLoading && effectivePaymentStatus === "not_onboarded";
+
+  useEffect(() => {
+    if (tabFromUrl === "finance" || tabFromUrl === "all-payments") {
+      setActiveTabKey(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const setTabInUrl = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleItemClick = (item: TabListItem) => {
+    setActiveTabKey(item.tabKey);
+    setTabInUrl(item.tabKey);
+  };
+
+  if (paymentConfigLoading) {
+    return (
+      <div className="pb-8">
+        <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-zinc-200 bg-white">
+          <HashLoader color="#AB58E7" size={40} />
+        </div>
+      </div>
+    );
+  }
+
+  if (isPaymentNotOnboarded) {
+    return (
+      <div className="pb-8">
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-zinc-900">All payments</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            School-wide payment transactions across all students.
+          </p>
+        </header>
+        <SchoolPaymentsNotOnboarded
+          defaultContactEmail={me?.email ?? ""}
+          paymentConfig={paymentConfig}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-8">
+      <TabBar
+        items={PAYMENTS_TABS}
+        activeTabKey={activeTabKey}
+        onItemClick={handleItemClick}
+      />
+
+      {activeTabKey === "all-payments" && (
+        <AllPaymentsTabSection paymentConfigStatus={paymentConfig?.status} />
+      )}
+
+      {activeTabKey === "finance" && <FinanceTabSection />}
+    </div>
+  );
+};
+
+function AllPaymentsTabSection({
+  paymentConfigStatus,
+}: {
+  paymentConfigStatus?: string;
+}) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,27 +144,14 @@ export const SchoolPaymentsPageContent: React.FC = () => {
     setCurrentPage(1);
   }, [debouncedSearch]);
 
-  const { config: paymentConfig, isLoading: paymentConfigLoading } =
-    useGetSchoolPaymentConfig();
-  const { me } = useGetMe();
-
-  const effectivePaymentStatus = paymentConfig?.status ?? "not_onboarded";
-  const isPaymentNotOnboarded =
-    !paymentConfigLoading && effectivePaymentStatus === "not_onboarded";
-  const paymentsQueryEnabled =
-    !paymentConfigLoading && effectivePaymentStatus !== "not_onboarded";
-
-  const { transactions, meta, summary, isLoading } = useGetSchoolPayments(
-    {
-      page: currentPage,
-      limit: PAGE_SIZE,
-      search: debouncedSearch,
-      status: selectedStatus,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-    },
-    paymentsQueryEnabled
-  );
+  const { transactions, meta, summary, isLoading } = useGetSchoolPayments({
+    page: currentPage,
+    limit: PAGE_SIZE,
+    search: debouncedSearch,
+    status: selectedStatus,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  });
 
   const totalPages = meta?.totalPages ?? 1;
   const resultCount = meta?.total ?? 0;
@@ -103,21 +178,21 @@ export const SchoolPaymentsPageContent: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const totalTransactions =
-    summary?.totalTransactions ?? meta?.total ?? 0;
+  const totalTransactions = summary?.totalTransactions ?? meta?.total ?? 0;
   const paidCount = summary?.paidCount ?? 0;
   const pendingCount = summary?.pendingCount ?? 0;
   const totalGross = summary?.totalAmountGhs ?? 0;
 
-  const pageHeader = (
-    <>
+  return (
+    <div>
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-zinc-900">All payments</h1>
         <p className="mt-1 text-sm text-zinc-500">
           School-wide payment transactions across all students.
         </p>
       </header>
-      { paymentConfig?.status === "paused" && (
+
+      {paymentConfigStatus === "paused" && (
         <div
           role="alert"
           className="mb-6 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
@@ -139,38 +214,9 @@ export const SchoolPaymentsPageContent: React.FC = () => {
           </div>
         </div>
       )}
-    </>
-  );
-
-  if (paymentConfigLoading) {
-    return (
-      <div className="pb-8">
-        {pageHeader}
-        <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-zinc-200 bg-white">
-          <HashLoader color="#AB58E7" size={40} />
-        </div>
-      </div>
-    );
-  }
-
-  if (isPaymentNotOnboarded) {
-    return (
-      <div className="pb-8">
-        {pageHeader}
-        <SchoolPaymentsNotOnboarded
-          defaultContactEmail={me?.email ?? ""}
-          paymentConfig={paymentConfig}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="pb-8">
-      {pageHeader}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3 mx-1">
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-zinc-200 bg-white p-4">
           <p className="text-sm tracking-wide text-zinc-500">
             Total transactions
           </p>
@@ -178,17 +224,15 @@ export const SchoolPaymentsPageContent: React.FC = () => {
             {totalTransactions}
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-sm tracking-wide text-zinc-500">
-            Paid / Pending
-          </p>
+        <div className="rounded-xl border border-zinc-200 bg-white p-4">
+          <p className="text-sm tracking-wide text-zinc-500">Paid / Pending</p>
           <p className="mt-2 text-2xl font-bold tabular-nums">
             <span className="text-emerald-600">{paidCount}</span>
             <span className="text-zinc-400 mx-1">/</span>
             <span className="text-amber-600">{pendingCount}</span>
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-zinc-200 bg-white p-4">
           <p className="text-sm tracking-wide text-zinc-500">
             Total amount (GHS)
           </p>
@@ -254,7 +298,7 @@ export const SchoolPaymentsPageContent: React.FC = () => {
         </p>
       </div>
 
-      <section className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <section className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
             <HashLoader color="#AB58E7" size={40} />
@@ -405,7 +449,6 @@ export const SchoolPaymentsPageContent: React.FC = () => {
           onViewReceipt={openReceipt}
         />
       )}
-
     </div>
   );
-};
+}

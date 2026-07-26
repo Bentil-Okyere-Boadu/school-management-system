@@ -6,7 +6,13 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { TeacherJwtAuthGuard } from 'src/teacher/guards/teacher-jwt-auth.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
@@ -16,7 +22,8 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { StudentAnalyticsService } from './student-analytics.service';
 
-@ApiTags('Teacher — Student analytics')
+@ApiTags('Teacher')
+@ApiBearerAuth()
 @Controller('teacher/students')
 export class StudentAnalyticsTeacherController {
   constructor(
@@ -26,6 +33,17 @@ export class StudentAnalyticsTeacherController {
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':studentId/performance-analytics')
   @Roles(Role.Teacher)
+  @ApiOperation({
+    summary: 'Get assignment-level performance analytics for a student',
+    description:
+      "Returns subject → topic → assignment breakdown of a student's graded submissions for a given academic term, restricted to subjects the teacher teaches for that student (class teachers still only see subjects they teach in this assignment-level endpoint).",
+  })
+  @ApiParam({ name: 'studentId', description: 'UUID of the student' })
+  @ApiQuery({
+    name: 'academicTermId',
+    description: 'UUID of the academic term',
+    required: true,
+  })
   async getPerformanceAnalytics(
     @Param('studentId') studentId: string,
     @Query('academicTermId') academicTermId: string,
@@ -38,6 +56,45 @@ export class StudentAnalyticsTeacherController {
       teacher,
       studentId,
       academicTermId.trim(),
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get(':studentId/topic-performance')
+  @Roles(Role.Teacher)
+  @ApiOperation({
+    summary: 'Get per-topic performance breakdown for a student in a subject',
+    description:
+      'Teacher-scoped mirror of the school-admin topic-performance endpoint. Class teachers of an overlapping class may query any subject; subject teachers may only query subjects they teach in an overlapping class. Used for the student detail page in Performance Breakdown.',
+  })
+  @ApiParam({ name: 'studentId', description: 'UUID of the student' })
+  @ApiQuery({
+    name: 'academicTermId',
+    description: 'UUID of the academic term',
+    required: true,
+  })
+  @ApiQuery({
+    name: 'subjectCatalogId',
+    description: 'UUID of the subject catalog entry',
+    required: true,
+  })
+  async getTopicPerformance(
+    @Param('studentId') studentId: string,
+    @Query('academicTermId') academicTermId: string,
+    @Query('subjectCatalogId') subjectCatalogId: string,
+    @CurrentUser() teacher: Teacher,
+  ) {
+    if (!academicTermId?.trim()) {
+      throw new BadRequestException('academicTermId is required');
+    }
+    if (!subjectCatalogId?.trim()) {
+      throw new BadRequestException('subjectCatalogId is required');
+    }
+    return this.studentAnalyticsService.getStudentTopicPerformanceForTeacher(
+      teacher,
+      studentId,
+      academicTermId.trim(),
+      subjectCatalogId.trim(),
     );
   }
 }
