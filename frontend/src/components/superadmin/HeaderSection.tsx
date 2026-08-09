@@ -3,8 +3,8 @@ import React, { useMemo } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Menu } from '@mantine/core';
 import {
+  IconCircleArrowLeft ,
   IconBell,
-  IconCircleX,
   IconLogout2,
 } from '@tabler/icons-react';
 import Cookies from "js-cookie";
@@ -226,7 +226,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
               showSidebarToggleOnDesktop ? isSidebarExpanded : undefined
             }
           >
-            {/* Mobile: always hamburger. Desktop: close icon when sidebar is open. */}
+            {/* Mobile: always hamburger. Desktop: left arrow when sidebar is open. */}
             <svg
               className={`w-6 h-6 text-gray-700 ${
                 showSidebarToggleOnDesktop && isSidebarExpanded
@@ -242,7 +242,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
             {showSidebarToggleOnDesktop && isSidebarExpanded && (
-              <IconCircleX
+              <IconCircleArrowLeft 
                 className="hidden md:block w-8 h-8 text-gray-500"
                 stroke={1.75}
                 aria-hidden="true"

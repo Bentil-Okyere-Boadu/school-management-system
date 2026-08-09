@@ -429,12 +429,12 @@ export const TopicAssignmentsTabSection: React.FC = () => {
                           {row.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 text-center">
                         <div>
                           {row.submissions || 0}
                         </div>
                       </td>
-                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
+                      <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5 text-center">
                         <div>{row.maxScore}</div>
                       </td>
                       <td className="px-6 py-4 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] max-md:px-5">
