@@ -2,15 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { Attendance } from 'src/attendance/attendance.entity';
+import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { Student } from 'src/student/student.entity';
 
-export type ParentAttendanceDayStatus = 'present' | 'absent' | 'none';
+export type ParentAttendanceDayStatus =
+  | 'present'
+  | 'absent'
+  | 'none'
+  | 'weekend'
+  | 'holiday';
 
 @Injectable()
 export class ParentAttendanceService {
   constructor(
     @InjectRepository(Attendance)
     private readonly attendanceRepository: Repository<Attendance>,
+    @InjectRepository(Holiday)
+    private readonly holidayRepository: Repository<Holiday>,
   ) {}
 
   async getMonthSheet(student: Student, year: number, month: number) {
@@ -18,12 +26,15 @@ export class ParentAttendanceService {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    const records = await this.attendanceRepository.find({
-      where: {
-        student: { id: student.id },
-        date: Between(startDate, endDate),
-      },
-    });
+    const [records, holidayDates] = await Promise.all([
+      this.attendanceRepository.find({
+        where: {
+          student: { id: student.id },
+          date: Between(startDate, endDate),
+        },
+      }),
+      this.getHolidayDates(student.school?.id, startDate, endDate),
+    ]);
 
     const byDate = new Map(records.map((row) => [row.date, row.status]));
 
@@ -33,15 +44,16 @@ export class ParentAttendanceService {
       status: ParentAttendanceDayStatus;
     }[] = [];
 
-    const presentCount = records.filter((row) => row.status === 'present').length;
-    const absentCount = records.filter((row) => row.status === 'absent').length;
+    let presentCount = 0;
+    let absentCount = 0;
 
     for (let day = 1; day <= lastDay; day++) {
       const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const recorded = byDate.get(date);
-      const status: ParentAttendanceDayStatus =
-        recorded === 'present' || recorded === 'absent' ? recorded : 'none';
+      const status = this.resolveDayStatus(date, byDate.get(date), holidayDates);
       days.push({ day, date, status });
+
+      if (status === 'present') presentCount += 1;
+      if (status === 'absent') absentCount += 1;
     }
 
     const daysRecorded = presentCount + absentCount;
@@ -67,5 +79,44 @@ export class ParentAttendanceService {
       year,
       days,
     };
+  }
+
+  private resolveDayStatus(
+    date: string,
+    recorded: string | undefined,
+    holidayDates: Set<string>,
+  ): ParentAttendanceDayStatus {
+    const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return 'weekend';
+    }
+
+    if (holidayDates.has(date)) {
+      return 'holiday';
+    }
+
+    return recorded === 'present' || recorded === 'absent' ? recorded : 'none';
+  }
+
+  private async getHolidayDates(
+    schoolId: string | undefined,
+    startDate: string,
+    endDate: string,
+  ) {
+    if (!schoolId) return new Set<string>();
+
+    const holidays = await this.holidayRepository
+      .createQueryBuilder('holiday')
+      .innerJoin('holiday.term', 'term')
+      .innerJoin('term.academicCalendar', 'calendar')
+      .innerJoin('calendar.school', 'school')
+      .where('school.id = :schoolId', { schoolId })
+      .andWhere('holiday.date BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      })
+      .getMany();
+
+    return new Set(holidays.map((holiday) => String(holiday.date).slice(0, 10)));
   }
 }

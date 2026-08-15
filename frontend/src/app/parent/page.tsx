@@ -1,91 +1,330 @@
 "use client";
-import { customAPI } from "../../../config/setup";
-import { useQuery } from "@tanstack/react-query";
-import Cookies from "js-cookie";
+
+import CustomButton from "@/components/Button";
+import { ParentAcademicsTab } from "@/components/parent/ParentAcademicsTab";
+import { ParentAttendanceTab } from "@/components/parent/ParentAttendanceTab";
+import { ParentEmptyChildren } from "@/components/parent/ParentEmptyChildren";
+import { ParentFilters } from "@/components/parent/ParentFilters";
+import { ParentFinanceTab } from "@/components/parent/ParentFinanceTab";
+import { ParentKpiRow } from "@/components/parent/ParentKpiRow";
+import { ParentPayFeesDrawer } from "@/components/parent/ParentPayFeesDrawer";
+import { ParentPillTabBar, ParentTabItem } from "@/components/parent/ParentPillTabBar";
+import {
+  pickAttendancePeriod,
+  pickCurrentCalendar,
+  pickCurrentTerm,
+} from "@/components/parent/parent-utils";
+import { useParentPageFilters } from "@/components/parent/useParentPageFilters";
+import {
+  getParentApiErrorMessage,
+  useConfirmParentChild,
+  useParentAcademics,
+  useParentAttendance,
+  useParentCalendars,
+  useParentFinance,
+  useParentOverview,
+} from "@/hooks/parent";
+import { IconWallet } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import { HashLoader } from "react-spinners";
+import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
-type ParentMe = {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  children?: Array<{
-    id: string;
-    firstName?: string;
-    lastName?: string;
-    studentId?: string;
-  }>;
-};
+const FAMILY_TABS: ParentTabItem[] = [
+  { tabLabel: "Attendance", tabKey: "attendance" },
+  { tabLabel: "Finance", tabKey: "finance" },
+  { tabLabel: "Academics", tabKey: "academics" },
+];
 
-const ParentHome = () => {
+const VALID_TABS = new Set(FAMILY_TABS.map((tab) => tab.tabKey));
+
+const ParentDashboard = () => {
   const router = useRouter();
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["parent-me"],
-    queryFn: async () => {
-      const response = await customAPI.get("/parent/me");
-      return response.data as ParentMe;
-    },
-  });
+  const now = new Date();
+  const {
+    me,
+    children,
+    isLoading: childrenLoading,
+    selectedStudentId,
+    apiStudentId,
+    setStudentId,
+    searchParams,
+    replaceParams,
+    handleChildAccessError,
+  } = useParentPageFilters();
 
-  const logout = () => {
-    Cookies.remove("parentToken");
-    Cookies.remove("parentTokenRefresh");
-    router.push("/home");
+  const tabFromUrl = searchParams.get("tab") ?? "";
+  const activeTabKey = VALID_TABS.has(tabFromUrl) ? tabFromUrl : "attendance";
+  const hasChildren = children.length > 0;
+
+  const { calendars } = useParentCalendars(true);
+  const calendarId = searchParams.get("calendarId") ?? "";
+  const termId = searchParams.get("termId") ?? "";
+  const month = Number(searchParams.get("month") ?? NaN);
+  const year = Number(searchParams.get("year") ?? NaN);
+
+  const [payOpen, setPayOpen] = useState(false);
+  const [preselectStudentId, setPreselectStudentId] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!calendars.length) {
+      if (!VALID_TABS.has(tabFromUrl)) {
+        replaceParams({ tab: "attendance" });
+      }
+      return;
+    }
+    const current = pickCurrentCalendar(calendars);
+    const nextCalendarId = calendarId || current?.id || "";
+    const calendar =
+      calendars.find((item) => item.id === nextCalendarId) ?? current;
+    const nextTerm = calendar?.terms?.find((term) => term.id === termId)
+      ?? pickCurrentTerm(calendar);
+    const nextTermId = termId || nextTerm?.id || "";
+    const period = pickAttendancePeriod(nextTerm);
+    const nextMonth = Number.isFinite(month) ? month : period.month;
+    const nextYear = Number.isFinite(year) ? year : period.year;
+
+    if (
+      nextCalendarId === calendarId &&
+      nextTermId === termId &&
+      nextMonth === month &&
+      nextYear === year &&
+      VALID_TABS.has(tabFromUrl)
+    ) {
+      return;
+    }
+
+    replaceParams({
+      tab: VALID_TABS.has(tabFromUrl) ? tabFromUrl : "attendance",
+      calendarId: nextCalendarId || undefined,
+      termId: nextTermId || undefined,
+      month: String(nextMonth),
+      year: String(nextYear),
+    });
+  }, [calendarId, calendars, month, replaceParams, tabFromUrl, termId, year]);
+
+  const { overview, isLoading: overviewLoading, error: overviewError } =
+    useParentOverview({
+      studentId: apiStudentId,
+      calendarId: calendarId || undefined,
+      termId: termId || undefined,
+    });
+
+  const attendanceMonth = Number.isFinite(month) ? month : now.getMonth() + 1;
+  const attendanceYear = Number.isFinite(year) ? year : now.getFullYear();
+
+  const { attendance, isLoading: attendanceLoading, error: attendanceError } =
+    useParentAttendance(
+      {
+        studentId: apiStudentId,
+        month: attendanceMonth,
+        year: attendanceYear,
+      },
+      hasChildren && activeTabKey === "attendance",
+    );
+
+  const { academics, isLoading: academicsLoading, error: academicsError } =
+    useParentAcademics(
+      { calendarId: calendarId || undefined, studentId: apiStudentId },
+      hasChildren && activeTabKey === "academics" && Boolean(calendarId),
+    );
+
+  const { finance, isLoading: financeLoading, error: financeError } =
+    useParentFinance(apiStudentId, hasChildren);
+
+  const confirmChild = useConfirmParentChild();
+
+  useEffect(() => {
+    handleChildAccessError(overviewError);
+    handleChildAccessError(attendanceError);
+    handleChildAccessError(academicsError);
+    handleChildAccessError(financeError);
+  }, [
+    academicsError,
+    attendanceError,
+    financeError,
+    handleChildAccessError,
+    overviewError,
+  ]);
+
+  const calendarOptions = calendars.map((calendar) => ({
+    value: calendar.id,
+    label: calendar.name,
+  }));
+  const selectedCalendar = calendars.find((calendar) => calendar.id === calendarId);
+  const termOptions = (selectedCalendar?.terms ?? []).map((term) => ({
+    value: term.id,
+    label: term.termName,
+  }));
+  const selectedTerm = selectedCalendar?.terms?.find((term) => term.id === termId);
+
+  const subtitle = [
+    `${children.length} ward${children.length === 1 ? "" : "s"} linked to your account`,
+    selectedCalendar?.name,
+    selectedTerm?.termName,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const openPay = (studentId?: string) => {
+    setPreselectStudentId(studentId ?? null);
+    setPayOpen(true);
   };
 
+  const hasOutstanding = finance.some(
+    (child) => (child.totals?.outstanding ?? 0) > 0,
+  );
+
   return (
-    <main className="min-h-screen bg-zinc-50 px-6 py-10">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-zinc-500">Parent portal</p>
-            <h1 className="text-2xl font-bold text-neutral-800">
-              {isLoading
-                ? "Loading..."
-                : `Welcome${data?.firstName ? `, ${data.firstName}` : ""}`}
-            </h1>
-          </div>
-          <button
-            onClick={logout}
-            className="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white"
-          >
-            Log out
-          </button>
+    <div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-neutral-800">Family overview</h2>
+          <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
         </div>
-        {error ? (
-          <p className="text-sm text-red-600">
-            Unable to load your parent account.
-          </p>
-        ) : (
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-800">
-              Linked children
-            </h2>
-            {!data?.children?.length ? (
-              <p className="text-sm text-zinc-600">
-                No active children yet. Confirm any pending child invitations
-                from your email.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {data.children.map((child) => (
-                  <li
-                    key={child.id}
-                    className="rounded-xl border border-zinc-100 px-4 py-3"
-                  >
-                    <p className="font-medium text-neutral-800">
-                      {child.firstName} {child.lastName}
-                    </p>
-                    <p className="text-xs text-zinc-500">{child.studentId}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
+        <CustomButton
+          text="Pay fees"
+          icon={<IconWallet size={16} />}
+          onClick={() => openPay()}
+          disabled={!hasOutstanding}
+          className="print:hidden py-[4px] px-[8px]"
+        />
       </div>
-    </main>
+
+      <ParentFilters
+        wards={children}
+        selectedStudentId={selectedStudentId}
+        onStudentChange={setStudentId}
+        calendarOptions={calendarOptions}
+        selectedCalendarId={calendarId}
+        onCalendarChange={(value) => {
+          const nextCalendar = calendars.find((calendar) => calendar.id === value);
+          const nextTerm = pickCurrentTerm(nextCalendar);
+          const period = pickAttendancePeriod(nextTerm);
+          replaceParams({
+            calendarId: value,
+            termId: nextTerm?.id,
+            month: String(period.month),
+            year: String(period.year),
+          });
+        }}
+        termOptions={termOptions}
+        selectedTermId={termId}
+        onTermChange={(value) => {
+          const nextTerm = selectedCalendar?.terms?.find((term) => term.id === value);
+          const period = pickAttendancePeriod(nextTerm);
+          replaceParams({
+            termId: value,
+            month: String(period.month),
+            year: String(period.year),
+          });
+        }}
+      />
+
+      {overviewLoading && !overview ? (
+        <div className="flex min-h-[200px] items-center justify-center">
+          <HashLoader color="#AB58E7" size={40} />
+        </div>
+      ) : (
+        <>
+          {(overview?.pendingActionsCount ?? 0) > 0 && (
+            <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              An extra child confirmation is waiting. Check your email and use
+              the confirm-child link to finish linking them.
+            </div>
+          )}
+
+          <ParentKpiRow overview={overview} termName={selectedTerm?.termName} />
+
+          {children.length === 0 ? (
+            <ParentEmptyChildren />
+          ) : (
+            <>
+              <ParentPillTabBar
+                items={FAMILY_TABS}
+                activeTabKey={activeTabKey}
+                onItemClick={(item) => replaceParams({ tab: item.tabKey })}
+                trackClassName="rounded-xl px-2 py-1.5"
+                itemClassName="rounded-md px-3 py-1 !text-[15px]"
+              />
+
+              {activeTabKey === "attendance" && (
+                <ParentAttendanceTab
+                  childrenCount={children.length}
+                  childrenLoading={childrenLoading}
+                  attendance={attendance}
+                  isLoading={attendanceLoading}
+                  term={selectedTerm}
+                  onPeriodChange={(nextMonth, nextYear) =>
+                    replaceParams({
+                      month: String(nextMonth),
+                      year: String(nextYear),
+                    })
+                  }
+                />
+              )}
+
+              {activeTabKey === "finance" && (
+                <ParentFinanceTab
+                  childrenCount={children.length}
+                  childrenLoading={childrenLoading}
+                  finance={finance}
+                  isLoading={financeLoading}
+                  onPay={openPay}
+                  onReceipt={(studentId, transactionId) =>
+                    router.push(
+                      `/parent/payments/receipt/${transactionId}?studentId=${studentId}`,
+                    )
+                  }
+                />
+              )}
+
+              {activeTabKey === "academics" && (
+                <ParentAcademicsTab
+                  childrenCount={children.length}
+                  childrenLoading={childrenLoading}
+                  academics={academics}
+                  isLoading={academicsLoading}
+                  selectedTermName={selectedTerm?.termName}
+                  confirming={confirmChild.isPending}
+                  onConfirm={async (linkId) => {
+                    try {
+                      await confirmChild.mutateAsync(linkId);
+                      toast.success("Child confirmed.");
+                    } catch (confirmError) {
+                      toast.error(
+                        getParentApiErrorMessage(
+                          confirmError,
+                          "Unable to confirm this child.",
+                        ),
+                      );
+                    }
+                  }}
+                />
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      <ParentPayFeesDrawer
+        open={payOpen}
+        onClose={() => {
+          setPayOpen(false);
+          setPreselectStudentId(null);
+        }}
+        finance={
+          preselectStudentId
+            ? finance.filter((child) => child.studentId === preselectStudentId)
+            : finance
+        }
+        parentName={`${me?.firstName ?? ""} ${me?.lastName ?? ""}`.trim()}
+        parentEmail={me?.email}
+      />
+    </div>
   );
 };
 
-export default ParentHome;
+export default ParentDashboard;

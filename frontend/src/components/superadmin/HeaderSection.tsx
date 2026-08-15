@@ -59,6 +59,9 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
     if (pathName.startsWith("/teacher")) {
       return Roles.TEACHER;
     }
+    if (pathName.startsWith("/parent")) {
+      return Roles.PARENT;
+    }
     return undefined;
   };
 
@@ -264,7 +267,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 
                 <p className="text-base text-zinc-600">
                   Welcome to {activeMenuItem} Overview
-                  {signedInRole === Roles.TEACHER && user?.school?.name
+                  {(signedInRole === Roles.TEACHER || signedInRole === Roles.PARENT) &&
+                  user?.school?.name
                     ? `, ${user.school.name}`
                     : ""}
                 </p>
@@ -311,7 +315,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 />
                 <div className="flex flex-col">
                   <span className="text-base text-neutral-800">{user?.firstName} {user?.lastName}</span>
-                  <span className="text-xs text-zinc-600">{user?.role.label}</span>
+                  <span className="text-xs text-zinc-600">{user?.role?.label}</span>
                 </div>
               </div>
             </Menu.Target>

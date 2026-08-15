@@ -1,6 +1,7 @@
 "use client";
 
 import { useGetSchoolPaymentReceipt } from "@/hooks/school-admin";
+import { useParentPaymentReceipt } from "@/hooks/parent";
 import { useGetMyPaymentReceipt } from "@/hooks/student";
 import {
   IconArrowLeft,
@@ -25,6 +26,9 @@ interface PaymentReceiptProps {
   variant?: PaymentReceiptVariant;
   /** Student portal uses `/payments/me/.../receipt` instead of the school admin receipt endpoint */
   studentPortal?: boolean;
+  /** Parent portal uses `/parent/children/:studentId/receipts/:transactionId` */
+  parentPortal?: boolean;
+  studentId?: string | null;
 }
 
 export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({
@@ -33,24 +37,41 @@ export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({
   onClose,
   variant = "overlay",
   studentPortal = false,
+  parentPortal = false,
+  studentId = null,
 }) => {
   const shouldFetch =
     Boolean(transactionId) && (variant === "page" || open);
 
   const adminReceipt = useGetSchoolPaymentReceipt(
     transactionId,
-    shouldFetch && !studentPortal
+    shouldFetch && !studentPortal && !parentPortal
   );
   const myReceipt = useGetMyPaymentReceipt(
     transactionId,
     shouldFetch && studentPortal
   );
+  const parentReceipt = useParentPaymentReceipt(
+    studentId ?? null,
+    transactionId,
+    shouldFetch && parentPortal
+  );
 
-  const receipt = studentPortal ? myReceipt.receipt : adminReceipt.receipt;
-  const isLoading = studentPortal ? myReceipt.isLoading : adminReceipt.isLoading;
-  const isFetching = studentPortal
-    ? myReceipt.isFetching
-    : adminReceipt.isFetching;
+  const receipt = parentPortal
+    ? parentReceipt.receipt
+    : studentPortal
+      ? myReceipt.receipt
+      : adminReceipt.receipt;
+  const isLoading = parentPortal
+    ? parentReceipt.isLoading
+    : studentPortal
+      ? myReceipt.isLoading
+      : adminReceipt.isLoading;
+  const isFetching = parentPortal
+    ? parentReceipt.isFetching
+    : studentPortal
+      ? myReceipt.isFetching
+      : adminReceipt.isFetching;
 
   const handlePrint = useCallback(() => {
     window.print();
