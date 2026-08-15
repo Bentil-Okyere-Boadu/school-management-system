@@ -194,6 +194,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
               Cookies.remove("teacherTokenRefresh");
               Cookies.remove("studentToken");
               Cookies.remove("studentTokenRefresh");
+              Cookies.remove("parentToken");
+              Cookies.remove("parentTokenRefresh");
             }
     
             router.push("/home");

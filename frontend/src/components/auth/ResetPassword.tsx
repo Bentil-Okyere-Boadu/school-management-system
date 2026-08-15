@@ -71,6 +71,9 @@ const ResetPassword: React.FC<ResetPwdProps> = ({token}) => {
       if (pathname.includes("admin")) {
         setUser("admin");
         return "/school-admin/reset-password";
+      } else if (pathname.includes("parent")) {
+        setUser("parent");
+        return "/parent/reset-password";
       } else return "/super-admin/auth/reset-password";
     };
 

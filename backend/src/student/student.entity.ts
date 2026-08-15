@@ -14,6 +14,7 @@ import { School } from '../school/school.entity';
 import { Role } from '../role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Parent } from '../parent/parent.entity';
+import { ParentStudent } from '../parent/parent-student.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { PaymentTransaction } from 'src/payments/entities/payment-transaction.entity';
 import { PaymentReceipt } from 'src/payments/entities/payment-receipt.entity';
@@ -99,10 +100,16 @@ export class Student {
 
   @OneToMany(() => Parent, (parent) => parent.student, {
     cascade: true,
-    eager: true,
-    onDelete: 'CASCADE',
+    eager: false,
+    onDelete: 'SET NULL',
   })
   parents: Parent[];
+
+  @OneToMany(() => ParentStudent, (link) => link.student, {
+    cascade: true,
+    eager: true,
+  })
+  parentStudents: ParentStudent[];
 
   @ManyToMany(() => ClassLevel, (classLevel) => classLevel.students)
   classLevels: ClassLevel[];

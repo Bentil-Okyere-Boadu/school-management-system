@@ -33,6 +33,9 @@ const LoginCard: React.FC = () => {
     } else if(pathname.includes('student')) {
       setUser(Roles.STUDENT);
       return '/student/login'
+    } else if(pathname.includes('parent')) {
+      setUser(Roles.PARENT);
+      return '/parent/login'
     } else return '/super-admin/auth/login';
   }
 

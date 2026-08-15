@@ -15,6 +15,7 @@ import { InvitationService } from 'src/invitation/invitation.service';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Parent } from 'src/parent/parent.entity';
+import { ParentModule } from 'src/parent/parent.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { Parent } from 'src/parent/parent.entity';
       School,
       SchoolAdmin,
     ]),
+    ParentModule,
   ],
   controllers: [AdmissionController],
   providers: [AdmissionService, ObjectStorageServiceService, InvitationService],

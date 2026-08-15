@@ -10,6 +10,8 @@ export const config = {
     "/admin/:path*",
     "/teacher/:path*",
     "/student/:path*",
+    "/parent",
+    "/parent/:path*",
   ],
 };
 
@@ -107,6 +109,7 @@ export function handleLoginRedirectAndToken(
     school_admin: "/admin/dashboard",
     teacher: "/teacher/students",
     student: "/student/profile",
+    parent: "/parent",
   };
 
   const route = roleToRouteMap[roleName];

@@ -653,7 +653,7 @@ export class SchoolAdminService {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const student = await this.studentRepository.findOne({
       where: { id: studentId, school: { id: resolvedSchoolId } },
-      relations: ['profile', 'parents'],
+      relations: ['profile', 'parentStudents', 'parentStudents.parent'],
     });
 
     if (!student) {

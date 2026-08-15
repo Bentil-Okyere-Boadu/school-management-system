@@ -9,6 +9,7 @@ import {
   Param,
   Patch,
   Delete,
+  ForbiddenException,
   UseInterceptors,
   UploadedFile,
   Query,
@@ -71,20 +72,32 @@ export class StudentController {
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('me/parents')
+  @Roles(Role.Student)
+  listMyParents(@CurrentUser() student: Student) {
+    return this.parentService.listGuardiansForStudent(student.id);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id/parents')
   @Roles(Role.Student)
-  findOne(@Param('id') id: string) {
-    return this.parentService.findOne(id);
+  findOne(@CurrentUser() student: Student, @Param('id') id: string) {
+    if (id !== student.id) {
+      throw new ForbiddenException(
+        'You can only view guardians for your own profile',
+      );
+    }
+    return this.parentService.listGuardiansForStudent(student.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post(':studentId/parents')
   @Roles(Role.Student)
   createParent(
-    @Param('studentId') studentId: string,
+    @CurrentUser() student: Student,
     @Body() createParentDto: CreateParentDto,
   ) {
-    return this.parentService.create(createParentDto, studentId);
+    return this.parentService.create(createParentDto, student.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -92,7 +105,7 @@ export class StudentController {
   @Roles(Role.Student)
   updateParent(
     @CurrentUser() student: Student,
-    @Param('parentId') parentId: string,
+    @Param('id') parentId: string,
     @Body() updateParentDto: UpdateParentDto,
   ) {
     return this.parentService.update(parentId, updateParentDto, student.id);
@@ -100,8 +113,9 @@ export class StudentController {
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete(':id/parents')
-  remove(@Param('id') id: string) {
-    return this.parentService.remove(id);
+  @Roles(Role.Student)
+  remove(@CurrentUser() student: Student, @Param('id') id: string) {
+    return this.parentService.remove(id, student.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)

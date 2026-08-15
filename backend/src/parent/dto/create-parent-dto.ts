@@ -23,10 +23,10 @@ export class CreateParentDto {
   @MaxLength(100)
   occupation?: string;
 
-  @ApiProperty({ example: 'parent@example.com' })
-  @IsNotEmpty({ message: 'Email is required' })
+  @ApiPropertyOptional({ example: 'parent@example.com' })
+  @IsOptional()
   @IsEmail({}, { message: 'Email must be a valid email address' })
-  email: string;
+  email?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

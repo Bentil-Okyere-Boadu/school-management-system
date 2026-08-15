@@ -28,6 +28,7 @@ import { ObjectStorageServiceService } from '../object-storage-service/object-st
 import { EmailService } from '../common/services/email.service';
 import { SmsService } from '../common/services/sms.service';
 import { Parent } from '../parent/parent.entity';
+import { getContactParents } from '../parent/parent.helpers';
 import { School } from 'src/school/school.entity';
 
 @Injectable()
@@ -940,14 +941,14 @@ export class PlannerService {
     if (event.visibilityScope === VisibilityScope.SCHOOL_WIDE) {
       const students = await this.studentRepository.find({
         where: { school: { id: event.school.id } },
-        relations: ['parents', 'profile'],
+        relations: ['parentStudents', 'parentStudents.parent', 'profile'],
       });
       this.addStudentsToRecipients(students, recipients);
     } else if (event.visibilityScope === VisibilityScope.CLASS_LEVEL) {
       const classLevelIds = event.targetClassLevels.map((cl) => cl.id);
       const students = await this.studentRepository.find({
         where: { classLevels: { id: In(classLevelIds) } },
-        relations: ['parents', 'profile'],
+        relations: ['parentStudents', 'parentStudents.parent', 'profile'],
       });
       this.addStudentsToRecipients(students, recipients);
     } else if (event.visibilityScope === VisibilityScope.SUBJECT) {
@@ -982,15 +983,13 @@ export class PlannerService {
         });
       }
 
-      if (student.parents) {
-        for (const parent of student.parents) {
-          if (parent.email || parent.phone) {
-            recipients.push({
-              email: parent.email,
-              phone: parent.phone,
-              name: `${parent.firstName} ${parent.lastName}`,
-            });
-          }
+      for (const parent of getContactParents(student)) {
+        if (parent.email || parent.phone) {
+          recipients.push({
+            email: parent.email ?? undefined,
+            phone: parent.phone ?? undefined,
+            name: `${parent.firstName} ${parent.lastName}`,
+          });
         }
       }
     }
@@ -1050,7 +1049,7 @@ export class PlannerService {
 
     return this.studentRepository.find({
       where: { id: In(Array.from(studentIds)) },
-      relations: ['parents', 'profile'],
+      relations: ['parentStudents', 'parentStudents.parent', 'profile'],
     });
   }
 

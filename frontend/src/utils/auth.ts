@@ -8,6 +8,7 @@ export const ROLE_COOKIE_MAP: Record<string, string> = {
   [Roles.SCHOOL_ADMIN]: "adminToken",
   [Roles.TEACHER]: "teacherToken",
   [Roles.STUDENT]: "studentToken",
+  [Roles.PARENT]: "parentToken",
 };
 
 /**
@@ -18,6 +19,7 @@ export const ROUTE_TO_ROLE_MAP: Record<string, string> = {
   "/admin": Roles.SCHOOL_ADMIN,
   "/teacher": Roles.TEACHER,
   "/student": Roles.STUDENT,
+  "/parent": Roles.PARENT,
 };
 
 /**

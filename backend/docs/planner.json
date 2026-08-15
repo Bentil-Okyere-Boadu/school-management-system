@@ -177,14 +177,6 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "visibilityScope",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
