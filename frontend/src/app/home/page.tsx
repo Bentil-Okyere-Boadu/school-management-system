@@ -253,6 +253,15 @@ const items = FAQs.map((item, i) => (
                       Student
                     </Link>
                   </li>
+                  <li>
+                    <Link
+                      href="/auth/parent/login"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Parent
+                    </Link>
+                  </li>
                 </ul>
               )}
             </div>
@@ -337,6 +346,15 @@ const items = FAQs.map((item, i) => (
                         onClick={() => setDropdownOpen(false)}
                       >
                         Student
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/auth/parent/login"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Parent
                       </Link>
                     </li>
                   </ul>

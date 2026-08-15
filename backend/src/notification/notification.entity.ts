@@ -14,6 +14,12 @@ export enum NotificationType {
   Fee = 'fee',
   General = 'general',
   ClassTeacherResultSubmission = 'classTeacherResultSubmission',
+  ParentInvitation = 'parentInvitation',
+  ParentAccepted = 'parentAccepted',
+  ParentChildConfirmation = 'parentChildConfirmation',
+  ParentChildConfirmed = 'parentChildConfirmed',
+  ParentReviewRequired = 'parentReviewRequired',
+  ParentAccessRevoked = 'parentAccessRevoked',
 }
 
 @Entity()

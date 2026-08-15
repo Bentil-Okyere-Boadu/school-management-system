@@ -16,6 +16,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { Parent } from 'src/parent/parent.entity';
 
 @Injectable()
 export class AuthService {
@@ -53,7 +54,7 @@ export class AuthService {
 
   async generateRefreshToken(
     userId: string,
-    userType: 'school_admin' | 'teacher' | 'student' | 'super_admin',
+    userType: 'school_admin' | 'teacher' | 'student' | 'super_admin' | 'parent',
   ): Promise<string> {
     const token = uuidv4();
     const expiresAt = new Date();
@@ -110,7 +111,7 @@ export class AuthService {
 
   async revokeAllUserTokens(
     userId: string,
-    userType: 'school_admin' | 'teacher' | 'student' | 'super_admin',
+    userType: 'school_admin' | 'teacher' | 'student' | 'super_admin' | 'parent',
   ): Promise<void> {
     await this.refreshTokenRepository.update(
       { userId, userType, isRevoked: false },
@@ -119,7 +120,7 @@ export class AuthService {
   }
 
   async createAuthResponse(
-    entity: SuperAdmin | SchoolAdmin | Student | Teacher,
+    entity: SuperAdmin | SchoolAdmin | Student | Teacher | Parent,
   ) {
     const payload = {
       email: entity.email,
@@ -129,13 +130,20 @@ export class AuthService {
       role: entity.role?.name,
     };
 
-    let userType: 'school_admin' | 'teacher' | 'student' | 'super_admin';
+    let userType:
+      | 'school_admin'
+      | 'teacher'
+      | 'student'
+      | 'super_admin'
+      | 'parent';
     if (entity instanceof SchoolAdmin) {
       userType = 'school_admin';
     } else if (entity instanceof Teacher) {
       userType = 'teacher';
     } else if (entity instanceof Student) {
       userType = 'student';
+    } else if (entity instanceof Parent) {
+      userType = 'parent';
     } else {
       userType = 'super_admin';
     }
@@ -152,11 +160,15 @@ export class AuthService {
 
   async handleForgotPassword<
     T extends {
-      email: string;
-      resetPasswordToken: string;
-      resetPasswordExpires: Date;
+      email: string | null;
+      resetPasswordToken: string | null;
+      resetPasswordExpires: Date | null;
     },
-  >(email: string, repository: Repository<T>) {
+  >(
+    email: string,
+    repository: Repository<T>,
+    resetPath = '/auth/forgotPassword/resetPassword',
+  ) {
     const user = await repository.findOne({
       where: { email } as FindOptionsWhere<T>,
     });
@@ -176,7 +188,11 @@ export class AuthService {
     await repository.save(user);
 
     try {
-      await this.emailService.sendPasswordResetEmail(email, resetToken);
+      await this.emailService.sendPasswordResetEmail(
+        email,
+        resetToken,
+        resetPath,
+      );
       this.logger.log(`Password reset email sent to ${email}`);
     } catch (error) {
       this.logger.error('Error sending email:', error);
@@ -192,7 +208,7 @@ export class AuthService {
     T extends {
       resetPasswordToken: string | null;
       resetPasswordExpires: Date | null;
-      password: string;
+      password: string | null;
     },
   >(
     token: string,

@@ -50,6 +50,8 @@ export interface CreateCheckoutOtpInput {
   targetStudentFeeObligationId?: string | null;
   customerName?: string | null;
   customerEmail?: string | null;
+  parentId?: string | null;
+  allocations?: { studentId: string; amount: number }[] | null;
 }
 
 export interface CreatedCheckoutOtp {
@@ -236,6 +238,8 @@ export class PaymentsService {
       consumedAt: null,
       school: input.student.school,
       student: input.student,
+      parentId: input.parentId ?? null,
+      allocations: input.allocations ?? null,
     });
     const saved = await this.checkoutOtpRepository.save(record);
     return { otpRequestId: saved.id, otpPlain, expiresAt };

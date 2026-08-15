@@ -590,6 +590,159 @@
         "tags": ["School Admin"]
       }
     },
+    "/api/v1/school-admin/parents": {
+      "get": {
+        "operationId": "ParentAdminController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List parent–student relationships for the school",
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/parents/{parentId}/resend-invitation": {
+      "post": {
+        "operationId": "ParentAdminController_resendInvitation",
+        "parameters": [
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resend the set-password invitation to a parent",
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/parents/relationships/{id}/resend-confirmation": {
+      "post": {
+        "operationId": "ParentAdminController_resendConfirmation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resend the confirm-child email for a pending relationship",
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/parents/relationships/{id}/activate": {
+      "post": {
+        "operationId": "ParentAdminController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activate a parent–student relationship after review",
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/parents/relationships/{id}/send-to-confirmation": {
+      "post": {
+        "operationId": "ParentAdminController_sendToConfirmation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move a reviewed relationship to pending confirmation",
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/parents/relationships/{id}/revoke": {
+      "post": {
+        "operationId": "ParentAdminController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke parent portal access to a student",
+        "tags": ["School Admin"]
+      }
+    },
     "/api/v1/school-admin/students/{studentId}/performance-analytics": {
       "get": {
         "description": "Returns subject → topic → assignment breakdown of a student's graded submissions for a given academic term. Subject, topic, and overall averages use total points earned ÷ total points possible.",

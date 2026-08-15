@@ -18,6 +18,7 @@ import { StudentGrade } from './student-grade.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from '../academic-calendar/entitites/academic-calendar.entity';
 import { Student } from '../student/student.entity';
+import { Parent } from '../parent/parent.entity';
 import { GradingSystem } from '../grading-system/grading-system.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
 import { QueryString } from 'src/common/api-features/api-features';
@@ -887,7 +888,7 @@ export class SubjectService {
   async getStudentResults(
     studentId: string,
     academicCalendarId: string,
-    user: SchoolAdmin | Teacher | Student,
+    user: SchoolAdmin | Teacher | Student | Parent,
   ) {
     const calendar = await this.academicCalendarRepository.findOne({
       where: { id: academicCalendarId },
@@ -1022,7 +1023,7 @@ export class SubjectService {
     studentId: string,
     academicCalendarId: string,
     academicTermId: string,
-    user: SchoolAdmin | Teacher | Student,
+    user: SchoolAdmin | Teacher | Student | Parent,
   ) {
     const [calendar, academicTerm, student] = await Promise.all([
       this.academicCalendarRepository.findOne({

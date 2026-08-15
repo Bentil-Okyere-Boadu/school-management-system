@@ -31,6 +31,7 @@ import { AssignmentSubmission } from 'src/student/entities/assignment-submission
 import { GradeSubmissionDto } from './dto/grade-submission.dto';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { Parent } from 'src/parent/parent.entity';
+import { getContactParents } from 'src/parent/parent.helpers';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { QueryString } from 'src/common/api-features/api-features';
 import { APIFeatures } from 'src/common/api-features/api-features';
@@ -435,7 +436,7 @@ export class TeacherService {
       }),
       classLevelRepository.findOne({
         where: { id: dto.classLevelId },
-        relations: ['students', 'students.parents'],
+        relations: ['students', 'students.parentStudents', 'students.parentStudents.parent'],
       }),
     ]);
 
@@ -550,7 +551,8 @@ export class TeacherService {
     const emailPromises: Promise<void>[] = [];
 
     for (const student of classLevel.students) {
-      if (!student.parents || student.parents.length === 0) {
+      const parents = getContactParents(student);
+      if (parents.length === 0) {
         continue;
       }
 
@@ -558,7 +560,7 @@ export class TeacherService {
         `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() ||
         student.email;
 
-      for (const parent of student.parents) {
+      for (const parent of parents) {
         if (!parent.email) {
           continue;
         }
@@ -882,7 +884,7 @@ export class TeacherService {
       const classLevelRepository = manager.getRepository(ClassLevel);
       const classLevelWithStudents = await classLevelRepository.findOne({
         where: { id: savedAssignment.classLevel.id },
-        relations: ['students', 'students.parents'],
+        relations: ['students', 'students.parentStudents', 'students.parentStudents.parent'],
       });
 
       if (classLevelWithStudents) {

@@ -22,6 +22,7 @@ import { In } from 'typeorm';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from './entities/assignment-submission.entity';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
+import { ParentStudentStatus } from 'src/parent/parent.enums';
 
 @Injectable()
 export class StudentService {
@@ -146,8 +147,27 @@ export class StudentService {
 
     const studentInfo = await this.studentRepository.findOne({
       where: { id: user.id },
-      relations: ['role', 'profile', 'parents', 'classLevels'],
+      relations: [
+        'role',
+        'profile',
+        'classLevels',
+        'parentStudents',
+        'parentStudents.parent',
+        'parentStudents.parent.profile',
+      ],
     });
+    if (studentInfo) {
+      studentInfo.parents = (studentInfo.parentStudents ?? [])
+        .filter(
+          (link) =>
+            link.status !== ParentStudentStatus.Revoked && !!link.parent,
+        )
+        .map((link) => {
+          const parent = link.parent;
+          parent.relationship = link.relationship;
+          return parent;
+        });
+    }
     if (studentInfo?.profile?.id) {
       const profileWithUrl = await this.profileService.getProfileWithImageUrl(
         studentInfo.profile.id,

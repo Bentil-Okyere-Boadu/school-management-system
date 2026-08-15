@@ -37,7 +37,8 @@ export class ReminderScheduler {
         },
         relations: [
           'targetStudents',
-          'targetStudents.parents',
+          'targetStudents.parentStudents',
+          'targetStudents.parentStudents.parent',
           'targetStudents.profile', // needed for phoneContact
         ],
         take: 50, // safety cap

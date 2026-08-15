@@ -44,9 +44,9 @@ export class CreateParentDto {
   @MaxLength(20)
   phone?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ example: 'Mother' })
+  @IsNotEmpty({ message: 'Relationship is required' })
   @IsString()
   @MaxLength(50)
-  relationship?: string;
+  relationship: string;
 }

@@ -161,6 +161,7 @@
             "description": ""
           }
         },
+        "summary": "Complete invitation by setting a password (school admin or parent)",
         "tags": ["Invitation"]
       }
     },

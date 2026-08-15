@@ -70,6 +70,12 @@ export class CheckoutOtp {
   @JoinColumn()
   student: Student;
 
+  @Column({ type: 'uuid', nullable: true })
+  parentId: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  allocations: { studentId: string; amount: number }[] | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

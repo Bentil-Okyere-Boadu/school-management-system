@@ -11,6 +11,7 @@ import {
   Param,
   Patch,
   Delete,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -38,6 +39,9 @@ import {
   AttendanceFilter,
   AttendanceService,
 } from 'src/attendance/attendance.service';
+import { ParentService } from 'src/parent/parent.service';
+import { CreateParentDto } from 'src/parent/dto/create-parent-dto';
+import { UpdateParentDto } from 'src/parent/dto/update-parent-dto';
 
 @ApiTags('School Admin')
 @Controller('school-admin')
@@ -48,6 +52,7 @@ export class SchoolAdminController {
     private readonly schoolAdminService: SchoolAdminService,
     private readonly admissionService: AdmissionService,
     private readonly attendanceService: AttendanceService,
+    private readonly parentService: ParentService,
   ) {}
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -144,6 +149,64 @@ export class SchoolAdminController {
   @UseInterceptors(DeepSanitizeResponseInterceptor)
   async getUserById(@Param('id') id: string) {
     return this.schoolAdminService.getUserById(id);
+  }
+
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Post('students/:studentId/parents')
+  @Roles(Role.SchoolAdmin)
+  async addStudentGuardian(
+    @Param('studentId') studentId: string,
+    @Body() dto: CreateParentDto,
+  ) {
+    const student = await this.schoolAdminService.findStudentById(studentId);
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+    return this.parentService.create(dto, studentId);
+  }
+
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Patch('students/:studentId/parents/:parentId')
+  @Roles(Role.SchoolAdmin)
+  async updateStudentGuardian(
+    @Param('studentId') studentId: string,
+    @Param('parentId') parentId: string,
+    @Body() dto: UpdateParentDto,
+  ) {
+    const student = await this.schoolAdminService.findStudentById(studentId);
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+    return this.parentService.update(parentId, dto, studentId);
+  }
+
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Delete('students/:studentId/parents/:parentId')
+  @Roles(Role.SchoolAdmin)
+  async removeStudentGuardian(
+    @Param('studentId') studentId: string,
+    @Param('parentId') parentId: string,
+  ) {
+    const student = await this.schoolAdminService.findStudentById(studentId);
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+    return this.parentService.remove(parentId, studentId);
   }
   @UseGuards(
     SchoolAdminJwtAuthGuard,

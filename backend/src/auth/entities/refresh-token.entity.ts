@@ -10,8 +10,9 @@ import { SchoolAdmin } from '../../school-admin/school-admin.entity';
 import { Teacher } from '../../teacher/teacher.entity';
 import { Student } from '../../student/student.entity';
 import { SuperAdmin } from '../../super-admin/super-admin.entity';
+import { Parent } from '../../parent/parent.entity';
 
-export type UserEntity = SchoolAdmin | Teacher | Student | SuperAdmin;
+export type UserEntity = SchoolAdmin | Teacher | Student | SuperAdmin | Parent;
 
 @Entity()
 @Index(['token'], { unique: true })
@@ -27,7 +28,7 @@ export class RefreshToken {
   userId: string;
 
   @Column()
-  userType: 'school_admin' | 'teacher' | 'student' | 'super_admin';
+  userType: 'school_admin' | 'teacher' | 'student' | 'super_admin' | 'parent';
 
   @Column({ type: 'timestamp' })
   expiresAt: Date;

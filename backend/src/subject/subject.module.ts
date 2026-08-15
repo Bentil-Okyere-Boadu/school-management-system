@@ -59,6 +59,6 @@ import { Notification } from 'src/notification';
     ObjectStorageServiceService,
   ],
   controllers: [SubjectController, SubjectCatalogController],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, SubjectService],
 })
 export class SubjectModule {}

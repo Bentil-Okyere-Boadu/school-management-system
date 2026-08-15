@@ -1015,7 +1015,15 @@ export enum NotificationType {
   Admission = "admission",
   Attendance = "attendance",
   Results = "results",
+  Fee = "fee",
   General = "general",
+  ClassTeacherResultSubmission = "classTeacherResultSubmission",
+  ParentInvitation = "parentInvitation",
+  ParentAccepted = "parentAccepted",
+  ParentChildConfirmation = "parentChildConfirmation",
+  ParentChildConfirmed = "parentChildConfirmed",
+  ParentReviewRequired = "parentReviewRequired",
+  ParentAccessRevoked = "parentAccessRevoked",
 }
 
 export interface Notification {

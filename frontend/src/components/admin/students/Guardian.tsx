@@ -2,8 +2,9 @@ import { Parent, ErrorResponse } from "@/@types";
 import { Dialog } from "@/components/common/Dialog";
 import InputField from "@/components/InputField";
 import { useDeleteGuardian, useUpdateGuardian } from "@/hooks/student";
+import GuardianFormFields from "./GuardianFormFields";
+import { validateGuardianIdentity } from "@/utils/guardians";
 import { IconPencil, IconTrashFilled } from "@tabler/icons-react";
-import { useParams } from "next/navigation";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 
@@ -11,6 +12,9 @@ interface GuardianProps {
   parent: Parent;
   count: number;
   viewMode: boolean;
+  studentId: string;
+  canManage: boolean;
+  asAdmin?: boolean;
   refetchStudentData: () => void;
 }
 
@@ -18,18 +22,22 @@ const Guardian = ({
   parent,
   count,
   viewMode,
+  studentId,
+  canManage,
+  asAdmin = false,
   refetchStudentData,
 }: GuardianProps) => {
   const [editParent, setEditParent] = useState(parent);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { mutate: deleteGuardianMutation } = useDeleteGuardian(
-    parent?.id as string
+    parent?.id as string,
+    { studentId, asAdmin },
   );
   const { mutate: updateParentMutation } = useUpdateGuardian(
-    parent.id as string
+    parent.id as string,
+    { studentId, asAdmin },
   );
-  const { id } = useParams();
 
   const deleteGuardian = () => {
     deleteGuardianMutation(undefined, {
@@ -46,6 +54,12 @@ const Guardian = ({
   };
 
   const updateParent = () => {
+    const error = validateGuardianIdentity(editParent);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
     const updatePayload: Pick<
       Parent,
       | "address"
@@ -56,10 +70,10 @@ const Guardian = ({
       | "phone"
       | "relationship"
     > = {
-      firstName: editParent.firstName,
-      lastName: editParent.lastName,
+      firstName: editParent.firstName.trim(),
+      lastName: editParent.lastName.trim(),
       address: editParent.address,
-      email: editParent.email,
+      email: editParent.email.trim(),
       phone: editParent.phone,
       relationship: editParent.relationship,
       occupation: editParent.occupation,
@@ -69,7 +83,6 @@ const Guardian = ({
       onSuccess: () => {
         toast.success("Guardian updated successfully.");
         setDialogOpen(false);
-        setEditParent({} as Parent);
         refetchStudentData();
       },
       onError: (error: unknown) => {
@@ -80,18 +93,23 @@ const Guardian = ({
     })
   };
 
+  const openEdit = () => {
+    setEditParent(parent);
+    setDialogOpen(true);
+  };
+
   return (
     <>
-      <div>
+      <div className="rounded-lg border border-gray-200 p-4 mb-4">
         {viewMode && (
           <div className="flex justify-between">
             <h4 className="font-bold mb-3">Guardian #{count}</h4>
-            {!id && (
+            {canManage && (
               <div className="flex items-center gap-3">
                 <IconPencil
                   size={18}
                   className="cursor-pointer"
-                  onClick={() => setDialogOpen(true)}
+                  onClick={openEdit}
                 />
                 <IconTrashFilled
                   size={18}
@@ -142,19 +160,7 @@ const Guardian = ({
           />
           <InputField
             className="!py-0"
-            label="Box Address"
-            value={parent.address}
-            isTransulent={viewMode}
-          />
-          <InputField
-            className="!py-0"
             label="Phone"
-            value={parent.phone}
-            isTransulent={viewMode}
-          />
-          <InputField
-            className="!py-0"
-            label="Phone(Optional)"
             value={parent.phone}
             isTransulent={viewMode}
           />
@@ -166,81 +172,9 @@ const Guardian = ({
         dialogTitle="Edit Guardian"
         onClose={() => setDialogOpen(false)}
         onSave={updateParent}
+        saveDisabled={!!validateGuardianIdentity(editParent)}
       >
-        <div className="flex flex-col mt-3">
-          <InputField
-            className="!py-0"
-            label="First Name"
-            value={editParent?.firstName}
-            onChange={(e) =>
-              setEditParent({
-                ...editParent,
-                firstName: e.target.value as string,
-              })
-            }
-          />
-          <InputField
-            className="!py-0"
-            label="Last Name"
-            value={editParent?.lastName}
-            onChange={(e) =>
-              setEditParent({
-                ...editParent,
-                lastName: e.target.value as string,
-              })
-            }
-          />
-          <InputField
-            className="!py-0"
-            label="Relationship with student"
-            value={editParent?.relationship}
-            onChange={(e) =>
-              setEditParent({
-                ...editParent,
-                relationship: e.target.value as string,
-              })
-            }
-          />
-          <InputField
-            className="!py-0"
-            label="Occupation"
-            value={editParent?.occupation}
-            onChange={(e) =>
-              setEditParent({
-                ...editParent,
-                occupation: e.target.value as string,
-              })
-            }
-          />
-          <InputField
-            className="!py-0"
-            label="Email"
-            value={editParent?.email}
-            onChange={(e) =>
-              setEditParent({ ...editParent, email: e.target.value as string })
-            }
-          />
-          <InputField
-            className="!py-0"
-            label="Street Address"
-            value={editParent?.address}
-            onChange={(e) =>
-              setEditParent({
-                ...editParent,
-                address: e.target.value as string,
-              })
-            }
-          />
-          <InputField className="!py-0" label="Box Address" />
-          <InputField
-            className="!py-0"
-            label="Phone"
-            value={editParent?.phone}
-            onChange={(e) =>
-              setEditParent({ ...editParent, phone: e.target.value as string })
-            }
-          />
-        </div>
+        <GuardianFormFields value={editParent} onChange={setEditParent} />
       </Dialog>
     </>
   );
