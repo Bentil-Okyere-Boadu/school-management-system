@@ -64,6 +64,27 @@
         "tags": ["Notification"]
       }
     },
+    "/api/v1/notifications/school/{id}/mark-all-read": {
+      "patch": {
+        "operationId": "NotificationController_markAllAsRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Notification"]
+      }
+    },
     "/api/v1/notifications/{id}": {
       "patch": {
         "operationId": "NotificationController_update",

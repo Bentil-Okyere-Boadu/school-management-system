@@ -37,25 +37,48 @@ export const useUpdateStudentProfile = () => {
     })
 }
 
-export const useCreateGuardian = (studentId: string) => {
+type GuardianMutationOptions = {
+  studentId?: string;
+  asAdmin?: boolean;
+};
+
+export const useCreateGuardian = (
+  studentId: string,
+  options?: GuardianMutationOptions,
+) => {
     return useMutation({
         mutationFn: (guardianDetails: Parent) => {
-            return customAPI.post(`/student/${studentId}/parents`, guardianDetails);
+            const path = options?.asAdmin
+              ? `/school-admin/students/${studentId}/parents`
+              : `/student/${studentId}/parents`;
+            return customAPI.post(path, guardianDetails);
         }
     });
 }
 
-export const useUpdateGuardian = (parentId: string) => {
+export const useUpdateGuardian = (
+  parentId: string,
+  options?: GuardianMutationOptions,
+) => {
     return useMutation({
         mutationFn: (guardianDetails: Partial<Parent>) => {
-            return customAPI.patch(`/student/${parentId}/parents`, guardianDetails);
+            const path = options?.asAdmin
+              ? `/school-admin/students/${options.studentId}/parents/${parentId}`
+              : `/student/${parentId}/parents`;
+            return customAPI.patch(path, guardianDetails);
         }
     });
 }
-export const useDeleteGuardian = (parentId: string) => {
+export const useDeleteGuardian = (
+  parentId: string,
+  options?: GuardianMutationOptions,
+) => {
     return useMutation({
         mutationFn: () => {
-            return customAPI.delete(`/student/${parentId}/parents`);
+            const path = options?.asAdmin
+              ? `/school-admin/students/${options.studentId}/parents/${parentId}`
+              : `/student/${parentId}/parents`;
+            return customAPI.delete(path);
         }
     });
 }

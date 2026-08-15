@@ -23,10 +23,10 @@ export class CreateParentDto {
   @MaxLength(100)
   occupation?: string;
 
-  @ApiPropertyOptional({ example: 'parent@example.com' })
-  @IsOptional()
+  @ApiProperty({ example: 'parent@example.com' })
+  @IsNotEmpty({ message: 'Email is required' })
   @IsEmail({}, { message: 'Email must be a valid email address' })
-  email?: string;
+  email: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -44,9 +44,9 @@ export class CreateParentDto {
   @MaxLength(20)
   phone?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ example: 'Mother' })
+  @IsNotEmpty({ message: 'Relationship is required' })
   @IsString()
   @MaxLength(50)
-  relationship?: string;
+  relationship: string;
 }

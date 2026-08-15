@@ -1624,6 +1624,30 @@ export const useMarkNotificationAsRead = () => {
   });
 };
 
+export const useMarkAllNotificationsAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (schoolId: string) => {
+      return customAPI.patch(`/notifications/school/${schoolId}/mark-all-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+};
+
+export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/notifications/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+};
+
 export const useCreateNotification = () => {
   return useMutation({
     mutationFn: (notification: Notification) => {

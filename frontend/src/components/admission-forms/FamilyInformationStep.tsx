@@ -8,6 +8,7 @@ import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { Guardian } from "@/@types/index";
 import countryList from 'react-select-country-list';
 import { Select } from '@mantine/core';
+import { relationshipSelectData } from "@/utils/guardians";
 
 interface FamilyInfoProps {
   guardians: Guardian[];
@@ -147,13 +148,15 @@ interface FamilyInfoProps {
                 handleFieldChange(index, "lastName", e.target.value)
               }
             />
-            <InputField
-              label="Relationship to applicant"
+            <Select
               required
-              isTransulent={false}
-              value={guardian.relationship}
-              onChange={(e) =>
-                handleFieldChange(index, "relationship", e.target.value)
+              label="Relationship to applicant"
+              placeholder="Select relationship"
+              data={relationshipSelectData(guardian.relationship)}
+              value={guardian.relationship || null}
+              className="-mt-2 mb-2 sm:mb-0"
+              onChange={(value) =>
+                handleFieldChange(index, "relationship", value ?? "")
               }
             />
             <InputField

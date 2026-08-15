@@ -13,6 +13,7 @@ import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { School } from 'src/school/school.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { ParentStudentStatus } from 'src/parent/parent.enums';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { AttendanceService } from 'src/attendance/attendance.service';
@@ -414,7 +415,12 @@ export class SchoolAdminService {
         id: userId,
         school: { id: resolvedSchoolId },
       },
-      relations: ['profile', 'classLevels'],
+      relations: [
+        'profile',
+        'classLevels',
+        'parentStudents',
+        'parentStudents.parent',
+      ],
     });
 
     if (student) {
@@ -422,8 +428,22 @@ export class SchoolAdminService {
         ? await this.profileService.getProfileWithImageUrl(student.profile.id)
         : null;
 
+      const parents = (student.parentStudents ?? [])
+        .filter(
+          (link) =>
+            link.status !== ParentStudentStatus.Revoked && !!link.parent,
+        )
+        .map((link) => ({
+          ...link.parent,
+          relationship: link.relationship,
+          relationshipStatus: link.status,
+          relationshipId: link.id,
+        }));
+
       return {
         ...student,
+        parentStudents: undefined,
+        parents,
         userType: 'student',
         profile: profileWithUrl,
       };

@@ -65,6 +65,23 @@ export class NotificationService {
     return this.notificationRepository.save(notification);
   }
 
+  async markAllAsRead(schoolId: string): Promise<{ updated: number }> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) throw new NotFoundException('School not found');
+
+    const result = await this.notificationRepository
+      .createQueryBuilder()
+      .update(Notification)
+      .set({ read: true })
+      .where('schoolId = :schoolId', { schoolId })
+      .andWhere('read = :read', { read: false })
+      .execute();
+
+    return { updated: result.affected ?? 0 };
+  }
+
   async remove(id: string): Promise<void> {
     const notification = await this.notificationRepository.findOneBy({ id });
     if (!notification) throw new NotFoundException('Notification not found');

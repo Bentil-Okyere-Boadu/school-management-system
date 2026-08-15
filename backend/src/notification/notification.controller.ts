@@ -29,6 +29,11 @@ export class NotificationController {
     return this.notificationService.findAllForSchool(schoolId, search);
   }
 
+  @Patch('school/:id/mark-all-read')
+  markAllAsRead(@Param('id') schoolId: string) {
+    return this.notificationService.markAllAsRead(schoolId);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateNotificationDto) {
     return this.notificationService.update(id, dto);
