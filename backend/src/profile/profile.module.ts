@@ -27,11 +27,13 @@ import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { SubjectCatalog } from 'src/subject/subject-catalog.entity';
 import { Subject } from 'src/subject/subject.entity';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
     StudentModule,
     TeacherModule,
+    NotificationModule,
     TypeOrmModule.forFeature([
       Profile,
       School,

@@ -126,7 +126,7 @@ export const ParentAttendanceSheet: React.FC<ParentAttendanceSheetProps> = ({
         </div>
       </div>
       <p className="mt-3 text-xs text-zinc-500">
-        Green check = present · Red X = absent · Dash = weekend or no record ·
+        Green check = present · Red X = absent · Dash = weekend or upcoming day ·
         Holiday = school holiday
       </p>
     </div>

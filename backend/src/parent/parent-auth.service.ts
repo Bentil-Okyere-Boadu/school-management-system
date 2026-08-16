@@ -8,7 +8,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Parent } from './parent.entity';
 import { AuthService } from 'src/auth/auth.service';
-import { normalizeEmail } from './parent.helpers';
+import { ParentAccountStatus } from './parent.enums';
+import { normalizeEmail, pickCanonicalParent } from './parent.helpers';
 
 @Injectable()
 export class ParentAuthService {
@@ -24,27 +25,24 @@ export class ParentAuthService {
       return null;
     }
 
-    const parent = await this.parentRepository
-      .createQueryBuilder('parent')
-      .leftJoinAndSelect('parent.role', 'role')
-      .leftJoinAndSelect('parent.school', 'school')
-      .where('LOWER(parent.email) = :email', { email: normalized })
-      .getOne();
+    const candidates = await this.findCandidatesByEmail(normalized);
 
-    if (!parent?.password) {
+    const unlocked: Parent[] = [];
+    for (const candidate of candidates) {
+      if (candidate.isSuspended || candidate.isArchived || !candidate.password) {
+        continue;
+      }
+      if (await bcrypt.compare(password, candidate.password)) {
+        unlocked.push(candidate);
+      }
+    }
+    if (unlocked.length === 0) {
       return null;
     }
 
-    const valid = await bcrypt.compare(password, parent.password);
-    if (!valid) {
-      return null;
-    }
+    const parent = pickCanonicalParent(candidates);
 
-    if (parent.isSuspended || parent.isArchived) {
-      return null;
-    }
-
-    return parent;
+    return parent ?? unlocked[0];
   }
 
   async findByEmail(email: string): Promise<Parent | null> {
@@ -52,12 +50,16 @@ export class ParentAuthService {
     if (!normalized) {
       return null;
     }
+    return pickCanonicalParent(await this.findCandidatesByEmail(normalized));
+  }
+
+  private async findCandidatesByEmail(email: string): Promise<Parent[]> {
     return this.parentRepository
       .createQueryBuilder('parent')
       .leftJoinAndSelect('parent.role', 'role')
       .leftJoinAndSelect('parent.school', 'school')
-      .where('LOWER(parent.email) = :email', { email: normalized })
-      .getOne();
+      .where('LOWER(parent.email) = :email', { email })
+      .getMany();
   }
 
   login(parent: Parent) {
@@ -71,19 +73,39 @@ export class ParentAuthService {
         'No user found with the provided credentials',
       );
     }
-    return this.authService.handleForgotPassword(
-      normalized,
+    const parent = await this.findByEmail(normalized);
+    if (!parent) {
+      throw new NotFoundException(
+        'No user found with the provided credentials',
+      );
+    }
+    return this.authService.issuePasswordReset(
+      parent,
       this.parentRepository,
       '/auth/parent/forgotPassword/resetPassword',
     );
   }
 
   async resetPassword(token: string, newPassword: string) {
-    return this.authService.handleResetPassword(
+    const parent = await this.parentRepository.findOne({
+      where: { resetPasswordToken: token },
+    });
+    const result = await this.authService.handleResetPassword(
       token,
       newPassword,
       this.parentRepository,
     );
+    if (
+      parent &&
+      parent.status !== ParentAccountStatus.Suspended &&
+      parent.status !== ParentAccountStatus.Archived
+    ) {
+      await this.parentRepository.update(parent.id, {
+        status: ParentAccountStatus.Active,
+        isInvitationAccepted: true,
+      });
+    }
+    return result;
   }
 
   async assertNotSuspended(email: string) {

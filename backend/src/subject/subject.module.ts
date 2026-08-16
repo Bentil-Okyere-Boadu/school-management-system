@@ -24,8 +24,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
-import { NotificationService } from 'src/notification/notification.service';
-import { Notification } from 'src/notification';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -46,8 +45,8 @@ import { Notification } from 'src/notification';
       Holiday,
       StudentTermRemark,
       ClassLevelResultApproval,
-      Notification,
     ]),
+    NotificationModule,
   ],
   providers: [
     SubjectService,
@@ -55,7 +54,6 @@ import { Notification } from 'src/notification';
     TeacherService,
     InvitationService,
     ProfileService,
-    NotificationService,
     ObjectStorageServiceService,
   ],
   controllers: [SubjectController, SubjectCatalogController],

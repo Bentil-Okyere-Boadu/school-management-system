@@ -37,6 +37,11 @@ import { QueryString } from 'src/common/api-features/api-features';
 import { APIFeatures } from 'src/common/api-features/api-features';
 import { ProfileService } from 'src/profile/profile.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
+import { NotificationService } from 'src/notification/notification.service';
+import {
+  NotificationRecipientRole,
+  NotificationType,
+} from 'src/notification/notification.entity';
 import {
   Event as PlannerEvent,
   VisibilityScope,
@@ -59,6 +64,7 @@ export class TeacherService {
     private readonly profileService: ProfileService,
     private readonly objectStorageService: ObjectStorageServiceService,
     private readonly academicCalendarService: AcademicCalendarService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async resendTeacherInvitation(
@@ -509,6 +515,12 @@ export class TeacherService {
 
     if (savedAssignment.state === 'published') {
       this.notifyParentsAboutAssignment(savedAssignment, classLevel, topic);
+      await this.notifyStudentsAboutAssignment(
+        teacherWithSchool.school.id,
+        savedAssignment,
+        classLevel.students,
+        'published',
+      );
 
       try {
         const eventId = await this.createAssignmentPlannerEvent(
@@ -528,6 +540,41 @@ export class TeacherService {
     }
 
     return savedAssignment;
+  }
+
+  private async notifyStudentsAboutAssignment(
+    schoolId: string,
+    assignment: Assignment,
+    students: Student[] | undefined,
+    kind: 'published' | 'updated',
+  ): Promise<void> {
+    const recipients = (students ?? [])
+      .filter((student) => !student.isArchived)
+      .map((student) => ({
+        id: student.id,
+        role: NotificationRecipientRole.Student,
+      }));
+
+    if (recipients.length === 0) {
+      return;
+    }
+
+    await this.notificationService.createForRecipients({
+      schoolId,
+      type:
+        kind === 'published'
+          ? NotificationType.AssignmentPublished
+          : NotificationType.AssignmentUpdated,
+      title:
+        kind === 'published'
+          ? `New assignment: ${assignment.title}`
+          : `Assignment updated: ${assignment.title}`,
+      message:
+        kind === 'published'
+          ? `A new assignment "${assignment.title}" has been published.`
+          : `Assignment "${assignment.title}" has been updated.`,
+      recipients,
+    });
   }
 
   private async notifyParentsAboutAssignment(
@@ -893,6 +940,12 @@ export class TeacherService {
           classLevelWithStudents,
           savedAssignment.topic,
         );
+        await this.notifyStudentsAboutAssignment(
+          teacherWithSchool.school.id,
+          savedAssignment,
+          classLevelWithStudents.students,
+          'published',
+        );
       }
 
       try {
@@ -929,13 +982,16 @@ export class TeacherService {
       }
     } else if (
       previousState === 'published' &&
-      savedAssignment.state === 'published' &&
-      savedAssignment.plannerEventId
+      savedAssignment.state === 'published'
     ) {
       const titleChanged = dto.title !== undefined;
       const dueDateChanged = dto.dueDate !== undefined;
+      const instructionsChanged = dto.instructions !== undefined;
 
-      if (titleChanged || dueDateChanged) {
+      if (
+        savedAssignment.plannerEventId &&
+        (titleChanged || dueDateChanged)
+      ) {
         try {
           const eventRepository = manager.getRepository(PlannerEvent);
           const event = await eventRepository.findOne({
@@ -956,6 +1012,20 @@ export class TeacherService {
             `Failed to sync planner event ${savedAssignment.plannerEventId} after update: ${e}`,
           );
         }
+      }
+
+      if (titleChanged || dueDateChanged || instructionsChanged) {
+        const classLevelRepository = manager.getRepository(ClassLevel);
+        const classLevelWithStudents = await classLevelRepository.findOne({
+          where: { id: savedAssignment.classLevel.id },
+          relations: ['students'],
+        });
+        await this.notifyStudentsAboutAssignment(
+          teacherWithSchool.school.id,
+          savedAssignment,
+          classLevelWithStudents?.students,
+          'updated',
+        );
       }
     }
 
@@ -1512,6 +1582,24 @@ export class TeacherService {
     }
 
     const saved = await submissionRepository.save(submission);
+
+    const schoolId = teacher.school?.id;
+    if (schoolId) {
+      const isReturned = saved.status === 'returned';
+      await this.notificationService.createForRecipients({
+        schoolId,
+        type: NotificationType.AssignmentGraded,
+        title: isReturned
+          ? `${assignment.title} returned`
+          : `${assignment.title} graded`,
+        message: isReturned
+          ? `${assignment.title} was returned with feedback.`
+          : `${assignment.title} has been graded.`,
+        recipients: [
+          { id: student.id, role: NotificationRecipientRole.Student },
+        ],
+      });
+    }
 
     return {
       id: saved.id,

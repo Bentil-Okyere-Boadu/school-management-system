@@ -1,6 +1,6 @@
 import { Parent } from './parent.entity';
 import { ParentStudent } from './parent-student.entity';
-import { ParentStudentStatus } from './parent.enums';
+import { ParentAccountStatus, ParentStudentStatus } from './parent.enums';
 import { Student } from '../student/student.entity';
 
 export function normalizeEmail(email?: string | null): string | null {
@@ -64,6 +64,46 @@ export function guardianDetailsCompatible(
       incoming.lastName,
     ) && phonesCompatible(existing.phone, incoming.phone)
   );
+}
+
+export function parentHasUsableAccount(parent: Parent): boolean {
+  return (
+    parent.status === ParentAccountStatus.Active || Boolean(parent.password)
+  );
+}
+
+export function pickCanonicalParent(parents: Parent[]): Parent | null {
+  const usable = parents.filter(
+    (parent) => !parent.isSuspended && !parent.isArchived,
+  );
+  if (usable.length === 0) {
+    return null;
+  }
+
+  const score = (parent: Parent) => {
+    let value = 0;
+    if (parent.status === ParentAccountStatus.Active) {
+      value += 8;
+    }
+    if (parent.school?.id) {
+      value += 4;
+    }
+    if (parent.password) {
+      value += 2;
+    }
+    if (parent.isInvitationAccepted) {
+      value += 1;
+    }
+    return value;
+  };
+
+  return [...usable].sort((a, b) => {
+    const diff = score(b) - score(a);
+    if (diff !== 0) {
+      return diff;
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  })[0];
 }
 
 export function isActiveRelationship(link?: ParentStudent | null): boolean {

@@ -255,6 +255,8 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
           {showNotification && me.role.name === Roles.SCHOOL_ADMIN && (
             <NotificationCard
               user={me}
+              source="admin"
+              inboxPath="/admin/notifications"
               onClose={() => setShowNotification(false)}
             />
           )}

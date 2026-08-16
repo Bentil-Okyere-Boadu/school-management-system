@@ -782,8 +782,8 @@ export const useGetCurriculumTopicNotes = (
     refetchOnWindowFocus: true,
   });
 
-  const notes =
-    (data as { data?: CurriculumTopicNote[] } | undefined)?.data ?? [];
+    const notes =
+      (data?.data as CurriculumTopicNote[] | undefined) ?? [];
 
   return { notes, isLoading, refetch };
 };
@@ -1605,6 +1605,7 @@ export const useGetNotifications = (
     },
     enabled: !!schoolId,
     refetchOnWindowFocus: true,
+    refetchInterval: 20000,
   });
 
   const notifications: Notification[] = data?.data || [];

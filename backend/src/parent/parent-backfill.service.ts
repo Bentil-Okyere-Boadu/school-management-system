@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { Parent } from './parent.entity';
 import { ParentStudent } from './parent-student.entity';
 import {
@@ -11,6 +11,7 @@ import {
 import {
   guardianDetailsCompatible,
   normalizeEmail,
+  pickCanonicalParent,
 } from './parent.helpers';
 import { Role } from 'src/role/role.entity';
 import { Student } from 'src/student/student.entity';
@@ -64,7 +65,13 @@ export class ParentBackfillService implements OnModuleInit {
       return;
     }
 
-    for (const parent of parents) {
+    await this.mergeOrphanParentsByEmail();
+
+    const remainingParents = await this.parentRepository.find({
+      relations: ['student', 'student.school', 'school', 'role'],
+    });
+
+    for (const parent of remainingParents) {
       const school = parent.school ?? parent.student?.school ?? null;
       let dirty = false;
 
@@ -143,12 +150,8 @@ export class ParentBackfillService implements OnModuleInit {
         continue;
       }
 
-      group.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
-      const canonical = group[0];
-      const others = group.slice(1);
+      const canonical = pickCanonicalParent(group) ?? group[0];
+      const others = group.filter((parent) => parent.id !== canonical.id);
       const conflict = others.some(
         (other) => !guardianDetailsCompatible(canonical, other),
       );
@@ -187,5 +190,101 @@ export class ParentBackfillService implements OnModuleInit {
         );
       }
     }
+  }
+
+  private async mergeOrphanParentsByEmail(): Promise<void> {
+    const parents = await this.parentRepository.find({
+      relations: ['school', 'role'],
+    });
+    const byEmail = new Map<string, Parent[]>();
+    for (const parent of parents) {
+      const email = normalizeEmail(parent.email);
+      if (!email) {
+        continue;
+      }
+      const list = byEmail.get(email) ?? [];
+      list.push(parent);
+      byEmail.set(email, list);
+    }
+
+    for (const group of byEmail.values()) {
+      if (group.length < 2) {
+        continue;
+      }
+
+      const schooled = group.filter((parent) => parent.school?.id);
+      const orphans = group.filter((parent) => !parent.school?.id);
+      if (orphans.length === 0 && schooled.length < 2) {
+        continue;
+      }
+
+      const canonical = pickCanonicalParent(schooled) ?? pickCanonicalParent(group);
+      if (!canonical) {
+        continue;
+      }
+
+      for (const duplicate of group) {
+        if (duplicate.id === canonical.id) {
+          continue;
+        }
+        const sameSchool =
+          Boolean(duplicate.school?.id) &&
+          duplicate.school?.id === canonical.school?.id;
+        const isOrphan = !duplicate.school?.id;
+        if (!sameSchool && !isOrphan) {
+          continue;
+        }
+        await this.mergeParentInto(canonical, duplicate);
+      }
+    }
+  }
+
+  private async mergeParentInto(
+    canonical: Parent,
+    duplicate: Parent,
+  ): Promise<void> {
+    const links = await this.parentStudentRepository.find({
+      where: { parent: { id: duplicate.id } },
+      relations: ['student', 'school'],
+    });
+
+    for (const link of links) {
+      const already = await this.parentStudentRepository.findOne({
+        where: {
+          parent: { id: canonical.id },
+          student: { id: link.student.id },
+        },
+      });
+      if (already) {
+        await this.parentStudentRepository.remove(link);
+        continue;
+      }
+      link.parent = canonical;
+      if (!link.school && canonical.school) {
+        link.school = canonical.school;
+      }
+      await this.parentStudentRepository.save(link);
+    }
+
+    if (
+      duplicate.password &&
+      (!canonical.password || duplicate.updatedAt > canonical.updatedAt)
+    ) {
+      canonical.password = duplicate.password;
+    }
+    if (!canonical.school && duplicate.school) {
+      canonical.school = duplicate.school;
+    }
+    if (
+      duplicate.status === ParentAccountStatus.Active &&
+      canonical.status !== ParentAccountStatus.Active
+    ) {
+      canonical.status = ParentAccountStatus.Active;
+    }
+    if (duplicate.isInvitationAccepted) {
+      canonical.isInvitationAccepted = true;
+    }
+    await this.parentRepository.save(canonical);
+    await this.parentRepository.remove(duplicate);
   }
 }

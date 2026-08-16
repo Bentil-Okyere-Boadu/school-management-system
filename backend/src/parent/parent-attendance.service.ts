@@ -36,7 +36,10 @@ export class ParentAttendanceService {
       this.getHolidayDates(student.school?.id, startDate, endDate),
     ]);
 
-    const byDate = new Map(records.map((row) => [row.date, row.status]));
+    const byDate = new Map(
+      records.map((row) => [this.toDateKey(row.date), row.status]),
+    );
+    const todayStr = new Date().toISOString().split('T')[0];
 
     const days: {
       day: number;
@@ -49,7 +52,12 @@ export class ParentAttendanceService {
 
     for (let day = 1; day <= lastDay; day++) {
       const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const status = this.resolveDayStatus(date, byDate.get(date), holidayDates);
+      const status = this.resolveDayStatus(
+        date,
+        byDate.get(date),
+        holidayDates,
+        todayStr,
+      );
       days.push({ day, date, status });
 
       if (status === 'present') presentCount += 1;
@@ -85,6 +93,7 @@ export class ParentAttendanceService {
     date: string,
     recorded: string | undefined,
     holidayDates: Set<string>,
+    todayStr: string,
   ): ParentAttendanceDayStatus {
     const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
@@ -95,7 +104,18 @@ export class ParentAttendanceService {
       return 'holiday';
     }
 
-    return recorded === 'present' || recorded === 'absent' ? recorded : 'none';
+    if (date > todayStr) {
+      return 'none';
+    }
+
+    return recorded === 'absent' ? 'absent' : 'present';
+  }
+
+  private toDateKey(value: string | Date): string {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString().slice(0, 10);
+    }
+    return String(value).slice(0, 10);
   }
 
   private async getHolidayDates(

@@ -11,6 +11,11 @@ import { Student } from '../student/student.entity';
 import { Holiday } from '../academic-calendar/entitites/holiday.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from '../academic-calendar/entitites/academic-calendar.entity';
+import { NotificationService } from '../notification/notification.service';
+import {
+  NotificationRecipientRole,
+  NotificationType,
+} from '../notification/notification.entity';
 
 export interface AttendanceFilter {
   classLevelId: string;
@@ -40,6 +45,7 @@ export class AttendanceService {
     private academicTermRepository: Repository<AcademicTerm>,
     @InjectRepository(AcademicCalendar)
     private academicCalendarRepository: Repository<AcademicCalendar>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async getClassAttendance(filter: AttendanceFilter) {
@@ -515,6 +521,7 @@ export class AttendanceService {
           date,
         },
       });
+      const previousStatus = attendance?.status;
       if (!attendance) {
         attendance = this.attendanceRepository.create({
           classLevel: { id: classLevelId } as ClassLevel,
@@ -533,6 +540,21 @@ export class AttendanceService {
         }
       }
       await this.attendanceRepository.save(attendance);
+
+      if (record.status === 'absent' && previousStatus !== 'absent') {
+        await this.notificationService.createForRecipients({
+          schoolId: classLevel.school.id,
+          type: NotificationType.Attendance,
+          title: 'Marked absent',
+          message: `Marked absent on ${date}`,
+          recipients: [
+            {
+              id: record.studentId,
+              role: NotificationRecipientRole.Student,
+            },
+          ],
+        });
+      }
     }
     return { message: 'Attendance marked successfully' };
   }

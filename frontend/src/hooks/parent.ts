@@ -125,6 +125,7 @@ export type ParentFinanceChild = {
 export type ParentPaymentChannel = "mtn-gh" | "vodafone-gh" | "tigo-gh";
 
 export type ParentInitiatePaymentPayload = {
+  academicTermId: string;
   children: Array<{ studentId: string; amount: number }>;
   mobileNumber: string;
   channel: ParentPaymentChannel;

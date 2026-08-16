@@ -27,6 +27,10 @@ export class ParentPaymentChildDto {
 }
 
 export class ParentInitiatePaymentDto {
+  @ApiProperty({ description: 'Academic term the payment should apply to first' })
+  @IsUUID()
+  academicTermId: string;
+
   @ApiProperty({ type: [ParentPaymentChildDto] })
   @IsArray()
   @ArrayMinSize(1)

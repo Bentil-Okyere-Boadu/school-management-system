@@ -315,13 +315,33 @@ const ParentDashboard = () => {
           setPayOpen(false);
           setPreselectStudentId(null);
         }}
-        finance={
-          preselectStudentId
-            ? finance.filter((child) => child.studentId === preselectStudentId)
-            : finance
-        }
+        finance={finance}
+        calendars={calendars}
+        calendarId={calendarId}
+        termId={termId}
+        preselectStudentId={preselectStudentId}
         parentName={`${me?.firstName ?? ""} ${me?.lastName ?? ""}`.trim()}
         parentEmail={me?.email}
+        onCalendarChange={(value) => {
+          const nextCalendar = calendars.find((calendar) => calendar.id === value);
+          const nextTerm = pickCurrentTerm(nextCalendar);
+          const period = pickAttendancePeriod(nextTerm);
+          replaceParams({
+            calendarId: value,
+            termId: nextTerm?.id,
+            month: String(period.month),
+            year: String(period.year),
+          });
+        }}
+        onTermChange={(value) => {
+          const nextTerm = selectedCalendar?.terms?.find((term) => term.id === value);
+          const period = pickAttendancePeriod(nextTerm);
+          replaceParams({
+            termId: value,
+            month: String(period.month),
+            year: String(period.year),
+          });
+        }}
       />
     </div>
   );

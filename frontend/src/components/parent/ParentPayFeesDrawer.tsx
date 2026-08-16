@@ -12,17 +12,20 @@ import {
   type ParentFinanceChild,
   type ParentPaymentChannel,
 } from "@/hooks/parent";
-import { formatParentDate, fullName, getInitials, normalizeGhanaMsisdn } from "./parent-utils";
+import type { Calendar } from "@/@types";
+import {
+  formatParentDate,
+  fullName,
+  getInitials,
+  normalizeGhanaMsisdn,
+  pickCurrentTerm,
+  termOutstanding,
+} from "./parent-utils";
+import { MomoNetworkPicker } from "./MomoNetworkPicker";
 import { IconCheck, IconReceipt, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-
-const CHANNEL_OPTIONS = [
-  { value: "mtn-gh", label: "MTN" },
-  { value: "vodafone-gh", label: "Telecel" },
-  { value: "tigo-gh", label: "AirtelTigo" },
-];
 
 type PayStep = "select" | "details" | "otp" | "status";
 
@@ -30,21 +33,44 @@ interface ParentPayFeesDrawerProps {
   open: boolean;
   onClose: () => void;
   finance: ParentFinanceChild[];
+  calendars: Calendar[];
+  calendarId?: string;
+  termId?: string;
+  preselectStudentId?: string | null;
   parentName?: string;
   parentEmail?: string;
+  onCalendarChange?: (calendarId: string) => void;
+  onTermChange?: (termId: string) => void;
 }
 
 export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
   open,
   onClose,
   finance,
+  calendars,
+  calendarId,
+  termId,
+  preselectStudentId,
   parentName,
   parentEmail,
+  onCalendarChange,
+  onTermChange,
 }) => {
   const queryClient = useQueryClient();
+  const selectedCalendar =
+    calendars.find((calendar) => calendar.id === calendarId) ?? calendars[0];
+  const selectedTerm =
+    selectedCalendar?.terms?.find((term) => term.id === termId) ??
+    pickCurrentTerm(selectedCalendar);
+  const activeTermId = selectedTerm?.id ?? termId ?? "";
+
   const payableChildren = useMemo(
-    () => finance.filter((child) => (child.totals?.outstanding ?? 0) > 0),
-    [finance],
+    () =>
+      finance.filter(
+        (child) =>
+          termOutstanding(child, activeTermId, selectedTerm?.termName) > 0,
+      ),
+    [activeTermId, finance, selectedTerm?.termName],
   );
 
   const [step, setStep] = useState<PayStep>("select");
@@ -62,32 +88,63 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
     clientReference,
     open && step === "status" && Boolean(clientReference),
   );
-  const initializedRef = useRef(false);
+  const initializedKeyRef = useRef<string | null>(null);
   const statusToastRef = useRef<string | null>(null);
+  const canChangePeriod = step === "select" || step === "details";
+
+  const calendarOptions = calendars.map((calendar) => ({
+    value: calendar.id,
+    label: calendar.name,
+  }));
+  const termOptions = (selectedCalendar?.terms ?? []).map((term) => ({
+    value: term.id,
+    label: term.termName,
+  }));
 
   useEffect(() => {
     if (!open) {
-      initializedRef.current = false;
+      initializedKeyRef.current = null;
       statusToastRef.current = null;
       return;
     }
-    if (initializedRef.current || payableChildren.length === 0) return;
-    initializedRef.current = true;
+    const initKey = `${activeTermId}:${payableChildren
+      .map((child) => child.studentId)
+      .join(",")}`;
+    if (initializedKeyRef.current === initKey) return;
+    if (
+      initializedKeyRef.current &&
+      (step === "otp" || step === "status")
+    ) {
+      return;
+    }
+    initializedKeyRef.current = initKey;
+
     const defaults = Object.fromEntries(
       payableChildren.map((child) => [
         child.studentId,
-        (child.totals.outstanding ?? 0).toFixed(2),
+        termOutstanding(child, activeTermId, selectedTerm?.termName).toFixed(2),
       ]),
     );
+    const preferred =
+      preselectStudentId &&
+      payableChildren.some((child) => child.studentId === preselectStudentId)
+        ? [preselectStudentId]
+        : payableChildren.slice(0, 1).map((child) => child.studentId);
+
     setStep("select");
-    setSelectedIds(payableChildren.slice(0, 1).map((child) => child.studentId));
+    setSelectedIds(preferred);
     setAmounts(defaults);
-    setMobileNumber("");
-    setChannel("mtn-gh");
     setOtp("");
     setOtpRequestId(null);
     setClientReference(null);
-  }, [open, payableChildren]);
+  }, [
+    activeTermId,
+    open,
+    payableChildren,
+    preselectStudentId,
+    selectedTerm?.termName,
+    step,
+  ]);
 
   useEffect(() => {
     if (step !== "status" || !status?.status) return;
@@ -121,7 +178,19 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
     );
   };
 
+  const selectAll = () => {
+    setSelectedIds(payableChildren.map((child) => child.studentId));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds([]);
+  };
+
   const handleInitiate = async () => {
+    if (!activeTermId) {
+      toast.error("Select a term before paying.");
+      return;
+    }
     const msisdn = normalizeGhanaMsisdn(mobileNumber);
     if (!/^233\d{9}$/.test(msisdn)) {
       toast.error("Enter a valid Ghana mobile number, e.g. 233XXXXXXXXX.");
@@ -132,16 +201,26 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
       amount: Number(Number(amounts[child.studentId]).toFixed(2)),
     }));
     if (
-      childrenPayload.some(
-        (child) => !Number.isFinite(child.amount) || child.amount < 0.5,
-      )
+      childrenPayload.some((child) => {
+        const max = termOutstanding(
+          payableChildren.find((row) => row.studentId === child.studentId)!,
+          activeTermId,
+          selectedTerm?.termName,
+        );
+        return (
+          !Number.isFinite(child.amount) ||
+          child.amount < 0.5 ||
+          child.amount > max + 0.001
+        );
+      })
     ) {
-      toast.error("Each selected ward must be at least GHS 0.50.");
+      toast.error("Enter between GHS 0.50 and this term's outstanding for each selected ward.");
       return;
     }
 
     try {
       const response = await initiatePayment.mutateAsync({
+        academicTermId: activeTermId,
         children: childrenPayload,
         mobileNumber: msisdn,
         channel,
@@ -182,6 +261,18 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
   const paid = status?.status === "PAID";
   const failed =
     status?.status === "FAILED" || status?.status === "CANCELLED";
+  const periodLabel = [selectedTerm?.termName, selectedCalendar?.name]
+    .filter(Boolean)
+    .join(" · ");
+
+  const payAnotherWard = () => {
+    statusToastRef.current = null;
+    setClientReference(null);
+    setOtpRequestId(null);
+    setOtp("");
+    setStep("select");
+    initializedKeyRef.current = null;
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex justify-end print:hidden">
@@ -196,7 +287,9 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
           <div>
             <h2 className="text-lg font-semibold text-zinc-900">Pay school fees</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Money is applied only to the wards you select below.
+              {periodLabel
+                ? `Paying for ${periodLabel}. Partial amounts are allowed.`
+                : "Money is applied only to the wards you select below."}
             </p>
           </div>
           <button
@@ -210,97 +303,159 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {payableChildren.length === 0 && (
+          {calendarOptions.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              <CustomSelectTag
+                variant="outline"
+                options={calendarOptions}
+                value={selectedCalendar?.id}
+                onOptionItemClick={(event) => {
+                  if (!canChangePeriod) return;
+                  onCalendarChange?.(event.target.value);
+                }}
+                selectClassName="!rounded-lg min-w-[160px]"
+              />
+              {termOptions.length > 0 && (
+                <CustomSelectTag
+                  variant="outline"
+                  options={termOptions}
+                  value={selectedTerm?.id}
+                  onOptionItemClick={(event) => {
+                    if (!canChangePeriod) return;
+                    onTermChange?.(event.target.value);
+                  }}
+                  selectClassName="!rounded-lg min-w-[140px]"
+                />
+              )}
+            </div>
+          )}
+
+          {payableChildren.length === 0 && step === "select" && (
             <p className="text-sm text-zinc-500">
-              None of your wards have an outstanding balance.
+              None of your wards have an outstanding balance for this term.
+              Switch term to pay another period.
             </p>
           )}
 
-          {step === "select" && (
-            <ul className="space-y-3">
-              {payableChildren.map((child) => {
-                const selected = selectedIds.includes(child.studentId);
-                return (
-                  <li key={child.studentId}>
-                    <button
-                      type="button"
-                      onClick={() => toggleChild(child.studentId)}
-                      className={`w-full rounded-xl border px-4 py-3 text-left cursor-pointer ${
-                        selected
-                          ? "border-teal-200 bg-teal-50"
-                          : "border-zinc-200 bg-white"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                            selected
-                              ? "border-teal-500 bg-teal-500 text-white"
-                              : "border-zinc-300 bg-white text-transparent"
-                          }`}
+          {step === "select" && payableChildren.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-zinc-500">
+                  Select wards for this term
+                </p>
+                <button
+                  type="button"
+                  onClick={
+                    selectedIds.length === payableChildren.length
+                      ? clearSelection
+                      : selectAll
+                  }
+                  className="text-xs font-medium text-purple-600 hover:text-purple-700 cursor-pointer"
+                >
+                  {selectedIds.length === payableChildren.length
+                    ? "Clear"
+                    : "Select all"}
+                </button>
+              </div>
+              <ul className="space-y-3">
+                {payableChildren.map((child) => {
+                  const selected = selectedIds.includes(child.studentId);
+                  const max = termOutstanding(
+                    child,
+                    activeTermId,
+                    selectedTerm?.termName,
+                  );
+                  return (
+                    <li key={child.studentId}>
+                      <div
+                        className={`rounded-xl border px-4 py-3 ${
+                          selected
+                            ? "border-teal-200 bg-teal-50"
+                            : "border-zinc-200 bg-white"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleChild(child.studentId)}
+                          className="w-full text-left cursor-pointer"
                         >
-                          <IconCheck size={14} />
-                        </div>
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500 text-sm font-semibold text-white">
-                          {getInitials(child.firstName, child.lastName)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-neutral-800">
-                            {fullName(child.firstName, child.lastName)}
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            {child.grade ?? "—"}
-                            {child.totals.nextDueDate
-                              ? ` · Due ${formatParentDate(child.totals.nextDueDate)}`
-                              : ""}
-                          </p>
-                        </div>
-                        <p className="text-sm font-semibold text-teal-600">
-                          {formatGHSCurrency(child.totals.outstanding)}
-                        </p>
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                                selected
+                                  ? "border-teal-500 bg-teal-500 text-white"
+                                  : "border-zinc-300 bg-white text-transparent"
+                              }`}
+                            >
+                              <IconCheck size={14} />
+                            </div>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500 text-sm font-semibold text-white">
+                              {getInitials(child.firstName, child.lastName)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-neutral-800">
+                                {fullName(child.firstName, child.lastName)}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                {child.grade ?? "—"}
+                                {child.totals.nextDueDate
+                                  ? ` · Due ${formatParentDate(child.totals.nextDueDate)}`
+                                  : ""}
+                              </p>
+                            </div>
+                            <p className="text-sm font-semibold text-teal-600">
+                              {formatGHSCurrency(max)}
+                            </p>
+                          </div>
+                        </button>
+                        {selected && (
+                          <div className="mt-3 pl-9">
+                            <InputField
+                              label="Amount to pay"
+                              type="number"
+                              min={0.5}
+                              max={max}
+                              step="0.01"
+                              value={amounts[child.studentId] ?? ""}
+                              onChange={(event) =>
+                                setAmounts((current) => ({
+                                  ...current,
+                                  [child.studentId]: event.target.value,
+                                }))
+                              }
+                            />
+                            <p className="-mt-2 text-xs text-zinc-500">
+                              Max {formatGHSCurrency(max)} for this term. You can pay less.
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
 
           {step === "details" && (
             <div className="space-y-4">
-              {selectedChildren.map((child) => (
-                <InputField
-                  key={child.studentId}
-                  label={`Amount for ${fullName(child.firstName, child.lastName)}`}
-                  type="number"
-                  min={0.5}
-                  max={child.totals.outstanding}
-                  step="0.01"
-                  value={amounts[child.studentId] ?? ""}
-                  onChange={(event) =>
-                    setAmounts((current) => ({
-                      ...current,
-                      [child.studentId]: event.target.value,
-                    }))
-                  }
-                />
-              ))}
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+                {selectedChildren
+                  .map(
+                    (child) =>
+                      `${fullName(child.firstName, child.lastName)} · ${formatGHSCurrency(
+                        Number(amounts[child.studentId] ?? 0),
+                      )}`,
+                  )
+                  .join(" · ")}
+              </div>
               <InputField
                 label="Mobile money number"
                 placeholder="233XXXXXXXXX"
                 value={mobileNumber}
                 onChange={(event) => setMobileNumber(event.target.value)}
               />
-              <div>
-                <p className="mb-1.5 text-xs text-zinc-600">Network</p>
-                <CustomSelectTag
-                  options={CHANNEL_OPTIONS}
-                  value={channel}
-                  onOptionItemClick={(event) =>
-                    setChannel(event.target.value as ParentPaymentChannel)
-                  }
-                />
-              </div>
+              <MomoNetworkPicker value={channel} onChange={setChannel} />
             </div>
           )}
 
@@ -349,19 +504,28 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
           {step === "select" && (
             <CustomButton
               text={`Continue · ${formatGHSCurrency(total)}`}
-              onClick={() => {}} // TODO: disabled for NOW
-              disabled={selectedChildren.length === 0}
+              onClick={() => setStep("details")}
+              disabled={selectedChildren.length === 0 || total < 0.5}
               className="w-full max-sm:w-full"
             />
           )}
           {step === "details" && (
-            <CustomButton
-              text={`Confirm payment of ${formatGHSCurrency(total)}`}
-              onClick={handleInitiate}
-              loading={initiatePayment.isPending}
-              disabled={selectedChildren.length === 0}
-              className="w-full max-sm:w-full"
-            />
+            <div className="space-y-2">
+              <CustomButton
+                text={`Confirm payment of ${formatGHSCurrency(total)}`}
+                onClick={handleInitiate}
+                loading={initiatePayment.isPending}
+                disabled={selectedChildren.length === 0}
+                className="w-full max-sm:w-full"
+              />
+              <button
+                type="button"
+                onClick={() => setStep("select")}
+                className="w-full text-center text-sm text-zinc-500 hover:text-zinc-700 cursor-pointer"
+              >
+                Back to ward selection
+              </button>
+            </div>
           )}
           {step === "otp" && (
             <CustomButton
@@ -373,14 +537,21 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
           )}
           {step === "status" && (paid || failed) && (
             <CustomButton
-              text="Done"
-              onClick={onClose}
+              text={
+                paid && payableChildren.length > 0
+                  ? "Pay another ward"
+                  : "Done"
+              }
+              onClick={
+                paid && payableChildren.length > 0 ? payAnotherWard : onClose
+              }
               className="w-full max-sm:w-full"
             />
           )}
           <p className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
             <IconReceipt size={14} />
-            You receive a receipt per ward immediately after payment.
+            You receive a receipt per ward immediately after payment. Unpaid
+            remainder stays on this term.
           </p>
         </div>
       </aside>

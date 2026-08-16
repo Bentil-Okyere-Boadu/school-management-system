@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { ClassCard } from '@/components/admin/classes/ClassCard';
+import { AdminClassResultsCard } from '@/components/admin/classes/AdminClassResultsCard';
 import { SearchBar } from '@/components/common/SearchBar';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
 import { ClassLevel, MissingGrade, ErrorResponse, NotificationType } from "@/@types";
@@ -95,7 +95,10 @@ const ClassesPage = () => {
   }
 
   const onApproveOrDisApproveClassResult = (classData: ClassLevel) => {
-    if(classData?.isApproved || classData?.schoolAdminApproved) {
+    if (classData?.schoolAdminApproved) {
+      return;
+    }
+    if (classData?.isApproved) {
       onDisApproveClassResult(classData)
     } else {
       onApproveClassResult(classData)
@@ -231,16 +234,21 @@ const ClassesPage = () => {
       </div>
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-6 px-0.5">
         {classLevels?.map((data, index) => (
-          <ClassCard
-            key={index + "12"}
+          <AdminClassResultsCard
+            key={data.id ?? index}
             classData={data}
-            studentCount={data?.studentCount}
-            showGoToAttendance={true}
-            showApproval={true}
-            isApproved={data?.isApproved}
-            approvalText={data?.isApproved ? 'Unsubmit Results' : 'Submit Results'}
-            onNavigateToAttendanceClick={onNavigateToAttendance}
-            onApprovalClick={() => onApproveOrDisApproveClassResult(data)}
+            studentCount={data?.studentCount ?? data?.students?.length ?? 0}
+            isAdminLocked={!!data?.schoolAdminApproved}
+            teacherSubmitted={!!data?.isApproved}
+            action="submit"
+            actionDisabled={!!data?.schoolAdminApproved}
+            actionTooltip={
+              data?.schoolAdminApproved
+                ? "Results are locked by the school admin. You cannot submit or unsubmit for this term."
+                : ""
+            }
+            onSubmitToggle={onApproveOrDisApproveClassResult}
+            onCardClick={onNavigateToAttendance}
             busy={busyCardId === data.id}
           />
         ))}

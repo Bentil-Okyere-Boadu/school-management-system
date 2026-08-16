@@ -11,9 +11,11 @@ import { SubjectCatalog } from '../subject/subject-catalog.entity';
 import { Subject } from '../subject/subject.entity';
 import { School } from '../school/school.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
+    NotificationModule,
     TypeOrmModule.forFeature([
       Curriculum,
       Topic,

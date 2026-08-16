@@ -19,7 +19,7 @@ import {
   getNotificationTypeLabel,
   groupNotificationsByCategory,
   NOTIFICATION_CATEGORY_LABELS,
-  NOTIFICATION_CATEGORY_ORDER,
+  ADMIN_NOTIFICATION_CATEGORIES,
   NotificationCategory,
 } from "@/utils/notifications";
 
@@ -27,16 +27,15 @@ type InboxFilter = "all" | "unread" | NotificationCategory;
 
 interface NotificationInboxProps {
   schoolId?: string;
+  notifications?: Notification[];
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
+  onMarkRead?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onMarkAllRead?: () => void;
+  isMarkingAll?: boolean;
+  categories?: NotificationCategory[];
 }
-
-const FILTER_PILLS: Array<{ key: InboxFilter; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "unread", label: "Unread" },
-  ...NOTIFICATION_CATEGORY_ORDER.map((category) => ({
-    key: category as InboxFilter,
-    label: NOTIFICATION_CATEGORY_LABELS[category],
-  })),
-];
 
 const NotificationInboxItem: React.FC<{
   note: Notification;
@@ -86,16 +85,40 @@ const NotificationInboxItem: React.FC<{
 
 export const NotificationInbox: React.FC<NotificationInboxProps> = ({
   schoolId,
+  notifications: notificationsProp,
+  searchQuery: searchQueryProp,
+  onSearch,
+  onMarkRead,
+  onDelete,
+  onMarkAllRead,
+  isMarkingAll: isMarkingAllProp,
+  categories = ADMIN_NOTIFICATION_CATEGORIES,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [internalSearch, setInternalSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<InboxFilter>("all");
-  const { notifications } = useGetNotifications(schoolId, searchQuery);
+  const searchQuery = searchQueryProp ?? internalSearch;
+
+  const { notifications: adminNotifications } = useGetNotifications(
+    schoolId,
+    searchQuery,
+  );
   const { mutate: markAsRead } = useMarkNotificationAsRead();
-  const { mutate: markAllAsRead, isPending: isMarkingAll } =
+  const { mutate: markAllAsRead, isPending: isMarkingAllAdmin } =
     useMarkAllNotificationsAsRead();
   const { mutate: deleteNotification } = useDeleteNotification();
 
+  const notifications = notificationsProp ?? adminNotifications;
+  const isMarkingAll = isMarkingAllProp ?? isMarkingAllAdmin;
   const unreadCount = notifications.filter((note) => !note.read).length;
+
+  const filterPills: Array<{ key: InboxFilter; label: string }> = [
+    { key: "all", label: "All" },
+    { key: "unread", label: "Unread" },
+    ...categories.map((category) => ({
+      key: category as InboxFilter,
+      label: NOTIFICATION_CATEGORY_LABELS[category],
+    })),
+  ];
 
   const filteredNotifications = useMemo(() => {
     if (activeFilter === "all") {
@@ -110,11 +133,23 @@ export const NotificationInbox: React.FC<NotificationInboxProps> = ({
   }, [activeFilter, notifications]);
 
   const groupedNotifications = useMemo(
-    () => groupNotificationsByCategory(filteredNotifications),
-    [filteredNotifications],
+    () => groupNotificationsByCategory(filteredNotifications, categories),
+    [categories, filteredNotifications],
   );
 
+  const handleSearch = (query: string) => {
+    if (onSearch) {
+      onSearch(query);
+      return;
+    }
+    setInternalSearch(query);
+  };
+
   const handleReadNotification = (id: string) => {
+    if (onMarkRead) {
+      onMarkRead(id);
+      return;
+    }
     markAsRead(id, {
       onError: (err) => {
         console.error("Error marking notification as read:", err);
@@ -123,6 +158,10 @@ export const NotificationInbox: React.FC<NotificationInboxProps> = ({
   };
 
   const handleDeleteNotification = (id: string) => {
+    if (onDelete) {
+      onDelete(id);
+      return;
+    }
     deleteNotification(id, {
       onError: (err) => {
         console.error("Error deleting notification:", err);
@@ -131,7 +170,14 @@ export const NotificationInbox: React.FC<NotificationInboxProps> = ({
   };
 
   const handleMarkAllRead = () => {
-    if (!schoolId || unreadCount === 0 || isMarkingAll) {
+    if (unreadCount === 0 || isMarkingAll) {
+      return;
+    }
+    if (onMarkAllRead) {
+      onMarkAllRead();
+      return;
+    }
+    if (!schoolId) {
       return;
     }
     markAllAsRead(schoolId, {
@@ -142,11 +188,12 @@ export const NotificationInbox: React.FC<NotificationInboxProps> = ({
   };
 
   const unreadLabel = `${unreadCount} unread`;
+  const markAllDisabled = unreadCount === 0 || isMarkingAll || (!onMarkAllRead && !schoolId);
 
   return (
     <div>
       <SearchBar
-        onSearch={setSearchQuery}
+        onSearch={handleSearch}
         value={searchQuery}
         className="w-[366px] max-md:w-full"
       />
@@ -156,13 +203,13 @@ export const NotificationInbox: React.FC<NotificationInboxProps> = ({
         <CustomButton
           text="Mark all as read"
           variant="outline"
-          disabled={!schoolId || unreadCount === 0 || isMarkingAll}
+          disabled={markAllDisabled}
           onClick={handleMarkAllRead}
         />
       </div>
 
       <div className="flex flex-wrap gap-2 mt-4">
-        {FILTER_PILLS.map((pill) => {
+        {filterPills.map((pill) => {
           const isActive = activeFilter === pill.key;
           return (
             <button

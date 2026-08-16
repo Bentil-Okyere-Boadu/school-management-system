@@ -158,6 +158,48 @@ export class AuthService {
     };
   }
 
+  async issuePasswordReset<
+    T extends {
+      email: string | null;
+      resetPasswordToken: string | null;
+      resetPasswordExpires: Date | null;
+    },
+  >(
+    user: T,
+    repository: Repository<T>,
+    resetPath = '/auth/forgotPassword/resetPassword',
+  ) {
+    if (!user.email) {
+      throw new NotFoundException(
+        'No user found with the provided credentials',
+      );
+    }
+
+    const resetToken = uuidv4();
+    const resetTokenExpires = new Date();
+    resetTokenExpires.setMinutes(resetTokenExpires.getMinutes() + 30);
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpires;
+    await repository.save(user);
+
+    try {
+      await this.emailService.sendPasswordResetEmail(
+        user.email,
+        resetToken,
+        resetPath,
+      );
+      this.logger.log(`Password reset email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error('Error sending email:', error);
+    }
+
+    return {
+      success: true,
+      message: 'Password reset link sent to your email',
+    };
+  }
+
   async handleForgotPassword<
     T extends {
       email: string | null;
@@ -179,29 +221,7 @@ export class AuthService {
       );
     }
 
-    const resetToken = uuidv4();
-    const resetTokenExpires = new Date();
-    resetTokenExpires.setMinutes(resetTokenExpires.getMinutes() + 30);
-
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = resetTokenExpires;
-    await repository.save(user);
-
-    try {
-      await this.emailService.sendPasswordResetEmail(
-        email,
-        resetToken,
-        resetPath,
-      );
-      this.logger.log(`Password reset email sent to ${email}`);
-    } catch (error) {
-      this.logger.error('Error sending email:', error);
-    }
-
-    return {
-      success: true,
-      message: 'Password reset link sent to your email',
-    };
+    return this.issuePasswordReset(user, repository, resetPath);
   }
 
   async handleResetPassword<

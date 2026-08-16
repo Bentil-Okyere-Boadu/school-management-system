@@ -49,17 +49,19 @@ export class ParentPaymentService {
       }
 
       const outstanding =
-        await this.paymentsService.getTotalOutstandingForStudent(student, {
-          ussdEligibleOnly: false,
-        });
+        await this.paymentsService.getTermOutstandingForStudent(
+          student,
+          dto.academicTermId,
+          { ussdEligibleOnly: false },
+        );
       if (outstanding <= 0) {
         throw new BadRequestException(
-          `No outstanding balance for ${student.firstName} ${student.lastName}`,
+          `No outstanding balance for ${student.firstName} ${student.lastName} for this term`,
         );
       }
       if (child.amount > outstanding + 0.001) {
         throw new BadRequestException(
-          `Amount for ${student.firstName} exceeds outstanding (max GHS ${outstanding.toFixed(2)})`,
+          `Amount for ${student.firstName} exceeds this term's outstanding (max GHS ${outstanding.toFixed(2)})`,
         );
       }
       allocations.push({
@@ -84,6 +86,7 @@ export class ParentPaymentService {
       channel: dto.channel,
       amount: total,
       targetFeeStructureId: null,
+      targetAcademicTermId: dto.academicTermId,
       customerName: dto.customerName ?? `${anchorStudent.firstName} guardian`,
       customerEmail: dto.customerEmail ?? null,
       parentId,
@@ -193,7 +196,9 @@ export class ParentPaymentService {
           channel: otp.channel,
           parentId,
           hubtelClientReference: clientReference,
+          academicTermId: otp.targetAcademicTermId,
         },
+        targetAcademicTermId: otp.targetAcademicTermId,
       });
 
       const updated =
