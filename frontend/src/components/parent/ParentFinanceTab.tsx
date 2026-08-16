@@ -127,7 +127,7 @@ function FinanceCard({
               </div>
               <div className="flex justify-between text-slate-800">
                 <span>Paid</span>
-                <span className="tabular-nums">
+                <span className="tabular-nums text-emerald-600">
                   {formatGHSCurrency(child.totals?.totalPaid)}
                 </span>
               </div>
@@ -135,7 +135,7 @@ function FinanceCard({
 
             <div className="mt-3 flex justify-between border-t border-slate-200 pt-3 text-sm font-semibold text-slate-800">
               <span>Outstanding</span>
-              <span className="tabular-nums text-cyan-500">
+              <span className="tabular-nums text-rose-400">
                 {formatGHSCurrency(outstanding)}
               </span>
             </div>
