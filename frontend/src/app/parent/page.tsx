@@ -16,8 +16,6 @@ import {
 } from "@/components/parent/parent-utils";
 import { useParentPageFilters } from "@/components/parent/useParentPageFilters";
 import {
-  getParentApiErrorMessage,
-  useConfirmParentChild,
   useParentAcademics,
   useParentAttendance,
   useParentCalendars,
@@ -28,7 +26,6 @@ import { IconWallet } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { HashLoader } from "react-spinners";
 import React, { useEffect, useState } from "react";
-import { toast } from "react-toastify";
 
 const FAMILY_TABS: ParentTabItem[] = [
   { tabLabel: "Attendance", tabKey: "attendance" },
@@ -133,8 +130,6 @@ const ParentDashboard = () => {
 
   const { finance, isLoading: financeLoading, error: financeError } =
     useParentFinance(apiStudentId, hasChildren);
-
-  const confirmChild = useConfirmParentChild();
 
   useEffect(() => {
     handleChildAccessError(overviewError);
@@ -288,20 +283,6 @@ const ParentDashboard = () => {
                   academics={academics}
                   isLoading={academicsLoading}
                   selectedTermName={selectedTerm?.termName}
-                  confirming={confirmChild.isPending}
-                  onConfirm={async (linkId) => {
-                    try {
-                      await confirmChild.mutateAsync(linkId);
-                      toast.success("Child confirmed.");
-                    } catch (confirmError) {
-                      toast.error(
-                        getParentApiErrorMessage(
-                          confirmError,
-                          "Unable to confirm this child.",
-                        ),
-                      );
-                    }
-                  }}
                 />
               )}
             </>

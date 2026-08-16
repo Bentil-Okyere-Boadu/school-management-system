@@ -53,7 +53,7 @@ export const ParentKpiRow: React.FC<ParentKpiRowProps> = ({
             ? `${overdue} with overdue fees`
             : "No overdue fees"
         }
-        hintClassName={overdue > 0 ? "text-rose-600" : "text-zinc-500"}
+        hintClassName={overdue > 0 ? "text-rose-400" : "text-zinc-500"}
       />
       <KpiCard
         label="Fees charged"
@@ -64,7 +64,7 @@ export const ParentKpiRow: React.FC<ParentKpiRowProps> = ({
         label="Paid"
         value={formatGHSCurrency(overview?.totalPaid ?? 0)}
         hint={paidHint}
-        valueClassName="text-purple-500"
+        valueClassName="text-emerald-600"
       />
       <KpiCard
         label="Outstanding"
@@ -74,7 +74,7 @@ export const ParentKpiRow: React.FC<ParentKpiRowProps> = ({
             ? `${pending} pending action(s)`
             : "No pending actions"
         }
-        valueClassName="text-teal-600"
+        valueClassName="text-rose-400"
       />
     </div>
   );

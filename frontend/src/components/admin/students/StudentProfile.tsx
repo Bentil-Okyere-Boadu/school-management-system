@@ -45,7 +45,7 @@ const StudentProfile = ({studentData, viewMode, refetch, canManageGuardians = fa
     phone: '',
     relationship: ''
   }
-  const { mutate: createGuardian } = useCreateGuardian(studentId, { asAdmin });
+  const { mutate: createGuardian, isPending: isCreateGuardianPending } = useCreateGuardian(studentId, { asAdmin });
   const { mutate: editStudent } = useUpdateStudentProfile();
 
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
@@ -331,6 +331,7 @@ const StudentProfile = ({studentData, viewMode, refetch, canManageGuardians = fa
 
           <Dialog
             isOpen={dialogOpen}
+            busy={isCreateGuardianPending}
             dialogTitle="Add Guardian"
             onClose={() => setDialogOpen(false)}
             onSave={saveNewGuardian}

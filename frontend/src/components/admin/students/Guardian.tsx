@@ -29,12 +29,13 @@ const Guardian = ({
 }: GuardianProps) => {
   const [editParent, setEditParent] = useState(parent);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
-  const { mutate: deleteGuardianMutation } = useDeleteGuardian(
+  const { mutate: deleteGuardianMutation, isPending: isDeletePending } = useDeleteGuardian(
     parent?.id as string,
     { studentId, asAdmin },
   );
-  const { mutate: updateParentMutation } = useUpdateGuardian(
+  const { mutate: updateParentMutation, isPending: isUpdatePending } = useUpdateGuardian(
     parent.id as string,
     { studentId, asAdmin },
   );
@@ -43,6 +44,7 @@ const Guardian = ({
     deleteGuardianMutation(undefined, {
       onSuccess: () => {
         toast.success("Guardian deleted successfully.");
+        setIsConfirmDeleteOpen(false);
         refetchStudentData();
       },
       onError: (error: unknown) => {
@@ -114,7 +116,7 @@ const Guardian = ({
                 <IconTrashFilled
                   size={18}
                   className="text-red-600 cursor-pointer"
-                  onClick={() => deleteGuardian()}
+                  onClick={() => setIsConfirmDeleteOpen(true)}
                 />
               </div>
             )}
@@ -169,12 +171,28 @@ const Guardian = ({
 
       <Dialog
         isOpen={dialogOpen}
+        busy={isUpdatePending}
         dialogTitle="Edit Guardian"
         onClose={() => setDialogOpen(false)}
         onSave={updateParent}
         saveDisabled={!!validateGuardianIdentity(editParent)}
       >
         <GuardianFormFields value={editParent} onChange={setEditParent} />
+      </Dialog>
+
+      <Dialog
+        isOpen={isConfirmDeleteOpen}
+        busy={isDeletePending}
+        dialogTitle="Confirm Delete"
+        saveButtonText="Delete Guardian"
+        onClose={() => setIsConfirmDeleteOpen(false)}
+        onSave={deleteGuardian}
+      >
+        <div className="my-3 flex flex-col gap-4">
+          <p className="mt-3 mb-6">
+            Are you sure you want to delete this guardian?
+          </p>
+        </div>
       </Dialog>
     </>
   );
