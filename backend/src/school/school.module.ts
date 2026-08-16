@@ -19,6 +19,7 @@ import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calen
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { EventCategory } from 'src/planner/entities/event-category.entity';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { EventCategory } from 'src/planner/entities/event-category.entity';
       EventCategory,
     ]),
     InvitationModule,
+    NotificationModule,
   ],
   providers: [
     SchoolService,

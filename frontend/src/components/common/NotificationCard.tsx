@@ -8,58 +8,123 @@ import {
   useMarkAllNotificationsAsRead,
   useMarkNotificationAsRead,
 } from "@/hooks/school-admin";
+import {
+  useGetMyNotifications as useGetTeacherNotifications,
+  useMarkAllMyNotificationsAsRead as useMarkAllTeacherNotificationsAsRead,
+  useMarkMyNotificationAsRead as useMarkTeacherNotificationAsRead,
+} from "@/hooks/teacher";
+import {
+  useGetMyNotifications as useGetStudentNotifications,
+  useMarkAllMyNotificationsAsRead as useMarkAllStudentNotificationsAsRead,
+  useMarkMyNotificationAsRead as useMarkStudentNotificationAsRead,
+} from "@/hooks/student";
 import NotificationIcon from "./NotificationIcon";
 import NoAvailableEmptyState from "./NoAvailableEmptyState";
 import CustomUnderlinedButton from "./CustomUnderlinedButton";
 import { formatRelativeTime, getNotificationTypeLabel } from "@/utils/notifications";
 
+export type NotificationCardSource = "admin" | "teacher" | "student";
+
 interface NotificationCardProps {
   onClose: () => void;
   user: User;
+  inboxPath?: string;
+  source?: NotificationCardSource;
 }
 
 export default function NotificationCard({
   onClose,
   user,
+  inboxPath = "/admin/notifications",
+  source = "admin",
 }: NotificationCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, onClose);
   const router = useRouter();
-  const schoolId = user.school.id;
+  const schoolId = user?.school?.id;
+  const userId = user?.id;
 
-  const { notifications } = useGetNotifications(schoolId);
-  const { mutate: markAsRead } = useMarkNotificationAsRead();
-  const { mutate: markAllAsRead, isPending: isMarkingAll } =
+  const { notifications: adminNotifications } = useGetNotifications(
+    source === "admin" ? schoolId : null,
+  );
+  const { mutate: markAdminAsRead } = useMarkNotificationAsRead();
+  const { mutate: markAllAdminAsRead, isPending: isMarkingAllAdmin } =
     useMarkAllNotificationsAsRead();
+
+  const { notifications: teacherNotifications } = useGetTeacherNotifications(
+    source === "teacher" ? userId : undefined,
+  );
+  const { mutate: markTeacherAsRead } = useMarkTeacherNotificationAsRead();
+  const { mutate: markAllTeacherAsRead, isPending: isMarkingAllTeacher } =
+    useMarkAllTeacherNotificationsAsRead();
+
+  const { notifications: studentNotifications } = useGetStudentNotifications(
+    source === "student" ? userId : undefined,
+  );
+  const { mutate: markStudentAsRead } = useMarkStudentNotificationAsRead();
+  const { mutate: markAllStudentAsRead, isPending: isMarkingAllStudent } =
+    useMarkAllStudentNotificationsAsRead();
+
+  const notifications =
+    source === "teacher"
+      ? teacherNotifications
+      : source === "student"
+        ? studentNotifications
+        : adminNotifications;
+
+  const isMarkingAll =
+    source === "teacher"
+      ? isMarkingAllTeacher
+      : source === "student"
+        ? isMarkingAllStudent
+        : isMarkingAllAdmin;
 
   const latestNotifications = notifications.slice(0, 8);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const onHandleNotificationItemClick = (id: string) => {
-    markAsRead(id, {
-      onError: (err) => {
-        console.error("Error marking notification as read:", err);
-      },
-    });
+    const onError = (err: unknown) => {
+      console.error("Error marking notification as read:", err);
+    };
 
-    router.push("/admin/notifications");
+    if (source === "teacher") {
+      markTeacherAsRead(id, { onError });
+    } else if (source === "student") {
+      markStudentAsRead(id, { onError });
+    } else {
+      markAdminAsRead(id, { onError });
+    }
+
+    router.push(inboxPath);
     onClose();
   };
 
   const onGoToNotificationsView = () => {
-    router.push("/admin/notifications");
+    router.push(inboxPath);
     onClose();
   };
 
   const onMarkAllRead = () => {
-    if (!schoolId || unreadCount === 0 || isMarkingAll) {
+    if (unreadCount === 0 || isMarkingAll) {
       return;
     }
-    markAllAsRead(schoolId, {
-      onError: (err) => {
-        console.error("Error marking all notifications as read:", err);
-      },
-    });
+
+    const onError = (err: unknown) => {
+      console.error("Error marking all notifications as read:", err);
+    };
+
+    if (source === "teacher") {
+      markAllTeacherAsRead(undefined, { onError });
+      return;
+    }
+    if (source === "student") {
+      markAllStudentAsRead(undefined, { onError });
+      return;
+    }
+    if (!schoolId) {
+      return;
+    }
+    markAllAdminAsRead(schoolId, { onError });
   };
 
   return (

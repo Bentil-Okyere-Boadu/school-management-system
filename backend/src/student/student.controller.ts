@@ -36,6 +36,8 @@ import { UpdateParentDto } from 'src/parent/dto/update-parent-dto';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationRecipientRole } from 'src/notification/notification.entity';
 
 @ApiTags('Student')
 @Controller('student')
@@ -46,6 +48,7 @@ export class StudentController {
     private readonly parentService: ParentService,
     private readonly attendanceService: AttendanceService,
     private readonly academicCalendarService: AcademicCalendarService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -123,6 +126,58 @@ export class StudentController {
   @Roles(Role.Student)
   getProfile(@CurrentUser() student: Student) {
     return this.studentService.getMyProfile(student);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('notifications')
+  @Roles(Role.Student)
+  getMyNotifications(
+    @CurrentUser() student: Student,
+    @Query('search') search?: string,
+  ) {
+    return this.notificationService.findAllForRecipient(
+      NotificationRecipientRole.Student,
+      student.id,
+      search,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('notifications/mark-all-read')
+  @Roles(Role.Student)
+  markAllMyNotificationsAsRead(@CurrentUser() student: Student) {
+    return this.notificationService.markAllAsReadForRecipient(
+      NotificationRecipientRole.Student,
+      student.id,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('notifications/:id/markAsRead')
+  @Roles(Role.Student)
+  markMyNotificationAsRead(
+    @CurrentUser() student: Student,
+    @Param('id') id: string,
+  ) {
+    return this.notificationService.markAsReadForRecipient(
+      id,
+      NotificationRecipientRole.Student,
+      student.id,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('notifications/:id')
+  @Roles(Role.Student)
+  deleteMyNotification(
+    @CurrentUser() student: Student,
+    @Param('id') id: string,
+  ) {
+    return this.notificationService.removeForRecipient(
+      id,
+      NotificationRecipientRole.Student,
+      student.id,
+    );
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)

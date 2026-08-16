@@ -6,6 +6,8 @@ export type NotificationCategory =
   | "results"
   | "parents"
   | "fees"
+  | "assignments"
+  | "curriculum"
   | "general";
 
 export const NOTIFICATION_CATEGORY_ORDER: NotificationCategory[] = [
@@ -14,6 +16,26 @@ export const NOTIFICATION_CATEGORY_ORDER: NotificationCategory[] = [
   "results",
   "parents",
   "fees",
+  "assignments",
+  "curriculum",
+  "general",
+];
+
+export const ADMIN_NOTIFICATION_CATEGORIES: NotificationCategory[] = [
+  "admissions",
+  "attendance",
+  "results",
+  "parents",
+  "fees",
+  "curriculum",
+  "general",
+];
+
+export const TEACHER_STUDENT_NOTIFICATION_CATEGORIES: NotificationCategory[] = [
+  "assignments",
+  "results",
+  "curriculum",
+  "attendance",
   "general",
 ];
 
@@ -24,6 +46,8 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
     results: "Results",
     parents: "Parents",
     fees: "Fees",
+    assignments: "Assignments",
+    curriculum: "Curriculum",
     general: "General",
   };
 
@@ -40,6 +64,16 @@ const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = {
   [NotificationType.ParentAccessRevoked]: "parents",
   [NotificationType.Fee]: "fees",
   [NotificationType.General]: "general",
+  [NotificationType.AssignmentPublished]: "assignments",
+  [NotificationType.AssignmentUpdated]: "assignments",
+  [NotificationType.AssignmentSubmitted]: "assignments",
+  [NotificationType.AssignmentGraded]: "assignments",
+  [NotificationType.CurriculumNote]: "curriculum",
+  [NotificationType.CurriculumNoteReply]: "curriculum",
+  [NotificationType.GradesSubmitted]: "results",
+  [NotificationType.ClassResultsSubmitted]: "results",
+  [NotificationType.ResultsReleased]: "results",
+  [NotificationType.ResultsUnlocked]: "results",
 };
 
 export function getNotificationCategory(
@@ -70,6 +104,16 @@ const TYPE_LABELS: Record<NotificationType, string> = {
   [NotificationType.ParentAccessRevoked]: "Access revoked",
   [NotificationType.Fee]: "Fees",
   [NotificationType.General]: "General",
+  [NotificationType.AssignmentPublished]: "Assignment published",
+  [NotificationType.AssignmentUpdated]: "Assignment updated",
+  [NotificationType.AssignmentSubmitted]: "Assignment submitted",
+  [NotificationType.AssignmentGraded]: "Assignment graded",
+  [NotificationType.CurriculumNote]: "Curriculum note",
+  [NotificationType.CurriculumNoteReply]: "Curriculum reply",
+  [NotificationType.GradesSubmitted]: "Grades submitted",
+  [NotificationType.ClassResultsSubmitted]: "Class results submitted",
+  [NotificationType.ResultsReleased]: "Results released",
+  [NotificationType.ResultsUnlocked]: "Results unlocked",
 };
 
 export function getNotificationTypeLabel(
@@ -120,6 +164,7 @@ export function formatRelativeTime(date?: string): string {
 
 export function groupNotificationsByCategory(
   notifications: Notification[],
+  categoryOrder: NotificationCategory[] = NOTIFICATION_CATEGORY_ORDER,
 ): Array<{ category: NotificationCategory; items: Notification[] }> {
   const buckets = new Map<NotificationCategory, Notification[]>();
 
@@ -130,7 +175,7 @@ export function groupNotificationsByCategory(
     buckets.set(category, list);
   }
 
-  return NOTIFICATION_CATEGORY_ORDER.filter((category) =>
+  return categoryOrder.filter((category) =>
     buckets.has(category),
   ).map((category) => ({
     category,

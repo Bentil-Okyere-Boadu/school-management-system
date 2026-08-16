@@ -7,6 +7,8 @@ import {
   IconBell,
   IconUsers,
   IconReceipt,
+  IconClipboard,
+  IconBook,
 } from "@tabler/icons-react";
 import { getNotificationCategory } from "@/utils/notifications";
 
@@ -29,6 +31,18 @@ const NotificationIcon = ({ type, size = 20 }: NotificationIconProps) => {
     [NotificationType.ClassTeacherResultSubmission]: (
       <IconFileText color="#eab308" size={size} />
     ),
+    [NotificationType.GradesSubmitted]: (
+      <IconFileText color="#eab308" size={size} />
+    ),
+    [NotificationType.ClassResultsSubmitted]: (
+      <IconFileText color="#eab308" size={size} />
+    ),
+    [NotificationType.ResultsReleased]: (
+      <IconFileText color="#eab308" size={size} />
+    ),
+    [NotificationType.ResultsUnlocked]: (
+      <IconFileText color="#eab308" size={size} />
+    ),
     [NotificationType.Fee]: <IconReceipt color="#059669" size={size} />,
     [NotificationType.ParentInvitation]: (
       <IconUsers color="#a855f7" size={size} />
@@ -48,6 +62,24 @@ const NotificationIcon = ({ type, size = 20 }: NotificationIconProps) => {
     [NotificationType.ParentAccessRevoked]: (
       <IconUsers color="#a855f7" size={size} />
     ),
+    [NotificationType.AssignmentPublished]: (
+      <IconClipboard color="#7c3aed" size={size} />
+    ),
+    [NotificationType.AssignmentUpdated]: (
+      <IconClipboard color="#7c3aed" size={size} />
+    ),
+    [NotificationType.AssignmentSubmitted]: (
+      <IconClipboard color="#7c3aed" size={size} />
+    ),
+    [NotificationType.AssignmentGraded]: (
+      <IconClipboard color="#7c3aed" size={size} />
+    ),
+    [NotificationType.CurriculumNote]: (
+      <IconBook color="#0ea5e9" size={size} />
+    ),
+    [NotificationType.CurriculumNoteReply]: (
+      <IconBook color="#0ea5e9" size={size} />
+    ),
     [NotificationType.General]: <IconBell color="#9ca3af" size={size} />,
   };
 
@@ -57,6 +89,8 @@ const NotificationIcon = ({ type, size = 20 }: NotificationIconProps) => {
     results: "bg-yellow-50",
     parents: "bg-purple-50",
     fees: "bg-emerald-50",
+    assignments: "bg-violet-50",
+    curriculum: "bg-sky-50",
     general: "bg-gray-100",
   };
 

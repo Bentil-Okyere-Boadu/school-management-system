@@ -30,9 +30,11 @@ import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar
 import { AssignmentSubmission } from './entities/assignment-submission.entity';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
+    NotificationModule,
     TypeOrmModule.forFeature([
       Student,
       Role,

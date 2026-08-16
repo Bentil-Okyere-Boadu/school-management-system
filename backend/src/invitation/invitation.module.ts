@@ -30,6 +30,7 @@ import { AssignmentSubmission } from 'src/student/entities/assignment-submission
 import { Subject } from 'rxjs';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 import { ParentModule } from 'src/parent/parent.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { ParentModule } from 'src/parent/parent.module';
     }),
     StudentModule,
     ParentModule,
+    NotificationModule,
   ],
   providers: [
     InvitationService,

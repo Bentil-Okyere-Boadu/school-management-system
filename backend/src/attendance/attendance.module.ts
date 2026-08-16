@@ -7,9 +7,13 @@ import { Student } from 'src/student/student.entity';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Attendance, ClassLevel, Student, Holiday, AcademicTerm, AcademicCalendar])],
+  imports: [
+    NotificationModule,
+    TypeOrmModule.forFeature([Attendance, ClassLevel, Student, Holiday, AcademicTerm, AcademicCalendar]),
+  ],
   providers: [AttendanceService],
 })
 export class AttendanceModule {}

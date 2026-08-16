@@ -11,8 +11,9 @@ import {
   SchoolPaymentConfig,
   SchoolPaymentReceiptDetail,
   SchoolPaymentsListParams,
+  Notification,
 } from "@/@types";
-import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
 export const useStudentGetMe = () => {
@@ -370,4 +371,60 @@ export const useGetMyPaymentReceipt = (
   const receipt = data?.data as SchoolPaymentReceiptDetail | undefined;
 
   return { receipt, isLoading, isFetching, error, refetch };
+};
+
+export const useGetMyNotifications = (
+  userId?: string,
+  search?: string,
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["notifications", "student", userId, search],
+    queryFn: () => {
+      const queryParams = search ? `?search=${encodeURIComponent(search)}` : "";
+      return customAPI.get(`/student/notifications${queryParams}`);
+    },
+    enabled: !!userId,
+    refetchOnWindowFocus: true,
+    refetchInterval: 20000,
+  });
+
+  const notifications: Notification[] = data?.data || [];
+
+  return { notifications, isLoading, refetch };
+};
+
+export const useMarkMyNotificationAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.patch(`/student/notifications/${id}/markAsRead`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "student"] });
+    },
+  });
+};
+
+export const useMarkAllMyNotificationsAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      return customAPI.patch(`/student/notifications/mark-all-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "student"] });
+    },
+  });
+};
+
+export const useDeleteMyNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/student/notifications/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "student"] });
+    },
+  });
 };

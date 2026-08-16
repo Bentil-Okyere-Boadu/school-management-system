@@ -183,6 +183,23 @@ export class ClassLevelService {
     }
     return classLevel;
   }
+
+  async findOneForTeacher(id: string, teacherId: string): Promise<ClassLevel> {
+    const associatedIds =
+      await this.getAssociatedClassLevelIdsForTeacher(teacherId);
+    if (!associatedIds.includes(id)) {
+      throw new NotFoundException(`Class level with ID ${id} not found`);
+    }
+
+    const classLevel = await this.classLevelRepository.findOne({
+      where: { id },
+      relations: ['students', 'students.profile', 'classTeacher', 'teachers'],
+    });
+    if (!classLevel) {
+      throw new NotFoundException(`Class level with ID ${id} not found`);
+    }
+    return classLevel;
+  }
   async findOne(id: string, admin: SchoolAdmin): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
       where: { id, school: { id: admin.school.id } },

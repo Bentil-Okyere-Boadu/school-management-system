@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react'
-import { ClassCard } from '@/components/admin/classes/ClassCard';
+import { AdminClassResultsCard } from '@/components/admin/classes/AdminClassResultsCard';
 import { SearchBar } from '@/components/common/SearchBar';
 import NoAvailableEmptyState from '@/components/common/NoAvailableEmptyState';
 import { ClassLevel } from "@/@types";
@@ -32,13 +32,14 @@ const ClassesPage = () => {
       </div>
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-6 px-0.5">
         {classSubjects?.map((data, index) => (
-          <ClassCard
-            key={index + "12"}
+          <AdminClassResultsCard
+            key={data?.classLevel?.id ?? index}
             classData={data?.classLevel}
-            showGoToGrading={true}
-            studentCount={data?.classLevel?.studentCount}
-            showClassTeacher={false}
-            onNavigateToGradingClick={onNavigateToGradingClick}
+            studentCount={data?.classLevel?.studentCount ?? data?.classLevel?.students?.length ?? 0}
+            isAdminLocked={!!data?.classLevel?.schoolAdminApproved}
+            teacherSubmitted={!!data?.classLevel?.isApproved}
+            action="grade"
+            onCardClick={onNavigateToGradingClick}
           />
         ))}
       </section>

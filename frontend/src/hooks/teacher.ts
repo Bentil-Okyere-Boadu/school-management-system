@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentPerformanceAnalytics, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload, PostAttendancePayload, ClassSubjectPerformanceResponse, StudentTopicPerformanceResponse, PerformanceCluster, TeacherAnalyticsSubjectsResponse } from "@/@types";
+import { Calendar, ClassLevel, ClassSubjectInfo, Student, Teacher, User, PostGradesPayload, StudentPerformanceAnalytics, StudentResultsResponse, ApproveClassResultsPayload, TeacherSubject, PlannerEvent, EventCategory, CreatePlannerEventPayload, Subtopic, CurriculumTopicNote, CreateSubtopicPayload, UpdateSubtopicPayload, CreateCurriculumTopicNotePayload, TeacherCurriculumProgressDashboard, TeacherTopicPayload, PostAttendancePayload, ClassSubjectPerformanceResponse, StudentTopicPerformanceResponse, PerformanceCluster, TeacherAnalyticsSubjectsResponse, Notification } from "@/@types";
 import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
@@ -82,6 +82,19 @@ export const useGetTeacherClassById = (
   const classData = (data as { data: ClassLevel })?.data;
 
   return { classData, isPending, refetch };
+};
+
+export const useGetTeacherClassDetail = (id: string) => {
+  const { data, isPending, refetch } = useQuery({
+    queryKey: ["teacherClassDetail", id],
+    queryFn: () => customAPI.get(`/teacher/classes/${id}`),
+    enabled: Boolean(id),
+    refetchOnWindowFocus: true,
+  });
+
+  const classDetail = (data as { data: ClassLevel })?.data;
+
+  return { classDetail, isPending, refetch };
 };
 
 
@@ -1217,4 +1230,60 @@ export const useGetTeacherEventCategories = () => {
   const categories = (data?.data as EventCategory[]) || [];
 
   return { categories, isLoading, refetch };
+};
+
+export const useGetMyNotifications = (
+  userId?: string,
+  search?: string,
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["notifications", "teacher", userId, search],
+    queryFn: () => {
+      const queryParams = search ? `?search=${encodeURIComponent(search)}` : "";
+      return customAPI.get(`/teacher/notifications${queryParams}`);
+    },
+    enabled: !!userId,
+    refetchOnWindowFocus: true,
+    refetchInterval: 20000,
+  });
+
+  const notifications: Notification[] = data?.data || [];
+
+  return { notifications, isLoading, refetch };
+};
+
+export const useMarkMyNotificationAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.patch(`/teacher/notifications/${id}/markAsRead`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "teacher"] });
+    },
+  });
+};
+
+export const useMarkAllMyNotificationsAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      return customAPI.patch(`/teacher/notifications/mark-all-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "teacher"] });
+    },
+  });
+};
+
+export const useDeleteMyNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/teacher/notifications/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "teacher"] });
+    },
+  });
 };

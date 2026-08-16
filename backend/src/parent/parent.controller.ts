@@ -131,7 +131,7 @@ export class ParentController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Attendance KPIs and 1–31 day grid for active children (unmarked stays none)',
+      'Attendance KPIs and 1–31 day grid for active children (unmarked school days count as present)',
   })
   getAttendance(
     @CurrentUser() parent: Parent,
@@ -248,7 +248,7 @@ export class ParentController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Start a multi-child MoMo payment; each studentId must be an active linked child',
+      "Start a multi-child MoMo payment for the selected term; amounts cannot exceed that term's outstanding",
   })
   initiatePayment(
     @CurrentUser() parent: Parent,

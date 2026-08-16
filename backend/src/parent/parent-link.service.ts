@@ -15,7 +15,7 @@ import {
   ParentStudentSource,
   ParentStudentStatus,
 } from './parent.enums';
-import { normalizeEmail } from './parent.helpers';
+import { normalizeEmail, parentHasUsableAccount } from './parent.helpers';
 import { LinkGuardianInput } from './dto/link-guardian.dto';
 import { Student } from 'src/student/student.entity';
 import { Role } from 'src/role/role.entity';
@@ -66,8 +66,13 @@ export class ParentLinkService {
     const source = input.source ?? ParentStudentSource.StudentProfile;
 
     let parent = email
-      ? await this.findParentInSchool(student.school.id, email)
+      ? await this.findParentForLinking(student.school.id, email)
       : null;
+
+    if (parent && !parent.school && student.school) {
+      parent.school = student.school;
+      parent = await this.parentRepository.save(parent);
+    }
 
     if (!parent) {
       parent = await this.createPendingParent(student, input, email);
@@ -89,7 +94,7 @@ export class ParentLinkService {
       shouldNotify = true;
     } else if (!relationship) {
       const isOriginating =
-        parent.status !== ParentAccountStatus.Active &&
+        !parentHasUsableAccount(parent) &&
         (await this.countNonRevokedLinks(parent.id)) === 0;
 
       relationship = this.parentStudentRepository.create({
@@ -153,7 +158,7 @@ export class ParentLinkService {
     };
 
     if (email) {
-      const existing = await this.findParentInSchool(student.school.id, email);
+      const existing = await this.findParentForLinking(student.school.id, email);
       if (existing && existing.id !== current.id) {
         currentLink.status = ParentStudentStatus.Revoked;
         currentLink.revokedAt = new Date();
@@ -196,6 +201,7 @@ export class ParentLinkService {
     const shouldInvite =
       !!email &&
       current.status !== ParentAccountStatus.Active &&
+      !current.password &&
       currentLink.status === ParentStudentStatus.Pending &&
       (emailAdded || neverInvited);
 
@@ -342,7 +348,7 @@ export class ParentLinkService {
     }
     link.status = ParentStudentStatus.PendingConfirmation;
     await this.parentStudentRepository.save(link);
-    if (link.parent?.status === ParentAccountStatus.Active) {
+    if (link.parent && parentHasUsableAccount(link.parent)) {
       await this.sendChildConfirmation(link.parent, link);
     }
     return link;
@@ -396,14 +402,19 @@ export class ParentLinkService {
     });
   }
 
-  private async findParentInSchool(schoolId: string, email: string) {
-    return this.parentRepository
+  private async findParentForLinking(schoolId: string, email: string) {
+    const matches = await this.parentRepository
       .createQueryBuilder('parent')
       .leftJoinAndSelect('parent.school', 'school')
       .leftJoinAndSelect('parent.role', 'role')
-      .where('school.id = :schoolId', { schoolId })
-      .andWhere('LOWER(parent.email) = :email', { email })
-      .getOne();
+      .where('LOWER(parent.email) = :email', { email })
+      .getMany();
+
+    return (
+      matches.find((parent) => parent.school?.id === schoolId) ??
+      matches.find((parent) => !parent.school?.id) ??
+      null
+    );
   }
 
   private async createPendingParent(
@@ -465,7 +476,15 @@ export class ParentLinkService {
 
     if (
       relationship.status === ParentStudentStatus.Pending &&
-      parent.status !== ParentAccountStatus.Active
+      parentHasUsableAccount(parent)
+    ) {
+      relationship.status = ParentStudentStatus.PendingConfirmation;
+      await this.parentStudentRepository.save(relationship);
+    }
+
+    if (
+      relationship.status === ParentStudentStatus.Pending &&
+      !parentHasUsableAccount(parent)
     ) {
       parent.invitationToken = this.generateToken();
       parent.invitationExpires = this.tokenExpiry();
@@ -483,7 +502,7 @@ export class ParentLinkService {
     }
 
     if (relationship.status === ParentStudentStatus.PendingConfirmation) {
-      if (parent.status === ParentAccountStatus.Active) {
+      if (parentHasUsableAccount(parent)) {
         await this.sendChildConfirmation(parent, relationship);
       }
       await this.notifyAdmin(

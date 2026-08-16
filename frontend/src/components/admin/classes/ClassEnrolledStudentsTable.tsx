@@ -12,17 +12,25 @@ import { Student } from "@/@types";
 
 interface ClassEnrolledStudentsTableProps {
   students: Student[];
-  isRemoveMode: boolean;
-  selectedIds: string[];
-  onSelectionChange: (ids: string[]) => void;
+  isRemoveMode?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
+  profileBasePath?: string;
 }
 
 export const ClassEnrolledStudentsTable: React.FC<
   ClassEnrolledStudentsTableProps
-> = ({ students, isRemoveMode, selectedIds, onSelectionChange }) => {
+> = ({
+  students,
+  isRemoveMode = false,
+  selectedIds = [],
+  onSelectionChange,
+  profileBasePath = "/admin/students",
+}) => {
   const router = useRouter();
 
   const toggleStudent = (id: string) => {
+    if (!onSelectionChange) return;
     if (selectedIds.includes(id)) {
       onSelectionChange(selectedIds.filter((sid) => sid !== id));
     } else {
@@ -31,6 +39,7 @@ export const ClassEnrolledStudentsTable: React.FC<
   };
 
   const toggleAll = () => {
+    if (!onSelectionChange) return;
     if (selectedIds.length === students.length) {
       onSelectionChange([]);
     } else {
@@ -121,7 +130,7 @@ export const ClassEnrolledStudentsTable: React.FC<
                         <Menu.Item
                           leftSection={<IconEyeFilled size={14} />}
                           onClick={() =>
-                            router.push(`/admin/students/${student.id}`)
+                            router.push(`${profileBasePath}/${student.id}`)
                           }
                         >
                           View profile
