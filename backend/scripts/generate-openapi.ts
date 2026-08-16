@@ -13,6 +13,8 @@ import { writeFile, mkdir } from 'fs/promises';
 import * as pathModule from 'path';
 import { AppModule } from '../src/app.module';
 
+console.log('Starting OpenAPI generator');
+
 // Resolve script directory for output path (works with ts-node and node)
 const scriptDir =
   typeof __dirname !== 'undefined'
@@ -208,7 +210,8 @@ function filterDocByPathPrefix(
 }
 
 async function main(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { logger: false });
+  console.log('Bootstrapping Nest app to generate OpenAPI...');
+  const app = await NestFactory.create(AppModule, { logger: ['error'] });
   app.setGlobalPrefix(GLOBAL_PREFIX);
 
   const config = new DocumentBuilder()
@@ -226,6 +229,13 @@ async function main(): Promise<void> {
 
   const docsDir = pathModule.resolve(scriptDir, '..', 'docs');
   await mkdir(docsDir, { recursive: true });
+
+  await writeFile(
+    pathModule.join(docsDir, 'openapi.json'),
+    JSON.stringify(fullDoc, null, 2),
+    'utf-8',
+  );
+  console.log('Wrote openapi.json (combined spec)');
 
   const writtenTags = new Set<string>();
   const writtenPrefixes = new Set<string>();
@@ -270,6 +280,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(err instanceof Error ? err.stack || err.message : err);
   process.exit(1);
 });

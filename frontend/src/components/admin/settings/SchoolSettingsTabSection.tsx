@@ -107,10 +107,10 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
     />
   );
 
-  const { mutate: createFeeStructure } = useSaveFeeStructure();
+  const { mutate: createFeeStructure, isPending: pendingCreate } = useSaveFeeStructure();
   const { feesStructure, isLoading, refetch } = useGetFeeStructure();
-  const {mutate: deleteMutation } = useDeleteFeeStructure();
-  const { mutate: editMutation } = useEditFeeStructure(feeId);
+  const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteFeeStructure();
+  const { mutate: editMutation, isPending: pendingEdit } = useEditFeeStructure(feeId);
 
   const deleteFeeStructure = () => {
     deleteMutation(feeId, {
@@ -483,7 +483,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           setIsFeeStructureDialogOpen(false);
         }}
         onSave={editMode? editFeeStructure : addNewFeeStructure}
-        busy={isLoading}
+        busy={editMode ? pendingEdit : pendingCreate}
       >
         <p className="text-xs text-gray-500">
           Enter the fee details to update the fee structure
@@ -559,7 +559,7 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       {/* Confirm Delete Fee Structure Dialog */}
       <Dialog
         isOpen={isConfirmDeleteFeeStructureDialogOpen}
-        busy={false}
+        busy={pendingDelete}
         dialogTitle="Confirm Delete"
         saveButtonText="Delete Fee"
         onClose={() => setIsConfirmDeleteFeeStructureDialogOpen(false)}

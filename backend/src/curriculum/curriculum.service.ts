@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository } from 'typeorm';
@@ -26,6 +27,11 @@ import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entit
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { QueryString } from '../common/api-features/api-features';
 import { APIFeatures } from '../common/api-features/api-features';
+import { NotificationService } from '../notification/notification.service';
+import {
+  NotificationRecipientRole,
+  NotificationType,
+} from '../notification/notification.entity';
 
 const TOPIC_READ_RELATIONS = [
   'subjectCatalog',
@@ -39,6 +45,8 @@ const TOPIC_READ_RELATIONS = [
 
 @Injectable()
 export class CurriculumService {
+  private readonly logger = new Logger(CurriculumService.name);
+
   constructor(
     @InjectRepository(Curriculum)
     private curriculumRepository: Repository<Curriculum>,
@@ -58,6 +66,7 @@ export class CurriculumService {
     private schoolRepository: Repository<School>,
     @InjectRepository(AcademicTerm)
     private academicTermRepository: Repository<AcademicTerm>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /** Validates term belongs to school; used for subtopic completions and notes. */
@@ -1595,13 +1604,13 @@ export class CurriculumService {
   ): Promise<number> {
     return this.curriculumTopicNoteRepository
       .createQueryBuilder('note')
-      .where('note.topic.id = :topicId', { topicId })
-      .andWhere('note.parent IS NULL')
-      .andWhere('(note.subject.id = :subjectId OR note.subject.id IS NULL)', {
+      .where('note.topic_id = :topicId', { topicId })
+      .andWhere('note.parent_id IS NULL')
+      .andWhere('(note.subject_id = :subjectId OR note.subject_id IS NULL)', {
         subjectId,
       })
       .andWhere(
-        '(note.academicTerm.id = :academicTermId OR note.academicTerm.id IS NULL)',
+        '(note.academic_term_id = :academicTermId OR note.academic_term_id IS NULL)',
         { academicTermId },
       )
       .getCount();
@@ -1813,6 +1822,7 @@ export class CurriculumService {
     if (dto.subjectId) {
       const sub = await this.subjectRepository.findOne({
         where: { id: dto.subjectId, school: { id: admin.school.id } },
+        relations: ['teacher'],
       });
       if (!sub) throw new NotFoundException('Subject not found');
       subject = sub;
@@ -1850,7 +1860,17 @@ export class CurriculumService {
       content: dto.content,
       parent: parent ?? undefined,
     });
-    return await this.curriculumTopicNoteRepository.save(note);
+    const saved = await this.curriculumTopicNoteRepository.save(note);
+    try {
+      await this.notifyTeachersAboutAdminNote(topic, subject, parent, admin);
+    } catch (error) {
+      this.logger.error(
+        `Failed to notify teachers about curriculum note: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+    return this.mapNote(saved);
   }
 
   async getNotesForTopic(
@@ -1858,7 +1878,7 @@ export class CurriculumService {
     schoolId: string,
     subjectId?: string,
     academicTermId?: string,
-  ): Promise<CurriculumTopicNote[]> {
+  ) {
     const topic = await this.topicRepository.findOne({
       where: { id: topicId },
       relations: ['subjectCatalog', 'subjectCatalog.school'],
@@ -1870,23 +1890,23 @@ export class CurriculumService {
     const qb = this.curriculumTopicNoteRepository
       .createQueryBuilder('note')
       .leftJoinAndSelect('note.replies', 'replies')
-      .leftJoinAndSelect('note.subject', 'subject')
-      .leftJoinAndSelect('note.academicTerm', 'academicTerm')
-      .where('note.topic.id = :topicId', { topicId })
-      .andWhere('note.parent IS NULL');
+      .where('note.topic_id = :topicId', { topicId })
+      .andWhere('note.parent_id IS NULL');
     if (subjectId) {
-      qb.andWhere('(note.subject.id = :subjectId OR note.subject.id IS NULL)', {
-        subjectId,
-      });
+      qb.andWhere(
+        '(note.subject_id = :subjectId OR note.subject_id IS NULL)',
+        { subjectId },
+      );
     }
     if (academicTermId) {
       qb.andWhere(
-        '(note.academicTerm.id = :academicTermId OR note.academicTerm.id IS NULL)',
+        '(note.academic_term_id = :academicTermId OR note.academic_term_id IS NULL)',
         { academicTermId },
       );
     }
     qb.orderBy('note.createdAt', 'ASC').addOrderBy('replies.createdAt', 'ASC');
-    return qb.getMany();
+    const notes = await qb.getMany();
+    return notes.map((note) => this.mapNote(note));
   }
 
   async deleteNote(noteId: string, admin: SchoolAdmin) {
@@ -2185,6 +2205,97 @@ export class CurriculumService {
       content: dto.content,
       parent,
     });
-    return await this.curriculumTopicNoteRepository.save(note);
+    const saved = await this.curriculumTopicNoteRepository.save(note);
+    try {
+      await this.notificationService.create({
+        schoolId,
+        type: NotificationType.CurriculumNoteReply,
+        title: `Teacher replied on ${topic.name}`,
+        message: `A teacher replied to a curriculum note on ${topic.name}.`,
+      });
+    } catch {
+      // Admin inbox should not block teacher replies.
+    }
+    return this.mapNote(saved);
+  }
+
+  private mapNote(note: CurriculumTopicNote) {
+    return {
+      id: note.id,
+      content: note.content,
+      createdAt: note.createdAt,
+      authorRole: note.authorRole,
+      authorId: note.authorId,
+      replies: (note.replies ?? []).map((reply) => this.mapNote(reply)),
+    };
+  }
+
+  private async notifyTeachersAboutAdminNote(
+    topic: Topic,
+    subject: Subject | null,
+    parent: CurriculumTopicNote | null,
+    admin: SchoolAdmin,
+  ): Promise<void> {
+    const schoolId = admin.school?.id ?? topic.subjectCatalog?.school?.id;
+    if (!schoolId) {
+      return;
+    }
+
+    const catalogTeachers = await this.subjectRepository.find({
+      where: {
+        subjectCatalog: { id: topic.subjectCatalog.id },
+        school: { id: schoolId },
+        ...(subject ? { id: subject.id } : {}),
+      },
+      relations: ['teacher'],
+    });
+
+    const recipients: Array<{ id: string; role: NotificationRecipientRole }> =
+      [];
+
+    if (subject?.teacher?.id) {
+      recipients.push({
+        id: subject.teacher.id,
+        role: NotificationRecipientRole.Teacher,
+      });
+    }
+
+    for (const assigned of catalogTeachers) {
+      if (assigned.teacher?.id) {
+        recipients.push({
+          id: assigned.teacher.id,
+          role: NotificationRecipientRole.Teacher,
+        });
+      }
+    }
+
+    if (parent?.authorRole === 'teacher' && parent.authorId) {
+      recipients.push({
+        id: parent.authorId,
+        role: NotificationRecipientRole.Teacher,
+      });
+    }
+
+    if (recipients.length === 0) {
+      this.logger.warn(
+        `No teacher recipients for curriculum note on topic ${topic.id}`,
+      );
+      return;
+    }
+
+    const isReply = !!parent;
+    await this.notificationService.createForRecipients({
+      schoolId,
+      type: isReply
+        ? NotificationType.CurriculumNoteReply
+        : NotificationType.CurriculumNote,
+      title: isReply
+        ? `Admin replied on ${topic.name}`
+        : `New curriculum note on ${topic.name}`,
+      message: isReply
+        ? `An admin replied to a curriculum note on ${topic.name}.`
+        : `A new curriculum note was added on ${topic.name}.`,
+      recipients,
+    });
   }
 }

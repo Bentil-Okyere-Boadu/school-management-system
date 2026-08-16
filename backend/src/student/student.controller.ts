@@ -9,6 +9,7 @@ import {
   Param,
   Patch,
   Delete,
+  ForbiddenException,
   UseInterceptors,
   UploadedFile,
   Query,
@@ -35,6 +36,8 @@ import { UpdateParentDto } from 'src/parent/dto/update-parent-dto';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationRecipientRole } from 'src/notification/notification.entity';
 
 @ApiTags('Student')
 @Controller('student')
@@ -45,6 +48,7 @@ export class StudentController {
     private readonly parentService: ParentService,
     private readonly attendanceService: AttendanceService,
     private readonly academicCalendarService: AcademicCalendarService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -71,20 +75,32 @@ export class StudentController {
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('me/parents')
+  @Roles(Role.Student)
+  listMyParents(@CurrentUser() student: Student) {
+    return this.parentService.listGuardiansForStudent(student.id);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get(':id/parents')
   @Roles(Role.Student)
-  findOne(@Param('id') id: string) {
-    return this.parentService.findOne(id);
+  findOne(@CurrentUser() student: Student, @Param('id') id: string) {
+    if (id !== student.id) {
+      throw new ForbiddenException(
+        'You can only view guardians for your own profile',
+      );
+    }
+    return this.parentService.listGuardiansForStudent(student.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post(':studentId/parents')
   @Roles(Role.Student)
   createParent(
-    @Param('studentId') studentId: string,
+    @CurrentUser() student: Student,
     @Body() createParentDto: CreateParentDto,
   ) {
-    return this.parentService.create(createParentDto, studentId);
+    return this.parentService.create(createParentDto, student.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -92,7 +108,7 @@ export class StudentController {
   @Roles(Role.Student)
   updateParent(
     @CurrentUser() student: Student,
-    @Param('parentId') parentId: string,
+    @Param('id') parentId: string,
     @Body() updateParentDto: UpdateParentDto,
   ) {
     return this.parentService.update(parentId, updateParentDto, student.id);
@@ -100,8 +116,9 @@ export class StudentController {
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete(':id/parents')
-  remove(@Param('id') id: string) {
-    return this.parentService.remove(id);
+  @Roles(Role.Student)
+  remove(@CurrentUser() student: Student, @Param('id') id: string) {
+    return this.parentService.remove(id, student.id);
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -109,6 +126,58 @@ export class StudentController {
   @Roles(Role.Student)
   getProfile(@CurrentUser() student: Student) {
     return this.studentService.getMyProfile(student);
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('notifications')
+  @Roles(Role.Student)
+  getMyNotifications(
+    @CurrentUser() student: Student,
+    @Query('search') search?: string,
+  ) {
+    return this.notificationService.findAllForRecipient(
+      NotificationRecipientRole.Student,
+      student.id,
+      search,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('notifications/mark-all-read')
+  @Roles(Role.Student)
+  markAllMyNotificationsAsRead(@CurrentUser() student: Student) {
+    return this.notificationService.markAllAsReadForRecipient(
+      NotificationRecipientRole.Student,
+      student.id,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('notifications/:id/markAsRead')
+  @Roles(Role.Student)
+  markMyNotificationAsRead(
+    @CurrentUser() student: Student,
+    @Param('id') id: string,
+  ) {
+    return this.notificationService.markAsReadForRecipient(
+      id,
+      NotificationRecipientRole.Student,
+      student.id,
+    );
+  }
+
+  @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('notifications/:id')
+  @Roles(Role.Student)
+  deleteMyNotification(
+    @CurrentUser() student: Student,
+    @Param('id') id: string,
+  ) {
+    return this.notificationService.removeForRecipient(
+      id,
+      NotificationRecipientRole.Student,
+      student.id,
+    );
   }
 
   @UseGuards(StudentJwtAuthGuard, ActiveUserGuard, RolesGuard)

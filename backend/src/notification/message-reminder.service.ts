@@ -17,6 +17,7 @@ import { SearchMessageReminderDto } from './dto/search-message-reminder.dto';
 import { School } from 'src/school/school.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
+import { getContactParents } from 'src/parent/parent.helpers';
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { EmailService } from '../common/services/email.service';
 import { SmsService } from '../common/services/sms.service';
@@ -66,7 +67,7 @@ export class MessageReminderService {
           school: { id: schoolId },
           classLevels: { id: In(createDto.targetClassLevelIds) },
         },
-        relations: ['classLevels', 'parents'],
+        relations: ['classLevels', 'parentStudents', 'parentStudents.parent'],
       });
     } else if (
       createDto.targetGradeIds &&
@@ -80,7 +81,7 @@ export class MessageReminderService {
           school: { id: schoolId },
           classLevels: { id: In(classLevels.map((cl) => cl.id)) },
         },
-        relations: ['classLevels', 'parents'],
+        relations: ['classLevels', 'parentStudents', 'parentStudents.parent'],
       });
     }
 
@@ -198,7 +199,8 @@ export class MessageReminderService {
         'school',
         'createdBy',
         'targetStudents',
-        'targetStudents.parents',
+        'targetStudents.parentStudents',
+        'targetStudents.parentStudents.parent',
         'targetStudents.classLevels',
         'targetClassLevels',
       ],
@@ -269,8 +271,8 @@ export class MessageReminderService {
       for (const student of reminder.targetStudents) {
         try {
           // Send to parents if enabled
-          if (reminder.sendToParents && student.parents?.length > 0) {
-            for (const parent of student.parents) {
+          if (reminder.sendToParents) {
+            for (const parent of getContactParents(student)) {
               try {
                 // Send email using EmailService directly
                 if (parent.email) {

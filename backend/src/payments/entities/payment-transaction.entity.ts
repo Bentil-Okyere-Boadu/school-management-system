@@ -111,6 +111,10 @@ export class PaymentTransaction {
   @Column({ type: 'varchar', nullable: true })
   targetStudentFeeObligationId: string | null;
 
+  /** When set, allocation applies to this academic term first. */
+  @Column({ type: 'uuid', nullable: true })
+  targetAcademicTermId: string | null;
+
   @ManyToOne(() => School, { onDelete: 'CASCADE', eager: true })
   @JoinColumn()
   school: School;

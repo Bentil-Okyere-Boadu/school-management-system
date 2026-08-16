@@ -7,6 +7,7 @@ import {
   BadRequestException,
   UseInterceptors,
 } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
@@ -27,8 +28,12 @@ import { SchoolAdminAuthService } from 'src/school-admin/school-admin-auth.servi
 import { TeacherService } from 'src/teacher/teacher.service';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { ParentLinkService } from 'src/parent/parent-link.service';
+import { ParentAuthService } from 'src/parent/parent-auth.service';
+import { EmailService } from 'src/common/services/email.service';
 
 @Controller('invitations')
+@ApiTags('Invitation')
 @UseInterceptors(SanitizeResponseInterceptor)
 export class InvitationController {
   constructor(
@@ -36,6 +41,9 @@ export class InvitationController {
     private studentService: StudentService,
     private teacherService: TeacherService,
     private readonly schoolAdminAuthService: SchoolAdminAuthService,
+    private readonly parentLinkService: ParentLinkService,
+    private readonly parentAuthService: ParentAuthService,
+    private readonly emailService: EmailService,
   ) {}
 
   // Superadmin endpoints
@@ -103,6 +111,10 @@ export class InvitationController {
 
   // Common endpoints
   @Post('complete-registration')
+  @ApiOperation({
+    summary:
+      'Complete invitation by setting a password (school admin or parent)',
+  })
   async completeRegistration(@Body() completeRegDto: CompleteRegistrationDto) {
     if (!completeRegDto.token || !completeRegDto.password) {
       throw new BadRequestException('Token and password are required');
@@ -113,7 +125,21 @@ export class InvitationController {
       completeRegDto.password,
     );
 
-    return this.schoolAdminAuthService.login(schoolAdmin);
+    if (schoolAdmin) {
+      return this.schoolAdminAuthService.login(schoolAdmin);
+    }
+
+    const parent = await this.parentLinkService.completeParentInvitation(
+      completeRegDto.token,
+      completeRegDto.password,
+    );
+    if (!parent) {
+      throw new BadRequestException(
+        'Invalid invitation token - token not found',
+      );
+    }
+    await this.emailService.sendRegistrationConfirmationEmail(parent);
+    return this.parentAuthService.login(parent);
   }
 
   // PIN reset for students and teachers

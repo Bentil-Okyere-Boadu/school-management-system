@@ -6,6 +6,7 @@ import { BaseException } from '../exceptions/base.exception';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { Parent } from 'src/parent/parent.entity';
 
 /**
  * Email templates
@@ -26,6 +27,8 @@ export enum EmailTemplate {
   ADMISSION_WAITLISTED = 'admission_waitlisted',
   INTERVIEW_COMPLETED = 'interview_completed',
   ASSIGNMENT_PUBLISHED = 'assignment_published',
+  PARENT_INVITATION = 'parent_invitation',
+  PARENT_CHILD_CONFIRMATION = 'parent_child_confirmation',
 }
 
 /**
@@ -101,6 +104,83 @@ export class EmailService implements OnModuleInit {
       );
       throw new EmailException(
         `Failed to send invitation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async sendParentInvitationEmail(
+    parent: Parent,
+    student: Student | null,
+  ): Promise<void> {
+    if (!parent.email || !parent.invitationToken) {
+      return;
+    }
+    const invitationLink = `${this.frontendUrl}/auth/complete-registration?token=${parent.invitationToken}`;
+    const childName = student
+      ? `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim()
+      : 'your child';
+    const schoolName = parent.school?.name || student?.school?.name || 'your school';
+
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: parent.email,
+        subject: `Parent portal invitation — ${schoolName}`,
+        html: this.getEmailTemplate(EmailTemplate.PARENT_INVITATION, {
+          name: `${parent.firstName} ${parent.lastName}`,
+          childName,
+          schoolName,
+          invitationLink,
+        }),
+      });
+      this.logger.log(`Parent invitation email sent to ${parent.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send parent invitation email to ${parent.email}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send parent invitation email: ${BaseException.getErrorMessage(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async sendParentChildConfirmationEmail(
+    parent: Parent,
+    student: Student | null,
+    token: string,
+  ): Promise<void> {
+    if (!parent.email || !token) {
+      return;
+    }
+    const confirmLink = `${this.frontendUrl}/auth/parent/confirm-child?token=${token}`;
+    const childName = student
+      ? `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim()
+      : 'a student';
+    const schoolName = parent.school?.name || student?.school?.name || 'your school';
+
+    try {
+      await this.transporter.sendMail({
+        from: this.fromEmail,
+        to: parent.email,
+        subject: `Confirm a child on your parent portal — ${schoolName}`,
+        html: this.getEmailTemplate(EmailTemplate.PARENT_CHILD_CONFIRMATION, {
+          name: `${parent.firstName} ${parent.lastName}`,
+          childName,
+          schoolName,
+          confirmLink,
+        }),
+      });
+      this.logger.log(`Parent child confirmation email sent to ${parent.email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send parent child confirmation email to ${parent.email}`,
+        error,
+      );
+      throw new EmailException(
+        `Failed to send parent child confirmation email: ${BaseException.getErrorMessage(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -187,7 +267,16 @@ export class EmailService implements OnModuleInit {
    * @param user The user to send the confirmation to
    * @returns Promise resolving to the mail send info
    */
-  async sendRegistrationConfirmationEmail(user: SchoolAdmin): Promise<void> {
+  async sendRegistrationConfirmationEmail(
+    user: SchoolAdmin | Parent,
+  ): Promise<void> {
+    if (!user.email) {
+      return;
+    }
+    const loginLink =
+      user instanceof Parent
+        ? `${this.frontendUrl}/auth/parent/login`
+        : `${this.frontendUrl}/auth/admin/login`;
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
@@ -195,7 +284,7 @@ export class EmailService implements OnModuleInit {
         subject: 'Registration Confirmed',
         html: this.getEmailTemplate(EmailTemplate.REGISTRATION_CONFIRMATION, {
           name: user.firstName + ' ' + user.lastName,
-          loginLink: `${this.frontendUrl}/auth/admin/login`,
+          loginLink,
         }),
       });
       this.logger.log(`Registration confirmation email sent to ${user.email}`);
@@ -219,8 +308,9 @@ export class EmailService implements OnModuleInit {
   async sendPasswordResetEmail(
     email: string,
     resetToken: string,
+    resetPath = '/auth/forgotPassword/resetPassword',
   ): Promise<void> {
-    const resetLink = `${this.frontendUrl}/auth/forgotPassword/resetPassword?token=${resetToken}`;
+    const resetLink = `${this.frontendUrl}${resetPath}?token=${resetToken}`;
     try {
       await this.transporter.sendMail({
         from: this.fromEmail,
@@ -438,6 +528,40 @@ export class EmailService implements OnModuleInit {
             </p>
             <p>This invitation link will expire in 24 hours.</p>
             <p>If you did not request this invitation, please ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">GoEdtech</p>
+          </div>
+        `;
+
+      case EmailTemplate.PARENT_INVITATION:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Parent portal invitation</h2>
+            <p>Dear ${data.name},</p>
+            <p>You have been listed as a parent/guardian of <strong>${data.childName}</strong> at ${data.schoolName}.</p>
+            <p>Create your password to activate your parent portal account. This only confirms access for the child named in this email.</p>
+            <p style="margin: 25px 0;">
+              <a href="${data.invitationLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Create password</a>
+            </p>
+            <p>This invitation link will expire in 24 hours.</p>
+            <p>If you were not expecting this invitation, please ignore this email or contact the school.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #777; font-size: 12px;">GoEdtech</p>
+          </div>
+        `;
+
+      case EmailTemplate.PARENT_CHILD_CONFIRMATION:
+        return `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h2 style="color: #333;">Confirm a child on your parent portal</h2>
+            <p>Dear ${data.name},</p>
+            <p><strong>${data.childName}</strong> at ${data.schoolName} listed you as their parent/guardian.</p>
+            <p>Confirm only if this student is your ward. Until you confirm, they will not appear in your parent portal.</p>
+            <p style="margin: 25px 0;">
+              <a href="${data.confirmLink}" style="background-color: #AB58E7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Confirm this child</a>
+            </p>
+            <p>This confirmation link will expire in 24 hours.</p>
+            <p>If you do not recognize this student, ignore this email and contact the school.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="color: #777; font-size: 12px;">GoEdtech</p>
           </div>

@@ -4,7 +4,7 @@ import ForgotPasswordCard from '@/components/auth/ForgotPasswordCard'
 import React from 'react';
 
 export function generateStaticParams() {
-  return [{ user: 'admin' }, { user: 'teacher' }, { user: 'student' }]
+  return [{ user: 'admin' }, { user: 'teacher' }, { user: 'student' }, { user: 'parent' }]
 }
 
 export const dynamicParams = false;

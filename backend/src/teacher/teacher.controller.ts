@@ -47,6 +47,8 @@ import { CurriculumService } from 'src/curriculum/curriculum.service';
 import { CreateSubtopicDto } from 'src/curriculum/dto/create-subtopic.dto';
 import { UpdateSubtopicDto } from 'src/curriculum/dto/update-subtopic.dto';
 import { CreateCurriculumTopicNoteDto } from 'src/curriculum/dto/create-curriculum-topic-note.dto';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationRecipientRole } from 'src/notification/notification.entity';
 
 @ApiTags('Teacher')
 @Controller('teacher')
@@ -59,6 +61,7 @@ export class TeacherController {
     private readonly schoolAdminService: SchoolAdminService,
     private readonly academicCalendarService: AcademicCalendarService,
     private readonly curriculumService: CurriculumService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -99,6 +102,17 @@ export class TeacherController {
   @Roles(Role.Teacher)
   async getClassLevelName(@Param('id') id: string) {
     return this.classLevelService.getClassLevelNameById(id);
+  }
+
+  @Get('classes/:id')
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.Teacher)
+  @UseInterceptors(DeepSanitizeResponseInterceptor)
+  async getClassLevel(
+    @Param('id') id: string,
+    @CurrentUser() teacher: Teacher,
+  ) {
+    return this.classLevelService.findOneForTeacher(id, teacher.id);
   }
   //Todo
   @Get('classes/:classLevelId/students/:studentId/attendance')
@@ -240,6 +254,58 @@ export class TeacherController {
   @Roles(Role.Teacher)
   getProfile(@CurrentUser() teacher: Teacher) {
     return this.TeacherService.getMyProfile(teacher);
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('notifications')
+  @Roles(Role.Teacher)
+  getMyNotifications(
+    @CurrentUser() teacher: Teacher,
+    @Query('search') search?: string,
+  ) {
+    return this.notificationService.findAllForRecipient(
+      NotificationRecipientRole.Teacher,
+      teacher.id,
+      search,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('notifications/mark-all-read')
+  @Roles(Role.Teacher)
+  markAllMyNotificationsAsRead(@CurrentUser() teacher: Teacher) {
+    return this.notificationService.markAllAsReadForRecipient(
+      NotificationRecipientRole.Teacher,
+      teacher.id,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('notifications/:id/markAsRead')
+  @Roles(Role.Teacher)
+  markMyNotificationAsRead(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') id: string,
+  ) {
+    return this.notificationService.markAsReadForRecipient(
+      id,
+      NotificationRecipientRole.Teacher,
+      teacher.id,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('notifications/:id')
+  @Roles(Role.Teacher)
+  deleteMyNotification(
+    @CurrentUser() teacher: Teacher,
+    @Param('id') id: string,
+  ) {
+    return this.notificationService.removeForRecipient(
+      id,
+      NotificationRecipientRole.Teacher,
+      teacher.id,
+    );
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)

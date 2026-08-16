@@ -22,6 +22,7 @@ export type OutstandingFeeLine = {
   periodLabel: string;
   periodEnd: string;
   periodStart: string;
+  academicTermId: string | null;
 };
 
 export type ObligationAllocationRow = {
@@ -54,6 +55,7 @@ export type FinanceObligationLine = {
   outstanding: number;
   isArrear: boolean;
   dueDate: string | null;
+  academicTermId: string | null;
 };
 
 export type StudentFinanceTotals = {
@@ -407,6 +409,7 @@ export class FeeObligationService {
         periodLabel: this.formatPeriodLabel(ob),
         periodEnd: ob.periodEnd,
         periodStart: ob.periodStart,
+        academicTermId: this.obligationAcademicTermId(ob),
       });
     }
 
@@ -446,6 +449,23 @@ export class FeeObligationService {
     return Math.round(t * 100) / 100;
   }
 
+  async getTermOutstanding(
+    student: Student,
+    applicableFees: FeeStructure[],
+    academicTermId: string,
+    options?: { ussdEligibleOnly?: boolean },
+  ): Promise<number> {
+    const lines = await this.getOutstandingLines(
+      student,
+      applicableFees,
+      options,
+    );
+    const t = lines
+      .filter((line) => line.academicTermId === academicTermId)
+      .reduce((s, r) => s + r.outstanding, 0);
+    return Math.round(t * 100) / 100;
+  }
+
   /**
    * Ordered obligations with positive outstanding for allocation / simulation.
    */
@@ -456,6 +476,7 @@ export class FeeObligationService {
       ussdEligibleOnly?: boolean;
       prioritizeObligationId?: string | null;
       prioritizeFeeStructureId?: string | null;
+      prioritizeAcademicTermId?: string | null;
     },
   ): Promise<ObligationAllocationRow[]> {
     const lines = await this.getOutstandingLines(
@@ -470,7 +491,7 @@ export class FeeObligationService {
 
     const obligations = await this.obligationRepository.find({
       where: { id: In(obIds) },
-      relations: ['feeStructure'],
+      relations: ['feeStructure', 'academicTerm'],
     });
     const obMap = new Map(obligations.map((o) => [o.id, o]));
     const feeById = new Map(applicableFees.map((f) => [f.id, f]));
@@ -497,6 +518,15 @@ export class FeeObligationService {
       const fid = options.prioritizeFeeStructureId;
       const head = ordered.filter((r) => r.fee.id === fid);
       const tail = ordered.filter((r) => r.fee.id !== fid);
+      ordered = [...head, ...tail];
+    } else if (options?.prioritizeAcademicTermId) {
+      const termId = options.prioritizeAcademicTermId;
+      const head = ordered.filter(
+        (r) => this.obligationAcademicTermId(r.obligation) === termId,
+      );
+      const tail = ordered.filter(
+        (r) => this.obligationAcademicTermId(r.obligation) !== termId,
+      );
       ordered = [...head, ...tail];
     }
 
@@ -534,6 +564,20 @@ export class FeeObligationService {
       return `Year ${yk}`;
     }
     return ob.periodStart;
+  }
+
+  private obligationAcademicTermId(
+    ob: StudentFeeObligation,
+  ): string | null {
+    if (ob.academicTerm?.id) {
+      return ob.academicTerm.id;
+    }
+    const key = ob.periodKey ?? '';
+    if (key.startsWith('term:')) {
+      const termId = key.slice('term:'.length);
+      return termId || null;
+    }
+    return null;
   }
 
   /**
@@ -596,6 +640,7 @@ export class FeeObligationService {
         outstanding,
         isArrear,
         dueDate: fee.dueDate ?? null,
+        academicTermId: this.obligationAcademicTermId(ob),
       });
     }
 

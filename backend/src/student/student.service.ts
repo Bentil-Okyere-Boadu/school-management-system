@@ -22,6 +22,12 @@ import { In } from 'typeorm';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from './entities/assignment-submission.entity';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
+import { ParentStudentStatus } from 'src/parent/parent.enums';
+import { NotificationService } from 'src/notification/notification.service';
+import {
+  NotificationRecipientRole,
+  NotificationType,
+} from 'src/notification/notification.entity';
 
 @Injectable()
 export class StudentService {
@@ -34,6 +40,7 @@ export class StudentService {
     private invitationService: InvitationService,
     private readonly profileService: ProfileService,
     private objectStorageService: ObjectStorageServiceService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /**
@@ -146,8 +153,27 @@ export class StudentService {
 
     const studentInfo = await this.studentRepository.findOne({
       where: { id: user.id },
-      relations: ['role', 'profile', 'parents', 'classLevels'],
+      relations: [
+        'role',
+        'profile',
+        'classLevels',
+        'parentStudents',
+        'parentStudents.parent',
+        'parentStudents.parent.profile',
+      ],
     });
+    if (studentInfo) {
+      studentInfo.parents = (studentInfo.parentStudents ?? [])
+        .filter(
+          (link) =>
+            link.status !== ParentStudentStatus.Revoked && !!link.parent,
+        )
+        .map((link) => {
+          const parent = link.parent;
+          parent.relationship = link.relationship;
+          return parent;
+        });
+    }
     if (studentInfo?.profile?.id) {
       const profileWithUrl = await this.profileService.getProfileWithImageUrl(
         studentInfo.profile.id,
@@ -363,7 +389,7 @@ export class StudentService {
     // Verify assignment exists and is published
     const assignment = await assignmentRepo.findOne({
       where: { id: assignmentId },
-      relations: ['classLevel'],
+      relations: ['classLevel', 'teacher'],
     });
 
     if (!assignment) {
@@ -444,6 +470,21 @@ export class StudentService {
     submission.status = 'pending';
 
     const saved = await submissionRepo.save(submission);
+
+    if (assignment.teacher?.id && me.school?.id) {
+      await this.notificationService.createForRecipients({
+        schoolId: me.school.id,
+        type: NotificationType.AssignmentSubmitted,
+        title: 'Assignment submitted',
+        message: `${me.firstName} ${me.lastName} submitted ${assignment.title}`,
+        recipients: [
+          {
+            id: assignment.teacher.id,
+            role: NotificationRecipientRole.Teacher,
+          },
+        ],
+      });
+    }
 
     return {
       id: saved.id,

@@ -7,6 +7,7 @@ import InputField from "@/components/InputField";
 import { Parent, Profile, Student, ErrorResponse } from "@/@types";
 import CustomButton from "@/components/Button";
 import Guardian from "./Guardian";
+import GuardianFormFields from "./GuardianFormFields";
 import CustomUnderlinedButton from "@/components/common/CustomUnderlinedButton";
 import { Dialog } from "@/components/common/Dialog";
 import { useCreateGuardian, useDeleteProfileImage, useUpdateStudentProfile, useUploadProfileImage } from "@/hooks/student";
@@ -15,15 +16,20 @@ import { useQueryClient } from "@tanstack/react-query";
 import ProfileCard from "@/components/common/ProfileCard";
 import FileUploadArea from "@/components/common/FileUploadArea";
 import { Select } from "@mantine/core";
+import { IconPlus, IconUsers } from "@tabler/icons-react";
+import { validateGuardianIdentity } from "@/utils/guardians";
 
 interface StudentProfileProps {
   studentData: Student;
   viewMode: boolean;
   refetch: () => void;
+  canManageGuardians?: boolean;
 }
 
-const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) => {
+const StudentProfile = ({studentData, viewMode, refetch, canManageGuardians = false} : StudentProfileProps) => {
   const { id } = useParams();
+  const studentId = (id as string) || studentData?.id;
+  const asAdmin = canManageGuardians && Boolean(id);
 
   const genderOptions = [
     { value: "male", label: "Male" },
@@ -39,7 +45,7 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
     phone: '',
     relationship: ''
   }
-  const { mutate: createGuardian } = useCreateGuardian(id? id as string : studentData?.id);
+  const { mutate: createGuardian, isPending: isCreateGuardianPending } = useCreateGuardian(studentId, { asAdmin });
   const { mutate: editStudent } = useUpdateStudentProfile();
 
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
@@ -77,7 +83,19 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
   }
 
   const saveNewGuardian = () => {
-    createGuardian(newGuardian as Parent, {
+    const error = validateGuardianIdentity(newGuardian);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    createGuardian(
+      {
+        ...newGuardian,
+        firstName: newGuardian.firstName.trim(),
+        lastName: newGuardian.lastName.trim(),
+        email: newGuardian.email.trim(),
+      },
+      {
       onSuccess: () => {
         toast.success('Guardian added successfully.')
         refetch();
@@ -90,6 +108,11 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
         );
       }
     })
+  }
+
+  const openAddGuardian = () => {
+    setNewGuardian(guardianObj);
+    setDialogOpen(true);
   }
 
   const queryClient = useQueryClient();
@@ -134,6 +157,8 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
   const onDeleteProfileImageClick = () => {
     setIsConfirmDeleteProfileImageDialogOpen(true);
   }
+
+  const guardians = student?.parents ?? [];
 
   return (
     <div>
@@ -256,35 +281,63 @@ const StudentProfile = ({studentData, viewMode, refetch} : StudentProfileProps) 
 
         {/* Parent/Guardian Information */}
         <div className="mt-15 mb-10">
-          <div className="flex justify-between items-center">
-            <h3 className="font-bold mb-3">Parent/Guardian Information</h3>
-            {!id && (<CustomUnderlinedButton
-              text="Add New Guardian"
-              textColor="text-purple-500"
-              onClick={() => setDialogOpen(true)}
-              showIcon={false}
-            />)}
+          <div className="flex justify-between items-start gap-4 mb-3">
+            <div>
+              <h3 className="font-bold">Guardians</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Guardians linked to this student. Adding an email invites them to the parent portal.
+              </p>
+            </div>
+            {canManageGuardians && (
+              <CustomButton
+                text="Add guardian"
+                icon={<IconPlus size={16} />}
+                onClick={openAddGuardian}
+              />
+            )}
           </div>
-          {student?.parents.map((parent, index) => {
-            return <Guardian key={index} parent={parent} viewMode={true} count={index+1} refetchStudentData={refetch}/>
-          })}
+          {guardians.length > 0 ? (
+            guardians.map((parent, index) => (
+              <Guardian
+                key={parent.id || index}
+                parent={parent}
+                viewMode={true}
+                count={index + 1}
+                studentId={studentId}
+                canManage={canManageGuardians}
+                asAdmin={asAdmin}
+                refetchStudentData={refetch}
+              />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 px-6 py-12 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                <IconUsers size={24} className="text-gray-400" />
+              </div>
+              <h4 className="font-semibold text-gray-800">No guardians linked yet</h4>
+              <p className="text-sm text-gray-500 mt-1 max-w-md">
+                Add a guardian to keep a contact on file, or include an email to invite them to the parent portal.
+              </p>
+              {canManageGuardians && (
+                <CustomButton
+                  className="mt-4"
+                  text="Add guardian"
+                  icon={<IconPlus size={16} />}
+                  onClick={openAddGuardian}
+                />
+              )}
+            </div>
+          )}
 
           <Dialog
             isOpen={dialogOpen}
+            busy={isCreateGuardianPending}
             dialogTitle="Add Guardian"
             onClose={() => setDialogOpen(false)}
             onSave={saveNewGuardian}
+            saveDisabled={!!validateGuardianIdentity(newGuardian)}
           >
-            <div className="flex flex-col mt-3">
-              <InputField className="!py-0" label="First Name" value={newGuardian?.firstName} onChange={(e) => setNewGuardian({...newGuardian, firstName: e.target.value as string})}/>
-              <InputField className="!py-0" label="Last Name" value={newGuardian?.lastName} onChange={(e) => setNewGuardian({...newGuardian, lastName: e.target.value as string})}/>
-              <InputField className="!py-0" label="Relationship with student" value={newGuardian?.relationship} onChange={(e) => setNewGuardian({...newGuardian, relationship: e.target.value as string})}/>
-              <InputField className="!py-0" label="Occupation" value={newGuardian?.occupation} onChange={(e) => setNewGuardian({...newGuardian, occupation: e.target.value as string})}/>
-              <InputField className="!py-0" label="Email" value={newGuardian?.email} onChange={(e) => setNewGuardian({...newGuardian, email: e.target.value as string})}/>
-              <InputField className="!py-0" label="Street Address" value={newGuardian?.address} onChange={(e) => setNewGuardian({...newGuardian, address: e.target.value as string})}/>
-              <InputField className="!py-0" label="Box Address"/>
-              <InputField className="!py-0" label="Phone" value={newGuardian?.phone} onChange={(e) => setNewGuardian({...newGuardian, phone: e.target.value as string})}/>
-            </div>
+            <GuardianFormFields value={newGuardian} onChange={setNewGuardian} />
           </Dialog>
         </div>
 

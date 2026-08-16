@@ -67,7 +67,7 @@ const StudentDashboard = () => {
       />
 
       {activeTabKey === "student-profile" && (
-        <StudentProfile studentData={me as Student} viewMode={false} refetch={refetch} />
+        <StudentProfile studentData={me as Student} viewMode={false} refetch={refetch} canManageGuardians={true} />
       )}
 
       {activeTabKey === "analytics" && (

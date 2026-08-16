@@ -17,6 +17,7 @@ import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { Teacher } from '../teacher/teacher.entity';
 import { Student } from '../student/student.entity';
 import { SuperAdmin } from '../super-admin/super-admin.entity';
+import { Parent } from '../parent/parent.entity';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SuperAdmin } from '../super-admin/super-admin.entity';
       Teacher,
       Student,
       SuperAdmin,
+      Parent,
     ]),
     SchoolAdminModule,
     SuperAdminModule,

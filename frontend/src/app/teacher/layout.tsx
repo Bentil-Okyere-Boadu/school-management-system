@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon, ClipboardIcon, PlannerIcon, PerformanceIcon } from "@/utils/icons";
 
 import { useTeacherGetMe } from "@/hooks/teacher";
+import NotificationCard from "@/components/common/NotificationCard";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -15,6 +16,7 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [activeMenuItem, setActiveMenuItem] = useState("students");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
+  const [showNotification, setShowNotification] = useState(false);
 
   const {me} = useTeacherGetMe();
 
@@ -69,6 +71,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       setIsOverviewPage(true);
     } else if (pathname === "/teacher/planner") {
       setActiveMenuItem("Planner");
+      setIsOverviewPage(true);
+    } else if (pathname === "/teacher/notifications") {
+      setActiveMenuItem("Notifications");
       setIsOverviewPage(true);
     } else if (
       pathname === "/teacher/performance-analytics" ||
@@ -147,10 +152,26 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
         </div>
       )}
 
-      <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden">
-        <HeaderSection user={me} isOverviewPage={isOverviewPage} activeMenuItem={activeMenuItem} onToggleSidebar={() => setIsSidebarOpen(true)} />
+      <section className="box-border flex-1 p-5 max-md:p-2.5 max-sm:p-1.5 overflow-hidden relative">
+        <HeaderSection
+          user={me}
+          isOverviewPage={isOverviewPage}
+          activeMenuItem={activeMenuItem}
+          onToggleSidebar={() => setIsSidebarOpen(true)}
+          onNotificationClick={() => {
+            setShowNotification(!showNotification);
+          }}
+        />
         <main className="flex-1 pt-8 overflow-auto">
           {children}
+          {showNotification && me && (
+            <NotificationCard
+              user={me}
+              source="teacher"
+              inboxPath="/teacher/notifications"
+              onClose={() => setShowNotification(false)}
+            />
+          )}
         </main>
       </section>
     </div>

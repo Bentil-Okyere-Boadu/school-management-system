@@ -8,6 +8,9 @@ import {
   IconSchool,
   IconLock,
   IconLockOpen,
+  IconSend,
+  IconArrowBackUp,
+  IconClipboard,
 } from "@tabler/icons-react";
 import { ClassLevel } from "@/@types";
 import { Badge, Tooltip } from "@mantine/core";
@@ -18,11 +21,15 @@ interface AdminClassResultsCardProps {
   studentCount: number;
   isAdminLocked: boolean;
   teacherSubmitted: boolean;
-  onLockToggle: (item: ClassLevel) => void;
+  onLockToggle?: (item: ClassLevel) => void;
+  onSubmitToggle?: (item: ClassLevel) => void;
   onEditClick?: (item: ClassLevel) => void;
   onDeleteClick?: (id: string) => void;
   onCardClick?: (item: ClassLevel) => void;
   lockTooltip?: string;
+  action?: "lock" | "submit" | "grade";
+  actionDisabled?: boolean;
+  actionTooltip?: string;
   busy?: boolean;
 }
 
@@ -32,12 +39,21 @@ export const AdminClassResultsCard: React.FC<AdminClassResultsCardProps> = ({
   isAdminLocked,
   teacherSubmitted,
   onLockToggle,
+  onSubmitToggle,
   onEditClick,
   onDeleteClick,
   onCardClick,
   lockTooltip = "",
+  action = "lock",
+  actionDisabled = false,
+  actionTooltip = "",
   busy = false,
 }) => {
+  const isSubmitAction = action === "submit";
+  const isGradeAction = action === "grade";
+  const footerTooltip = isSubmitAction || isGradeAction ? actionTooltip : lockTooltip;
+  const footerDisabled = (isSubmitAction || isGradeAction) && actionDisabled;
+
   return (
     <div
       role={onCardClick ? "button" : undefined}
@@ -145,22 +161,55 @@ export const AdminClassResultsCard: React.FC<AdminClassResultsCardProps> = ({
           multiline
           w={260}
           withArrow
-          disabled={!lockTooltip}
-          label={lockTooltip}
+          disabled={!footerTooltip}
+          label={footerTooltip}
         >
           <button
             type="button"
+            disabled={footerDisabled}
             onClick={(e) => {
               e.stopPropagation();
-              onLockToggle(classData);
+              if (footerDisabled) return;
+              if (isGradeAction) {
+                onCardClick?.(classData);
+              } else if (isSubmitAction) {
+                onSubmitToggle?.(classData);
+              } else {
+                onLockToggle?.(classData);
+              }
             }}
             className={`w-full flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-              isAdminLocked
-                ? "border-green-200 text-green-800 bg-green-50 hover:bg-green-100"
-                : "border-red-200 text-red-800 bg-red-50 hover:bg-red-100"
+              footerDisabled
+                ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+                : isGradeAction
+                  ? "border-purple-200 text-purple-800 bg-purple-50 hover:bg-purple-100"
+                  : isSubmitAction
+                    ? teacherSubmitted
+                      ? "border-red-200 text-red-800 bg-red-50 hover:bg-red-100"
+                      : "border-purple-200 text-purple-800 bg-purple-50 hover:bg-purple-100"
+                    : isAdminLocked
+                      ? "border-green-200 text-green-800 bg-green-50 hover:bg-green-100"
+                      : "border-red-200 text-red-800 bg-red-50 hover:bg-red-100"
             }`}
           >
-            {isAdminLocked ? (
+            {isGradeAction ? (
+              <>
+                <IconClipboard size={18} />
+                Go to grading view
+              </>
+            ) : isSubmitAction ? (
+              teacherSubmitted ? (
+                <>
+                  <IconArrowBackUp size={18} />
+                  Unsubmit results
+                </>
+              ) : (
+                <>
+                  <IconSend size={18} />
+                  Submit results
+                </>
+              )
+            ) : isAdminLocked ? (
               <>
                 <IconLockOpen size={18} />
                 Unlock results

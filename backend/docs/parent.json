@@ -1,0 +1,645 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Parent",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/parent/login": {
+      "post": {
+        "operationId": "ParentController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParentLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Parent login with email and password",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/forgot-password": {
+      "post": {
+        "operationId": "ParentController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Request a parent password reset email",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/reset-password": {
+      "post": {
+        "operationId": "ParentController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Reset parent password with email token",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/relationships/confirm": {
+      "post": {
+        "operationId": "ParentController_confirmChild",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmChildDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Confirm an extra child using the email confirmation token",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/me": {
+      "get": {
+        "operationId": "ParentController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Current parent identity and active children",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/calendars": {
+      "get": {
+        "operationId": "ParentController_getCalendars",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Academic calendars for the parent school",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/overview": {
+      "get": {
+        "operationId": "ParentController_getOverview",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "description": "Limit overview to one active child",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "calendarId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Family overview for active linked children only",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/attendance": {
+      "get": {
+        "operationId": "ParentController_getAttendance",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "description": "Limit attendance to one active child",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 12,
+              "example": 8,
+              "type": "number"
+            }
+          },
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 2026,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Attendance KPIs and 1–31 day grid for active children (unmarked stays none)",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/children/{studentId}/attendance": {
+      "get": {
+        "operationId": "ParentController_getChildAttendance",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 12,
+              "example": 8,
+              "type": "number"
+            }
+          },
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 2026,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Attendance grid for one active child",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/children/{studentId}/attendance/report": {
+      "get": {
+        "operationId": "ParentController_getChildAttendanceReport",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 12,
+              "example": 8,
+              "type": "number"
+            }
+          },
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 2026,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Attendance report for one active child",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/finance": {
+      "get": {
+        "operationId": "ParentController_getFinance",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "description": "Limit finance to one active child",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Fee lines, outstanding balances, and payment history",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/children/{studentId}/receipts/{transactionId}": {
+      "get": {
+        "operationId": "ParentController_getReceipt",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "transactionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Receipt for a paid transaction on an active child",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/academics": {
+      "get": {
+        "operationId": "ParentController_getAcademics",
+        "parameters": [
+          {
+            "name": "calendarId",
+            "required": true,
+            "in": "query",
+            "description": "Academic calendar to load published results for",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "description": "Limit academics to one active child",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Published results, announcements, and required actions",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/relationships/{id}/confirm": {
+      "post": {
+        "operationId": "ParentController_confirmOwnedChild",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm a pending child while logged in as the parent",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/payments/initiate": {
+      "post": {
+        "operationId": "ParentController_initiatePayment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParentInitiatePaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Start a multi-child MoMo payment; each studentId must be an active linked child",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/payments/verify-and-pay": {
+      "post": {
+        "operationId": "ParentController_verifyPayment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyAndPayPublicPaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify checkout OTP and trigger Hubtel payment",
+        "tags": ["Parent"]
+      }
+    },
+    "/api/v1/parent/payments/status/{clientReference}": {
+      "get": {
+        "operationId": "ParentController_paymentStatus",
+        "parameters": [
+          {
+            "name": "clientReference",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Payment status for a parent checkout reference",
+        "tags": ["Parent"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ParentLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jane@email.com"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": ["email", "password"]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@school.com"
+          }
+        },
+        "required": ["email"]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Password reset token from email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": ["token", "password"]
+      },
+      "ConfirmChildDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Confirmation token from the confirm-child email"
+          }
+        },
+        "required": ["token"]
+      },
+      "ParentInitiatePaymentDto": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParentPaymentChildDto"
+            }
+          },
+          "mobileNumber": {
+            "type": "string",
+            "example": "233249111411"
+          },
+          "channel": {
+            "type": "string",
+            "enum": ["mtn-gh", "vodafone-gh", "tigo-gh"]
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerEmail": {
+            "type": "string"
+          }
+        },
+        "required": ["children", "mobileNumber", "channel"]
+      },
+      "ParentPaymentChildDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          }
+        },
+        "required": ["studentId", "amount"]
+      },
+      "VerifyAndPayPublicPaymentDto": {
+        "type": "object",
+        "properties": {
+          "otpRequestId": {
+            "type": "string",
+            "description": "OTP request id returned from /initiate"
+          },
+          "otp": {
+            "type": "string",
+            "description": "6-digit OTP code"
+          }
+        },
+        "required": ["otpRequestId", "otp"]
+      }
+    }
+  },
+  "tags": []
+}

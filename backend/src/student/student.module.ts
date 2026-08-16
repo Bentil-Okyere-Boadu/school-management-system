@@ -19,7 +19,7 @@ import { Profile } from 'src/profile/profile.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { Parent } from 'src/parent/parent.entity';
-import { ParentService } from 'src/parent/parent.service';
+import { ParentModule } from 'src/parent/parent.module';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { Attendance } from 'src/attendance/attendance.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
@@ -30,9 +30,11 @@ import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar
 import { AssignmentSubmission } from './entities/assignment-submission.entity';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
+    NotificationModule,
     TypeOrmModule.forFeature([
       Student,
       Role,
@@ -50,6 +52,7 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
       Assignment,
       RefreshToken,
     ]),
+    ParentModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -68,7 +71,6 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
     ProfileService,
     InvitationService,
     ObjectStorageServiceService,
-    ParentService,
     StudentAuthService,
     StudentLocalStrategy,
     StudentLocalAuthGuard,

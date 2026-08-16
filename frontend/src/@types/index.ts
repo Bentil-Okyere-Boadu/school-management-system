@@ -41,6 +41,7 @@ export interface ClassLevel {
   description: string;
   isApproved: boolean;
   schoolAdminApproved: boolean;
+  classTeacher?: User;
 }
 
 export interface Student extends User {
@@ -702,6 +703,7 @@ export interface FinanceFeeLine {
   outstanding: number;
   isArrear: boolean;
   dueDate: string | null;
+  academicTermId?: string | null;
 }
 
 export interface FinanceRecentPayment {
@@ -1015,7 +1017,25 @@ export enum NotificationType {
   Admission = "admission",
   Attendance = "attendance",
   Results = "results",
+  Fee = "fee",
   General = "general",
+  ClassTeacherResultSubmission = "classTeacherResultSubmission",
+  ParentInvitation = "parentInvitation",
+  ParentAccepted = "parentAccepted",
+  ParentChildConfirmation = "parentChildConfirmation",
+  ParentChildConfirmed = "parentChildConfirmed",
+  ParentReviewRequired = "parentReviewRequired",
+  ParentAccessRevoked = "parentAccessRevoked",
+  AssignmentPublished = "assignmentPublished",
+  AssignmentUpdated = "assignmentUpdated",
+  AssignmentSubmitted = "assignmentSubmitted",
+  AssignmentGraded = "assignmentGraded",
+  CurriculumNote = "curriculumNote",
+  CurriculumNoteReply = "curriculumNoteReply",
+  GradesSubmitted = "gradesSubmitted",
+  ClassResultsSubmitted = "classResultsSubmitted",
+  ResultsReleased = "resultsReleased",
+  ResultsUnlocked = "resultsUnlocked",
 }
 
 export interface Notification {

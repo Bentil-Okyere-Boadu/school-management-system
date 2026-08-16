@@ -62,6 +62,8 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
       return "/teacher";
     } else if (pathname.includes("student")) {
       return "/student";
+    } else if (pathname.includes("parent")) {
+      return "/parent";
     } else return "/super-admin/auth";
   }, [pathname]);
 
@@ -102,17 +104,17 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
   return (
     <section className="relative px-10 py-12 rounded-3xl border border-white border-solid bg-zinc-100 shadow-sm w-[475px] z-[1] max-md:max-w-[475px] max-md:w-[90%] max-sm:px-5 max-sm:py-8 max-sm:w-[95%]">
       <h1 className="mb-3.5 text-2xl font-bold text-neutral-800">
-        Forgot {user && user !== "admin" ? "PIN" : "Password"}?
+        Forgot {pinUser ? "PIN" : "Password"}?
       </h1>
       <p className="mb-10 text-xs text-zinc-600">
         Enter{" "}
-        {user && user !== "admin"
+        {pinUser
           ? "your email or ID"
           : "the email you used to sign up"}
       </p>
       <form method="POST" onSubmit={handleSubmit(requestPwdReset)}>
         <InputField
-          label={user && user !== "admin" ? "Email or ID" : "Email"}
+          label={pinUser ? "Email or ID" : "Email"}
           {...register("identifier")}
           type={pinUser ? "text" : "email"}
           autoComplete={pinUser ? "username" : "email"}
@@ -125,7 +127,7 @@ const ForgotPasswordCard = ({ user }: ForgotPwdCardProps) => {
           <ActionButton
             type={ButtonType.submit}
             text={
-              user && user !== "admin"
+              pinUser
                 ? "Request PIN Reset"
                 : "Request Password Reset"
             }

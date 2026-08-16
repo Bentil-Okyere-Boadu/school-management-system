@@ -18,13 +18,17 @@ import { StudentGrade } from './student-grade.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from '../academic-calendar/entitites/academic-calendar.entity';
 import { Student } from '../student/student.entity';
+import { Parent } from '../parent/parent.entity';
 import { GradingSystem } from '../grading-system/grading-system.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
 import { QueryString } from 'src/common/api-features/api-features';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 import { isSchoolAdminOrClassTeacher } from '../common/utils/authUtil';
 import { NotificationService } from 'src/notification/notification.service';
-import { NotificationType } from 'src/notification/notification.entity';
+import {
+  NotificationRecipientRole,
+  NotificationType,
+} from 'src/notification/notification.entity';
 import { Assignment } from '../teacher/entities/assignment.entity';
 import { AssignmentSubmission } from '../student/entities/assignment-submission.entity';
 import { TenantContextService } from 'src/common/tenant/tenant-context.service';
@@ -381,12 +385,34 @@ export class SubjectService {
     await this.classLevelResultApprovalRepository.save(approval);
 
     if (action === 'approve') {
-      // Notify school admin
-      await this.notificationService.create({
-        title: 'Class Results Approved',
-        message: `Teacher ${teacher.firstName} ${teacher.lastName} has approved results for ${classLevel.name} for academic term ${term.termName}.`,
+      try {
+        await this.notificationService.create({
+          title: 'Class Results Approved',
+          message: `Teacher ${teacher.firstName} ${teacher.lastName} has approved results for ${classLevel.name} for academic term ${term.termName}.`,
+          schoolId: teacher.school.id,
+          type: NotificationType.ClassTeacherResultSubmission,
+        });
+      } catch {
+        // Admin inbox should not block teacher notifications.
+      }
+
+      const otherSubjectTeachers = subjects
+        .map((subject) => subject.teacher)
+        .filter(
+          (assignedTeacher): assignedTeacher is Teacher =>
+            !!assignedTeacher?.id && assignedTeacher.id !== teacher.id,
+        )
+        .map((assignedTeacher) => ({
+          id: assignedTeacher.id,
+          role: NotificationRecipientRole.Teacher,
+        }));
+
+      await this.notificationService.createForRecipients({
         schoolId: teacher.school.id,
-        type: NotificationType.ClassTeacherResultSubmission,
+        type: NotificationType.ClassResultsSubmitted,
+        title: 'Class results submitted',
+        message: `${classLevel.name} results submitted for ${term.termName}`,
+        recipients: otherSubjectTeachers,
       });
     }
 
@@ -483,6 +509,7 @@ export class SubjectService {
 
     const classLevel = await this.classLevelRepository.findOne({
       where: { id: classLevelId },
+      relations: ['students', 'classTeacher'],
     });
     if (!classLevel) throw new NotFoundException('Class level not found');
 
@@ -514,6 +541,64 @@ export class SubjectService {
     }
 
     await this.classLevelResultApprovalRepository.save(approval);
+
+    const subjects = await this.subjectRepository.find({
+      where: {
+        classLevels: { id: classLevelId },
+        school: { id: schoolAdmin.school.id },
+      },
+      relations: ['teacher'],
+    });
+
+    const teacherRecipients = [
+      ...(classLevel.classTeacher?.id
+        ? [
+            {
+              id: classLevel.classTeacher.id,
+              role: NotificationRecipientRole.Teacher,
+            },
+          ]
+        : []),
+      ...subjects
+        .filter((subject) => !!subject.teacher?.id)
+        .map((subject) => ({
+          id: subject.teacher.id,
+          role: NotificationRecipientRole.Teacher,
+        })),
+    ];
+
+    if (action === 'approve') {
+      await this.notificationService.createForRecipients({
+        schoolId: schoolAdmin.school.id,
+        type: NotificationType.ResultsReleased,
+        title: 'Results locked',
+        message: `${classLevel.name} results locked for ${term.termName}`,
+        recipients: teacherRecipients,
+      });
+
+      const studentRecipients = (classLevel.students ?? [])
+        .filter((student) => !student.isArchived)
+        .map((student) => ({
+          id: student.id,
+          role: NotificationRecipientRole.Student,
+        }));
+
+      await this.notificationService.createForRecipients({
+        schoolId: schoolAdmin.school.id,
+        type: NotificationType.ResultsReleased,
+        title: 'Results available',
+        message: `${term.termName} results are now available`,
+        recipients: studentRecipients,
+      });
+    } else {
+      await this.notificationService.createForRecipients({
+        schoolId: schoolAdmin.school.id,
+        type: NotificationType.ResultsUnlocked,
+        title: 'Results unlocked',
+        message: `${classLevel.name} results unlocked for ${term.termName}`,
+        recipients: teacherRecipients,
+      });
+    }
 
     return {
       message:
@@ -887,7 +972,7 @@ export class SubjectService {
   async getStudentResults(
     studentId: string,
     academicCalendarId: string,
-    user: SchoolAdmin | Teacher | Student,
+    user: SchoolAdmin | Teacher | Student | Parent,
   ) {
     const calendar = await this.academicCalendarRepository.findOne({
       where: { id: academicCalendarId },
@@ -1022,7 +1107,7 @@ export class SubjectService {
     studentId: string,
     academicCalendarId: string,
     academicTermId: string,
-    user: SchoolAdmin | Teacher | Student,
+    user: SchoolAdmin | Teacher | Student | Parent,
   ) {
     const [calendar, academicTerm, student] = await Promise.all([
       this.academicCalendarRepository.findOne({
@@ -1219,6 +1304,7 @@ export class SubjectService {
     const [classLevel, subject, academicTerm, teacher] = await Promise.all([
       this.classLevelRepository.findOne({
         where: { id: classLevelId },
+        relations: ['classTeacher'],
       }),
       this.subjectRepository.findOne({
         where: { id: subjectId },
@@ -1319,6 +1405,24 @@ export class SubjectService {
         return this.studentGradeRepository.save(studentGrade);
       }),
     );
+
+    if (
+      classLevel.classTeacher?.id &&
+      classLevel.classTeacher.id !== teacherId
+    ) {
+      await this.notificationService.createForRecipients({
+        schoolId: subject.school.id,
+        type: NotificationType.GradesSubmitted,
+        title: 'Grades submitted',
+        message: `${subject.subjectCatalog?.name ?? 'Subject'} grades submitted for ${classLevel.name}`,
+        recipients: [
+          {
+            id: classLevel.classTeacher.id,
+            role: NotificationRecipientRole.Teacher,
+          },
+        ],
+      });
+    }
 
     return {
       message: 'Grades submitted successfully',

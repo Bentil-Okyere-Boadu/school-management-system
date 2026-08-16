@@ -69,6 +69,18 @@
         "tags": ["Student"]
       }
     },
+    "/api/v1/student/me/parents": {
+      "get": {
+        "operationId": "StudentController_listMyParents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
     "/api/v1/student/{id}/parents": {
       "get": {
         "operationId": "StudentController_findOne",
@@ -93,7 +105,7 @@
         "operationId": "StudentController_updateParent",
         "parameters": [
           {
-            "name": "parentId",
+            "name": "id",
             "required": true,
             "in": "path",
             "schema": {
@@ -141,16 +153,7 @@
     "/api/v1/student/{studentId}/parents": {
       "post": {
         "operationId": "StudentController_createParent",
-        "parameters": [
-          {
-            "name": "studentId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -402,7 +405,7 @@
             "type": "string"
           }
         },
-        "required": ["firstName", "lastName", "email"]
+        "required": ["firstName", "lastName"]
       },
       "SubmitAssignmentDto": {
         "type": "object",

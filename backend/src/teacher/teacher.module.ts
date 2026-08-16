@@ -35,10 +35,12 @@ import { Assignment } from './entities/assignment.entity';
 import { Subject } from 'src/subject/subject.entity';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 import { CurriculumModule } from 'src/curriculum/curriculum.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
     CurriculumModule,
+    NotificationModule,
     TypeOrmModule.forFeature([
       Teacher,
       Role,

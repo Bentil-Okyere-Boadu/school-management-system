@@ -10,11 +10,11 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
-import { seedSubtopicCompletionClassLevels } from './curriculum/subtopic-completion-class-level.backfill';
-import { seedTopicAcademicTerms } from './curriculum/topic-academic-term.backfill';
-import { seedStudentBillingCodes } from './payments/student-billing-code.backfill';
-import { seedFeeObligationLegacyBackfill } from './payments/fee-obligation-legacy.backfill';
-import { seedStudentCreditBalanceBackfill } from './payments/student-credit-balance.backfill';
+// import { seedSubtopicCompletionClassLevels } from './curriculum/subtopic-completion-class-level.backfill';
+// import { seedTopicAcademicTerms } from './curriculum/topic-academic-term.backfill';
+// import { seedStudentBillingCodes } from './payments/student-billing-code.backfill';
+// import { seedFeeObligationLegacyBackfill } from './payments/fee-obligation-legacy.backfill';
+// import { seedStudentCreditBalanceBackfill } from './payments/student-credit-balance.backfill';
 
 async function seedRoles(app: INestApplication) {
   const logger = new Logger('Seeder');
@@ -233,11 +233,12 @@ async function bootstrap() {
   await seedRoles(app);
   await seedDefaultEventCategories(app);
   await seedDefaultGradingSystems(app);
-  await seedSubtopicCompletionClassLevels(app);
-  await seedTopicAcademicTerms(app);
-  await seedStudentBillingCodes(app);
-  await seedFeeObligationLegacyBackfill(app);
-  await seedStudentCreditBalanceBackfill(app);
+  // Sprint: skip one-time seeders/backfills so local restarts stay fast.
+  // await seedSubtopicCompletionClassLevels(app);
+  // await seedTopicAcademicTerms(app);
+  // await seedStudentBillingCodes(app);
+  // await seedFeeObligationLegacyBackfill(app);
+  // await seedStudentCreditBalanceBackfill(app);
 
   await app.listen(process.env.PORT ?? 5000);
 }

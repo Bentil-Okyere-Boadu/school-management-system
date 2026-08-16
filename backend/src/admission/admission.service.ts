@@ -23,6 +23,8 @@ import { Role } from 'src/role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Parent } from 'src/parent/parent.entity';
 import { TenantContextService } from 'src/common/tenant/tenant-context.service';
+import { ParentLinkService } from 'src/parent/parent-link.service';
+import { ParentStudentSource } from 'src/parent/parent.enums';
 
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -56,6 +58,7 @@ export class AdmissionService {
     private smsService: SmsService,
     private invitationService: InvitationService,
     private readonly tenantContext: TenantContextService,
+    private readonly parentLinkService: ParentLinkService,
   ) {}
 
   async createAdmission(
@@ -590,27 +593,28 @@ export class AdmissionService {
         }
       }
 
-      // Create parents from guardians
       if (admission.guardians && Array.isArray(admission.guardians)) {
         for (const guardian of admission.guardians) {
-          const parent = this.parentRepository.create({
-            firstName: guardian.firstName,
-            lastName: guardian.lastName,
-            email: guardian.email,
-            phone: guardian.guardianPhone,
-            relationship: guardian.relationship,
-            student: savedStudent,
-          });
-          await this.parentRepository.save(parent);
-          // Create parent profile with headshot if available
+          const { parent } = await this.parentLinkService.linkGuardianToStudent(
+            savedStudent.id,
+            {
+              firstName: guardian.firstName,
+              lastName: guardian.lastName,
+              email: guardian.email,
+              phone: guardian.guardianPhone,
+              relationship: guardian.relationship,
+              occupation: guardian.occupation,
+              address: guardian.streetAddress,
+              source: ParentStudentSource.Admission,
+            },
+          );
           if (guardian.headshotPath) {
             const parentProfile = this.profileRepository.create({
               avatarPath: guardian.headshotPath,
               mediaType: guardian.headshotMediaType,
               parent,
             });
-            await this.parentRepository.save(parent);
-            parent.profile = parentProfile;
+            await this.profileRepository.save(parentProfile);
           }
         }
       }

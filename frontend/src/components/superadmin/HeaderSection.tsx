@@ -14,8 +14,10 @@ import { Roles, User } from "@/@types";
 import { getCookieNameForPath } from "@/utils/auth";
 import { useGetSchoolById } from "@/hooks/super-admin";
 import { useGetAdmissionById, useGetMySchool, useGetSchoolUserById, useGetNotifications, useGetClassLevelById } from "@/hooks/school-admin";
-import { useGetStudentById, useGetTeacherClassById } from "@/hooks/teacher";
+import { useGetStudentById, useGetTeacherClassById, useGetMyNotifications as useGetTeacherNotifications } from "@/hooks/teacher";
+import { useGetMyNotifications as useGetStudentNotifications } from "@/hooks/student";
 import { useLogout } from "@/hooks/auth";
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 import {
   SchoolAdminPaymentStatusTag,
   StudentPaymentStatusTag,
@@ -58,6 +60,9 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
     }
     if (pathName.startsWith("/teacher")) {
       return Roles.TEACHER;
+    }
+    if (pathName.startsWith("/parent")) {
+      return Roles.PARENT;
     }
     return undefined;
   };
@@ -115,10 +120,36 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
 
   // Get notifications for unread count badge
   const schoolIdForNotifications = signedInRole === Roles.SCHOOL_ADMIN ? user?.school?.id : null;
-  const { notifications } = useGetNotifications(schoolIdForNotifications);
+  const { notifications: adminNotifications } = useGetNotifications(schoolIdForNotifications);
+  const { notifications: teacherNotifications } = useGetTeacherNotifications(
+    signedInRole === Roles.TEACHER ? user?.id : undefined,
+  );
+  const { notifications: studentNotifications } = useGetStudentNotifications(
+    signedInRole === Roles.STUDENT ? user?.id : undefined,
+  );
+  const notificationList =
+    signedInRole === Roles.TEACHER
+      ? teacherNotifications
+      : signedInRole === Roles.STUDENT
+        ? studentNotifications
+        : adminNotifications;
   const unreadCount = useMemo(() => {
-    return notifications.filter(n => !n.read).length;
-  }, [notifications]);
+    return notificationList.filter(n => !n.read).length;
+  }, [notificationList]);
+  const unreadIds = useMemo(
+    () =>
+      notificationList
+        .filter((n) => !n.read && n.id)
+        .map((n) => n.id as string),
+    [notificationList],
+  );
+
+  const showNotificationBell =
+    signedInRole === Roles.SCHOOL_ADMIN ||
+    signedInRole === Roles.TEACHER ||
+    signedInRole === Roles.STUDENT;
+
+  useNotificationSound(unreadIds, showNotificationBell);
 
   const displayTitle: string = useMemo(() => {
     if (isOverviewPage) {
@@ -194,6 +225,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
               Cookies.remove("teacherTokenRefresh");
               Cookies.remove("studentToken");
               Cookies.remove("studentTokenRefresh");
+              Cookies.remove("parentToken");
+              Cookies.remove("parentTokenRefresh");
             }
     
             router.push("/home");
@@ -262,7 +295,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 
                 <p className="text-base text-zinc-600">
                   Welcome to {activeMenuItem} Overview
-                  {signedInRole === Roles.TEACHER && user?.school?.name
+                  {(signedInRole === Roles.TEACHER || signedInRole === Roles.PARENT) &&
+                  user?.school?.name
                     ? `, ${user.school.name}`
                     : ""}
                 </p>
@@ -283,9 +317,11 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
             <StudentPaymentStatusTag />
           )}
 
-          {signedInRole === Roles.SCHOOL_ADMIN && (
+          {showNotificationBell && (
             <>
-              {isAdminPaymentView && <SchoolAdminPaymentStatusTag />}
+              {signedInRole === Roles.SCHOOL_ADMIN && isAdminPaymentView && (
+                <SchoolAdminPaymentStatusTag />
+              )}
               <div className="relative mr-1">
                 <IconBell className="cursor-pointer size-6" onClick={onNotificationClick} />
                 {unreadCount > 0 && (
@@ -309,7 +345,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 />
                 <div className="flex flex-col">
                   <span className="text-base text-neutral-800">{user?.firstName} {user?.lastName}</span>
-                  <span className="text-xs text-zinc-600">{user?.role.label}</span>
+                  <span className="text-xs text-zinc-600">{user?.role?.label}</span>
                 </div>
               </div>
             </Menu.Target>

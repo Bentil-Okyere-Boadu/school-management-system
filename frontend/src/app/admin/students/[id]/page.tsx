@@ -101,7 +101,7 @@ const ViewStudentPage = () => {
 
         { activeTabKey === "student-profile" && (
             <div>
-                <StudentProfile viewMode={true} studentData={schoolUser as Student} refetch={refetch}/>
+                <StudentProfile viewMode={true} studentData={schoolUser as Student} refetch={refetch} canManageGuardians={true}/>
             </div>
         )}
         { activeTabKey === "attendance" && (

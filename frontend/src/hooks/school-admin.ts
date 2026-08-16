@@ -782,8 +782,8 @@ export const useGetCurriculumTopicNotes = (
     refetchOnWindowFocus: true,
   });
 
-  const notes =
-    (data as { data?: CurriculumTopicNote[] } | undefined)?.data ?? [];
+    const notes =
+      (data?.data as CurriculumTopicNote[] | undefined) ?? [];
 
   return { notes, isLoading, refetch };
 };
@@ -1605,6 +1605,7 @@ export const useGetNotifications = (
     },
     enabled: !!schoolId,
     refetchOnWindowFocus: true,
+    refetchInterval: 20000,
   });
 
   const notifications: Notification[] = data?.data || [];
@@ -1617,6 +1618,30 @@ export const useMarkNotificationAsRead = () => {
   return useMutation({
     mutationFn: (id: string) => {
       return customAPI.patch(`/notifications/${id}/markAsRead`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+};
+
+export const useMarkAllNotificationsAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (schoolId: string) => {
+      return customAPI.patch(`/notifications/school/${schoolId}/mark-all-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+};
+
+export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/notifications/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });

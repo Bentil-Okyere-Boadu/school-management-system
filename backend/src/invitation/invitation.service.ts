@@ -471,9 +471,7 @@ export class InvitationService {
     });
 
     if (!user) {
-      throw new BadRequestException(
-        'Invalid invitation token - token not found',
-      );
+      return null;
     }
 
     const expiryTimestamp = user.invitationExpires.getTime();
@@ -490,6 +488,9 @@ export class InvitationService {
 
   async completeRegistration(token: string, password: string) {
     const adminuser = await this.verifyInvitationToken(token);
+    if (!adminuser) {
+      return null;
+    }
     const hashPassword = await bcrypt.hash(password, 10);
 
     adminuser.password = hashPassword;

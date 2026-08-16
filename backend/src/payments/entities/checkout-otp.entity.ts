@@ -39,6 +39,9 @@ export class CheckoutOtp {
   @Column({ type: 'varchar', nullable: true })
   targetStudentFeeObligationId: string | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  targetAcademicTermId: string | null;
+
   @Column({ type: 'varchar', nullable: true })
   customerName: string | null;
 
@@ -69,6 +72,12 @@ export class CheckoutOtp {
   @ManyToOne(() => Student, { onDelete: 'CASCADE' })
   @JoinColumn()
   student: Student;
+
+  @Column({ type: 'uuid', nullable: true })
+  parentId: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  allocations: { studentId: string; amount: number }[] | null;
 
   @CreateDateColumn()
   createdAt: Date;

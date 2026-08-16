@@ -48,8 +48,11 @@ export interface CreateCheckoutOtpInput {
   amount: number;
   targetFeeStructureId: string | null;
   targetStudentFeeObligationId?: string | null;
+  targetAcademicTermId?: string | null;
   customerName?: string | null;
   customerEmail?: string | null;
+  parentId?: string | null;
+  allocations?: { studentId: string; amount: number }[] | null;
 }
 
 export interface CreatedCheckoutOtp {
@@ -227,6 +230,7 @@ export class PaymentsService {
       amount: Math.round(input.amount * 100) / 100,
       targetFeeStructureId: input.targetFeeStructureId ?? null,
       targetStudentFeeObligationId: input.targetStudentFeeObligationId ?? null,
+      targetAcademicTermId: input.targetAcademicTermId ?? null,
       customerName: input.customerName ?? null,
       customerEmail: input.customerEmail ?? null,
       codeHash,
@@ -236,6 +240,8 @@ export class PaymentsService {
       consumedAt: null,
       school: input.student.school,
       student: input.student,
+      parentId: input.parentId ?? null,
+      allocations: input.allocations ?? null,
     });
     const saved = await this.checkoutOtpRepository.save(record);
     return { otpRequestId: saved.id, otpPlain, expiresAt };
@@ -401,6 +407,23 @@ export class PaymentsService {
     return this.feeObligationService.getTotalOutstanding(student, fees, {
       ussdEligibleOnly: ussdOnly,
     });
+  }
+
+  async getTermOutstandingForStudent(
+    student: Student,
+    academicTermId: string,
+    options?: { ussdEligibleOnly?: boolean },
+  ): Promise<number> {
+    const ussdOnly = options?.ussdEligibleOnly ?? true;
+    const fees = await this.findApplicableFeeStructuresForStudent(student, {
+      ussdEligibleOnly: ussdOnly,
+    });
+    return this.feeObligationService.getTermOutstanding(
+      student,
+      fees,
+      academicTermId,
+      { ussdEligibleOnly: ussdOnly },
+    );
   }
 
   /**
@@ -601,6 +624,7 @@ export class PaymentsService {
     interactionPayload: Record<string, unknown>;
     targetFeeStructureId?: string | null;
     targetStudentFeeObligationId?: string | null;
+    targetAcademicTermId?: string | null;
   }): Promise<PaymentTransaction> {
     if (input.amount <= 0) {
       throw new BadRequestException('Payment amount must be greater than zero');
@@ -623,6 +647,7 @@ export class PaymentsService {
       status: PaymentTransactionStatus.PENDING,
       targetFeeStructureId: input.targetFeeStructureId ?? null,
       targetStudentFeeObligationId: input.targetStudentFeeObligationId ?? null,
+      targetAcademicTermId: input.targetAcademicTermId ?? null,
     });
 
     return this.paymentTransactionRepository.save(transaction);
@@ -912,6 +937,11 @@ export class PaymentsService {
             prioritizeFeeStructureId: transaction.targetStudentFeeObligationId
               ? null
               : transaction.targetFeeStructureId,
+            prioritizeAcademicTermId:
+              transaction.targetStudentFeeObligationId ||
+              transaction.targetFeeStructureId
+                ? null
+                : transaction.targetAcademicTermId,
           },
         );
 

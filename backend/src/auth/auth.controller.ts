@@ -18,6 +18,7 @@ import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { Teacher } from '../teacher/teacher.entity';
 import { Student } from '../student/student.entity';
 import { SuperAdmin } from '../super-admin/super-admin.entity';
+import { Parent } from '../parent/parent.entity';
 
 export class RefreshTokenDto {
   @ApiPropertyOptional({ description: 'Refresh token from login response' })
@@ -41,6 +42,8 @@ export class AuthController {
     private studentRepository: Repository<Student>,
     @InjectRepository(SuperAdmin)
     private superAdminRepository: Repository<SuperAdmin>,
+    @InjectRepository(Parent)
+    private parentRepository: Repository<Parent>,
   ) {}
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -61,7 +64,8 @@ export class AuthController {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    let user: SchoolAdmin | Teacher | Student | SuperAdmin | null = null;
+    let user: SchoolAdmin | Teacher | Student | SuperAdmin | Parent | null =
+      null;
 
     switch (refreshToken.userType) {
       case 'school_admin':
@@ -86,6 +90,12 @@ export class AuthController {
         user = await this.superAdminRepository.findOne({
           where: { id: refreshToken.userId },
           relations: ['role'],
+        });
+        break;
+      case 'parent':
+        user = await this.parentRepository.findOne({
+          where: { id: refreshToken.userId },
+          relations: ['role', 'school'],
         });
         break;
     }

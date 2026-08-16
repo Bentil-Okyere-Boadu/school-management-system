@@ -11,8 +11,9 @@ import {
   SchoolPaymentConfig,
   SchoolPaymentReceiptDetail,
   SchoolPaymentsListParams,
+  Notification,
 } from "@/@types";
-import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { useMutation, useQuery, UseQueryOptions, useQueryClient } from "@tanstack/react-query";
 import { customAPI } from "../../config/setup";
 
 export const useStudentGetMe = () => {
@@ -37,25 +38,48 @@ export const useUpdateStudentProfile = () => {
     })
 }
 
-export const useCreateGuardian = (studentId: string) => {
+type GuardianMutationOptions = {
+  studentId?: string;
+  asAdmin?: boolean;
+};
+
+export const useCreateGuardian = (
+  studentId: string,
+  options?: GuardianMutationOptions,
+) => {
     return useMutation({
         mutationFn: (guardianDetails: Parent) => {
-            return customAPI.post(`/student/${studentId}/parents`, guardianDetails);
+            const path = options?.asAdmin
+              ? `/school-admin/students/${studentId}/parents`
+              : `/student/${studentId}/parents`;
+            return customAPI.post(path, guardianDetails);
         }
     });
 }
 
-export const useUpdateGuardian = (parentId: string) => {
+export const useUpdateGuardian = (
+  parentId: string,
+  options?: GuardianMutationOptions,
+) => {
     return useMutation({
         mutationFn: (guardianDetails: Partial<Parent>) => {
-            return customAPI.patch(`/student/${parentId}/parents`, guardianDetails);
+            const path = options?.asAdmin
+              ? `/school-admin/students/${options.studentId}/parents/${parentId}`
+              : `/student/${parentId}/parents`;
+            return customAPI.patch(path, guardianDetails);
         }
     });
 }
-export const useDeleteGuardian = (parentId: string) => {
+export const useDeleteGuardian = (
+  parentId: string,
+  options?: GuardianMutationOptions,
+) => {
     return useMutation({
         mutationFn: () => {
-            return customAPI.delete(`/student/${parentId}/parents`);
+            const path = options?.asAdmin
+              ? `/school-admin/students/${options.studentId}/parents/${parentId}`
+              : `/student/${parentId}/parents`;
+            return customAPI.delete(path);
         }
     });
 }
@@ -347,4 +371,60 @@ export const useGetMyPaymentReceipt = (
   const receipt = data?.data as SchoolPaymentReceiptDetail | undefined;
 
   return { receipt, isLoading, isFetching, error, refetch };
+};
+
+export const useGetMyNotifications = (
+  userId?: string,
+  search?: string,
+) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["notifications", "student", userId, search],
+    queryFn: () => {
+      const queryParams = search ? `?search=${encodeURIComponent(search)}` : "";
+      return customAPI.get(`/student/notifications${queryParams}`);
+    },
+    enabled: !!userId,
+    refetchOnWindowFocus: true,
+    refetchInterval: 20000,
+  });
+
+  const notifications: Notification[] = data?.data || [];
+
+  return { notifications, isLoading, refetch };
+};
+
+export const useMarkMyNotificationAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.patch(`/student/notifications/${id}/markAsRead`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "student"] });
+    },
+  });
+};
+
+export const useMarkAllMyNotificationsAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => {
+      return customAPI.patch(`/student/notifications/mark-all-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "student"] });
+    },
+  });
+};
+
+export const useDeleteMyNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => {
+      return customAPI.delete(`/student/notifications/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "student"] });
+    },
+  });
 };
