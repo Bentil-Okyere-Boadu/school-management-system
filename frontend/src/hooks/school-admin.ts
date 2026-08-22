@@ -10,6 +10,10 @@ import {
   Calendar,
   FeeStructure,
   Grade,
+  GradingScheme,
+  GradingSchemeStatus,
+  CreateGradingSchemePayload,
+  UpdateGradingSchemePayload,
   SchoolAdminInfo,
   Term,
   ClassLevel,
@@ -434,6 +438,121 @@ export const useEditGrade = (id: string) => {
   return useMutation({
     mutationFn: (grade: Partial<Grade>) => {
       return customAPI.put(`/grading-system/${id}`, grade);
+    },
+  });
+};
+
+/**
+ * GRADING SCHEMES (named schemes with draft/activate lifecycle)
+ */
+export const useGetGradingSchemes = (status?: GradingSchemeStatus | "") => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["gradingSchemes", { status: status || "" }],
+    queryFn: () => {
+      const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+      return customAPI.get(`/grading-schemes${qs}`);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const schemes = (data?.data as GradingScheme[]) || [];
+  return { schemes, isLoading, refetch };
+};
+
+export const useGetGradingScheme = (id: string | null, enabled = true) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["gradingScheme", id],
+    queryFn: () => customAPI.get(`/grading-schemes/${id}`),
+    enabled: Boolean(id) && enabled,
+    refetchOnWindowFocus: false,
+  });
+
+  const scheme = (data?.data as GradingScheme) || null;
+  return { scheme, isLoading, refetch };
+};
+
+export const useCreateGradingScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateGradingSchemePayload) =>
+      customAPI.post("/grading-schemes", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gradingSchemes"] });
+      queryClient.invalidateQueries({ queryKey: ["myGradingSystem"] });
+    },
+  });
+};
+
+export const useUpdateGradingScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UpdateGradingSchemePayload;
+    }) => customAPI.patch(`/grading-schemes/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gradingSchemes"] });
+      queryClient.invalidateQueries({ queryKey: ["gradingScheme"] });
+      queryClient.invalidateQueries({ queryKey: ["myGradingSystem"] });
+    },
+  });
+};
+
+export const useDuplicateGradingScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => customAPI.post(`/grading-schemes/${id}/duplicate`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gradingSchemes"] });
+    },
+  });
+};
+
+export const useActivateGradingScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => customAPI.post(`/grading-schemes/${id}/activate`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gradingSchemes"] });
+      queryClient.invalidateQueries({ queryKey: ["gradingScheme"] });
+      queryClient.invalidateQueries({ queryKey: ["myGradingSystem"] });
+    },
+  });
+};
+
+export const useDeactivateGradingScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      customAPI.post(`/grading-schemes/${id}/deactivate`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gradingSchemes"] });
+      queryClient.invalidateQueries({ queryKey: ["gradingScheme"] });
+    },
+  });
+};
+
+export const useDeleteGradingScheme = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => customAPI.delete(`/grading-schemes/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gradingSchemes"] });
+      queryClient.invalidateQueries({ queryKey: ["gradingScheme"] });
+    },
+  });
+};
+
+export const useNewGradingSchemeVersion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      customAPI.post(`/grading-schemes/${id}/new-version`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gradingSchemes"] });
     },
   });
 };
@@ -1758,6 +1877,84 @@ export const useAdminApproveClassResults = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teacherClasses"] });
       queryClient.invalidateQueries({ queryKey: ["myClassLevels"] });
+      queryClient.invalidateQueries({ queryKey: ["adminResultsReview"] });
+    },
+  });
+};
+
+export const useAdminCheckResults = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { classLevelId: string; academicTermId: string }) =>
+      customAPI.post(`/subject/school-admin/check-results`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myClassLevels"] });
+      queryClient.invalidateQueries({ queryKey: ["adminResultsReview"] });
+    },
+  });
+};
+
+export const useAdminReturnResults = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      classLevelId: string;
+      academicTermId: string;
+      returnNote: string;
+    }) => customAPI.post(`/subject/school-admin/return-results`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myClassLevels"] });
+      queryClient.invalidateQueries({ queryKey: ["adminResultsReview"] });
+    },
+  });
+};
+
+export const useAdminPublishResults = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { classLevelId: string; academicTermId: string }) =>
+      customAPI.post(`/subject/school-admin/publish-results`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myClassLevels"] });
+      queryClient.invalidateQueries({ queryKey: ["adminResultsReview"] });
+    },
+  });
+};
+
+export const useAdminResultsReview = (filters: {
+  classLevelId?: string;
+  subjectId?: string;
+  teacherId?: string;
+  academicTermId?: string;
+}) => {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["adminResultsReview", filters],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filters.classLevelId) params.set("classLevelId", filters.classLevelId);
+      if (filters.subjectId) params.set("subjectId", filters.subjectId);
+      if (filters.teacherId) params.set("teacherId", filters.teacherId);
+      if (filters.academicTermId) {
+        params.set("academicTermId", filters.academicTermId);
+      }
+      const q = params.toString();
+      return customAPI.get(`/subject/school-admin/results-review${q ? `?${q}` : ""}`);
+    },
+  });
+  return { review: data?.data, isLoading, refetch };
+};
+
+export const useUpdateParentResultVisibility = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      parentShowScores: boolean;
+      parentShowGrades: boolean;
+      parentShowLabels: boolean;
+      parentShowFeedback: boolean;
+    }) => customAPI.patch("/schools/parent-result-visibility", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mySchool"] });
     },
   });
 };

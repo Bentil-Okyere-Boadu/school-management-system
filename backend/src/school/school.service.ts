@@ -431,6 +431,28 @@ export class SchoolService {
     return this.schoolRepository.save(school);
   }
 
+  async updateParentResultVisibility(
+    schoolId: string,
+    payload: {
+      parentShowScores: boolean;
+      parentShowGrades: boolean;
+      parentShowLabels: boolean;
+      parentShowFeedback: boolean;
+    },
+  ): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+    school.parentShowScores = payload.parentShowScores;
+    school.parentShowGrades = payload.parentShowGrades;
+    school.parentShowLabels = payload.parentShowLabels;
+    school.parentShowFeedback = payload.parentShowFeedback;
+    return this.schoolRepository.save(school);
+  }
+
   async updateGradingPercentages(
     schoolId: string,
     classScorePercentage: number,

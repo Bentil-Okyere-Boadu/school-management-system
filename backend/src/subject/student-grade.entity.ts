@@ -54,6 +54,36 @@ export class StudentGrade {
   @Column({ type: 'varchar', nullable: true })
   grade: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  gradeLabel: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  feedback: string | null;
+
+  @Column({ type: 'varchar', default: 'submitted' })
+  status: 'draft' | 'submitted';
+
+  @Column({ type: 'text', nullable: true })
+  bandDescription: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  gradingSchemeId: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  gradingSchemeVersion: number | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  overrideGrade: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  overrideReason: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  overriddenById: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  overriddenByName: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

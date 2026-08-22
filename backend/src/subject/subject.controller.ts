@@ -18,6 +18,7 @@ import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
+import { SubmitGradesDto } from './dto/submit-grades.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 import { TeacherJwtAuthGuard } from '../teacher/guards/teacher-jwt-auth.guard';
 import { Teacher } from 'src/teacher/teacher.entity';
@@ -135,6 +136,90 @@ export class SubjectController {
     @CurrentUser() schoolAdmin: SchoolAdmin,
   ) {
     return this.subjectService.getAllClassResultsApprovalStatus(schoolAdmin);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/check-results')
+  async adminCheckResults(
+    @Body() body: { classLevelId: string; academicTermId: string },
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.adminCheckResults(
+      body.classLevelId,
+      body.academicTermId,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/return-results')
+  async adminReturnResults(
+    @Body() body: { classLevelId: string; academicTermId: string; returnNote: string },
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.adminReturnResults(
+      body.classLevelId,
+      body.academicTermId,
+      body.returnNote,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/publish-results')
+  async adminPublishResults(
+    @Body() body: { classLevelId: string; academicTermId: string },
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.adminPublishResults(
+      body.classLevelId,
+      body.academicTermId,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/results-review')
+  async getAdminResultsReview(
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+    @Query('classLevelId') classLevelId?: string,
+    @Query('subjectId') subjectId?: string,
+    @Query('teacherId') teacherId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.subjectService.getAdminResultsReview(schoolAdmin, {
+      classLevelId,
+      subjectId,
+      teacherId,
+      academicTermId,
+    });
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/submission-history/:classLevelId')
+  async getGradeSubmissionHistory(
+    @Param('classLevelId') classLevelId: string,
+    @Query('academicTermId') academicTermId: string,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.getGradeSubmissionHistory(
+      classLevelId,
+      academicTermId,
+      schoolAdmin,
+    );
+  }
+
+  @Get('grading-legend')
+  async getGradingLegend(
+    @Query('schoolId') schoolId: string,
+    @Query('classLevelId') classLevelId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.subjectService.getActiveGradingLegend(
+      schoolId,
+      classLevelId,
+      academicTermId,
+    );
   }
 
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -283,17 +368,7 @@ export class SubjectController {
   @Post('submit-grades')
   async submitGrades(
     @CurrentUser() teacher: Teacher,
-    @Body()
-    body: {
-      classLevelId: string;
-      subjectId: string;
-      academicTermId: string;
-      grades: Array<{
-        studentId: string;
-        classScore: number; // 30%
-        examScore: number; // 70%
-      }>;
-    },
+    @Body() body: SubmitGradesDto,
   ) {
     return this.subjectService.submitGrades({
       ...body,

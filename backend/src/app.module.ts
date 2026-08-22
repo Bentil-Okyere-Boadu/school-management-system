@@ -10,6 +10,7 @@ import { SchoolModule } from './school/school.module';
 import { CommonModule } from './common/common.module';
 import { FeeStructureModule } from './fee-structure/fee-structure.module';
 import { GradingSystemModule } from './grading-system/grading-system.module';
+import { GradingSchemeModule } from './grading-scheme/grading-scheme.module';
 import { AdmissionPolicyModule } from './admission-policy/admission-policy.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
@@ -76,6 +77,7 @@ import { StudentAnalyticsModule } from './student-analytics/student-analytics.mo
     SchoolModule,
     FeeStructureModule,
     GradingSystemModule,
+    GradingSchemeModule,
     AdmissionPolicyModule,
     InvitationModule,
     SuperAdminModule,

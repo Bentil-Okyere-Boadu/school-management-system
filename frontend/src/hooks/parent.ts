@@ -98,6 +98,12 @@ export type ParentAcademicsChild = {
   photoUrl: string | null;
   resultsPending: boolean;
   results: StudentResultsResponse | null;
+  parentVisibility?: {
+    showScores: boolean;
+    showGrades: boolean;
+    showLabels: boolean;
+    showFeedback: boolean;
+  };
   announcements: ParentAnnouncement[];
   requiredActions: ParentRequiredAction[];
 };

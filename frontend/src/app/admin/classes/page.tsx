@@ -327,7 +327,13 @@ const ClassesPage = () => {
             onSearch={handleSearch}
             className="w-[366px] max-md:w-full"
           />
-          <CustomButton text="Add Class" onClick={onAddNewClassLevel} />
+          <div className="flex flex-wrap items-center gap-2">
+            <CustomButton text="Add Class" onClick={onAddNewClassLevel} />
+            <CustomButton
+              text="Review results"
+              onClick={() => router.push("/admin/results-review")}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 px-0.5">

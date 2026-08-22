@@ -95,15 +95,26 @@ const ClassesPage = () => {
   }
 
   const onApproveOrDisApproveClassResult = (classData: ClassLevel) => {
-    if (classData?.schoolAdminApproved) {
+    if (
+      classData?.schoolAdminApproved ||
+      classData?.resultStatus === "published"
+    ) {
       return;
     }
-    if (classData?.isApproved) {
-      onDisApproveClassResult(classData)
+    if (
+      classData?.isApproved ||
+      classData?.resultStatus === "submitted" ||
+      classData?.resultStatus === "approved"
+    ) {
+      if (classData?.resultStatus === "returned") {
+        onApproveClassResult(classData);
+        return;
+      }
+      onDisApproveClassResult(classData);
     } else {
-      onApproveClassResult(classData)
+      onApproveClassResult(classData);
     }
-  }
+  };
 
   const onApproveClassResult = (classData: ClassLevel) => {
     if(approveResultPending) return;

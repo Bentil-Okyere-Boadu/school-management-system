@@ -103,6 +103,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     } else if (pathname === "/admin/classes") {
       setActiveMenuItem("Classes");
       setIsOverviewPage(true);
+    } else if (pathname === "/admin/results-review") {
+      setActiveMenuItem("Classes");
+      setIsOverviewPage(true);
     } else if (pathname === "/admin/settings") {
       setActiveMenuItem("Settings");
       setIsOverviewPage(true);

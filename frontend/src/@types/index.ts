@@ -41,6 +41,8 @@ export interface ClassLevel {
   description: string;
   isApproved: boolean;
   schoolAdminApproved: boolean;
+  resultStatus?: string;
+  returnNote?: string | null;
   classTeacher?: User;
 }
 
@@ -110,6 +112,66 @@ export type Grade = {
   id: string;
 };
 
+export type GradingSchemeStatus = "draft" | "active" | "inactive";
+export type GradingSchemeRounding = "none" | "nearest" | "up" | "down";
+export type GradingSchemeScopeType = "school" | "classLevels";
+
+export type GradingSchemeBand = {
+  id?: string;
+  code: string;
+  label: string;
+  description?: string | null;
+  minScore: number;
+  maxScore: number;
+  sortOrder?: number;
+};
+
+export type GradingScheme = {
+  id: string;
+  name: string;
+  status: GradingSchemeStatus;
+  version: number;
+  scoreScaleMin: number;
+  scoreScaleMax: number;
+  passMark: number;
+  rounding: GradingSchemeRounding;
+  allowManualOverride: boolean;
+  effectiveFrom: string | null;
+  scopeType: GradingSchemeScopeType;
+  bands: GradingSchemeBand[];
+  classLevelIds: string[];
+  classLevels: { id: string; name: string }[];
+  usedByClassCount: number;
+  gapWarnings: string[];
+  createdById?: string | null;
+  createdByName?: string | null;
+  updatedById?: string | null;
+  updatedByName?: string | null;
+  activatedById?: string | null;
+  activatedByName?: string | null;
+  activatedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CreateGradingSchemePayload = {
+  name: string;
+  scoreScaleMin?: number;
+  scoreScaleMax?: number;
+  passMark?: number;
+  rounding?: GradingSchemeRounding;
+  allowManualOverride?: boolean;
+  effectiveFrom?: string | null;
+  scopeType?: GradingSchemeScopeType;
+  classLevelIds?: string[];
+  bands: GradingSchemeBand[];
+  activate?: boolean;
+};
+
+export type UpdateGradingSchemePayload = Partial<
+  Omit<CreateGradingSchemePayload, "activate">
+>;
+
 export type SchoolAdminInfo = {
   email: string;
   firstName: string;
@@ -151,6 +213,10 @@ export interface School {
   updatedAt: string;
   logoUrl: string;
   calendlyUrl: string;
+  parentShowScores?: boolean;
+  parentShowGrades?: boolean;
+  parentShowLabels?: boolean;
+  parentShowFeedback?: boolean;
 }
 
 export enum AdmissionStatus {
@@ -864,12 +930,68 @@ export type PostGradesPayload = {
   classLevelId: string;
   subjectId: string;
   academicTermId: string;
+  saveMode: "draft" | "submit";
+  forceSubmit?: boolean;
   grades: {
     studentId: string;
-    classScore: number;
-    examScore: number;
+    classScore: number | null;
+    examScore: number | null;
+    feedback?: string | null;
   }[];
 };
+
+export type GradingBandPreview = {
+  code: string;
+  label: string;
+  minScore: number;
+  maxScore: number;
+};
+
+export type StudentsForGradingResponse = {
+  metadata: {
+    subject: { id: string; name: string };
+    classLevel: { id: string; name: string };
+    academicTerm: { id: string; name: string };
+    academicCalendar: { id: string; name: string };
+    isApproved: boolean;
+    approvedAt?: string;
+    schoolAdminApproved: boolean;
+    schoolAdminApprovedAt?: string;
+    resultStatus?: string;
+    returnNote?: string | null;
+    allowManualOverride?: boolean;
+    passMark?: number;
+    classScoreMax: number;
+    examScoreMax: number;
+    gradingBands: GradingBandPreview[];
+  };
+  students: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    studentId: string;
+    isArchived?: boolean;
+    archivedAt?: string | null;
+    hasGradeRecord?: boolean;
+    feedback?: string | null;
+    status?: "draft" | "submitted" | null;
+    scores: {
+      classScore: number | null;
+      examScore: number | null;
+      totalScore: number | null;
+      grade: string | null;
+      gradeLabel: string | null;
+    };
+  }>;
+};
+
+export interface GradingLegendBand {
+  code: string;
+  label: string;
+  description?: string | null;
+  minScore: number;
+  maxScore: number;
+}
 
 export interface SubjectResult {
   subject: string;
@@ -877,27 +999,38 @@ export interface SubjectResult {
   examScore: number;
   totalScore: number;
   grade: string;
+  gradeLabel?: string | null;
+  bandDescription?: string | null;
+  feedback?: string | null;
   percentage: string;
-  percentile: string;
-  rank: string;
+  percentile?: string;
+  rank?: string;
+  hasOverride?: boolean;
+  overrideReason?: string | null;
 }
 
 export interface TermResult {
   termName: string;
+  termId?: string;
+  resultStatus?: string;
+  isPublished?: boolean;
   subjects: SubjectResult[];
   teacherRemarks: string;
+  remarksBy?: string;
 }
 
 export interface StudentResultsResponse {
   studentInfo: {
     academicYear: string;
     class: string;
-    term: string;
+    term?: string;
   };
   terms: TermResult[];
-  subjects: SubjectResult[];
-  teacherRemarks: string;
-  remarksBy: string;
+  subjects?: SubjectResult[];
+  teacherRemarks?: string;
+  remarksBy?: string;
+  gradingLegend?: GradingLegendBand[];
+  passMark?: number;
 }
 
 /** One graded submission under a topic (performance analytics API) */

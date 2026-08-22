@@ -3,6 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { CustomSelectTag } from "../../common/CustomSelectTag";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
+import { GradingLegendPanel } from "@/components/common/GradingLegendPanel";
+import { ResultsSubjectsTable } from "@/components/common/ResultsSubjectsTable";
+import {
+  averagePercentage,
+  overallPerformanceBand,
+  performanceBandClass,
+} from "@/utils/gradeDisplay";
 import CustomButton from "@/components/Button";
 import { Calendar, ErrorResponse, StudentResultsResponse } from "@/@types";
 import { Textarea } from "@mantine/core";
@@ -144,36 +151,50 @@ const StudentResults: React.FC<StudentResultProps> = ({
 
       <div>
         {studentResults?.subjects?.length > 0 ? (
-          <div>
-            <p className="text-sm font-semibold text-[#878787] my-5">
-              {studentResults?.studentInfo?.academicYear} — {studentResults?.studentInfo?.term}
-            </p>
-            <table className="w-full border-collapse mb-6">
-              <thead>
-                <tr>
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Subject</th>
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Class Score</th>
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Exam Score</th>
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Percentage</th>
-                  {/* <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Percentile</th>
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Rank</th> */}
-                  <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">Grade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {studentResults.subjects.map((data, i) => (
-                  <tr key={i} className="border-b border-solid border-b-gray-200">
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.subject}</td>
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.classScore}</td>
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.examScore}</td>
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.percentage}</td>
-                    {/* <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.percentile}</td>
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.rank}</td> */}
-                    <td className="py-2 pl-2.5 text-sm text-[#252C32]">{data.grade}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <article className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <p className="text-sm font-semibold text-zinc-600">
+                {studentResults?.studentInfo?.academicYear} —{" "}
+                {studentResults?.studentInfo?.term}
+              </p>
+              {(() => {
+                const avg = averagePercentage(
+                  studentResults.subjects.map((s) => s.percentage),
+                );
+                const band = overallPerformanceBand(avg);
+                if (!band || avg == null) return null;
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${performanceBandClass(band)}`}
+                    >
+                      {band}
+                    </span>
+                    <span className="text-sm font-medium text-zinc-600">
+                      {avg}% avg
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <ResultsSubjectsTable
+              subjects={studentResults.subjects}
+              columns={[
+                "subject",
+                "classScore",
+                "examScore",
+                "percentage",
+                "grade",
+                "label",
+                "feedback",
+              ]}
+            />
+
+            <GradingLegendPanel
+              bands={studentResults.gradingLegend}
+              passMark={studentResults.passMark}
+            />
 
             <div className="mt-6">
               <Textarea
@@ -186,7 +207,7 @@ const StudentResults: React.FC<StudentResultProps> = ({
                 maxRows={8}
               />
             </div>
-          </div>
+          </article>
         ) : (
           <NoAvailableEmptyState message="No results available yet." />
         )}

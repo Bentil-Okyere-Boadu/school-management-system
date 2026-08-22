@@ -266,6 +266,12 @@ export class ParentDashboardService {
           photoUrl: child.profile?.avatarUrl ?? null,
           resultsPending: !published,
           results,
+          parentVisibility: {
+            showScores: parent.school.parentShowScores ?? true,
+            showGrades: parent.school.parentShowGrades ?? true,
+            showLabels: parent.school.parentShowLabels ?? true,
+            showFeedback: parent.school.parentShowFeedback ?? true,
+          },
           announcements,
           requiredActions: pendingConfirmations.map((link) => ({
             id: link.id,
