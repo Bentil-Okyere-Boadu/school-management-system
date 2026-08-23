@@ -20,6 +20,10 @@ import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { SubmitGradesDto } from './dto/submit-grades.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
+import {
+  AdminResultActionDto,
+  AdminReturnResultsDto,
+} from './dto/admin-results.dto';
 import { TeacherJwtAuthGuard } from '../teacher/guards/teacher-jwt-auth.guard';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
@@ -141,7 +145,7 @@ export class SubjectController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('school-admin/check-results')
   async adminCheckResults(
-    @Body() body: { classLevelId: string; academicTermId: string },
+    @Body() body: AdminResultActionDto,
     @CurrentUser() schoolAdmin: SchoolAdmin,
   ) {
     return this.subjectService.adminCheckResults(
@@ -154,7 +158,7 @@ export class SubjectController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('school-admin/return-results')
   async adminReturnResults(
-    @Body() body: { classLevelId: string; academicTermId: string; returnNote: string },
+    @Body() body: AdminReturnResultsDto,
     @CurrentUser() schoolAdmin: SchoolAdmin,
   ) {
     return this.subjectService.adminReturnResults(
@@ -168,7 +172,7 @@ export class SubjectController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Post('school-admin/publish-results')
   async adminPublishResults(
-    @Body() body: { classLevelId: string; academicTermId: string },
+    @Body() body: AdminResultActionDto,
     @CurrentUser() schoolAdmin: SchoolAdmin,
   ) {
     return this.subjectService.adminPublishResults(

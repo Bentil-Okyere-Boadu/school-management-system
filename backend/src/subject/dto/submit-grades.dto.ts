@@ -2,8 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -68,6 +68,7 @@ export class SubmitGradesDto {
     description: 'When true, submit even if some students have missing scores',
   })
   @IsOptional()
+  @IsBoolean()
   forceSubmit?: boolean;
 
   @ApiProperty({ type: [SubmitGradeEntryDto] })

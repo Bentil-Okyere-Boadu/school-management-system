@@ -464,6 +464,9 @@ export class GradingSchemeService {
   }
 
   private async syncLegacyGradingSystem(scheme: GradingScheme) {
+    if (scheme.scopeType !== 'school') {
+      return;
+    }
     const schoolId = scheme.school?.id;
     if (!schoolId) return;
 

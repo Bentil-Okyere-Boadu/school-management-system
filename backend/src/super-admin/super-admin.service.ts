@@ -192,7 +192,7 @@ export class SuperAdminService {
         { sum: number; count: number }
       >();
       for (const g of grades) {
-        if (g.student?.school?.id !== school.id) continue;
+        if (g.student?.school?.id !== school.id || g.totalScore == null) continue;
         const key = g.student.id;
         const current = perStudentTotals.get(key) || { sum: 0, count: 0 };
         current.sum += g.totalScore;

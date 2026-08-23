@@ -2,9 +2,31 @@ import { ForbiddenException } from '@nestjs/common';
 import { SchoolAdmin } from '../../school-admin/school-admin.entity';
 import { Teacher } from '../../teacher/teacher.entity';
 import { ClassLevel } from '../../class-level/class-level.entity';
+import { Subject } from '../../subject/subject.entity';
 import { Repository } from 'typeorm';
 import { Student } from 'src/student/student.entity';
 import { Parent } from 'src/parent/parent.entity';
+
+export type ParentResultVisibility = {
+  showScores: boolean;
+  showGrades: boolean;
+  showLabels: boolean;
+  showFeedback: boolean;
+};
+
+export function getParentResultVisibility(school: {
+  parentShowScores?: boolean;
+  parentShowGrades?: boolean;
+  parentShowLabels?: boolean;
+  parentShowFeedback?: boolean;
+}): ParentResultVisibility {
+  return {
+    showScores: school.parentShowScores ?? true,
+    showGrades: school.parentShowGrades ?? true,
+    showLabels: school.parentShowLabels ?? true,
+    showFeedback: school.parentShowFeedback ?? true,
+  };
+}
 
 export function assertSchoolAdminSchoolScope(
   user: Teacher | SchoolAdmin | Student | Parent,
@@ -19,10 +41,51 @@ export function assertSchoolAdminSchoolScope(
   }
 }
 
+export function assertUserSchoolScope(
+  user: Teacher | SchoolAdmin | Student | Parent,
+  ...schoolIds: string[]
+): void {
+  if (user.role?.label === 'School Admin') {
+    assertSchoolAdminSchoolScope(user, ...schoolIds);
+    return;
+  }
+  const schoolId = user.school?.id;
+  if (!schoolId || schoolIds.some((id) => id !== schoolId)) {
+    throw new ForbiddenException('You can only access data for your school');
+  }
+}
+
+export async function isTeacherAuthorizedForClassResults(
+  teacherId: string,
+  classLevelId: string,
+  classLevelRepository: Repository<ClassLevel>,
+  subjectRepository: Repository<Subject>,
+): Promise<boolean> {
+  const classLevel = await classLevelRepository.findOne({
+    where: { id: classLevelId },
+    relations: ['classTeacher'],
+  });
+  if (!classLevel) {
+    return false;
+  }
+  if (classLevel.classTeacher?.id === teacherId) {
+    return true;
+  }
+
+  const assignedCount = await subjectRepository.count({
+    where: {
+      teacher: { id: teacherId },
+      classLevels: { id: classLevelId },
+    },
+  });
+  return assignedCount > 0;
+}
+
 export async function isSchoolAdminOrClassTeacher(
   user: Teacher | SchoolAdmin | Student | Parent,
   classLevelId: string,
   classLevelRepository: Repository<ClassLevel>,
+  subjectRepository?: Repository<Subject>,
 ): Promise<boolean> {
   if (user.role?.label === 'School Admin') {
     const classLevel = await classLevelRepository.findOne({
@@ -34,6 +97,15 @@ export async function isSchoolAdminOrClassTeacher(
     }
     const adminSchoolId = (user as SchoolAdmin).school?.id;
     return !!adminSchoolId && classLevel.school.id === adminSchoolId;
+  }
+
+  if (user.role?.label === 'Teacher' && subjectRepository) {
+    return isTeacherAuthorizedForClassResults(
+      user.id,
+      classLevelId,
+      classLevelRepository,
+      subjectRepository,
+    );
   }
 
   if (user.role?.label === 'Teacher') {

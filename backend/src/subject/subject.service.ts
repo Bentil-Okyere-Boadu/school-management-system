@@ -27,7 +27,13 @@ import { StudentTermRemark } from './student-term-remark.entity';
 import { QueryString } from 'src/common/api-features/api-features';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 import { GradeSubmissionHistory } from 'src/class-level/grade-submission-history.entity';
-import { isSchoolAdminOrClassTeacher, assertSchoolAdminSchoolScope } from '../common/utils/authUtil';
+import {
+  isSchoolAdminOrClassTeacher,
+  assertSchoolAdminSchoolScope,
+  assertUserSchoolScope,
+  getParentResultVisibility,
+  ParentResultVisibility,
+} from '../common/utils/authUtil';
 import {
   applyScoreRounding,
   isPublishedResultStatus,
@@ -557,10 +563,26 @@ export class SubjectService {
     }
 
     const classLevel = await this.classLevelRepository.findOne({
-      where: { id: classLevelId },
+      where: { id: classLevelId, school: { id: schoolAdmin.school.id } },
       relations: ['students', 'classTeacher'],
     });
     if (!classLevel) throw new NotFoundException('Class level not found');
+
+    if (action === 'approve') {
+      const existingApproval =
+        await this.classLevelResultApprovalRepository.findOne({
+          where: {
+            classLevel: { id: classLevelId },
+            academicTerm: { id: term.id },
+          },
+        });
+      if (existingApproval?.resultStatus !== 'approved') {
+        throw new BadRequestException(
+          'Results must be checked and approved before locking or publishing. Use Results Review first.',
+        );
+      }
+      return this.adminPublishResults(classLevelId, term.id, schoolAdmin);
+    }
 
     let approval = await this.classLevelResultApprovalRepository.findOne({
       where: {
@@ -575,71 +597,44 @@ export class SubjectService {
         academicTerm: term,
         approved: false,
         approvedAt: undefined,
-        schoolAdminApproved: action === 'approve',
-        schoolAdminApprovedAt: action === 'approve' ? new Date() : undefined,
-        approvedBySchoolAdmin: action === 'approve' ? schoolAdmin : undefined,
-        resultStatus: action === 'approve' ? 'published' : 'draft',
-        publishedAt: action === 'approve' ? new Date() : null,
-        publishedById: action === 'approve' ? schoolAdmin.id : null,
-        publishedByName: action === 'approve'
-          ? `${schoolAdmin.firstName} ${schoolAdmin.lastName}`
-          : null,
+        schoolAdminApproved: false,
+        schoolAdminApprovedAt: undefined,
+        approvedBySchoolAdmin: undefined,
+        resultStatus: 'draft',
+        publishedAt: null,
+        publishedById: null,
+        publishedByName: null,
       });
     } else {
-      approval.schoolAdminApproved = action === 'approve';
-      approval.schoolAdminApprovedAt =
-        action === 'approve' ? new Date() : undefined;
-      approval.approvedBySchoolAdmin =
-        action === 'approve' ? schoolAdmin : undefined;
-      approval.resultStatus =
-        action === 'approve'
-          ? 'published'
-          : 'draft';
-      approval.publishedAt = action === 'approve' ? new Date() : null;
-      approval.publishedById = action === 'approve' ? schoolAdmin.id : null;
-      approval.publishedByName =
-        action === 'approve'
-          ? `${schoolAdmin.firstName} ${schoolAdmin.lastName}`
-          : null;
-      if (action === 'unapprove') {
-        approval.approved = false;
-        approval.approvedAt = undefined;
-        approval.resultStatus = 'draft';
-        approval.returnNote = null;
-        approval.returnedAt = null;
-        approval.returnedById = null;
-        approval.returnedByName = null;
-        approval.adminApprovedAt = null;
-        approval.adminApprovedById = null;
-        approval.adminApprovedByName = null;
-      }
+      approval.schoolAdminApproved = false;
+      approval.schoolAdminApprovedAt = undefined;
+      approval.approvedBySchoolAdmin = undefined;
+      approval.resultStatus = 'draft';
+      approval.publishedAt = null;
+      approval.publishedById = null;
+      approval.publishedByName = null;
+      approval.approved = false;
+      approval.approvedAt = undefined;
+      approval.returnNote = null;
+      approval.returnedAt = null;
+      approval.returnedById = null;
+      approval.returnedByName = null;
+      approval.adminApprovedAt = null;
+      approval.adminApprovedById = null;
+      approval.adminApprovedByName = null;
     }
 
     await this.classLevelResultApprovalRepository.save(approval);
+    await this.reopenStudentGradesForClassTerm(classLevelId, term.id);
 
-    if (action === 'unapprove') {
-      await this.reopenStudentGradesForClassTerm(classLevelId, term.id);
-    }
-
-    if (action === 'approve') {
-      await this.recordGradeSubmissionHistory({
-        classLevel,
-        academicTerm: term,
-        action: 'published',
-        performedById: schoolAdmin.id,
-        performedByName: `${schoolAdmin.firstName} ${schoolAdmin.lastName}`,
-        performedByRole: 'School Admin',
-      });
-    } else {
-      await this.recordGradeSubmissionHistory({
-        classLevel,
-        academicTerm: term,
-        action: 'unlocked',
-        performedById: schoolAdmin.id,
-        performedByName: `${schoolAdmin.firstName} ${schoolAdmin.lastName}`,
-        performedByRole: 'School Admin',
-      });
-    }
+    await this.recordGradeSubmissionHistory({
+      classLevel,
+      academicTerm: term,
+      action: 'unlocked',
+      performedById: schoolAdmin.id,
+      performedByName: `${schoolAdmin.firstName} ${schoolAdmin.lastName}`,
+      performedByRole: 'School Admin',
+    });
 
     const subjects = await this.subjectRepository.find({
       where: {
@@ -666,44 +661,16 @@ export class SubjectService {
         })),
     ];
 
-    if (action === 'approve') {
-      await this.notificationService.createForRecipients({
-        schoolId: schoolAdmin.school.id,
-        type: NotificationType.ResultsReleased,
-        title: 'Results locked',
-        message: `${classLevel.name} results locked for ${term.termName}`,
-        recipients: teacherRecipients,
-      });
-
-      const studentRecipients = (classLevel.students ?? [])
-        .filter((student) => !student.isArchived)
-        .map((student) => ({
-          id: student.id,
-          role: NotificationRecipientRole.Student,
-        }));
-
-      await this.notificationService.createForRecipients({
-        schoolId: schoolAdmin.school.id,
-        type: NotificationType.ResultsReleased,
-        title: 'Results available',
-        message: `${term.termName} results are now available`,
-        recipients: studentRecipients,
-      });
-    } else {
-      await this.notificationService.createForRecipients({
-        schoolId: schoolAdmin.school.id,
-        type: NotificationType.ResultsUnlocked,
-        title: 'Results unlocked',
-        message: `${classLevel.name} results unlocked for ${term.termName}`,
-        recipients: teacherRecipients,
-      });
-    }
+    await this.notificationService.createForRecipients({
+      schoolId: schoolAdmin.school.id,
+      type: NotificationType.ResultsUnlocked,
+      title: 'Results unlocked',
+      message: `${classLevel.name} results unlocked for ${term.termName}`,
+      recipients: teacherRecipients,
+    });
 
     return {
-      message:
-        action === 'approve'
-          ? 'Class level results approved by school admin.'
-          : 'Class level results unapproved by school admin.',
+      message: 'Class level results unapproved by school admin.',
       isApproved: approval.approved,
       approvedAt: approval.approvedAt,
       schoolAdminApproved: approval.schoolAdminApproved,
@@ -859,11 +826,11 @@ export class SubjectService {
       }),
       this.subjectRepository.findOne({
         where: { id: subjectId },
-        relations: ['teacher', 'school', 'classLevels'],
+        relations: ['teacher', 'school', 'classLevels', 'subjectCatalog'],
       }),
       this.classLevelRepository.findOne({
         where: { id: classLevelId },
-        relations: ['school'],
+        relations: ['school', 'classTeacher'],
       }),
       this.academicTermRepository.findOne({
         where: { id: academicTermId },
@@ -1193,6 +1160,12 @@ export class SubjectService {
     }
 
     assertSchoolAdminSchoolScope(user, student.school.id, calendar.school.id);
+    if (user.role?.label !== 'School Admin') {
+      assertUserSchoolScope(user, student.school.id, calendar.school.id);
+    }
+    if (user.role?.label === 'Student' && user.id !== studentId) {
+      throw new ForbiddenException('You can only view your own results');
+    }
 
     const studentGradesForClassLevel =
       await this.studentGradeRepository.findOne({
@@ -1214,7 +1187,19 @@ export class SubjectService {
       user,
       studentClassLevelId,
       this.classLevelRepository,
+      this.subjectRepository,
     );
+
+    if (user.role?.label === 'Teacher' && !authorizedToView) {
+      throw new ForbiddenException(
+        'You are not authorized to view results for this student',
+      );
+    }
+
+    const parentVisibility =
+      user.role?.label === 'Parent'
+        ? getParentResultVisibility(student.school)
+        : undefined;
 
     const resolvedScheme = await this.resolveGradingScheme(
       calendar.school.id,
@@ -1248,7 +1233,10 @@ export class SubjectService {
           approval?.schoolAdminApproved,
         );
 
-        if (restrictedViewer && !isPublished) {
+        if (!isPublished && !authorizedToView) {
+          if (restrictedViewer) {
+            return null;
+          }
           return null;
         }
 
@@ -1268,18 +1256,23 @@ export class SubjectService {
           relations: ['teacher'],
         });
 
+        const remarks = termRemark?.remarks || '';
+        const remarksBy = termRemark
+          ? `${termRemark.teacher.firstName} ${termRemark.teacher.lastName}`
+          : '';
+
         return {
           termName: term.termName,
           termId: term.id,
           resultStatus: approval?.resultStatus ?? 'draft',
           isPublished,
           subjects: visibleGrades.map((grade) =>
-            this.mapGradeToSubjectResult(grade),
+            this.mapGradeToSubjectResult(grade, parentVisibility),
           ),
-          teacherRemarks: termRemark?.remarks || '',
-          remarksBy: termRemark
-            ? `${termRemark.teacher.firstName} ${termRemark.teacher.lastName}`
-            : '',
+          teacherRemarks:
+            parentVisibility && !parentVisibility.showFeedback ? '' : remarks,
+          remarksBy:
+            parentVisibility && !parentVisibility.showFeedback ? '' : remarksBy,
         };
       }),
     );
@@ -1291,9 +1284,7 @@ export class SubjectService {
         academicYear: calendar.name,
         class: studentGradesForClassLevel.classLevel.name,
       },
-      terms: authorizedToView
-        ? termResults.filter(Boolean)
-        : visibleTerms.filter(Boolean),
+      terms: visibleTerms,
       gradingLegend: resolvedScheme.bands.map((band) => ({
         code: band.code,
         label: band.label,
@@ -1334,6 +1325,12 @@ export class SubjectService {
     if (!student) throw new NotFoundException('Student not found');
 
     assertSchoolAdminSchoolScope(user, student.school.id, calendar.school.id);
+    if (user.role?.label !== 'School Admin') {
+      assertUserSchoolScope(user, student.school.id, calendar.school.id);
+    }
+    if (user.role?.label === 'Student' && user.id !== studentId) {
+      throw new ForbiddenException('You can only view your own results');
+    }
 
     const studentGradesForClassLevel =
       await this.studentGradeRepository.findOne({
@@ -1364,11 +1361,24 @@ export class SubjectService {
     const studentClassLevelId = studentGradesForClassLevel.classLevel.id;
     const studentClassName = studentGradesForClassLevel.classLevel.name;
 
+    const restrictedViewer = isStudentParentRestrictedRole(user.role?.label);
     const authorizedToView = await isSchoolAdminOrClassTeacher(
       user,
       studentClassLevelId,
       this.classLevelRepository,
+      this.subjectRepository,
     );
+
+    if (user.role?.label === 'Teacher' && !authorizedToView) {
+      throw new ForbiddenException(
+        'You are not authorized to view results for this student',
+      );
+    }
+
+    const parentVisibility =
+      user.role?.label === 'Parent'
+        ? getParentResultVisibility(student.school)
+        : undefined;
 
     const approval = await this.classLevelResultApprovalRepository.findOne({
       where: {
@@ -1377,47 +1387,19 @@ export class SubjectService {
       },
     });
 
-    if (!approval?.schoolAdminApproved && !authorizedToView) {
-      const isPublished = isPublishedResultStatus(
-        approval?.resultStatus,
-        approval?.schoolAdminApproved,
-      );
-      if (
-        isStudentParentRestrictedRole(user.role?.label) &&
-        !isPublished
-      ) {
-        return {
-          studentInfo: {
-            academicYear: calendar.name,
-            term: academicTerm.termName,
-            class: studentClassName,
-            isApproved: false,
-            approvedAt: undefined,
-            schoolAdminApproved: false,
-            schoolAdminApprovedAt: undefined,
-            resultStatus: approval?.resultStatus ?? 'draft',
-          },
-          subjects: [],
-          teacherRemarks: '',
-          remarksBy: '',
-          gradingLegend: [],
-        };
-      }
-    }
-
-    const restrictedViewer = isStudentParentRestrictedRole(user.role?.label);
     const isPublished = isPublishedResultStatus(
       approval?.resultStatus,
       approval?.schoolAdminApproved,
     );
-    if (restrictedViewer && !isPublished) {
+
+    if (!isPublished && !authorizedToView) {
       return {
         studentInfo: {
           academicYear: calendar.name,
           term: academicTerm.termName,
           class: studentClassName,
-          isApproved: approval?.approved || false,
-          approvedAt: approval?.approvedAt,
+          isApproved: false,
+          approvedAt: undefined,
           schoolAdminApproved: false,
           schoolAdminApprovedAt: undefined,
           resultStatus: approval?.resultStatus ?? 'draft',
@@ -1444,24 +1426,10 @@ export class SubjectService {
 
     // Get the class level from the first grade (assuming all grades are for the same class level)
     const classLevelId = studentGrades[0]?.classLevel?.id;
-
-    // Fetch approval status for this class level and term
-    let isApproved = false;
-    let approvedAt: Date | undefined = undefined;
-    let schoolAdminApproved = false;
-    let schoolAdminApprovedAt: Date | undefined = undefined;
-    if (classLevelId) {
-      const approval = await this.classLevelResultApprovalRepository.findOne({
-        where: {
-          classLevel: { id: classLevelId },
-          academicTerm: { id: academicTermId },
-        },
-      });
-      isApproved = approval?.approved || false;
-      approvedAt = approval?.approvedAt;
-      schoolAdminApproved = approval?.schoolAdminApproved || false;
-      schoolAdminApprovedAt = approval?.schoolAdminApprovedAt;
-    }
+    const isApproved = approval?.approved || false;
+    const approvedAt = approval?.approvedAt;
+    const schoolAdminApproved = approval?.schoolAdminApproved || false;
+    const schoolAdminApprovedAt = approval?.schoolAdminApprovedAt;
 
     const subjectIds = studentGrades.map((g) => g.subject.id);
     const allGradesInTerm = await this.studentGradeRepository.find({
@@ -1494,7 +1462,9 @@ export class SubjectService {
         (g) => g.subject.id === grade.subject.id,
       );
 
-      subjectGrades.sort((a, b) => b.totalScore - a.totalScore);
+      subjectGrades.sort(
+        (a, b) => (b.totalScore ?? -1) - (a.totalScore ?? -1),
+      );
 
       const rank =
         subjectGrades.findIndex((g) => g.student.id === studentId) + 1;
@@ -1505,10 +1475,18 @@ export class SubjectService {
           ? Math.round(((totalStudents - rank) / (totalStudents - 1)) * 100)
           : 100;
 
+      const mapped = this.mapGradeToSubjectResult(grade, parentVisibility);
+
       return {
-        ...this.mapGradeToSubjectResult(grade),
-        percentile: `${percentile}th`,
-        rank: toOrdinal(rank),
+        ...mapped,
+        percentile:
+          parentVisibility && !parentVisibility.showScores
+            ? undefined
+            : `${percentile}th`,
+        rank:
+          parentVisibility && !parentVisibility.showScores
+            ? undefined
+            : toOrdinal(rank),
       };
     });
 
@@ -1534,10 +1512,16 @@ export class SubjectService {
         publishedAt: approval?.publishedAt ?? null,
       },
       subjects: resultWithPercentile,
-      teacherRemarks: termRemark?.remarks || '',
-      remarksBy: termRemark
-        ? `${termRemark.teacher.firstName} ${termRemark.teacher.lastName}`
-        : '',
+      teacherRemarks:
+        parentVisibility && !parentVisibility.showFeedback
+          ? ''
+          : termRemark?.remarks || '',
+      remarksBy:
+        parentVisibility && !parentVisibility.showFeedback
+          ? ''
+          : termRemark
+            ? `${termRemark.teacher.firstName} ${termRemark.teacher.lastName}`
+            : '',
       gradingLegend: resolvedScheme.bands.map((band) => ({
         code: band.code,
         label: band.label,
@@ -2021,17 +2005,17 @@ export class SubjectService {
           }
         }
 
-        const resolvedClass = classScore ?? 0;
-        const resolvedExam = examScore ?? 0;
-        const rawTotal = resolvedClass + resolvedExam;
-        const totalScore = applyScoreRounding(
-          rawTotal,
-          resolvedScheme.rounding,
-        );
+        const resolvedClass =
+          classScore === null || classScore === undefined ? null : classScore;
+        const resolvedExam =
+          examScore === null || examScore === undefined ? null : examScore;
+        const hasBothScores =
+          resolvedClass !== null && resolvedExam !== null;
 
-        let grade: string;
-        let gradeLabel: string;
-        let bandDescription: string | null;
+        let totalScore: number | null = null;
+        let grade: string | null = null;
+        let gradeLabel: string | null = null;
+        let bandDescription: string | null = null;
 
         if (entry.overrideGrade?.trim() && resolvedScheme.allowManualOverride) {
           grade = entry.overrideGrade.trim();
@@ -2041,7 +2025,19 @@ export class SubjectService {
           studentGrade.overrideReason = entry.overrideReason?.trim() ?? null;
           studentGrade.overriddenById = teacher.id;
           studentGrade.overriddenByName = `${teacher.firstName} ${teacher.lastName}`;
-        } else {
+          if (hasBothScores) {
+            const rawTotal = resolvedClass + resolvedExam;
+            totalScore = applyScoreRounding(
+              rawTotal,
+              resolvedScheme.rounding,
+            );
+          }
+        } else if (hasBothScores) {
+          const rawTotal = resolvedClass + resolvedExam;
+          totalScore = applyScoreRounding(
+            rawTotal,
+            resolvedScheme.rounding,
+          );
           const resolved = resolveGradeFromBands(
             totalScore,
             gradingBands,
@@ -2050,6 +2046,11 @@ export class SubjectService {
           grade = resolved.grade;
           gradeLabel = resolved.gradeLabel;
           bandDescription = resolved.bandDescription;
+          studentGrade.overrideGrade = null;
+          studentGrade.overrideReason = null;
+          studentGrade.overriddenById = null;
+          studentGrade.overriddenByName = null;
+        } else {
           studentGrade.overrideGrade = null;
           studentGrade.overrideReason = null;
           studentGrade.overriddenById = null;
@@ -2201,8 +2202,25 @@ export class SubjectService {
     await this.gradeSubmissionHistoryRepository.save(entry);
   }
 
-  private mapGradeToSubjectResult(grade: StudentGrade) {
-    return {
+  private mapGradeToSubjectResult(
+    grade: StudentGrade,
+    parentVisibility?: ParentResultVisibility,
+  ) {
+    const result: {
+      subject: string;
+      classScore: number | null;
+      examScore: number | null;
+      totalScore: number | null;
+      grade: string | null;
+      gradeLabel: string | null;
+      bandDescription: string | null;
+      feedback: string | null;
+      percentage: string | null;
+      hasOverride: boolean;
+      overrideReason: string | null;
+      gradingSchemeId: string | null;
+      gradingSchemeVersion: number | null;
+    } = {
       subject: grade.subject.subjectCatalog.name,
       classScore: grade.classScore,
       examScore: grade.examScore,
@@ -2211,12 +2229,38 @@ export class SubjectService {
       gradeLabel: grade.gradeLabel,
       bandDescription: grade.bandDescription,
       feedback: grade.feedback,
-      percentage: `${Math.round(grade.totalScore)}%`,
+      percentage:
+        grade.totalScore == null
+          ? null
+          : `${Math.round(grade.totalScore)}%`,
       hasOverride: Boolean(grade.overrideGrade),
       overrideReason: grade.overrideReason,
       gradingSchemeId: grade.gradingSchemeId,
       gradingSchemeVersion: grade.gradingSchemeVersion,
     };
+
+    if (!parentVisibility) {
+      return result;
+    }
+
+    if (!parentVisibility.showScores) {
+      result.classScore = null;
+      result.examScore = null;
+      result.totalScore = null;
+      result.percentage = null;
+    }
+    if (!parentVisibility.showGrades) {
+      result.grade = null;
+    }
+    if (!parentVisibility.showLabels) {
+      result.gradeLabel = null;
+      result.bandDescription = null;
+    }
+    if (!parentVisibility.showFeedback) {
+      result.feedback = null;
+    }
+
+    return result;
   }
 
   private async resolveGradingBandsForContext(

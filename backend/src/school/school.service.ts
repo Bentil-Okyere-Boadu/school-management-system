@@ -516,6 +516,7 @@ export class SchoolService {
         });
 
         grades.forEach((grade) => {
+          if (grade.totalScore == null) return;
           schoolTotalGrades += grade.totalScore;
           numGrades++;
         });

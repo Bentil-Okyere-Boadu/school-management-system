@@ -73,8 +73,10 @@ function AcademicsCard({
   }, [child.results?.terms, selectedTermName]);
 
   const subjects = terms.flatMap((term) => term.subjects ?? []);
-  const avg = averagePercentage(subjects.map((subject) => subject.percentage));
-  const band = overallPerformanceBand(avg);
+  const avg = visibility.showScores
+    ? averagePercentage(subjects.map((subject) => subject.percentage))
+    : null;
+  const band = visibility.showScores ? overallPerformanceBand(avg) : null;
   const pending = child.resultsPending || subjects.length === 0;
   const teacherRemarks =
     terms.find((term) => term.teacherRemarks)?.teacherRemarks ||
@@ -188,7 +190,7 @@ function AcademicsCard({
               </tbody>
             </table>
           </div>
-          {teacherRemarks ? (
+          {visibility.showFeedback && teacherRemarks ? (
             <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3">
               <p className="text-xs font-medium text-zinc-500 mb-1">
                 Class teacher remark
