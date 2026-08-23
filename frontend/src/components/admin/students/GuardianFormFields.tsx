@@ -66,6 +66,7 @@ const GuardianFormFields = ({ value, onChange }: GuardianFormFieldsProps) => {
       <InputField
         className="!py-0"
         label="Phone"
+        required
         value={value.phone}
         onChange={(e) => update({ phone: e.target.value })}
       />
