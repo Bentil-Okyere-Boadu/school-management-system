@@ -14,11 +14,18 @@ import {
 import {
   useActivateGradingScheme,
   useCreateGradingScheme,
+  useGetCalendars,
   useGetClassLevels,
   useUpdateGradingScheme,
 } from "@/hooks/school-admin";
 import { MultiSelect, NativeSelect, Switch } from "@mantine/core";
 import { toast } from "react-toastify";
+import { IconTrash } from "@tabler/icons-react";
+import {
+  buildTermSelectData,
+  getSortedSchoolTerms,
+  getTermLabel,
+} from "@/utils/schoolTerms";
 import {
   BandFormRow,
   SUGGESTED_AF_BANDS,
@@ -65,6 +72,14 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
   const [confirmActivateOpen, setConfirmActivateOpen] = useState(false);
 
   const { classLevels } = useGetClassLevels();
+  const { calendars } = useGetCalendars();
+  const termSelectData = useMemo(() => {
+    const sorted = getSortedSchoolTerms(calendars);
+    return [
+      { value: "", label: "All terms (no restriction)" },
+      ...buildTermSelectData(calendars ?? [], sorted),
+    ];
+  }, [calendars]);
   const { mutate: createScheme, isPending: creating } = useCreateGradingScheme();
   const { mutate: updateScheme, isPending: updating } = useUpdateGradingScheme();
   const { mutate: activateScheme, isPending: activating } =
@@ -132,7 +147,7 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
     passMark,
     rounding,
     allowManualOverride,
-    effectiveFrom: effectiveFrom.trim() || null,
+    effectiveFrom: effectiveFrom || null,
     scopeType,
     classLevelIds: scopeType === "classLevels" ? classLevelIds : [],
     bands: bandsToPayload(bands),
@@ -251,9 +266,9 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
         onSave={onPrimary}
         busy={busy}
         saveDisabled={busy}
-        dialogWidth="w-[720px] max-w-[95vw]"
+        dialogWidth="w-[min(96vw,920px)] max-w-none"
       >
-        <div className="space-y-4 px-1 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-4 px-1">
           {step === 1 && (
             <div className="space-y-3">
               <InputField
@@ -298,12 +313,13 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
                   setRounding(e.currentTarget.value as GradingSchemeRounding)
                 }
               />
-              <InputField
+              <NativeSelect
                 label="Effective from"
-                isTransulent={false}
+                description="Scheme applies from this term onward when grading"
+                data={termSelectData}
                 value={effectiveFrom}
-                onChange={(e) => setEffectiveFrom(e.target.value)}
-                placeholder="e.g. 2025/26 Term 1"
+                onChange={(e) => setEffectiveFrom(e.currentTarget.value)}
+                disabled={termSelectData.length <= 1}
               />
               <NativeSelect
                 label="Scope"
@@ -353,9 +369,9 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
               {bands.map((band, index) => (
                 <div
                   key={index}
-                  className="grid grid-cols-12 gap-2 items-end border border-neutral-200 rounded-lg p-2"
+                  className="grid grid-cols-12 gap-3 items-start border border-neutral-200 rounded-lg p-3"
                 >
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <InputField
                       label="Code"
                       isTransulent={false}
@@ -363,7 +379,7 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
                       onChange={(e) => updateBand(index, { code: e.target.value })}
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2">
                     <InputField
                       label="Label"
                       isTransulent={false}
@@ -373,7 +389,7 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <InputField
                       label="Min"
                       type="number"
@@ -387,7 +403,7 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <InputField
                       label="Max"
                       type="number"
@@ -401,7 +417,7 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
                       }
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-6">
                     <InputField
                       label="Description"
                       isTransulent={false}
@@ -411,15 +427,24 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
                       }
                     />
                   </div>
-                  <div className="col-span-1 pb-2">
+                  <div className="col-span-1 mb-4">
+                    <span
+                      className="mb-1.5 text-xs block invisible select-none"
+                      aria-hidden="true"
+                    >
+                      &nbsp;
+                    </span>
                     <button
                       type="button"
-                      className="text-xs text-red-500 cursor-pointer"
+                      aria-label="Remove band"
+                      title="Remove band"
+                      className="h-10 w-full flex items-center justify-center rounded-md text-red-500 hover:bg-red-50 hover:text-red-600 cursor-pointer disabled:opacity-40 disabled:hover:bg-transparent"
                       onClick={() =>
                         setBands((prev) => prev.filter((_, i) => i !== index))
                       }
+                      disabled={bands.length <= 1}
                     >
-                      Remove
+                      <IconTrash size={18} stroke={1.75} />
                     </button>
                   </div>
                 </div>
@@ -502,7 +527,7 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
               </p>
               <p>
                 <span className="font-medium">Effective from:</span>{" "}
-                {effectiveFrom || "—"}
+                {getTermLabel(calendars, effectiveFrom)}
               </p>
               <p>
                 <span className="font-medium">Bands:</span> {bands.length}

@@ -14,10 +14,12 @@ import {
   useDeactivateGradingScheme,
   useDeleteGradingScheme,
   useDuplicateGradingScheme,
+  useGetCalendars,
   useGetGradingSchemes,
   useNewGradingSchemeVersion,
 } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
+import { getTermLabel } from "@/utils/schoolTerms";
 import { GradingSchemeWizardDialog } from "./GradingSchemeWizardDialog";
 import { GradingSchemeDetailDrawer } from "./GradingSchemeDetailDrawer";
 
@@ -58,6 +60,7 @@ export const GradingSchemesSection: React.FC = () => {
   const { schemes, isLoading, refetch } = useGetGradingSchemes(
     tab === "all" ? "" : tab,
   );
+  const { calendars } = useGetCalendars();
   const { mutate: activateScheme, isPending: activating } =
     useActivateGradingScheme();
   const { mutate: deactivateScheme, isPending: deactivating } =
@@ -210,7 +213,7 @@ export const GradingSchemesSection: React.FC = () => {
                   </span>
                 </td>
                 <td className="px-3 py-2.5 text-neutral-700">
-                  {scheme.effectiveFrom || "—"}
+                  {getTermLabel(calendars, scheme.effectiveFrom, "—")}
                 </td>
                 <td className="px-3 py-2.5 text-neutral-700">
                   {formatDate(scheme.updatedAt)}

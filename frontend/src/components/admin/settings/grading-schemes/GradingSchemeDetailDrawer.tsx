@@ -3,6 +3,8 @@
 import React from "react";
 import { GradingScheme } from "@/@types";
 import { IconX } from "@tabler/icons-react";
+import { useGetCalendars } from "@/hooks/school-admin";
+import { getTermLabel } from "@/utils/schoolTerms";
 
 type Props = {
   scheme: GradingScheme | null;
@@ -36,6 +38,8 @@ export const GradingSchemeDetailDrawer: React.FC<Props> = ({
   onNewVersion,
   onEdit,
 }) => {
+  const { calendars } = useGetCalendars();
+
   if (!scheme) return null;
 
   const classesUsing =
@@ -85,7 +89,10 @@ export const GradingSchemeDetailDrawer: React.FC<Props> = ({
               Manual override:{" "}
               {scheme.allowManualOverride ? "Allowed" : "Not allowed"}
             </p>
-            <p>Effective from: {scheme.effectiveFrom || "—"}</p>
+            <p>
+              Effective from:{" "}
+              {getTermLabel(calendars, scheme.effectiveFrom, "All terms")}
+            </p>
             <p>Classes using: {classesUsing}</p>
             {scheme.usedByClassCount >= 0 && (
               <p className="text-neutral-500">

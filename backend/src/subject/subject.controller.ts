@@ -209,14 +209,16 @@ export class SubjectController {
     );
   }
 
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.Teacher)
   @Get('grading-legend')
   async getGradingLegend(
-    @Query('schoolId') schoolId: string,
+    @CurrentUser() teacher: Teacher,
     @Query('classLevelId') classLevelId?: string,
     @Query('academicTermId') academicTermId?: string,
   ) {
     return this.subjectService.getActiveGradingLegend(
-      schoolId,
+      teacher.school.id,
       classLevelId,
       academicTermId,
     );
@@ -313,13 +315,9 @@ export class SubjectController {
     // If only term is provided, infer calendar from term
     if (termId && !calendarId) {
       // Use repository call to get the term with calendar
-      const term = await this.academicCalendarService['termRepository'].findOne(
-        {
-          where: { id: termId },
-          relations: ['academicCalendar'],
-        },
+      const term = await this.academicCalendarService.getTermWithCalendar(
+        termId,
       );
-      if (!term) throw new NotFoundException('Academic term not found');
       calendarId = term.academicCalendar.id;
     }
 
@@ -356,6 +354,7 @@ export class SubjectController {
       classLevelId,
       subjectId,
       String(termId),
+      teacher.id,
     );
   }
 

@@ -27,7 +27,7 @@ import { StudentTermRemark } from './student-term-remark.entity';
 import { QueryString } from 'src/common/api-features/api-features';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 import { GradeSubmissionHistory } from 'src/class-level/grade-submission-history.entity';
-import { isSchoolAdminOrClassTeacher } from '../common/utils/authUtil';
+import { isSchoolAdminOrClassTeacher, assertSchoolAdminSchoolScope } from '../common/utils/authUtil';
 import {
   applyScoreRounding,
   isPublishedResultStatus,
@@ -840,6 +840,72 @@ export class SubjectService {
     return results;
   }
 
+  private async assertTeacherGradingAccess(
+    teacherId: string,
+    classLevelId: string,
+    subjectId: string,
+    academicTermId: string,
+  ): Promise<{
+    teacher: Teacher;
+    classLevel: ClassLevel;
+    subject: Subject;
+    academicTerm: AcademicTerm;
+    school: School;
+  }> {
+    const [teacher, subject, classLevel, academicTerm] = await Promise.all([
+      this.teacherRepository.findOne({
+        where: { id: teacherId },
+        relations: ['school'],
+      }),
+      this.subjectRepository.findOne({
+        where: { id: subjectId },
+        relations: ['teacher', 'school', 'classLevels'],
+      }),
+      this.classLevelRepository.findOne({
+        where: { id: classLevelId },
+        relations: ['school'],
+      }),
+      this.academicTermRepository.findOne({
+        where: { id: academicTermId },
+        relations: ['academicCalendar', 'academicCalendar.school'],
+      }),
+    ]);
+
+    if (!teacher) throw new NotFoundException('Teacher not found');
+    if (!subject) throw new NotFoundException('Subject not found');
+    if (!classLevel) throw new NotFoundException('Class level not found');
+    if (!academicTerm) throw new NotFoundException('Academic term not found');
+
+    const schoolId = teacher.school.id;
+    if (subject.school.id !== schoolId) {
+      throw new ForbiddenException('Subject does not belong to your school');
+    }
+    if (classLevel.school.id !== schoolId) {
+      throw new ForbiddenException('Class level does not belong to your school');
+    }
+    if (academicTerm.academicCalendar.school.id !== schoolId) {
+      throw new ForbiddenException(
+        'Academic term does not belong to your school',
+      );
+    }
+    if (subject.teacher?.id !== teacherId) {
+      throw new ForbiddenException('You can only grade your assigned subjects');
+    }
+    if (!subject.classLevels?.some((cl) => cl.id === classLevelId)) {
+      throw new BadRequestException(
+        'This subject is not assigned to the selected class',
+      );
+    }
+
+    return {
+      teacher,
+      classLevel,
+      subject,
+      academicTerm,
+      school: subject.school,
+    };
+  }
+
   private async calculateAggregatedAssignmentScores(
     classLevelId: string,
     subjectCatalogId: string,
@@ -927,36 +993,32 @@ export class SubjectService {
   async getStudentsForGrading(
     classLevelId: string,
     subjectId: string,
-    academicTermId?: string,
+    academicTermId: string,
+    teacherId: string,
   ) {
     if (!classLevelId) {
       throw new BadRequestException('classLevel is required');
     }
-    // Fetch class level with students and their profiles
-    const classLevel = await this.classLevelRepository.findOne({
-      where: { id: classLevelId },
-      relations: ['students', 'students.profile'],
-    });
-
-    if (!classLevel) throw new NotFoundException('Class level not found');
-
-    // Fetch subject with catalog to get subject name
-
     if (!subjectId) {
       throw new BadRequestException('subject is required');
     }
-    const subject = await this.subjectRepository.findOne({
-      where: { id: subjectId },
-      relations: ['subjectCatalog', 'school'],
-    });
-    if (!subject) throw new NotFoundException('Subject not found');
 
-    // Fetch academic term and calendar
-    const academicTerm = await this.academicTermRepository.findOne({
-      where: { id: academicTermId },
-      relations: ['academicCalendar'],
+    const { classLevel, subject, academicTerm } =
+      await this.assertTeacherGradingAccess(
+        teacherId,
+        classLevelId,
+        subjectId,
+        academicTermId,
+      );
+
+    // Fetch class level with students and their profiles
+    const classLevelWithStudents = await this.classLevelRepository.findOne({
+      where: { id: classLevel.id },
+      relations: ['students', 'students.profile'],
     });
-    if (!academicTerm) throw new NotFoundException('Academic term not found');
+    if (!classLevelWithStudents) {
+      throw new NotFoundException('Class level not found');
+    }
 
     // Fetch existing grades for this subject/class/term
     const grades = await this.studentGradeRepository.find({
@@ -990,7 +1052,7 @@ export class SubjectService {
       minScore: band.minScore,
       maxScore: band.maxScore,
     }));
-    const studentIds = classLevel.students.map((s) => s.id);
+    const studentIds = classLevelWithStudents.students.map((s) => s.id);
     const aggregatedScoresMap = await this.calculateAggregatedAssignmentScores(
       classLevelId,
       subject.subjectCatalog.id,
@@ -1006,8 +1068,8 @@ export class SubjectService {
           name: subject.subjectCatalog.name,
         },
         classLevel: {
-          id: classLevel.id,
-          name: classLevel.name,
+          id: classLevelWithStudents.id,
+          name: classLevelWithStudents.name,
         },
         academicTerm: {
           id: academicTerm.id,
@@ -1029,7 +1091,7 @@ export class SubjectService {
         examScoreMax,
         gradingBands,
       },
-      students: classLevel.students.map((student) => {
+      students: classLevelWithStudents.students.map((student) => {
         const existingGrade = gradeMap.get(student.id);
         const aggregatedScore = aggregatedScoresMap.get(student.id);
         const classScore =
@@ -1129,6 +1191,8 @@ export class SubjectService {
     if (!student) {
       throw new NotFoundException(`Student with ID ${studentId} not found`);
     }
+
+    assertSchoolAdminSchoolScope(user, student.school.id, calendar.school.id);
 
     const studentGradesForClassLevel =
       await this.studentGradeRepository.findOne({
@@ -1252,7 +1316,13 @@ export class SubjectService {
         where: { id: academicCalendarId },
         relations: ['school'],
       }),
-      this.academicTermRepository.findOne({ where: { id: academicTermId } }),
+      this.academicTermRepository.findOne({
+        where: {
+          id: academicTermId,
+          academicCalendar: { id: academicCalendarId },
+        },
+        relations: ['academicCalendar', 'academicCalendar.school'],
+      }),
       this.studentRepository.findOne({
         where: { id: studentId },
         relations: ['classLevels', 'school'],
@@ -1262,6 +1332,8 @@ export class SubjectService {
     if (!calendar) throw new NotFoundException('Academic calendar not found');
     if (!academicTerm) throw new NotFoundException('Academic term not found');
     if (!student) throw new NotFoundException('Student not found');
+
+    assertSchoolAdminSchoolScope(user, student.school.id, calendar.school.id);
 
     const studentGradesForClassLevel =
       await this.studentGradeRepository.findOne({
@@ -1603,8 +1675,7 @@ export class SubjectService {
     );
 
     if (
-      approval?.resultStatus !== 'approved' &&
-      approval?.resultStatus !== 'submitted'
+      approval?.resultStatus !== 'approved'
     ) {
       throw new BadRequestException(
         'Results must be checked and approved before publishing',
@@ -1832,35 +1903,13 @@ export class SubjectService {
       forceSubmit,
     } = dto;
 
-    const [classLevel, subject, academicTerm, teacher] = await Promise.all([
-      this.classLevelRepository.findOne({
-        where: { id: classLevelId },
-        relations: ['classTeacher'],
-      }),
-      this.subjectRepository.findOne({
-        where: { id: subjectId },
-        relations: ['school'],
-      }),
-      this.academicTermRepository.findOne({
-        where: { id: academicTermId },
-        relations: ['academicCalendar'],
-      }),
-      this.teacherRepository.findOne({
-        where: { id: teacherId },
-      }),
-    ]);
-
-    if (!classLevel) throw new NotFoundException('Class level not found');
-    if (!subject) throw new NotFoundException('Subject not found');
-    if (!academicTerm) throw new NotFoundException('Academic term not found');
-    if (!teacher) throw new NotFoundException('Teacher not found');
-
-    const school = await this.schoolRepository.findOne({
-      where: { id: subject.school.id },
-    });
-    if (!school) {
-      throw new NotFoundException('School not found');
-    }
+    const { teacher, classLevel, subject, academicTerm, school } =
+      await this.assertTeacherGradingAccess(
+        teacherId,
+        classLevelId,
+        subjectId,
+        academicTermId,
+      );
 
     const classScoreMax = school.classScorePercentage || 30;
     const examScoreMax = school.examScorePercentage || 70;
@@ -1912,10 +1961,15 @@ export class SubjectService {
     const results = await Promise.all(
       grades.map(async (entry) => {
         const student = await this.studentRepository.findOne({
-          where: { id: entry.studentId },
+          where: {
+            id: entry.studentId,
+            classLevels: { id: classLevel.id },
+          },
         });
         if (!student) {
-          throw new NotFoundException(`Student ${entry.studentId} not found`);
+          throw new BadRequestException(
+            `Student ${entry.studentId} is not in this class`,
+          );
         }
 
         const classScore =
