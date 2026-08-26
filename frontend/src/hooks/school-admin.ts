@@ -1929,6 +1929,7 @@ export const useAdminResultsReview = (filters: {
 }) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["adminResultsReview", filters],
+    enabled: !!filters.academicTermId,
     queryFn: () => {
       const params = new URLSearchParams();
       if (filters.classLevelId) params.set("classLevelId", filters.classLevelId);

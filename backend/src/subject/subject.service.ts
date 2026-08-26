@@ -324,6 +324,12 @@ export class SubjectService {
       gradeMap.set(`${grade.student.id}_${grade.subject.id}`, grade);
     }
 
+    const resolvedScheme = await this.resolveGradingScheme(
+      teacher.school.id,
+      classLevelId,
+      term.id,
+    );
+
     const missingGrades: Array<{
       student: { id: string; firstName: string; lastName: string };
       missingSubjects: Array<{
@@ -344,7 +350,11 @@ export class SubjectService {
         };
       }[] = [];
       for (const subject of subjects) {
-        if (!gradeMap.has(`${student.id}_${subject.id}`)) {
+        const grade = gradeMap.get(`${student.id}_${subject.id}`);
+        if (
+          !grade ||
+          !this.isGradeComplete(grade, resolvedScheme.allowManualOverride)
+        ) {
           missingSubjects.push({
             subjectId: subject.id,
             subjectName: subject.subjectCatalog.name,
@@ -1102,16 +1112,33 @@ export class SubjectService {
     },
   ) {
     const [student, teacher, academicTerm] = await Promise.all([
-      this.studentRepository.findOne({ where: { id: data.studentId } }),
-      this.teacherRepository.findOne({ where: { id: teacherId } }),
+      this.studentRepository.findOne({
+        where: { id: data.studentId },
+        relations: ['school'],
+      }),
+      this.teacherRepository.findOne({
+        where: { id: teacherId },
+        relations: ['school'],
+      }),
       this.academicTermRepository.findOne({
         where: { id: data.academicTermId },
+        relations: ['academicCalendar', 'academicCalendar.school'],
       }),
     ]);
 
     if (!student) throw new NotFoundException('Student not found');
     if (!teacher) throw new NotFoundException('Teacher not found');
     if (!academicTerm) throw new NotFoundException('Academic term not found');
+
+    const schoolId = teacher.school.id;
+    if (student.school.id !== schoolId) {
+      throw new ForbiddenException('Student does not belong to your school');
+    }
+    if (academicTerm.academicCalendar.school.id !== schoolId) {
+      throw new ForbiddenException(
+        'Academic term does not belong to your school',
+      );
+    }
 
     // Find existing remark or create new one
     let remark = await this.remarkRepository.findOne({
@@ -1153,7 +1180,7 @@ export class SubjectService {
 
     const student = await this.studentRepository.findOne({
       where: { id: studentId },
-      relations: ['school'],
+      relations: ['school', 'classLevels'],
     });
     if (!student) {
       throw new NotFoundException(`Student with ID ${studentId} not found`);
@@ -1167,13 +1194,28 @@ export class SubjectService {
       throw new ForbiddenException('You can only view your own results');
     }
 
-    const studentGradesForClassLevel =
-      await this.studentGradeRepository.findOne({
-        where: { student: { id: studentId } },
-        relations: ['classLevel'],
-      });
+    const calendarGrades = await this.studentGradeRepository.find({
+      where: {
+        student: { id: studentId },
+        academicCalendar: { id: academicCalendarId },
+      },
+      relations: ['classLevel', 'academicTerm'],
+    });
 
-    if (!studentGradesForClassLevel?.classLevel) {
+    let studentClassLevelId: string | null = null;
+    let studentClassName: string | null = null;
+    if (calendarGrades.length) {
+      const sortedCalendarGrades = [...calendarGrades].sort((a, b) =>
+        b.academicTerm.startDate.localeCompare(a.academicTerm.startDate),
+      );
+      studentClassLevelId = sortedCalendarGrades[0].classLevel.id;
+      studentClassName = sortedCalendarGrades[0].classLevel.name;
+    } else if (student.classLevels?.length) {
+      studentClassLevelId = student.classLevels[0].id;
+      studentClassName = student.classLevels[0].name;
+    }
+
+    if (!studentClassLevelId) {
       return {
         studentInfo: { academicYear: calendar.name, class: null },
         terms: [],
@@ -1181,7 +1223,6 @@ export class SubjectService {
       };
     }
 
-    const studentClassLevelId = studentGradesForClassLevel.classLevel.id;
     const restrictedViewer = isStudentParentRestrictedRole(user.role?.label);
     const authorizedToView = await isSchoolAdminOrClassTeacher(
       user,
@@ -1282,16 +1323,21 @@ export class SubjectService {
     return {
       studentInfo: {
         academicYear: calendar.name,
-        class: studentGradesForClassLevel.classLevel.name,
+        class: studentClassName,
       },
       terms: visibleTerms,
-      gradingLegend: resolvedScheme.bands.map((band) => ({
-        code: band.code,
-        label: band.label,
-        description: band.description,
-        minScore: band.minScore,
-        maxScore: band.maxScore,
-      })),
+      gradingLegend:
+        parentVisibility &&
+        !parentVisibility.showGrades &&
+        !parentVisibility.showLabels
+          ? []
+          : resolvedScheme.bands.map((band) => ({
+              code: band.code,
+              label: band.label,
+              description: band.description,
+              minScore: band.minScore,
+              maxScore: band.maxScore,
+            })),
       passMark: resolvedScheme.passMark,
     };
   }
@@ -1544,15 +1590,31 @@ export class SubjectService {
       schoolAdmin.school.id,
     );
 
-    if (!approval?.approved && approval?.resultStatus !== 'submitted') {
+    if (!approval || approval.resultStatus !== 'submitted') {
+      const status = approval?.resultStatus ?? 'draft';
+      if (status === 'published') {
+        throw new BadRequestException(
+          'Published results cannot be checked again',
+        );
+      }
+      if (status === 'returned') {
+        throw new BadRequestException(
+          'Returned results must be resubmitted by the class teacher before checking',
+        );
+      }
+      if (status === 'approved') {
+        throw new BadRequestException('Results have already been checked');
+      }
       throw new BadRequestException(
         'Class results must be submitted by the class teacher before checking',
       );
     }
 
-    if (!approval) {
-      throw new BadRequestException('No submitted results found for this class');
-    }
+    await this.assertNoIncompleteClassGrades(
+      classLevelId,
+      academicTermId,
+      schoolAdmin.school.id,
+    );
 
     approval.resultStatus = 'approved';
     approval.adminApprovedAt = new Date();
@@ -1591,7 +1653,18 @@ export class SubjectService {
       throw new BadRequestException('No submitted results found for this class');
     }
 
+    if (
+      approval.resultStatus !== 'submitted' &&
+      approval.resultStatus !== 'approved'
+    ) {
+      throw new BadRequestException(
+        'Only submitted or checked results can be returned',
+      );
+    }
+
     approval.resultStatus = 'returned';
+    approval.approved = false;
+    approval.approvedAt = undefined;
     approval.returnNote = returnNote.trim();
     approval.returnedAt = new Date();
     approval.returnedById = schoolAdmin.id;
@@ -1666,6 +1739,12 @@ export class SubjectService {
       );
     }
 
+    await this.assertNoIncompleteClassGrades(
+      classLevelId,
+      academicTermId,
+      schoolAdmin.school.id,
+    );
+
     approval.resultStatus = 'published';
     approval.schoolAdminApproved = true;
     approval.schoolAdminApprovedAt = new Date();
@@ -1735,30 +1814,60 @@ export class SubjectService {
       academicTermId?: string;
     },
   ) {
-    const schoolId = schoolAdmin.school.id;
-    let term: AcademicTerm | null = null;
-    if (filters.academicTermId) {
-      term = await this.academicTermRepository.findOne({
-        where: {
-          id: filters.academicTermId,
-          academicCalendar: { school: { id: schoolId } },
-        },
-      });
-    } else {
-      term = await this.academicTermRepository.findOne({
-        where: { academicCalendar: { school: { id: schoolId } } },
-        order: { startDate: 'DESC' },
-      });
+    if (!filters.academicTermId) {
+      throw new BadRequestException('academicTermId is required');
     }
+
+    const schoolId = schoolAdmin.school.id;
+    const term = await this.academicTermRepository.findOne({
+      where: {
+        id: filters.academicTermId,
+        academicCalendar: { school: { id: schoolId } },
+      },
+    });
     if (!term) throw new NotFoundException('Academic term not found');
+
+    const schoolClasses = await this.classLevelRepository.find({
+      where: { school: { id: schoolId } },
+      order: { name: 'ASC' },
+    });
+    const classIds = schoolClasses.map((c) => c.id);
+    const approvals = classIds.length
+      ? await this.classLevelResultApprovalRepository.find({
+          where: {
+            academicTerm: { id: term.id },
+            classLevel: { id: In(classIds) },
+          },
+          relations: ['classLevel'],
+        })
+      : [];
+    const approvalByClass = new Map(
+      approvals.map((a) => [a.classLevel.id, a]),
+    );
+
+    const classes = schoolClasses.map((classLevel) => {
+      const approval = approvalByClass.get(classLevel.id);
+      return {
+        classLevelId: classLevel.id,
+        className: classLevel.name,
+        resultStatus: approval?.resultStatus ?? 'draft',
+        teacherApproved: approval?.approved ?? false,
+        schoolAdminApproved: approval?.schoolAdminApproved ?? false,
+      };
+    });
+
+    if (!filters.classLevelId) {
+      return {
+        term: { id: term.id, name: term.termName },
+        classes,
+        rows: [],
+      };
+    }
 
     const gradeWhere: Record<string, unknown> = {
       academicTerm: { id: term.id },
-      classLevel: { school: { id: schoolId } },
+      classLevel: { id: filters.classLevelId, school: { id: schoolId } },
     };
-    if (filters.classLevelId) {
-      gradeWhere.classLevel = { id: filters.classLevelId, school: { id: schoolId } };
-    }
     if (filters.subjectId) {
       gradeWhere.subject = { id: filters.subjectId };
     }
@@ -1786,10 +1895,20 @@ export class SubjectService {
     });
     const classScoreMax = school?.classScorePercentage ?? 30;
     const examScoreMax = school?.examScorePercentage ?? 70;
+    const resolvedScheme = await this.resolveGradingScheme(
+      schoolId,
+      filters.classLevelId,
+      term.id,
+    );
 
     return {
       term: { id: term.id, name: term.termName },
+      classes,
       rows: filtered.map((grade) => {
+        const isMissing = !this.isGradeComplete(
+          grade,
+          resolvedScheme.allowManualOverride,
+        );
         const validation = this.validateGradeEntries(
           [
             {
@@ -1814,7 +1933,7 @@ export class SubjectService {
           ...this.mapGradeToSubjectResult(grade),
           status: grade.status,
           isInvalid: validation.invalid.length > 0,
-          isMissing: validation.missing.length > 0,
+          isMissing,
           hasOverride: Boolean(grade.overrideGrade),
           overrideReason: grade.overrideReason,
         };
@@ -2259,6 +2378,12 @@ export class SubjectService {
     if (!parentVisibility.showFeedback) {
       result.feedback = null;
     }
+    if (!parentVisibility.showGrades && !parentVisibility.showLabels) {
+      result.hasOverride = false;
+      result.overrideReason = null;
+    } else if (!parentVisibility.showGrades) {
+      result.overrideReason = null;
+    }
 
     return result;
   }
@@ -2374,6 +2499,72 @@ export class SubjectService {
       grade: resolved.grade,
       gradeLabel: resolved.gradeLabel,
     };
+  }
+
+  private isGradeComplete(
+    grade: Pick<
+      StudentGrade,
+      'classScore' | 'examScore' | 'overrideGrade' | 'overrideReason'
+    >,
+    allowManualOverride = false,
+  ): boolean {
+    if (
+      allowManualOverride &&
+      grade.overrideGrade?.trim() &&
+      grade.overrideReason?.trim()
+    ) {
+      return true;
+    }
+    return grade.classScore != null && grade.examScore != null;
+  }
+
+  private async assertNoIncompleteClassGrades(
+    classLevelId: string,
+    academicTermId: string,
+    schoolId: string,
+  ): Promise<void> {
+    const [classLevel, subjects, grades, resolvedScheme] = await Promise.all([
+      this.classLevelRepository.findOne({
+        where: { id: classLevelId, school: { id: schoolId } },
+        relations: ['students'],
+      }),
+      this.subjectRepository.find({
+        where: {
+          classLevels: { id: classLevelId },
+          school: { id: schoolId },
+        },
+      }),
+      this.studentGradeRepository.find({
+        where: {
+          classLevel: { id: classLevelId },
+          academicTerm: { id: academicTermId },
+        },
+      }),
+      this.resolveGradingScheme(schoolId, classLevelId, academicTermId),
+    ]);
+
+    if (!classLevel) {
+      throw new NotFoundException('Class level not found');
+    }
+
+    const gradeMap = new Map<string, StudentGrade>();
+    for (const grade of grades) {
+      gradeMap.set(`${grade.student.id}_${grade.subject.id}`, grade);
+    }
+
+    for (const student of classLevel.students ?? []) {
+      for (const subject of subjects) {
+        const grade = gradeMap.get(`${student.id}_${subject.id}`);
+        if (
+          !grade ||
+          !this.isGradeComplete(grade, resolvedScheme.allowManualOverride)
+        ) {
+          throw new BadRequestException(
+            `Incomplete grades remain for ${student.firstName} ${student.lastName}`,
+          );
+        }
+      }
+    }
   }
 
   private validateGradeEntries(

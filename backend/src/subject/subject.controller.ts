@@ -24,6 +24,7 @@ import {
   AdminResultActionDto,
   AdminReturnResultsDto,
 } from './dto/admin-results.dto';
+import { SubmitTermRemarksDto } from './dto/submit-term-remarks.dto';
 import { TeacherJwtAuthGuard } from '../teacher/guards/teacher-jwt-auth.guard';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
@@ -281,7 +282,7 @@ export class SubjectController {
     @CurrentUser() teacher: Teacher,
     @Param('studentId') studentId: string,
     @Param('termId') termId: string,
-    @Body() body: { remarks: string },
+    @Body() body: SubmitTermRemarksDto,
   ) {
     return this.subjectService.submitTermRemarks(teacher.id, {
       studentId,

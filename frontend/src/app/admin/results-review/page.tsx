@@ -20,6 +20,41 @@ import { HashLoader } from "react-spinners";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 import { IconArrowLeft } from "@tabler/icons-react";
 
+type ReviewClass = {
+  classLevelId: string;
+  className: string;
+  resultStatus: string;
+};
+
+function statusLabel(status: string): string {
+  switch (status) {
+    case "submitted":
+      return "Submitted";
+    case "approved":
+      return "Approved";
+    case "published":
+      return "Published";
+    case "returned":
+      return "Returned";
+    default:
+      return "Draft";
+  }
+}
+
+function statusChipClass(status: string): string {
+  switch (status) {
+    case "submitted":
+      return "bg-blue-50 text-blue-700";
+    case "approved":
+      return "bg-emerald-50 text-emerald-700";
+    case "published":
+      return "bg-purple-50 text-purple-700";
+    case "returned":
+      return "bg-amber-50 text-amber-700";
+    default:
+      return "bg-zinc-100 text-zinc-600";
+  }
+}
 type ReviewRow = {
   studentId: string;
   studentName: string;
@@ -113,6 +148,7 @@ export default function AdminResultsReviewPage() {
     useAdminReturnResults();
 
   const rows: ReviewRow[] = review?.rows ?? [];
+  const reviewClasses: ReviewClass[] = review?.classes ?? [];
   const actionBusy = checking || publishing || returning;
 
   const handleCheck = (targetClassLevelId: string) => {
@@ -193,13 +229,12 @@ export default function AdminResultsReviewPage() {
     );
   };
 
-  const uniqueClasses = useMemo(() => {
-    const map = new Map<string, string>();
-    rows.forEach((row) => {
-      map.set(row.classLevelId, row.className);
-    });
-    return Array.from(map.entries());
-  }, [rows]);
+  const reviewClassesForActions = useMemo(() => {
+    if (classLevelId) {
+      return reviewClasses.filter((c) => c.classLevelId === classLevelId);
+    }
+    return reviewClasses;
+  }, [reviewClasses, classLevelId]);
 
   return (
     <div className="pb-8">
@@ -264,35 +299,48 @@ export default function AdminResultsReviewPage() {
         />
       </div>
 
-      {uniqueClasses.length > 0 && termId ? (
+      {reviewClassesForActions.length > 0 && termId ? (
         <div className="mb-5 flex flex-col gap-3">
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Class actions
             {selectedTermName ? ` · ${selectedTermName}` : ""}
           </p>
           <div className="flex flex-wrap gap-2">
-            {uniqueClasses.map(([id, name]) => (
+            {reviewClassesForActions.map((reviewClass) => (
               <div
-                key={id}
+                key={reviewClass.classLevelId}
                 className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2"
               >
                 <span className="text-sm font-medium text-neutral-800">
-                  {name}
+                  {reviewClass.className}
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusChipClass(reviewClass.resultStatus)}`}
+                >
+                  {statusLabel(reviewClass.resultStatus)}
                 </span>
                 <CustomButton
                   text="Check"
-                  onClick={() => handleCheck(id)}
-                  disabled={actionBusy}
+                  onClick={() => handleCheck(reviewClass.classLevelId)}
+                  disabled={
+                    actionBusy || reviewClass.resultStatus !== "submitted"
+                  }
                 />
                 <CustomButton
                   text="Publish"
-                  onClick={() => handlePublish(id)}
-                  disabled={actionBusy}
+                  onClick={() => handlePublish(reviewClass.classLevelId)}
+                  disabled={
+                    actionBusy || reviewClass.resultStatus !== "approved"
+                  }
                 />
                 <CustomButton
                   text="Return"
-                  onClick={() => openReturn(id)}
-                  disabled={actionBusy}
+                  onClick={() => openReturn(reviewClass.classLevelId)}
+                  disabled={
+                    actionBusy ||
+                    (reviewClass.resultStatus !== "submitted" &&
+                      reviewClass.resultStatus !== "approved")
+                  }
                 />
               </div>
             ))}
@@ -379,9 +427,11 @@ export default function AdminResultsReviewPage() {
                       colSpan={8}
                       className="py-12 text-center text-sm text-zinc-500"
                     >
-                      {termId
+                      {termId && classLevelId
                         ? "No submitted results match these filters."
-                        : "Select an academic term to review results."}
+                        : termId
+                          ? "Select a class to view grade rows."
+                          : "Select an academic term to review results."}
                     </td>
                   </tr>
                 )}

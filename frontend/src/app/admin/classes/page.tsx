@@ -92,12 +92,22 @@ const ClassesPage = () => {
   );
 
   const lockedCount = useMemo(
-    () => classLevels.filter((c) => c.schoolAdminApproved).length,
-    [classLevels]
+    () =>
+      classLevels.filter(
+        (c) => c.schoolAdminApproved || c.resultStatus === "published",
+      ).length,
+    [classLevels],
+  );
+  const readyToLockCount = useMemo(
+    () => classLevels.filter((c) => c.resultStatus === "approved").length,
+    [classLevels],
   );
   const unlockedCount = useMemo(
-    () => classLevels.filter((c) => !c.schoolAdminApproved).length,
-    [classLevels]
+    () =>
+      classLevels.filter(
+        (c) => !c.schoolAdminApproved && c.resultStatus !== "published",
+      ).length,
+    [classLevels],
   );
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteClassLevel();
   const { mutate: createMutation, isPending: pendingCreate } = useCreateClassLevel();
@@ -293,9 +303,9 @@ const ClassesPage = () => {
   };
 
   const handleLockAll = async () => {
-    if (!selectedTermId || approveResultPending || bulkBusy || unlockedCount === 0)
+    if (!selectedTermId || approveResultPending || bulkBusy || readyToLockCount === 0)
       return;
-    const targets = classLevels.filter((c) => !c.schoolAdminApproved);
+    const targets = classLevels.filter((c) => c.resultStatus === "approved");
     setBulkBusy(true);
     try {
       for (const c of targets) {
@@ -410,11 +420,11 @@ const ClassesPage = () => {
             />
             <CustomButton
               variant="outline"
-              text={`Lock all (${unlockedCount})`}
+              text={`Lock all (${readyToLockCount})`}
               icon={<IconLock size={18} />}
               onClick={handleLockAll}
               disabled={
-                unlockedCount === 0 ||
+                readyToLockCount === 0 ||
                 approveResultPending ||
                 bulkBusy ||
                 !selectedTermId

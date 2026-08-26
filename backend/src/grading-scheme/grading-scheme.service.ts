@@ -498,8 +498,11 @@ export class GradingSchemeService {
 
     return actives.filter((other) => {
       if (other.id === scheme.id) return false;
-      if (scheme.scopeType === 'school' || other.scopeType === 'school') {
+      if (scheme.scopeType === 'school') {
         return true;
+      }
+      if (other.scopeType !== 'classLevels') {
+        return false;
       }
       const ids = new Set((scheme.classLevels ?? []).map((level) => level.id));
       return (other.classLevels ?? []).some((level) => ids.has(level.id));
