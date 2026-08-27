@@ -17,7 +17,8 @@ Subjects and curriculum define what is taught at the school. School admins creat
 | On the **Curriculum** tab, add a curriculum. | A success message appears and the curriculum card grid refreshes. |
 | Edit, delete, or activate/deactivate a curriculum. | Changes save with success messages. |
 | Click a curriculum card to view its detail page. | You navigate to the curriculum with subjects, topics, and progress views. |
-| Browse **Curriculum Progress** and **Topics** tabs. | You see read-only monitoring of topic completion and can navigate into topic detail pages. |
+| Open the **Curriculum Progress** tab. Filter by class, subject, and term. | You see a read-only dashboard of topic completion status. Clicking a row with a topic opens that topic’s detail page. |
+| Open the **Topics** tab. Click **Create Topic**, or **Edit** / **Delete** from a topic’s row menu. | Create and edit dialogs save with success messages. Delete asks for confirmation, then removes the topic and refreshes the list. |
 
 ## Teacher
 

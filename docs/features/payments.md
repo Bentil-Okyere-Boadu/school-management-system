@@ -31,7 +31,8 @@ Payments lets schools collect fees through mobile money. School admins track tra
 
 | Action | Result |
 |--------|--------|
-| On **Family Dashboard**, open the **Finance** tab or click **Pay fees** in the header. | You see balances and transaction history for the selected ward. If any balance is outstanding, a pay drawer opens. |
+| On **Family Dashboard**, open the **Finance** tab. | You see balances and payment history for the selected ward. The pay drawer does not open. |
+| Click **Pay fees** in the header, or **Pay** on a child in the Finance tab, when a balance is outstanding. | The pay drawer opens. **Pay fees** is disabled when nothing is outstanding. |
 | In the pay drawer, select child(ren), enter amounts, provide a mobile money number and network, then proceed. | You move to an OTP verification step. |
 | Enter the OTP and complete payment. | A status step confirms the outcome. Finance data refreshes on success. |
 | Open a receipt from the finance tab. | You navigate to the receipt page for that transaction. |

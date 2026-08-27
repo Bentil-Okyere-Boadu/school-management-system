@@ -14,7 +14,6 @@ Settings is where school admins configure their school — fee structures, brand
 | Add, edit, or delete a fee structure. | Validation messages appear for invalid input. Successful changes refresh the fee structure list. |
 | Upload or delete the school logo. | Success messages appear and the logo display updates. |
 | Edit the Calendly scheduling URL used for admission interview invites. | A success message confirms the URL was saved. |
-| Add or remove admission notification email addresses. | The email list updates after saving. |
 | Add, edit, or delete grading system grades and grading percentages. | Success messages appear and the grading tables refresh. |
 | Create, edit, or delete admission policies. | Policy changes save with success messages and the list refreshes. |
 

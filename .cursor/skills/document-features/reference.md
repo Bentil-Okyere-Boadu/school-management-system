@@ -26,7 +26,7 @@ Group pages by product feature when documenting. A feature may span multiple rol
 |------|-------|
 | `/auth/login` | Login |
 | `/auth/signup` | Super Admin sign up |
-| `/auth/complete-registration` | Finish registration |
+| `/auth/complete-registration` | School Admin — set password from invitation (not teacher/student) |
 | `/auth/forgotPassword/*` | Password reset flow |
 | `/auth/[user]/login` | Role-specific login |
 | `/auth/[user]/forgotPassword/*` | Role-specific password reset |

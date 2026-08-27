@@ -12,8 +12,8 @@ Students are the core users of the school. School admins manage the full student
 | Action | Result |
 |--------|--------|
 | Open **Students**, search, or filter by account status. | The student table updates. Use pagination to browse pages. |
-| Open **Full View** from a student’s row menu. | You navigate to the student detail page with tabs: Profile, Attendance, Results, and Analytics. |
-| On the Profile tab, add, edit, or delete a guardian. | Success messages appear and the guardian list refreshes. |
+| Open **Full View** from a student’s row menu. | You navigate to the student detail page with tabs: **Student Profile**, **Attendance**, **Results**, and **Analytics**. |
+| On the **Student Profile** tab, add, edit, or delete a guardian. | Success messages appear and the guardian list refreshes. |
 | Upload or delete the student’s profile photo. | Success messages appear and the photo updates. |
 | Switch to Attendance, Results, or Analytics tabs and select year, calendar, or term. | The corresponding data displays for that student. |
 | Archive or unarchive a student from the list row menu. | A confirmation dialog appears. After confirming, a success message appears and the list refreshes. |
@@ -23,7 +23,7 @@ Students are the core users of the school. School admins manage the full student
 | Action | Result |
 |--------|--------|
 | Open **Students**, search, and filter by account status. | A paginated table of your students updates. |
-| Open **View** from a student’s row menu. | You see the student profile with Profile, Attendance, Results, and Analytics tabs (read-only profile fields). |
+| Open **Full View** from a student’s row menu. | You see the student detail page with **Student Profile**, **Attendance**, **Results**, and **Analytics** tabs (read-only profile fields). |
 
 ## Student
 

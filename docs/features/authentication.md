@@ -5,7 +5,7 @@
 
 ## Overview
 
-Authentication covers signing in, creating a Super Admin account from the sign-up page, completing registration from an invitation, recovering a forgotten password or PIN, and linking a parent to a child. Super Admin, School Admin, and Parent sign in with email and password. Teacher and Student sign in with ID and PIN. After a successful login, each role is redirected to their default home page.
+Authentication covers signing in, creating a Super Admin account from the sign-up page, completing School Admin registration from an invitation, recovering a forgotten password or PIN, and linking a parent to a child. Super Admin, School Admin, and Parent sign in with email and password. Teacher and Student sign in with ID and PIN. After a successful login, each role is redirected to their default home page.
 
 ## Super Admin, School Admin, and Parent — Sign in
 
@@ -30,11 +30,13 @@ Authentication covers signing in, creating a Super Admin account from the sign-u
 |--------|--------|
 | On the Super Admin Log in page, click **Sign up**. Enter an email and password that meets the validation rules and submit. | A Super Admin account is created (not a generic user). You are logged in and redirected to the Super Admin dashboard. |
 
-## Invited users — Complete registration
+## School Admin — Complete registration
+
+Invited teachers and students do **not** use this page. They receive a generated PIN in their invitation email or when an admin chooses **Send credentials**, then sign in with **ID** and **PIN**.
 
 | Action | Result |
 |--------|--------|
-| Open the registration link from your invitation email, set your password, and submit. | Your registration completes, you are logged in, and redirected to your role’s home page. |
+| Open the registration link from your School Admin invitation email, set your password, and submit. | Your School Admin account is activated. You are logged in and redirected to the School Admin dashboard. |
 
 ## Super Admin, School Admin, and Parent — Forgot password
 
