@@ -440,6 +440,14 @@ export class SubjectService {
     }
 
     if (action === 'approve') {
+      await this.studentGradeRepository.update(
+        {
+          classLevel: { id: classLevelId },
+          academicTerm: { id: term.id },
+        },
+        { status: 'submitted' },
+      );
+
       await this.recordGradeSubmissionHistory({
         classLevel,
         academicTerm: term,
@@ -1286,9 +1294,10 @@ export class SubjectService {
           (grade) => grade.academicTerm.id === term.id,
         );
 
-        const visibleGrades = restrictedViewer
-          ? termGrades.filter((grade) => grade.status === 'submitted')
-          : termGrades;
+        const visibleGrades =
+          restrictedViewer && !isPublished
+            ? termGrades.filter((grade) => grade.status === 'submitted')
+            : termGrades;
 
         const termRemark = await this.remarkRepository.findOne({
           where: {
@@ -1494,9 +1503,10 @@ export class SubjectService {
       return n + (s[(v - 20) % 10] || s[v] || s[0]);
     };
 
-    const visibleGrades = restrictedViewer
-      ? studentGrades.filter((grade) => grade.status === 'submitted')
-      : studentGrades;
+    const visibleGrades =
+      restrictedViewer && !isPublished
+        ? studentGrades.filter((grade) => grade.status === 'submitted')
+        : studentGrades;
 
     const resolvedScheme = await this.resolveGradingScheme(
       calendar.school?.id ?? student.school.id,
@@ -1754,6 +1764,14 @@ export class SubjectService {
     approval.publishedById = schoolAdmin.id;
     approval.publishedByName = `${schoolAdmin.firstName} ${schoolAdmin.lastName}`;
     await this.classLevelResultApprovalRepository.save(approval);
+
+    await this.studentGradeRepository.update(
+      {
+        classLevel: { id: classLevelId },
+        academicTerm: { id: academicTermId },
+      },
+      { status: 'submitted' },
+    );
 
     await this.recordGradeSubmissionHistory({
       classLevel,

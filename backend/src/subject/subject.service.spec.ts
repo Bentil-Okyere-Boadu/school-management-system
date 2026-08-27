@@ -22,6 +22,7 @@ describe('SubjectService lifecycle helpers', () => {
   };
   const studentGradeRepository = {
     find: jest.fn(),
+    update: jest.fn(async () => ({})),
   };
   const gradeSubmissionHistoryRepository = {
     create: jest.fn((value) => value),
@@ -262,6 +263,10 @@ describe('SubjectService lifecycle helpers', () => {
       expect(result.isApproved).toBe(true);
       expect(result.missingGrades).toEqual([]);
       expect(result.message).toContain('approved for this term');
+      expect(studentGradeRepository.update).toHaveBeenCalledWith(
+        { classLevel: { id: 'class-1' }, academicTerm: { id: 'term-1' } },
+        { status: 'submitted' },
+      );
     });
   });
 
