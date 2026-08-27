@@ -28,7 +28,6 @@ const ClassesPage = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<string>();
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [isMissingGradesDialogOpen, setIsMissingGradesDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
   const [busyCardId, setBusyCardId] = useState<string | null>(null);
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
@@ -191,43 +190,18 @@ const ClassesPage = () => {
   }
 
   const onApproveClassResult = (classData: ClassLevel) => {
-    if(approveResultPending) return;
+    if (approveResultPending) return;
+
+    if (classData.resultStatus !== 'approved') {
+      toast.error('Results must be reviewed and approved before locking');
+      return;
+    }
 
     setBusyCardId(classData.id);
     setSelectedClass(classData);
 
-    if(classData.isApproved){
-      const payload = {
-        classLevelId: classData?.id,
-        action: "approve" as const,
-        forceApprove: true,
-        academicTermId: selectedTermId ?? undefined,
-      };
-
-      approveResults(payload, {
-        onSuccess: () => {
-          refetch().finally(() => {
-            setBusyCardId(null);
-            toast.success('Class results locked successfully');
-          });
-        },
-        onError: (error: unknown) => {
-          setBusyCardId(null);
-          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-        },
-      });
-    } else {
-      setIsMissingGradesDialogOpen(true);
-      setBusyCardId(null);
-    }
-  }
-
-  const onConfirmClassResultApproval = (classData?: ClassLevel) => {
-    const activeId = classData?.id || (selectedClass?.id as string);
-    setBusyCardId(activeId); 
-
     const payload = {
-      classLevelId: classData?.id || selectedClass?.id as string,
+      classLevelId: classData?.id,
       action: "approve" as const,
       forceApprove: true,
       academicTermId: selectedTermId ?? undefined,
@@ -235,11 +209,10 @@ const ClassesPage = () => {
 
     approveResults(payload, {
       onSuccess: () => {
-      setIsMissingGradesDialogOpen(false);
-      refetch().finally(() => {
-        setBusyCardId(null);
-        toast.success('Class results locked successfully');
-      });
+        refetch().finally(() => {
+          setBusyCardId(null);
+          toast.success('Class results locked successfully');
+        });
       },
       onError: (error: unknown) => {
         setBusyCardId(null);
@@ -435,24 +408,32 @@ const ClassesPage = () => {
         </div>
 
         <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-2 px-0.5">
-          {classLevels?.map((data, index) => (
-            <AdminClassResultsCard
-              key={data.id ?? index}
-              classData={data}
-              studentCount={data?.students?.length ?? 0}
-              isAdminLocked={!!data?.schoolAdminApproved}
-              teacherSubmitted={!!data?.isApproved}
-              onLockToggle={onApproveOrDisApproveClassResult}
-              onCardClick={(data) => router.push(`/admin/classes/${data.id}`)}
-              onDeleteClick={() => onDeleteButtonClick(data.id)}
-              lockTooltip={
-                data?.schoolAdminApproved
-                  ? "Unlock to allow teachers to edit and resubmit results for this term."
-                  : "Lock to finalize results and prevent further changes for this term."
-              }
-              busy={busyCardId === data.id || bulkBusy}
-            />
-          ))}
+          {classLevels?.map((data, index) => {
+            const isLocked = !!data?.schoolAdminApproved;
+            const canLock = data?.resultStatus === "approved";
+            const lockDisabled = !isLocked && !canLock;
+            return (
+              <AdminClassResultsCard
+                key={data.id ?? index}
+                classData={data}
+                studentCount={data?.students?.length ?? 0}
+                isAdminLocked={isLocked}
+                teacherSubmitted={!!data?.isApproved}
+                actionDisabled={lockDisabled}
+                onLockToggle={onApproveOrDisApproveClassResult}
+                onCardClick={(data) => router.push(`/admin/classes/${data.id}`)}
+                onDeleteClick={() => onDeleteButtonClick(data.id)}
+                lockTooltip={
+                  isLocked
+                    ? "Unlock to allow teachers to edit and resubmit results for this term."
+                    : canLock
+                      ? "Lock to finalize results and prevent further changes for this term."
+                      : "Results must be reviewed and checked by an admin (approved status) before locking."
+                }
+                busy={busyCardId === data.id || bulkBusy}
+              />
+            );
+          })}
         </section>
         {classLevels.length === 0 && (
           <NoAvailableEmptyState message="No class available — add a class to get started." />
@@ -509,22 +490,6 @@ const ClassesPage = () => {
           <p>
             Are you sure you want to delete this class? You will loose all related information
           </p>
-        </div>
-      </Dialog>
-
-
-      {/* Class Results Approval Dialog */}
-      <Dialog 
-        isOpen={isMissingGradesDialogOpen}
-        busy={approveResultPending}
-        dialogTitle="Class Results Locking"
-        subheader=""
-        saveButtonText="Confirm"
-        onSave={() => {onConfirmClassResultApproval(selectedClass as ClassLevel)}} 
-        onClose={() => setIsMissingGradesDialogOpen(false)}
-      >
-        <div className="my-3">
-            <p>Class teacher has not submitted results yet, would you still like to proceed to lock results ?</p>
         </div>
       </Dialog>
     </>

@@ -339,7 +339,8 @@ export class SubjectService {
       }>;
     }> = [];
 
-    for (const student of classLevel.students) {
+    for (const student of classLevel.students ?? []) {
+      if (student.isArchived) continue;
       const missingSubjects: {
         subjectId: string;
         subjectName: string;
@@ -2553,6 +2554,7 @@ export class SubjectService {
     }
 
     for (const student of classLevel.students ?? []) {
+      if (student.isArchived) continue;
       for (const subject of subjects) {
         const grade = gradeMap.get(`${student.id}_${subject.id}`);
         if (

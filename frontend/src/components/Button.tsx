@@ -9,6 +9,7 @@ interface ButtonProps {
   className?: string;
   icon?: React.ReactNode;
   hideText?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const CustomButton = ({
@@ -20,6 +21,7 @@ const CustomButton = ({
   className,
   icon,
   hideText = false,
+  type = 'button',
 }: ButtonProps) => {
   const baseStyles = `
     px-4 py-2 text-sm font-medium rounded cursor-pointer w-fit
@@ -34,6 +36,7 @@ const CustomButton = ({
 
   return (
     <button
+      type={type}
       className={`
         ${baseStyles}
         ${variant === 'outline' ? outlineStyles : solidStyles}

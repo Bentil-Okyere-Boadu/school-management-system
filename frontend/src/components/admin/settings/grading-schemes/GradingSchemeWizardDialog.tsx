@@ -266,6 +266,7 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
         onSave={onPrimary}
         busy={busy}
         saveDisabled={busy}
+        onBack={step > 1 ? () => setStep((s) => s - 1) : undefined}
         dialogWidth="w-[min(96vw,920px)] max-w-none"
       >
         <div className="space-y-4 px-1">
@@ -546,16 +547,6 @@ export const GradingSchemeWizardDialog: React.FC<Props> = ({
                 Activate now
               </button>
             </div>
-          )}
-
-          {step > 1 && step < 4 && (
-            <button
-              type="button"
-              className="text-sm text-neutral-500 underline cursor-pointer"
-              onClick={() => setStep((s) => s - 1)}
-            >
-              Back
-            </button>
           )}
         </div>
       </Dialog>
