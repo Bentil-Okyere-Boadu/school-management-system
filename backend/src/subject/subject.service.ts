@@ -387,9 +387,13 @@ export class SubjectService {
       },
     });
 
-    if (approval?.schoolAdminApproved || approval?.resultStatus === 'published') {
+    if (
+      approval?.schoolAdminApproved ||
+      approval?.resultStatus === 'published' ||
+      approval?.resultStatus === 'approved'
+    ) {
       throw new ForbiddenException(
-        'The results for this class and academic term have already been approved by class teacher. Please contact your administrator if you need them to be unlocked.',
+        'The results for this class and academic term have already been checked, approved, or published. Please contact your administrator if you need them to be returned or unlocked.',
       );
     }
 

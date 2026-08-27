@@ -268,6 +268,29 @@ describe('SubjectService lifecycle helpers', () => {
         { status: 'submitted' },
       );
     });
+
+    it('rejects unapproving when resultStatus is approved (after admin Check)', async () => {
+      classLevelRepository.findOne.mockResolvedValue({
+        id: 'class-1',
+        students: [],
+      });
+      classLevelResultApprovalRepository.findOne.mockResolvedValue({
+        id: 'approval-1',
+        resultStatus: 'approved',
+        approved: true,
+        schoolAdminApproved: false,
+      });
+
+      await expect(
+        service.toggleClassResultsApproval(
+          'class-1',
+          teacher,
+          'unapprove',
+          false,
+          'term-1',
+        ),
+      ).rejects.toThrow();
+    });
   });
 
   describe('mapGradeToSubjectResult parent redaction', () => {
