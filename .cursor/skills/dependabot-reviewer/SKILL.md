@@ -1,6 +1,6 @@
 ---
 name: dependabot-reviewer
-description: Review Dependabot dependency upgrade pull requests for breaking changes and required code updates in this NestJS backend + Next.js frontend school management system. Use when reviewing Dependabot PRs, dependency bumps, or package upgrade pull requests.
+description: Review Dependabot dependency upgrade pull requests (author dependabot[bot] or dependabot/ branch) for breaking changes in this NestJS backend + Next.js frontend school management system. Use only for those PRs. Human-authored package.json or lockfile bumps targeting develop use the reviewer skill.
 ---
 
 # Dependabot Reviewer
@@ -10,8 +10,8 @@ Review **only** Dependabot dependency upgrade PRs. Assess whether upgrades are s
 ## Gate (run first)
 
 1. Identify the PR with `gh pr view` (author, base branch, title, files).
-2. Proceed only if the author is `dependabot[bot]`, or the PR is clearly a Dependabot bump (`dependabot/` branch, conventional "Bump X from A to B" title).
-3. If it is **not** a Dependabot PR: post a short skip comment (or reply in chat if no PR URL) and stop. Do not perform a general code review.
+2. Proceed only if the author is `dependabot[bot]` or the head branch is under `dependabot/`. A conventional “Bump X from A to B” title is **not** enough by itself.
+3. If it is **not** a Dependabot PR: post a short skip comment (or reply in chat if no PR URL) and stop. Do not review it here — human dependency PRs targeting `develop` are handled by the **reviewer** skill.
 4. Only fully review PRs that **target `develop`**. If the base is not `develop`, post a short skip comment and stop.
 
 ## Review workflow
@@ -49,24 +49,24 @@ Approve when:
 
 ## Output
 
-Use `gh` for all PR interaction:
-
-### No issues
-
-1. `gh pr review --approve` with a short summary body: packages, versions, why it is safe, residual risk (if any).
-2. Optionally post a summary comment with the same content if the approval body is insufficient.
-
-### Issues found
-
-1. Do **not** approve.
-2. Post one summary comment listing findings.
-3. Add inline review comments on lockfile / `package.json` lines when a finding maps to a specific bump.
+Post a single summary comment on the PR (plus inline comments when a finding maps to a specific bump). Do **not** require `gh` write access. In this repo’s Cursor automations, `gh` is often read-only — a failed `gh pr review --approve` must not be treated as a completed review.
 
 For each finding include:
 
 - Package name and old → new version
 - Why it matters in this repo (file/symbol if known)
 - Concrete change the team must make
+
+### No issues
+
+1. Post one summary: packages, versions, why it is safe, residual risk (if any). Overall assessment: approve-ready.
+2. Approve (`gh pr review --approve`) **only** when the environment actually supports write reviews. If `gh` is read-only, the summary comment is the review.
+
+### Issues found
+
+1. Do **not** approve.
+2. Post one summary comment listing findings grouped by severity.
+3. Add inline review comments on lockfile / `package.json` lines when a finding maps to a specific bump.
 
 ## Constraints
 

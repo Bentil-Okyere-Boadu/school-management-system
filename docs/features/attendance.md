@@ -1,7 +1,7 @@
 # Attendance
 
 **Who can use this:** School Admin, Teacher, Student, Parent  
-**Where:** School Admin → Attendance; Teacher → Classes → select class → Attendance; Student → Attendance; Parent → Family overview → Attendance tab
+**Where:** School Admin → Attendance; Teacher → Classes → select class → Attendance; Student → Attendance; Parent → Family Dashboard → Attendance tab
 
 ## Overview
 
@@ -32,7 +32,7 @@ Attendance lets schools track who was present or absent by class and date. Teach
 
 | Action | Result |
 |--------|--------|
-| On the Family overview page, select a ward and open the **Attendance** tab. Change the month or year. | The ward’s attendance sheet updates for the selected period. |
+| On **Family Dashboard**, select a ward and open the **Attendance** tab. Change the month or year. | The ward’s attendance sheet updates for the selected period. |
 
 ## Empty, error, and blocked states
 

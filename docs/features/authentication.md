@@ -1,25 +1,34 @@
 # Authentication
 
 **Who can use this:** Super Admin, School Admin, Teacher, Student, Parent, Public  
-**Where:** Login and sign-up pages under Auth; role-specific login and password reset flows
+**Where:** Role-specific Log in pages under Auth; Super Admin uses the general Log in page; sign-up, invitation registration, and parent confirm-child links
 
 ## Overview
 
-Authentication covers signing in, creating an account, completing registration from an invitation, resetting a forgotten password, and linking a parent to a child. After a successful login, each role is redirected to their default home page.
+Authentication covers signing in, creating a Super Admin account from the sign-up page, completing registration from an invitation, recovering a forgotten password or PIN, and linking a parent to a child. Super Admin, School Admin, and Parent sign in with email and password. Teacher and Student sign in with ID and PIN. After a successful login, each role is redirected to their default home page.
 
-## All roles — Sign in
+## Super Admin, School Admin, and Parent — Sign in
 
 | Action | Result |
 |--------|--------|
-| Enter your email and password on the login page and click **Sign In**. | A success message appears and you are redirected to your role’s home page (Super Admin dashboard, School Admin dashboard, Teacher students list, Student profile, or Parent family overview). |
+| Enter your **Email** and **Password** on the Log in page and click **Sign In**. | A success message appears and you are redirected to your home page (Super Admin dashboard, School Admin dashboard, or Parent **Family Dashboard**). |
 | Enter incorrect credentials and click **Sign In**. | An error message indicates the login failed. |
-| Click **Forgot PIN/Password** on the login page. | You are taken to the password reset flow for your role. |
+| Click **Forgot Password?** | You are taken to the password reset page for your role. |
 
-## Public — Sign up
+## Teacher and Student — Sign in
 
 | Action | Result |
 |--------|--------|
-| Enter an email and password that meets the validation rules on the sign-up page and submit. | Your account is created, you are logged in, and redirected to the appropriate home page. |
+| Enter your **ID** and **PIN** on the Log in page and click **Sign In**. | A success message appears and you are redirected to the Teacher students list or the Student profile. |
+| Enter incorrect credentials and click **Sign In**. | An error message indicates the login failed. |
+| Click **Forgot PIN?** | You are taken to the PIN reset page for your role. |
+| (Teacher only) Click **Forgot Credentials? Reset**. | You are taken to the same PIN reset page as **Forgot PIN?**. |
+
+## Super Admin — Sign up
+
+| Action | Result |
+|--------|--------|
+| On the Super Admin Log in page, click **Sign up**. Enter an email and password that meets the validation rules and submit. | A Super Admin account is created (not a generic user). You are logged in and redirected to the Super Admin dashboard. |
 
 ## Invited users — Complete registration
 
@@ -27,12 +36,19 @@ Authentication covers signing in, creating an account, completing registration f
 |--------|--------|
 | Open the registration link from your invitation email, set your password, and submit. | Your registration completes, you are logged in, and redirected to your role’s home page. |
 
-## All roles — Forgot password
+## Super Admin, School Admin, and Parent — Forgot password
 
 | Action | Result |
 |--------|--------|
-| Submit your email on the forgot-password page (teachers and students may also enter an ID). | A success message appears and you are redirected to a confirmation page indicating that reset instructions were sent. |
-| Open the reset link from your email, enter a new password, and submit. | Your password is saved and you see a success confirmation page. |
+| On the **Forgot Password?** page, enter the email you used to sign up and click **Request Password Reset**. | A success message appears. A password reset link is sent to that email. |
+| Open the reset link from your email, enter a new password and confirmation, and click **Save new password**. | Your password is saved. You see a confirmation that the reset succeeded, with a **log in** link to sign in with the new password. |
+
+## Teacher and Student — Forgot PIN
+
+| Action | Result |
+|--------|--------|
+| On the **Forgot PIN?** page, enter your email or ID and click **Request PIN Reset**. | A success message appears. Your PIN is reset immediately. You are taken to a confirmation page stating the reset succeeded and that the new PIN was sent to your registered email. You do not open a link or choose a PIN. |
+| Click **Log in** on the confirmation page. | You return to your role’s Log in page, where you sign in with your ID and the new PIN from the email. |
 
 ## Parent — Confirm child
 
@@ -43,4 +59,6 @@ Authentication covers signing in, creating an account, completing registration f
 ## Empty, error, and blocked states
 
 - Login shows an error toast when credentials are invalid.
-- Password reset and registration forms show validation errors when required fields are missing or rules are not met.
+- **Forgot Password?** requires a valid email. **Forgot PIN?** requires an email or ID.
+- Password reset, sign-up, and registration forms show validation errors when required fields are missing or password rules are not met.
+- PIN or password recovery shows an error if no matching account is found, or if the reset email cannot be sent.

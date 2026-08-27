@@ -25,7 +25,7 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | Path | Notes |
 |------|-------|
 | `/auth/login` | Login |
-| `/auth/signup` | Sign up |
+| `/auth/signup` | Super Admin sign up |
 | `/auth/complete-registration` | Finish registration |
 | `/auth/forgotPassword/*` | Password reset flow |
 | `/auth/[user]/login` | Role-specific login |
@@ -48,7 +48,7 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | `/admin/attendance` | School Admin — sheet & summary tabs |
 | `/teacher/classes/[classId]/attendance` | Teacher — record for class |
 | `/student/attendance` | Student — view |
-| `/parent/attendance` | Parent — view |
+| `/parent/attendance` | Parent — Family Dashboard, Attendance tab |
 
 ### Assignments and grading
 
@@ -56,11 +56,10 @@ Group pages by product feature when documenting. A feature may span multiple rol
 |------|------|
 | `/admin/assignments` | School Admin |
 | `/admin/assignments/[id]` | School Admin — detail |
-| `/student/assignments` | Student |
+| `/student/assignments` | Student — My Scores |
 | `/teacher/assignments/[assignmentId]/grading` | Teacher — grade submissions |
 | `/teacher/grading` | Teacher — grading hub |
 | `/teacher/grading/[classId]` | Teacher — grade by class |
-| `/admin/results-review` | School Admin — review results |
 
 ### Classes and students
 
@@ -83,7 +82,7 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | `/admin/subjects/curriculum/[id]` | School Admin — curriculum |
 | `/admin/subjects/curriculum/[id]/subject/[subjectId]/topics` | School Admin — topics |
 | `/admin/subjects/topics/[topicId]/detail` | School Admin — topic detail |
-| `/teacher/subjects` | Teacher |
+| `/teacher/subjects` | Teacher — Curriculum |
 
 ### Payments and fees
 
@@ -91,9 +90,9 @@ Group pages by product feature when documenting. A feature may span multiple rol
 |------|------|
 | `/admin/payments` | School Admin |
 | `/admin/payments/receipt/[transactionId]` | School Admin — receipt |
-| `/student/payments` | Student |
+| `/student/payments` | Student — My Payments |
 | `/student/payments/receipt/[transactionId]` | Student — receipt |
-| `/parent/payments` | Parent |
+| `/parent/payments` | Parent — Family Dashboard, Finance tab |
 | `/parent/payments/receipt/[transactionId]` | Parent — receipt |
 
 ### Planner and calendar
@@ -115,10 +114,13 @@ Group pages by product feature when documenting. A feature may span multiple rol
 
 ### Results
 
+Lock/unlock for School Admin is on **Classes** (`/admin/classes`), not a separate results-review page.
+
 | Path | Role |
 |------|------|
+| `/admin/classes` | School Admin — lock/unlock term results |
 | `/student/results` | Student |
-| `/parent/results` | Parent |
+| `/parent/results` | Parent — Family Dashboard, Academics tab |
 
 ### Notifications
 
@@ -169,6 +171,7 @@ Use kebab-case filenames under `docs/features/`:
 - `classes.md`
 - `students.md`
 - `subjects.md`
+- `users.md`
 - `payments.md`
 - `planner.md`
 - `performance-analytics.md`

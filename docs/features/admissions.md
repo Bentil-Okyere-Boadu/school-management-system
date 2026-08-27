@@ -24,8 +24,9 @@ Admissions lets prospective families apply to a school through a multi-step publ
 | Open the **Admissions Analytics** tab. | You see read-only metric cards and charts showing admission trends and statistics. |
 | Open the **Admissions List** tab. Search, filter by status, or change pages. | The application list updates to match your filters. |
 | Change an application’s status to Accepted, Rejected, Waitlisted, or Mark completed from the status menu. | A success message appears and the list refreshes with the new status. |
-| Select **Send Interview Invite** for an application (when the school has a scheduling link configured). | A scheduling popup opens. After the applicant schedules, the status changes to Interview Pending. |
-| Open an application’s detail page. Change status, send a manual interview invite with date and time, or click a submitted document. | Status changes show a success message and refresh the page. Documents open or download in a new tab. |
+| Select **Send Interview Invite** from the admissions list status menu. | A Calendly popup opens in your browser (even if no scheduling URL is configured). When you book an event in that popup, the application status changes to Interview Pending. The applicant does not schedule from this popup. |
+| Open an application’s detail page. Change status, or click a submitted document. | Status changes show a success message and refresh the page. Documents open or download in a new tab. |
+| On the detail page, select **Send Interview Invite**, enter an interview date and time, and submit. | An interview invitation email is sent to the applicant. This path does not open Calendly. |
 | Archive an application from the row menu. | A confirmation dialog appears. After confirming, a success message appears and the list refreshes. |
 
 ## Empty, error, and blocked states

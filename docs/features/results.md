@@ -1,7 +1,7 @@
 # Results
 
 **Who can use this:** School Admin, Teacher, Student, Parent  
-**Where:** School Admin → Classes (lock/unlock) and Students → Results tab; Teacher → Students → Results tab; Student → Results; Parent → Family overview → Academics tab
+**Where:** School Admin → Classes (lock/unlock) and Students → Results tab; Teacher → Students → Results tab; Student → Results; Parent → Family Dashboard → Academics tab
 
 ## Overview
 
@@ -31,7 +31,7 @@ Results show term grades and remarks for students. Teachers enter scores on the 
 
 | Action | Result |
 |--------|--------|
-| On the Family overview, select a ward and open the **Academics** tab. Choose a term. | Subject grades, averages, and teacher remarks display for the selected ward and term. If results are not yet ready, a pending state is shown. |
+| On **Family Dashboard**, select a ward and open the **Academics** tab. Choose a term. | Subject grades, averages, and teacher remarks display for the selected ward and term. If results are not yet ready, a pending state is shown. |
 
 ## Empty, error, and blocked states
 

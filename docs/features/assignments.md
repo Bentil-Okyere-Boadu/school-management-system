@@ -1,7 +1,7 @@
 # Assignments
 
 **Who can use this:** School Admin, Teacher, Student  
-**Where:** School Admin → Scores; Teacher → Subjects → Assignments tab; Student → Assignments
+**Where:** School Admin → Scores; Teacher → Curriculum → Assignments tab; Student → My Scores
 
 ## Overview
 
@@ -18,7 +18,7 @@ Assignments let teachers create work for their classes, students submit files an
 
 | Action | Result |
 |--------|--------|
-| Open **Subjects**, go to the **Assignments** tab, and filter by term or curriculum. | Your assignment list filters accordingly. |
+| Open **Curriculum**, go to the **Assignments** tab, and filter by term or curriculum. | Your assignment list filters accordingly. |
 | Create a new assignment with title, topic, class, due date, instructions, optional file, and publish toggle. | A success message appears and the assignment list refreshes. |
 | Edit or delete an existing assignment. | Edits save with a success message. Deleting requires confirmation, then shows a deleted confirmation and refreshes the list. |
 | Click **Grade** on an assignment. | You open the grading page with **Submitted** and **Pending** tabs. |
@@ -30,7 +30,7 @@ Assignments let teachers create work for their classes, students submit files an
 
 | Action | Result |
 |--------|--------|
-| Open **Assignments**, go to the **Pending** tab, attach a file and/or add notes, and submit. | A confirmation dialog appears. After confirming, a success message appears and the assignment moves to **Submitted**. |
+| Open **My Scores**, go to the **Pending** tab, attach a file and/or add notes, and submit. | A confirmation dialog appears. After confirming, a success message appears and the assignment moves to **Submitted**. |
 | View the **Submitted** tab. | You see assignments awaiting grading. |
 | On the **Graded** tab, click **View Feedback** on an assignment. | A dialog shows your score, teacher feedback, and any attachment. |
 

@@ -15,7 +15,8 @@ Classes group students under a teacher for a school year. School admins create a
 | Click **Add Class**, enter name, description, and assign a teacher, then save. | A success message appears and you are redirected to the new class detail page. |
 | Select an academic term on the classes list. | Class cards show whether results are locked or unlocked for that term. |
 | Lock or unlock results on a single class card. | If the teacher has not submitted results, a confirmation dialog appears first. After confirming, a success message appears and the card updates. |
-| Click **Lock all** or **Unlock all**. | All class cards for the selected term update in bulk with a success message. |
+| Click **Lock all**. | Every unlocked class for the selected term is locked immediately, including classes the teacher has not submitted. There is no confirmation dialog. |
+| Click **Unlock all**. | Every locked class for the selected term is unlocked with a success message. |
 | Open a class detail page. Edit the class, add students, or remove enrolled students. | Changes save with a success message. The enrolled student list refreshes. |
 | Click a student row on the class detail page. | You navigate to that student’s profile page. |
 | Delete a class from the card menu. | A confirmation dialog appears. After confirming, the class is removed and the list refreshes. |

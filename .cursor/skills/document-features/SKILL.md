@@ -79,7 +79,7 @@ Only include states the UI actually shows (validation errors, no permission, not
 - Every **Result** is what they see or what happens next.
 - Split by **role** when behavior differs (e.g. teacher records attendance; parent only views).
 - Use role labels consistent with the app: **Super Admin**, **School Admin**, **Teacher**, **Student**, **Parent**.
-- Prefer navigation labels from the UI (menu items, page titles, button text) over URL segments.
+- Prefer navigation labels from the UI (menu items, page titles, button text) over URL segments. Copy sidebar labels from `frontend/src/app/{role}/layout.tsx` (for example Teacher **Curriculum**, Student **My Scores** / **My Payments**, Parent **Family Dashboard**).
 - Keep language plain; avoid jargon unless the UI uses it.
 - Do not include screenshots unless the user asks.
 - Do not invent actions that are not wired in the UI.

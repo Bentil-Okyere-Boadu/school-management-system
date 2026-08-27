@@ -1,11 +1,11 @@
 # Subjects and curriculum
 
 **Who can use this:** School Admin, Teacher  
-**Where:** School Admin → Curriculum; Teacher → Subjects
+**Where:** School Admin → Curriculum; Teacher → Curriculum
 
 ## Overview
 
-Subjects and curriculum define what is taught at the school. School admins create subjects, assign teachers to classes, and manage curriculum structures with topics and progress tracking. Teachers view their assigned subjects, manage topics, track curriculum progress, and create assignments from their subjects page.
+Subjects and curriculum define what is taught at the school. School admins create subjects, assign teachers to classes, and manage curriculum structures with topics and progress tracking. Teachers view their assigned subjects, manage topics, track curriculum progress, and create assignments from **Curriculum**.
 
 ## School Admin
 
@@ -23,7 +23,7 @@ Subjects and curriculum define what is taught at the school. School admins creat
 
 | Action | Result |
 |--------|--------|
-| Open **Subjects** and view the **My Subjects** tab. | A read-only table shows subjects assigned to you. |
+| Open **Curriculum** and view the **My Subjects** tab. | A read-only table shows subjects assigned to you. |
 | On the **Topics** tab, create, edit, or delete a topic. | Success messages appear and the topic list refreshes. |
 | On **Curriculum Progress**, filter by class, subject, and term. Mark a subtopic complete or incomplete. | Completion status updates with a success message. |
 | Add, edit, or delete a subtopic. | Success messages appear and the list refreshes. |

@@ -1,7 +1,7 @@
 # Grading
 
 **Who can use this:** School Admin, Teacher  
-**Where:** School Admin → Scores (assignment submissions); Teacher → Grading; Teacher → Subjects → Assignments → Grade
+**Where:** School Admin → Scores (assignment submissions); Teacher → Grading; Teacher → Curriculum → Assignments → Grade
 
 ## Overview
 

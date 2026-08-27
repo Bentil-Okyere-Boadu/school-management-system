@@ -1,7 +1,7 @@
 # Payments
 
 **Who can use this:** School Admin, Student, Parent, Super Admin  
-**Where:** School Admin → Payments & Finance; Student → Payments; Parent → Family overview → Finance tab; Super Admin → Schools → Hubtel Merchant tab
+**Where:** School Admin → Payments & Finance; Student → My Payments; Parent → Family Dashboard → Finance tab; Super Admin → Schools → Hubtel Merchant tab
 
 ## Overview
 
@@ -22,16 +22,16 @@ Payments lets schools collect fees through mobile money. School admins track tra
 
 | Action | Result |
 |--------|--------|
-| Open **Payments** and view USSD payment instructions. | Short code, merchant ID, and related details appear with copy buttons. |
+| Open **My Payments** and view USSD payment instructions. | Short code, merchant ID, and related details appear with copy buttons. |
 | Search or filter your transaction history. | The paginated list updates. |
-| View a transaction detail or open a receipt. | A detail drawer opens, or you navigate to the full receipt page. Closing the receipt returns to Payments. |
+| View a transaction detail or open a receipt. | A detail drawer opens, or you navigate to the full receipt page. Closing the receipt returns to **My Payments**. |
 | Try to pay when the school has paused payments. | A banner indicates payments are disabled and instructions are greyed out. |
 
 ## Parent
 
 | Action | Result |
 |--------|--------|
-| On the Family overview, open the **Finance** tab or click **Pay fees** in the header. | You see balances and transaction history for the selected ward. If any balance is outstanding, a pay drawer opens. |
+| On **Family Dashboard**, open the **Finance** tab or click **Pay fees** in the header. | You see balances and transaction history for the selected ward. If any balance is outstanding, a pay drawer opens. |
 | In the pay drawer, select child(ren), enter amounts, provide a mobile money number and network, then proceed. | You move to an OTP verification step. |
 | Enter the OTP and complete payment. | A status step confirms the outcome. Finance data refreshes on success. |
 | Open a receipt from the finance tab. | You navigate to the receipt page for that transaction. |
