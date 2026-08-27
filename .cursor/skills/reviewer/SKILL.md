@@ -9,6 +9,7 @@ This repository is a school management system with a NestJS backend and a Next.j
 
 ## Scope
 
+- If the PR is from Dependabot (`dependabot[bot]`, `dependabot/` branch, or a dependency bump PR), skip this review and use the **dependabot-reviewer** skill instead.
 - Only perform a full review when the pull request **targets the `develop` branch**.
 - If the base branch is not `develop`, post a short comment noting the review was skipped and stop.
 
