@@ -28,7 +28,6 @@ const ClassesPage = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<string>();
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(null);
   const [busyCardId, setBusyCardId] = useState<string | null>(null);
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -198,7 +197,6 @@ const ClassesPage = () => {
     }
 
     setBusyCardId(classData.id);
-    setSelectedClass(classData);
 
     const payload = {
       classLevelId: classData?.id,
@@ -222,9 +220,8 @@ const ClassesPage = () => {
   }
 
   const onDisApproveClassResult = (classData?: ClassLevel) => {
-    if(approveResultPending) return;
+    if (approveResultPending) return;
     
-    setSelectedClass(classData as ClassLevel);
     setBusyCardId(classData?.id as string);
 
     const payload = {
