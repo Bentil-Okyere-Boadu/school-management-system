@@ -86,6 +86,18 @@ export class School {
   @Column({ type: 'timestamptz', nullable: true })
   paymentSetupRequestedAt: Date | null;
 
+  @Column({ type: 'boolean', default: true })
+  parentShowScores: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  parentShowGrades: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  parentShowLabels: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  parentShowFeedback: boolean;
+
   @OneToMany(() => SchoolAdmin, (admin) => admin.school, {
     onDelete: 'CASCADE',
   })

@@ -205,6 +205,19 @@ export class AcademicCalendarService {
     });
   }
 
+  async getTermWithCalendar(termId: string): Promise<AcademicTerm> {
+    const term = await this.termRepository.findOne({
+      where: { id: termId },
+      relations: ['academicCalendar'],
+    });
+
+    if (!term) {
+      throw new NotFoundException(`Academic Term with ID ${termId} not found`);
+    }
+
+    return term;
+  }
+
   async findOneTerm(id: string, admin: SchoolAdmin): Promise<AcademicTerm> {
     const term = await this.termRepository.findOne({
       where: { id },

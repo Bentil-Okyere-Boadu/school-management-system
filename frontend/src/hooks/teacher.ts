@@ -666,6 +666,9 @@ export type TeacherClassResultsApprovalStatus = {
   approvedAt?: string | null;
   schoolAdminApproved: boolean;
   schoolAdminApprovedAt?: string | null;
+  resultStatus?: string;
+  returnNote?: string | null;
+  publishedAt?: string | null;
   term: string;
   termId: string;
 };

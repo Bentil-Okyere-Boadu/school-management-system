@@ -42,17 +42,47 @@ export class StudentGrade {
   })
   teacher: Teacher;
 
-  @Column('float')
-  classScore: number;
+  @Column('float', { nullable: true })
+  classScore: number | null;
 
-  @Column('float')
-  examScore: number;
+  @Column('float', { nullable: true })
+  examScore: number | null;
 
-  @Column('float')
-  totalScore: number;
+  @Column('float', { nullable: true })
+  totalScore: number | null;
 
   @Column({ type: 'varchar', nullable: true })
-  grade: string;
+  grade: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  gradeLabel: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  feedback: string | null;
+
+  @Column({ type: 'varchar', default: 'submitted' })
+  status: 'draft' | 'submitted';
+
+  @Column({ type: 'text', nullable: true })
+  bandDescription: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  gradingSchemeId: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  gradingSchemeVersion: number | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  overrideGrade: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  overrideReason: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  overriddenById: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  overriddenByName: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -3,6 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { CustomSelectTag } from "../../common/CustomSelectTag";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
+import { GradingLegendPanel } from "@/components/common/GradingLegendPanel";
+import { ResultsSubjectsTable } from "@/components/common/ResultsSubjectsTable";
+import {
+  averagePercentage,
+  overallPerformanceBand,
+  performanceBandClass,
+} from "@/utils/gradeDisplay";
 import { Calendar, School, Student, StudentResultsResponse } from "@/@types";
 import CustomButton from "@/components/Button";
 import { IconDownload } from "@tabler/icons-react";
@@ -195,83 +202,70 @@ const StudentResults: React.FC<StudentResultProps> = ({
               {studentResults?.studentInfo?.academicYear}
             </p>
 
-            {studentResults.terms.map((term, index) => (
-              <div key={index} className="mb-10">
-                <h1 className="text-md font-semibold text-neutral-800 my-2">
-                  {term.termName || `Term ${index + 1}`}
-                </h1>
+            {studentResults.terms.map((term, index) => {
+              const avg = averagePercentage(
+                term.subjects?.map((s) => s.percentage) ?? [],
+              );
+              const band = overallPerformanceBand(avg);
 
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">
-                        Subject
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">
-                        Class Score
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">
-                        Exam Score
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">
-                        Percentage Score
-                      </th>
-                      <th className="py-2 pl-2.5 text-xs text-left text-[#5B5B5B] font-normal">
-                        Grade
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {term.subjects?.length > 0 ? (
-                      term.subjects.map((data, i) => (
-                        <tr
-                          key={i}
-                          className="border-b border-solid border-b-gray-200"
-                        >
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">
-                            {data.subject}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">
-                            {data.classScore}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">
-                            {data.examScore}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">
-                            {data.percentage}
-                          </td>
-                          <td className="py-2 pl-2.5 text-sm text-left text-[#252C32]">
-                            {data.grade}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="py-8 text-center text-sm text-gray-500"
-                        >
-                          <NoAvailableEmptyState message="No subjects available for this term." />
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              return (
+              <article
+                key={index}
+                className="mb-6 rounded-xl border border-zinc-200 bg-white p-5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <h2 className="text-md font-semibold text-neutral-800">
+                    {term.termName || `Term ${index + 1}`}
+                  </h2>
+                  {band && avg != null ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${performanceBandClass(band)}`}
+                      >
+                        {band}
+                      </span>
+                      <span className="text-sm font-medium text-zinc-600">
+                        {avg}% avg
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
 
-                {term.subjects?.length > 0 && (
-                  <div>
-                    <p className="text-xs text-[#878787] mt-4 mb-1">
-                      Teacher&apos;s Remark
+                <ResultsSubjectsTable
+                  subjects={term.subjects ?? []}
+                  columns={[
+                    "subject",
+                    "classScore",
+                    "examScore",
+                    "percentage",
+                    "grade",
+                    "label",
+                    "feedback",
+                  ]}
+                />
+
+                {term.subjects?.length > 0 && term.teacherRemarks ? (
+                  <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3">
+                    <p className="text-xs font-medium text-zinc-500 mb-1">
+                      Class teacher remark
                     </p>
-                    <p className="text-sm pl-1">{term.teacherRemarks}</p>
+                    <p className="text-sm italic text-zinc-600">
+                      {term.teacherRemarks}
+                    </p>
                   </div>
-                )}
-              </div>
-            ))}
+                ) : null}
+              </article>
+            );
+            })}
           </div>
         ) : (
           <NoAvailableEmptyState message="No results available yet." />
         )}
+
+        <GradingLegendPanel
+          bands={studentResults?.gradingLegend}
+          passMark={studentResults?.passMark}
+        />
       </div>
     </div>
   );

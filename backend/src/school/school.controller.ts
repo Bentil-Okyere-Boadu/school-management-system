@@ -12,6 +12,7 @@ import {
   BadRequestException,
   NotFoundException,
   Put,
+  Patch,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SchoolService } from './school.service';
@@ -20,6 +21,7 @@ import { RolesGuard } from 'src/auth/roles.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateCalendlyUrlDto } from './dto/update-calendly-url.dto';
+import { UpdateParentResultVisibilityDto } from './dto/update-parent-result-visibility.dto';
 import { UpdateGradingPercentagesDto } from './dto/update-grading-percentages.dto';
 import { UpdateHubtelMerchantDto } from './dto/update-hubtel-merchant.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
@@ -165,6 +167,23 @@ export class SchoolController {
 
     return {
       message: 'Calendly URL updated successfully',
+      school: updatedSchool,
+    };
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('parent-result-visibility')
+  @Roles(Role.SchoolAdmin)
+  async updateParentResultVisibility(
+    @CurrentUser() user: SchoolAdmin,
+    @Body() body: UpdateParentResultVisibilityDto,
+  ) {
+    const updatedSchool = await this.schoolService.updateParentResultVisibility(
+      user.school.id,
+      body,
+    );
+    return {
+      message: 'Parent result visibility updated',
       school: updatedSchool,
     };
   }
