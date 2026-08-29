@@ -33,4 +33,6 @@ export const PLATFORM_PUBLIC_TABLES: readonly string[] = [
   'platform_invitation',
   'migrations',
   'typeorm_metadata',
+  'platform_audit_log',
+  'tenant_audit_log',
 ];

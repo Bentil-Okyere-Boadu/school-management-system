@@ -65,12 +65,6 @@ export class Student {
   @Column({ default: 'pending' })
   status: string;
 
-  @Column({ nullable: true })
-  invitationToken: string;
-
-  @Column({ nullable: true })
-  invitationExpires: Date;
-
   @Column({ default: false })
   isInvitationAccepted: boolean;
 

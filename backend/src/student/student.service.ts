@@ -9,8 +9,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Student } from './student.entity';
 import * as bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from '../common/services/email.service';
+import { TenantUserLookupService } from 'src/tenant/tenant-user-lookup.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
@@ -38,6 +39,8 @@ export class StudentService {
     private studentRepository: Repository<Student>,
     private emailService: EmailService,
     private invitationService: InvitationService,
+    private readonly tenantUserLookup: TenantUserLookupService,
+    private readonly tenantConnection: TenantConnectionService,
     private readonly profileService: ProfileService,
     private objectStorageService: ObjectStorageServiceService,
     private readonly notificationService: NotificationService,
@@ -65,7 +68,6 @@ export class StudentService {
       where: {
         id: userId,
         status: 'pending',
-        school: { id: adminUser.school.id },
       },
       relations: ['role', 'school'],
     });
@@ -77,9 +79,6 @@ export class StudentService {
     // Generate new PIN
     const pin = this.invitationService.generatePin();
 
-    student.invitationToken = uuidv4();
-    student.invitationExpires =
-      this.invitationService.calculateTokenExpiration();
     student.password = await bcrypt.hash(pin, 10);
 
     const updatedStudent = await this.studentRepository.save(student);
@@ -111,23 +110,19 @@ export class StudentService {
   async forgotPin(
     identifier: string,
   ): Promise<{ success: boolean; message: string }> {
-    const trimmed = identifier.trim();
-    const student = await this.studentRepository.findOne({
-      where: [{ email: trimmed }, { studentId: trimmed }],
-      relations: ['role', 'school'],
-    });
-
-    if (!student) {
+    const student = await this.tenantUserLookup.findStudent(identifier);
+    if (!student?.school?.id) {
       throw new NotFoundException(
         'No user found with the provided credentials',
       );
     }
 
-    // Generate new PIN
     const pin = this.invitationService.generatePin();
     student.password = await bcrypt.hash(pin, 10);
 
-    await this.studentRepository.save(student);
+    await this.tenantConnection.runForSchoolId(student.school.id, (manager) =>
+      manager.save(Student, student),
+    );
 
     try {
       await this.emailService.sendStudentPinReset(student, pin);

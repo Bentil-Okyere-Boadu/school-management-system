@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { School } from './school.entity';
 import { SchoolService } from './school.service';
 import { SchoolController } from './school.controller';
-import { InvitationModule } from 'src/invitation/invitation.module';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { ProfileService } from 'src/profile/profile.service';
@@ -39,7 +38,6 @@ import { NotificationModule } from 'src/notification/notification.module';
       ClassLevel,
       EventCategory,
     ]),
-    InvitationModule,
     NotificationModule,
   ],
   providers: [

@@ -3,20 +3,13 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { School } from './school.entity';
-import { CreateSchoolDto } from './dto/create-school.dto';
-import { InvitationService } from 'src/invitation/invitation.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
-import { StudentGrade } from 'src/subject/student-grade.entity';
-import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
-import { AttendanceService } from 'src/attendance/attendance.service';
-import { EventCategory } from 'src/planner/entities/event-category.entity';
 import { EncryptionService } from 'src/common/utils/encryption.util';
 import { UpdateHubtelMerchantDto } from './dto/update-hubtel-merchant.dto';
 import { buildReceiveMoneyPrimaryCallbackUrl } from 'src/integrations/hubtel/hubtel-callback-url.util';
@@ -40,17 +33,7 @@ export class SchoolService {
   constructor(
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
-    @InjectRepository(SchoolAdmin)
-    private adminRepository: Repository<SchoolAdmin>,
     private objectStorageService: ObjectStorageServiceService,
-    private invitationService: InvitationService,
-    @InjectRepository(StudentGrade)
-    private studentGradeRepository: Repository<StudentGrade>,
-    @InjectRepository(AcademicTerm)
-    private academicTermRepository: Repository<AcademicTerm>,
-    @InjectRepository(EventCategory)
-    private eventCategoryRepository: Repository<EventCategory>,
-    private attendanceService: AttendanceService,
     private readonly encryptionService: EncryptionService,
     private readonly configService: ConfigService,
     private readonly tenantConnection: TenantConnectionService,
@@ -133,88 +116,6 @@ export class SchoolService {
       ),
       primaryCallbackUrl: buildReceiveMoneyPrimaryCallbackUrl(base, school.id),
     };
-  }
-
-  async create(
-    createSchoolDto: CreateSchoolDto,
-    adminUser: SchoolAdmin,
-  ): Promise<School> {
-    if (adminUser.role.name !== 'school_admin') {
-      throw new UnauthorizedException('Only school admins can create schools');
-    }
-
-    if (adminUser.school) {
-      throw new UnauthorizedException('Admin already associated with a school');
-    }
-
-    const school = this.schoolRepository.create(createSchoolDto);
-
-    const savedSchool = await this.schoolRepository.save(school);
-    if (!savedSchool.schoolCode) {
-      savedSchool.schoolCode = savedSchool.id
-        .toString()
-        .padStart(5, '0')
-        .substring(0, 5);
-      await this.schoolRepository.save(savedSchool); // Update schoolCode
-    }
-
-    adminUser.school = savedSchool;
-
-    if (!adminUser.adminId) {
-      const adminId = await this.invitationService.generateAdminId(
-        savedSchool,
-        adminUser,
-      );
-      adminUser.adminId = adminId;
-    }
-
-    await this.adminRepository.save(adminUser);
-
-    // Create default event categories for the new school
-    await this.createDefaultEventCategories(savedSchool);
-
-    return savedSchool;
-  }
-
-  private async createDefaultEventCategories(school: School): Promise<void> {
-    const defaultCategories = [
-      { name: 'General', color: '#6366f1', description: 'General events' },
-      {
-        name: 'Uncategorized',
-        color: '#94a3b8',
-        description: 'Uncategorized events',
-      },
-      {
-        name: 'School Event',
-        color: '#10b981',
-        description: 'School-wide events and activities',
-      },
-      {
-        name: 'Class Assignment',
-        color: '#f59e0b',
-        description: 'Assignment due dates for class levels',
-      },
-    ];
-
-    for (const categoryData of defaultCategories) {
-      const exists = await this.eventCategoryRepository.findOne({
-        where: {
-          name: categoryData.name,
-          school: { id: school.id },
-        },
-      });
-
-      if (!exists) {
-        const category = this.eventCategoryRepository.create({
-          ...categoryData,
-          school,
-        });
-        await this.eventCategoryRepository.save(category);
-        this.logger.log(
-          `Created default event category "${categoryData.name}" for school: ${school.name}`,
-        );
-      }
-    }
   }
 
   async findOneWithDetails(id: string): Promise<any> {

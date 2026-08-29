@@ -11,6 +11,19 @@ import { TenantDirectoryService } from './tenant-directory.service';
 import { TenantIterationService } from './tenant-iteration.service';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
 
+/**
+ * Pre-login school identity (fail closed).
+ *
+ * Student/Teacher login and forgot-PIN accept `identifier`:
+ * - generated id `INITIALS-SCHOOLCODE-ROLE-PERSON` (school = 5-digit schoolCode), or
+ * - email only when tenant_directory has exactly one row for that role.
+ *
+ * Zero or many directory matches → null. Never scan all tenant schemas.
+ * Do not use PIN/password to pick a tenant.
+ */
+const GENERATED_PIN_ID =
+  /^[A-Za-z]{2,4}-(\d{5})-(\d{3})-(\d{5})$/;
+
 @Injectable()
 export class TenantUserLookupService {
   constructor(
@@ -22,82 +35,15 @@ export class TenantUserLookupService {
   ) {}
 
   async findTeacher(identifier: string): Promise<Teacher | null> {
-    const dirs = await this.directory.findByLogin(identifier, 'teacher');
-    if (dirs.length === 1) {
-      return this.loadTeacher(dirs[0].schoolId, dirs[0].tenantUserId);
-    }
-    const school = await this.schoolFromCodePrefix(identifier);
-    if (school) {
-      return this.tenantConnection.runForSchoolId(school.id, (manager) =>
-        manager.findOne(Teacher, {
-          where: [{ email: identifier }, { teacherId: identifier }],
-          relations: ['role', 'school'],
-        }),
-      );
-    }
-    let found: Teacher | null = null;
-    await this.iteration.forEachActiveSchool(async (schoolId) => {
-      if (found) {
-        return;
-      }
-      const teacher = await this.tenantConnection.manager.findOne(Teacher, {
-        where: [{ email: identifier }, { teacherId: identifier }],
-        relations: ['role', 'school'],
-      });
-      if (teacher) {
-        found = teacher;
-        await this.directory.upsert({
-          loginKey: identifier,
-          userType: 'teacher',
-          schoolId,
-          tenantUserId: teacher.id,
-        });
-      }
-    });
-    return found;
+    return this.findPinUser(identifier, 'teacher', (schoolId, tenantUserId) =>
+      this.loadTeacher(schoolId, tenantUserId),
+    );
   }
 
   async findStudent(identifier: string): Promise<Student | null> {
-    const dirs = await this.directory.findByLogin(identifier, 'student');
-    if (dirs.length === 1) {
-      return this.tenantConnection.runForSchoolId(
-        dirs[0].schoolId,
-        (manager) =>
-          manager.findOne(Student, {
-            where: { id: dirs[0].tenantUserId },
-            relations: ['role', 'school'],
-          }),
-      );
-    }
-    const school = await this.schoolFromCodePrefix(identifier);
-    if (school) {
-      return this.tenantConnection.runForSchoolId(school.id, (manager) =>
-        manager.findOne(Student, {
-          where: [{ email: identifier }, { studentId: identifier }],
-          relations: ['role', 'school'],
-        }),
-      );
-    }
-    let found: Student | null = null;
-    await this.iteration.forEachActiveSchool(async (schoolId) => {
-      if (found) {
-        return;
-      }
-      const student = await this.tenantConnection.manager.findOne(Student, {
-        where: [{ email: identifier }, { studentId: identifier }],
-        relations: ['role', 'school'],
-      });
-      if (student) {
-        found = student;
-        await this.directory.upsert({
-          loginKey: identifier,
-          userType: 'student',
-          schoolId,
-          tenantUserId: student.id,
-        });
-      }
-    });
-    return found;
+    return this.findPinUser(identifier, 'student', (schoolId, tenantUserId) =>
+      this.loadStudent(schoolId, tenantUserId),
+    );
   }
 
   async findParentsByEmail(email: string): Promise<Parent[]> {
@@ -169,6 +115,49 @@ export class TenantUserLookupService {
     });
   }
 
+  private async findPinUser<T>(
+    identifier: string,
+    userType: 'student' | 'teacher',
+    load: (schoolId: string, tenantUserId: string) => Promise<T | null>,
+  ): Promise<T | null> {
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const dirs = await this.directory.findByLogin(trimmed, userType);
+    if (dirs.length === 1) {
+      return load(dirs[0].schoolId, dirs[0].tenantUserId);
+    }
+    if (dirs.length > 1) {
+      return null;
+    }
+
+    const school = await this.schoolFromGeneratedId(trimmed);
+    if (!school) {
+      return null;
+    }
+
+    return this.tenantConnection.runForSchoolId(school.id, (manager) => {
+      if (userType === 'student') {
+        return manager
+          .getRepository(Student)
+          .createQueryBuilder('student')
+          .leftJoinAndSelect('student.role', 'role')
+          .leftJoinAndSelect('student.school', 'school')
+          .where('LOWER(student.studentId) = LOWER(:id)', { id: trimmed })
+          .getOne() as Promise<T | null>;
+      }
+      return manager
+        .getRepository(Teacher)
+        .createQueryBuilder('teacher')
+        .leftJoinAndSelect('teacher.role', 'role')
+        .leftJoinAndSelect('teacher.school', 'school')
+        .where('LOWER(teacher.teacherId) = LOWER(:id)', { id: trimmed })
+        .getOne() as Promise<T | null>;
+    });
+  }
+
   private loadTeacher(schoolId: string, id: string): Promise<Teacher | null> {
     return this.tenantConnection.runForSchoolId(schoolId, (manager) =>
       manager.findOne(Teacher, {
@@ -178,14 +167,25 @@ export class TenantUserLookupService {
     );
   }
 
-  private async schoolFromCodePrefix(identifier: string): Promise<School | null> {
-    const code = identifier.split('-')[0];
-    if (!code) {
+  private loadStudent(schoolId: string, id: string): Promise<Student | null> {
+    return this.tenantConnection.runForSchoolId(schoolId, (manager) =>
+      manager.findOne(Student, {
+        where: { id },
+        relations: ['role', 'school'],
+      }),
+    );
+  }
+
+  private async schoolFromGeneratedId(
+    identifier: string,
+  ): Promise<School | null> {
+    const match = GENERATED_PIN_ID.exec(identifier);
+    if (!match) {
       return null;
     }
     return this.schoolRepository.findOne({
       where: {
-        schoolCode: code,
+        schoolCode: match[1],
         provisioningStatus: SchoolProvisioningStatus.Active,
         isDisabled: false,
       },

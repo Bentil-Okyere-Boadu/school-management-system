@@ -1,9 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
-/** Email or student ID (same as login `identifier`). */
+/**
+ * Same `identifier` as POST /student/login.
+ * Use generated studentId `ABC-00000-120-00001` (school = 5-digit schoolCode)
+ * or an email that maps to exactly one tenant_directory student row.
+ */
 export class ForgotStudentPasswordDto {
-  @ApiProperty({ example: 'student@school.com or STU-2024-001' })
+  @ApiProperty({
+    example: 'ABC-00000-120-00001',
+    description:
+      'Generated studentId, or email only if it belongs to exactly one school',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(320)

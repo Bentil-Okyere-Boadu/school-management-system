@@ -226,6 +226,7 @@ export class SchoolAdminController {
     return this.admissionService.findAllBySchool(query);
   }
   @Patch('admissions/:applicationId/status')
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SchoolAdmin)
   updateAdmissionStatus(
     @Param('applicationId') applicationId: string,

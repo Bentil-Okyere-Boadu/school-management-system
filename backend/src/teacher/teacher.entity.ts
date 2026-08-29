@@ -56,12 +56,6 @@ export class Teacher {
   @Column({ default: false })
   isInvitationAccepted: boolean;
 
-  @Column({ nullable: true })
-  invitationToken: string;
-
-  @Column({ nullable: true, type: 'timestamp' })
-  invitationExpires: Date;
-
   @CreateDateColumn()
   createdAt: Date;
 

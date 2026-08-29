@@ -58,8 +58,9 @@ export class TenantDirectoryService {
   }
 
   /**
-   * Directory rows only exist once an invitation has been accepted, so these
-   * counts are the number of users of that type that actually exist per school.
+   * Student/teacher rows are written at invite or admission time (before first
+   * login). School-admin and parent rows appear when those users exist in the
+   * tenant. Counts are per-school listings, not “accepted invitations.”
    */
   async countByUserTypeForSchools(
     userType: TenantDirectory['userType'],
@@ -85,5 +86,25 @@ export class TenantDirectoryService {
     return this.directoryRepository.findOne({
       where: { tenantUserId, userType },
     });
+  }
+
+  async upsertStudentLookupKeys(params: {
+    schoolId: string;
+    tenantUserId: string;
+    email?: string | null;
+    studentId?: string | null;
+    billingCode?: string | null;
+  }): Promise<void> {
+    const keys = [params.email, params.studentId, params.billingCode].filter(
+      (key): key is string => Boolean(key && key.trim()),
+    );
+    for (const loginKey of keys) {
+      await this.upsert({
+        loginKey,
+        userType: 'student',
+        schoolId: params.schoolId,
+        tenantUserId: params.tenantUserId,
+      });
+    }
   }
 }

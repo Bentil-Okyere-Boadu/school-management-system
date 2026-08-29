@@ -37,8 +37,19 @@ export class NotificationController {
     return tokenSchoolId;
   }
 
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Roles(Role.SchoolAdmin)
   @Post()
-  create(@Body() dto: CreateNotificationDto) {
+  create(
+    @Body() dto: CreateNotificationDto,
+    @CurrentUser() admin: SchoolAdmin,
+  ) {
+    this.schoolIdForAdmin(admin, dto.schoolId);
     return this.notificationService.create(dto);
   }
 
@@ -80,16 +91,37 @@ export class NotificationController {
     );
   }
 
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Roles(Role.SchoolAdmin)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateNotificationDto) {
     return this.notificationService.update(id, dto);
   }
 
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Roles(Role.SchoolAdmin)
   @Patch(':id/markAsRead')
   markAsRead(@Param('id') id: string) {
     return this.notificationService.markAsRead(id);
   }
 
+  @UseGuards(
+    SchoolAdminJwtAuthGuard,
+    ActiveUserGuard,
+    RolesGuard,
+    SchoolAdminSchoolGuard,
+  )
+  @Roles(Role.SchoolAdmin)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.notificationService.remove(id);

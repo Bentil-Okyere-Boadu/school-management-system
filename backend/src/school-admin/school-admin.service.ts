@@ -371,7 +371,6 @@ export class SchoolAdminService {
     const student = await this.studentRepository.findOne({
       where: {
         id: userId,
-        school: { id: resolvedSchoolId },
       },
       relations: [
         'profile',
@@ -411,7 +410,6 @@ export class SchoolAdminService {
     const teacher = await this.teacherRepository.findOne({
       where: {
         id: userId,
-        school: { id: resolvedSchoolId },
       },
       relations: ['role', 'profile', 'school'],
     });
@@ -466,7 +464,7 @@ export class SchoolAdminService {
   ): Promise<Student | null> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     return this.studentRepository.findOne({
-      where: { id, school: { id: resolvedSchoolId } },
+      where: { id },
     });
   }
 
@@ -540,7 +538,7 @@ export class SchoolAdminService {
   async suspendTeacher(teacherId: string, suspend: boolean, schoolId?: string) {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const teacher = await this.teacherRepository.findOne({
-      where: { id: teacherId, school: { id: resolvedSchoolId } },
+      where: { id: teacherId },
     });
 
     if (!teacher) {
@@ -565,7 +563,7 @@ export class SchoolAdminService {
   ): Promise<{ message: string }> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const student = await this.studentRepository.findOne({
-      where: { id: userId, school: { id: resolvedSchoolId } },
+      where: { id: userId },
     });
 
     if (student) {
@@ -573,7 +571,7 @@ export class SchoolAdminService {
     }
 
     const teacher = await this.teacherRepository.findOne({
-      where: { id: userId, school: { id: resolvedSchoolId } },
+      where: { id: userId },
     });
 
     if (teacher) {
@@ -591,7 +589,7 @@ export class SchoolAdminService {
   ): Promise<{ message: string }> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const teacher = await this.teacherRepository.findOne({
-      where: { id: teacherId, school: { id: resolvedSchoolId } },
+      where: { id: teacherId },
       relations: ['profile'],
     });
 
@@ -630,7 +628,7 @@ export class SchoolAdminService {
   ): Promise<{ message: string }> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const student = await this.studentRepository.findOne({
-      where: { id: studentId, school: { id: resolvedSchoolId } },
+      where: { id: studentId },
       relations: ['profile', 'parentStudents', 'parentStudents.parent'],
     });
 
@@ -687,7 +685,6 @@ export class SchoolAdminService {
       .count({ where: { isArchived: false } });
 
     const classLevels = await this.classLevelRepository.find({
-      where: { school: { id: resolvedSchoolId } },
       relations: ['students'],
     });
 
@@ -1030,7 +1027,7 @@ export class SchoolAdminService {
     }
 
     const classLevel = await classLevelRepository.findOne({
-      where: { id: assignment.classLevel.id, school: { id: admin.school.id } },
+      where: { id: assignment.classLevel.id },
       relations: ['students', 'students.profile'],
     });
 

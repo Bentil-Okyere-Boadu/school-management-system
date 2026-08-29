@@ -67,13 +67,15 @@ export class NotificationService {
 
     if (!school) throw new NotFoundException('School not found');
 
-    const notification = this.notificationRepository.create({
-      message: dto.message,
-      title: dto.title,
-      type: dto.type,
-      school,
+    return this.tenantConnection.runForSchoolId(dto.schoolId, async () => {
+      const notification = this.notificationRepository.create({
+        message: dto.message,
+        title: dto.title,
+        type: dto.type,
+        school,
+      });
+      return this.notificationRepository.save(notification);
     });
-    return this.notificationRepository.save(notification);
   }
 
   async createForRecipients(input: CreateForRecipientsInput): Promise<void> {

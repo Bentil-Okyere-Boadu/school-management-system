@@ -103,11 +103,12 @@ export async function dropPublicTenantTables(
     await dropPublicTable(queryRunner, name);
   }
 
-  const leftoverPlanner: Array<{ tablename: string }> = await queryRunner.query(
-    `SELECT tablename FROM pg_tables
-     WHERE schemaname = 'public' AND tablename LIKE 'planner\\_%' ESCAPE '\\'`,
+  const leftoverPublic: Array<{ tablename: string }> = await queryRunner.query(
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
   );
-  for (const row of leftoverPlanner) {
-    await dropPublicTable(queryRunner, row.tablename);
+  for (const row of leftoverPublic) {
+    if (names.has(row.tablename) || row.tablename.startsWith('planner_')) {
+      await dropPublicTable(queryRunner, row.tablename);
+    }
   }
 }

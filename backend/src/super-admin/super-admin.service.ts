@@ -235,15 +235,14 @@ export class SuperAdminService {
       await this.tenantConnection.runForSchoolId(school.id, async () => {
         if (scope === 'overall') {
           grades = await this.studentGradeRepository.find({
-            relations: ['student', 'student.school'],
+            relations: ['student'],
           });
         } else {
           const fromDate = options?.from ? new Date(options.from) : undefined;
           const toDate = options?.to ? new Date(options.to) : undefined;
           const qb = this.studentGradeRepository
             .createQueryBuilder('grade')
-            .leftJoinAndSelect('grade.student', 'student')
-            .leftJoinAndSelect('student.school', 'school');
+            .leftJoinAndSelect('grade.student', 'student');
           if (fromDate) qb.andWhere('grade.createdAt >= :fromDate', { fromDate });
           if (toDate) qb.andWhere('grade.createdAt <= :toDate', { toDate });
           grades = await qb.getMany();
@@ -255,7 +254,7 @@ export class SuperAdminService {
         { sum: number; count: number }
       >();
       for (const g of grades) {
-        if (g.student?.school?.id !== school.id || g.totalScore == null) continue;
+        if (!g.student || g.totalScore == null) continue;
         const key = g.student.id;
         const current = perStudentTotals.get(key) || { sum: 0, count: 0 };
         current.sum += g.totalScore;

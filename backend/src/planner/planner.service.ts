@@ -90,14 +90,13 @@ export class PlannerService {
 
   async findAllCategories(schoolId: string): Promise<EventCategory[]> {
     return this.categoryRepository.find({
-      where: { school: { id: schoolId } },
       order: { name: 'ASC' },
     });
   }
 
   async findOneCategory(id: string, schoolId: string): Promise<EventCategory> {
     const category = await this.categoryRepository.findOne({
-      where: { id, school: { id: schoolId } },
+      where: { id },
     });
 
     if (!category) {
