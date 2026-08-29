@@ -8,7 +8,6 @@ import { Parent } from 'src/parent/parent.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { TenantConnectionService } from './tenant-connection.service';
 import { TenantDirectoryService } from './tenant-directory.service';
-import { TenantIterationService } from './tenant-iteration.service';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
 
 /**
@@ -31,7 +30,6 @@ export class TenantUserLookupService {
     private readonly schoolRepository: Repository<School>,
     private readonly directory: TenantDirectoryService,
     private readonly tenantConnection: TenantConnectionService,
-    private readonly iteration: TenantIterationService,
   ) {}
 
   async findTeacher(identifier: string): Promise<Teacher | null> {
@@ -46,36 +44,19 @@ export class TenantUserLookupService {
     );
   }
 
-  async findParentsByEmail(email: string): Promise<Parent[]> {
+  async findParentByEmail(email: string): Promise<Parent | null> {
     const dirs = await this.directory.findByLogin(email, 'parent');
-    const parents: Parent[] = [];
-    if (dirs.length > 0) {
-      for (const dir of dirs) {
-        const parent = await this.tenantConnection.runForSchoolId(
-          dir.schoolId,
-          (manager) =>
-            manager.findOne(Parent, {
-              where: { id: dir.tenantUserId },
-              relations: ['role', 'school'],
-            }),
-        );
-        if (parent) {
-          parents.push(parent);
-        }
-      }
-      return parents;
+    if (dirs.length !== 1) {
+      return null;
     }
-    await this.iteration.forEachActiveSchool(async () => {
-      const matches = await this.tenantConnection.manager
-        .getRepository(Parent)
-        .createQueryBuilder('parent')
-        .leftJoinAndSelect('parent.role', 'role')
-        .leftJoinAndSelect('parent.school', 'school')
-        .where('LOWER(parent.email) = :email', { email: email.toLowerCase() })
-        .getMany();
-      parents.push(...matches);
-    });
-    return parents;
+    return this.tenantConnection.runForSchoolId(
+      dirs[0].schoolId,
+      (manager) =>
+        manager.findOne(Parent, {
+          where: { id: dirs[0].tenantUserId },
+          relations: ['role', 'school'],
+        }),
+    );
   }
 
   async loadByRefresh(

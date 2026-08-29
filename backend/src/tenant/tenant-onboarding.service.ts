@@ -19,6 +19,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Role } from 'src/role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { EmailRetryService } from 'src/common/services/email-retry.service';
+import { TenantDirectoryService } from './tenant-directory.service';
 import { tenantSchemaName } from './tenant-schema.util';
 
 @Injectable()
@@ -34,6 +35,7 @@ export class TenantOnboardingService {
     private readonly roleRepository: Repository<Role>,
     private readonly provisioner: TenantProvisionerService,
     private readonly tenantConnection: TenantConnectionService,
+    private readonly tenantDirectory: TenantDirectoryService,
     private readonly emailRetry: EmailRetryService,
   ) {}
 
@@ -294,16 +296,22 @@ export class TenantOnboardingService {
     });
   }
 
+  async resolveSchoolAdminDirectory(email: string) {
+    const dirs = await this.tenantDirectory.findByLogin(
+      email.toLowerCase(),
+      'school_admin',
+    );
+    if (dirs.length !== 1) {
+      return null;
+    }
+    return dirs[0];
+  }
+
   async validateSchoolAdminLogin(
     email: string,
     password: string,
   ): Promise<SchoolAdmin | null> {
-    const directory = await this.directoryRepository.findOne({
-      where: {
-        loginKey: email.toLowerCase(),
-        userType: 'school_admin',
-      },
-    });
+    const directory = await this.resolveSchoolAdminDirectory(email);
     if (!directory) {
       return null;
     }

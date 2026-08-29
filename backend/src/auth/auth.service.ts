@@ -207,6 +207,8 @@ export class AuthService {
     return {
       success: true,
       message: 'Password reset link sent to your email',
+      resetToken,
+      resetTokenExpires,
     };
   }
 

@@ -11,6 +11,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
 import { PlatformInvitation } from 'src/tenant/entities/platform-invitation.entity';
+import { PlatformPreloginToken } from 'src/tenant/entities/platform-prelogin-token.entity';
 import { TenantContextService } from './tenant/tenant-context.service';
 import { EncryptionService } from './utils/encryption.util';
 
@@ -23,6 +24,7 @@ import { EncryptionService } from './utils/encryption.util';
       Teacher,
       Student,
       PlatformInvitation,
+      PlatformPreloginToken,
     ]),
   ],
   controllers: [CleanupController],

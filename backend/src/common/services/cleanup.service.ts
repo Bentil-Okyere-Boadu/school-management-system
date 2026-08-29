@@ -6,6 +6,7 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
 import { Attendance } from 'src/attendance/attendance.entity';
 import { PlatformInvitation } from 'src/tenant/entities/platform-invitation.entity';
+import { PlatformPreloginToken } from 'src/tenant/entities/platform-prelogin-token.entity';
 import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 import { TenantIterationService } from 'src/tenant/tenant-iteration.service';
 
@@ -25,6 +26,8 @@ export class CleanupService {
     private studentRepository: Repository<Student>,
     @InjectRepository(PlatformInvitation)
     private invitationRepository: Repository<PlatformInvitation>,
+    @InjectRepository(PlatformPreloginToken)
+    private preloginTokenRepository: Repository<PlatformPreloginToken>,
     private readonly tenantConnection: TenantConnectionService,
     private readonly tenantIteration: TenantIterationService,
   ) {}
@@ -75,6 +78,7 @@ export class CleanupService {
 
   async cleanupExpiredTokens(): Promise<{
     expiredInvitations: number;
+    expiredPreloginTokens: number;
     expiredAdmins: number;
     expiredTeachers: number;
     expiredStudents: number;
@@ -86,6 +90,11 @@ export class CleanupService {
     const expiredInvitations = await this.deleteExpiredPlatformInvitations(now);
     this.logger.log(
       `Deleted ${expiredInvitations} expired platform invitations`,
+    );
+
+    const expiredPreloginTokens = await this.deleteExpiredPreloginTokens(now);
+    this.logger.log(
+      `Deleted ${expiredPreloginTokens} expired platform prelogin tokens`,
     );
 
     const totals = {
@@ -106,6 +115,7 @@ export class CleanupService {
 
     return {
       expiredInvitations,
+      expiredPreloginTokens,
       ...totals,
     };
   }
@@ -144,6 +154,24 @@ export class CleanupService {
       pendingInvitations,
       ...totals,
     };
+  }
+
+  private async deleteExpiredPreloginTokens(before: Date): Promise<number> {
+    const expired = await this.preloginTokenRepository
+      .createQueryBuilder()
+      .delete()
+      .from(PlatformPreloginToken)
+      .where('"expiresAt" < :before', { before })
+      .execute();
+    const consumed = await this.preloginTokenRepository
+      .createQueryBuilder()
+      .delete()
+      .from(PlatformPreloginToken)
+      .where('"consumedAt" IS NOT NULL AND "consumedAt" < :before', {
+        before,
+      })
+      .execute();
+    return (expired.affected ?? 0) + (consumed.affected ?? 0);
   }
 
   private async deleteExpiredPlatformInvitations(

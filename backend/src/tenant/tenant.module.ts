@@ -6,6 +6,8 @@ import { School } from 'src/school/school.entity';
 import { Role } from 'src/role/role.entity';
 import { TenantDirectory } from './entities/tenant-directory.entity';
 import { PlatformInvitation } from './entities/platform-invitation.entity';
+import { PlatformPreloginToken } from './entities/platform-prelogin-token.entity';
+import { PlatformPreloginTokenService } from './platform-prelogin-token.service';
 import { TenantResolverService } from './tenant-resolver.service';
 import { TenantConnectionService } from './tenant-connection.service';
 import { TenantOrmService } from './tenant-orm.service';
@@ -24,6 +26,7 @@ import { bindTenantRepositories } from './tenant-repository-binder';
       School,
       TenantDirectory,
       PlatformInvitation,
+      PlatformPreloginToken,
       Role,
     ]),
   ],
@@ -36,6 +39,7 @@ import { bindTenantRepositories } from './tenant-repository-binder';
     TenantIterationService,
     TenantDirectoryService,
     TenantUserLookupService,
+    PlatformPreloginTokenService,
     {
       provide: APP_INTERCEPTOR,
       useClass: TenantRequestInterceptor,
@@ -50,6 +54,7 @@ import { bindTenantRepositories } from './tenant-repository-binder';
     TenantIterationService,
     TenantDirectoryService,
     TenantUserLookupService,
+    PlatformPreloginTokenService,
     TypeOrmModule,
   ],
 })

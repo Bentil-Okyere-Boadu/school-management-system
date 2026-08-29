@@ -31,6 +31,7 @@ export const PLATFORM_PUBLIC_TABLES: readonly string[] = [
   'super_admin_profile',
   'tenant_directory',
   'platform_invitation',
+  'platform_prelogin_token',
   'migrations',
   'typeorm_metadata',
   'platform_audit_log',
