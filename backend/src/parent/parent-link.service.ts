@@ -21,6 +21,7 @@ import { Student } from 'src/student/student.entity';
 import { Role } from 'src/role/role.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
 import { NotificationType } from 'src/notification/notification.entity';
 
 @Injectable()
@@ -38,6 +39,7 @@ export class ParentLinkService {
     private readonly roleRepository: Repository<Role>,
     private readonly emailService: EmailService,
     private readonly notificationService: NotificationService,
+    private readonly tenantDirectory: TenantDirectoryService,
   ) {}
 
   generateToken(): string {
@@ -76,6 +78,15 @@ export class ParentLinkService {
 
     if (!parent) {
       parent = await this.createPendingParent(student, input, email);
+    }
+
+    if (parent.email && student.school?.id) {
+      await this.tenantDirectory.upsert({
+        loginKey: parent.email,
+        userType: 'parent',
+        schoolId: student.school.id,
+        tenantUserId: parent.id,
+      });
     }
 
     let relationship = await this.parentStudentRepository.findOne({

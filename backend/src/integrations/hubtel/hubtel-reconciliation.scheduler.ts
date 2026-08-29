@@ -3,6 +3,8 @@ import { Cron } from '@nestjs/schedule';
 import { HubtelStatusService } from './hubtel-status.service';
 import { PaymentsService } from 'src/payments/payments.service';
 import { PaymentTransactionStatus } from 'src/payments/entities/payment-transaction.entity';
+import { TenantIterationService } from 'src/tenant/tenant-iteration.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
 /**
  * Periodically checks the status of stale PENDING transactions via Hubtel's
@@ -18,6 +20,8 @@ export class HubtelReconciliationScheduler {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly hubtelStatusService: HubtelStatusService,
+    private readonly tenantIteration: TenantIterationService,
+    private readonly tenantConnection: TenantConnectionService,
   ) {}
 
   @Cron(process.env.HUBTEL_STATUS_RECONCILE_CRON ?? '0 */5 * * * *')
@@ -27,8 +31,14 @@ export class HubtelReconciliationScheduler {
     }
     this.running = true;
     try {
-      const staleTransactions =
-        await this.paymentsService.getStalePendingTransactions(5);
+      const staleTransactions: Awaited<
+        ReturnType<PaymentsService['getStalePendingTransactions']>
+      > = [];
+      await this.tenantIteration.forEachActiveSchool(async () => {
+        staleTransactions.push(
+          ...(await this.paymentsService.getStalePendingTransactions(5)),
+        );
+      });
 
       if (staleTransactions.length > 0) {
         this.logger.log(
@@ -45,6 +55,7 @@ export class HubtelReconciliationScheduler {
         }
 
         try {
+          await this.tenantConnection.runForSchoolId(school.id, async () => {
           const statusResponse =
             await this.hubtelStatusService.checkTransactionStatus(school, {
               sessionId: transaction.sessionId,
@@ -56,7 +67,7 @@ export class HubtelReconciliationScheduler {
             this.logger.warn(
               `Hubtel reconciliation: no status from Hubtel for transaction ${transaction.id} schoolId=${school.id} sessionId=${transaction.sessionId} (hubtelTxnId=${transaction.hubtelTransactionId ?? 'none'} networkTxnId=${transaction.networkTransactionId ?? 'none'})`,
             );
-            continue;
+            return;
           }
 
           const status = String(statusResponse.data.status).toLowerCase();
@@ -90,6 +101,7 @@ export class HubtelReconciliationScheduler {
           this.logger.log(
             `Hubtel reconciliation: success transactionId=${updated.id} schoolId=${school.id} sessionId=${transaction.sessionId} mappedStatus=${mappedStatus} providerStatus=${statusResponse.data.status} hubtelTransactionId=${statusResponse.data.transactionId ?? 'n/a'} networkTransactionId=${statusResponse.data.externalTransactionId ?? 'n/a'}`,
           );
+          });
         } catch (error) {
           const message =
             error instanceof Error ? error.message : String(error);

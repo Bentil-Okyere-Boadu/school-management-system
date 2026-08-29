@@ -21,9 +21,7 @@ export class ClassLevel {
   @Column({ nullable: true })
   description?: string;
 
-  @ManyToOne(() => School, (school) => school.classLevels, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => School, { onDelete: 'CASCADE' })
   school: School;
 
   @ManyToOne(() => Teacher, { nullable: true, onDelete: 'SET NULL' })

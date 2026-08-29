@@ -32,15 +32,9 @@ export class ParentBackfillService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    try {
-      await this.dropLegacyGlobalEmailUnique();
-      await this.backfill();
-    } catch (error) {
-      this.logger.error(
-        'Parent relationship backfill failed',
-        error instanceof Error ? error.stack : error,
-      );
-    }
+    this.logger.log(
+      'Parent relationship backfill skipped (schema-per-school; not a public-schema job)',
+    );
   }
 
   private async dropLegacyGlobalEmailUnique(): Promise<void> {

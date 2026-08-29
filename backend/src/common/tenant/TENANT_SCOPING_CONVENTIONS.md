@@ -1,8 +1,8 @@
-# Tenant Scoping Conventions
+# Tenant data access
 
-Use these rules for all school-scoped modules:
+Isolation is PostgreSQL `search_path` (`SET LOCAL` on a request QueryRunner), not `schoolId` filters.
 
-1. Resolve tenant context through `TenantContextService` (never parse `request.user` directly inside services).
-2. Default to `TenantScopedRepositoryService` for `find`, `findOne`, `count`, and query builder scoping.
-3. Only super-admin and explicitly exempt endpoints may bypass tenant scoping.
-4. Any cross-tenant query must be clearly documented in code comments with the business reason.
+- Tenant HTTP requests: `TenantRequestInterceptor` + `TenantConnectionService.runForSchoolId`.
+- Jobs/webhooks: `TenantIterationService` / `runForSchoolId` with a catalog `schoolId`.
+- Missing tenant context fails closed (`MissingTenantContextException`).
+- Schema names come only from `public.school`, never from JWT or headers.

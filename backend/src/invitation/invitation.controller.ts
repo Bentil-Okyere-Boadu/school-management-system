@@ -31,6 +31,7 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { ParentLinkService } from 'src/parent/parent-link.service';
 import { ParentAuthService } from 'src/parent/parent-auth.service';
 import { EmailService } from 'src/common/services/email.service';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
 
 @Controller('invitations')
 @ApiTags('Invitation')
@@ -44,6 +45,7 @@ export class InvitationController {
     private readonly parentLinkService: ParentLinkService,
     private readonly parentAuthService: ParentAuthService,
     private readonly emailService: EmailService,
+    private readonly tenantOnboarding: TenantOnboardingService,
   ) {}
 
   // Superadmin endpoints
@@ -54,7 +56,12 @@ export class InvitationController {
     @Body() inviteUserDto: InviteUserDto,
     @CurrentUser() user: SuperAdmin,
   ) {
-    return this.invitationService.inviteAdmin(inviteUserDto, user);
+    return this.tenantOnboarding.inviteSchoolAdmin({
+      schoolId: inviteUserDto.schoolId,
+      email: inviteUserDto.email,
+      firstName: inviteUserDto.firstName,
+      lastName: inviteUserDto.lastName,
+    });
   }
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -120,13 +127,15 @@ export class InvitationController {
       throw new BadRequestException('Token and password are required');
     }
 
-    const schoolAdmin = await this.invitationService.completeRegistration(
-      completeRegDto.token,
-      completeRegDto.password,
-    );
-
-    if (schoolAdmin) {
+    try {
+      const schoolAdmin =
+        await this.tenantOnboarding.acceptSchoolAdminInvitation(
+          completeRegDto.token,
+          completeRegDto.password,
+        );
       return this.schoolAdminAuthService.login(schoolAdmin);
+    } catch {
+      // Fall through to legacy parent invitation tokens.
     }
 
     const parent = await this.parentLinkService.completeParentInvitation(

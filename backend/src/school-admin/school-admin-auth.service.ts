@@ -1,52 +1,46 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { SchoolAdmin } from './school-admin.entity';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
+import { AuthService } from 'src/auth/auth.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
-import { SchoolAdmin } from './school-admin.entity';
-import { AuthService } from 'src/auth/auth.service';
+import { TenantDirectory } from 'src/tenant/entities/tenant-directory.entity';
 
 @Injectable()
 export class SchoolAdminAuthService {
-  //private readonly logger = new Logger(SchoolAdminAuthService.name);
-
   constructor(
-    @InjectRepository(SchoolAdmin)
-    private readonly schoolAdminRepository: Repository<SchoolAdmin>,
+    private readonly tenantOnboarding: TenantOnboardingService,
+    private readonly tenantConnection: TenantConnectionService,
     private readonly authService: AuthService,
+    @InjectRepository(TenantDirectory)
+    private readonly directoryRepository: Repository<TenantDirectory>,
   ) {}
 
   async validateSchoolAdmin(
     email: string,
     password: string,
   ): Promise<SchoolAdmin | null> {
-    const schoolAdmin = await this.schoolAdminRepository.findOne({
-      where: { email },
-    });
-
-    if (!schoolAdmin) {
-      return null;
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      schoolAdmin.password,
-    );
-
-    if (!isPasswordValid) {
-      return null;
-    }
-
-    if (schoolAdmin.isSuspended) {
-      return null;
-    }
-
-    return schoolAdmin;
+    return this.tenantOnboarding.validateSchoolAdminLogin(email, password);
   }
 
   async findByEmail(email: string): Promise<SchoolAdmin | null> {
-    return this.schoolAdminRepository.findOne({
-      where: { email },
+    const directory = await this.directoryRepository.findOne({
+      where: {
+        loginKey: email.toLowerCase(),
+        userType: 'school_admin',
+      },
     });
+    if (!directory) {
+      return null;
+    }
+    return this.tenantConnection.runForSchoolId(
+      directory.schoolId,
+      async (manager) =>
+        manager.findOne(SchoolAdmin, {
+          where: { id: directory.tenantUserId },
+        }),
+    );
   }
 
   login(schoolAdmin: SchoolAdmin) {
@@ -54,17 +48,46 @@ export class SchoolAdminAuthService {
   }
 
   async forgotPassword(email: string) {
-    return this.authService.handleForgotPassword(
-      email,
-      this.schoolAdminRepository,
+    const admin = await this.findByEmail(email);
+    if (!admin) {
+      throw new NotFoundException('No user found with the provided credentials');
+    }
+    const directory = await this.directoryRepository.findOne({
+      where: { loginKey: email.toLowerCase(), userType: 'school_admin' },
+    });
+    if (!directory) {
+      throw new NotFoundException('No user found with the provided credentials');
+    }
+    return this.tenantConnection.runForSchoolId(
+      directory.schoolId,
+      async (manager) => {
+        const repo = manager.getRepository(SchoolAdmin);
+        return this.authService.handleForgotPassword(email, repo);
+      },
     );
   }
 
   async resetPassword(token: string, newPassword: string) {
-    return this.authService.handleResetPassword(
-      token,
-      newPassword,
-      this.schoolAdminRepository,
-    );
+    const directories = await this.directoryRepository.find({
+      where: { userType: 'school_admin' },
+    });
+    for (const directory of directories) {
+      try {
+        return await this.tenantConnection.runForSchoolId(
+          directory.schoolId,
+          async (manager) => {
+            const repo = manager.getRepository(SchoolAdmin);
+            return this.authService.handleResetPassword(
+              token,
+              newPassword,
+              repo,
+            );
+          },
+        );
+      } catch {
+        continue;
+      }
+    }
+    throw new NotFoundException('Invalid or expired token');
   }
 }

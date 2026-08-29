@@ -1,5 +1,6 @@
 import {
   Controller,
+  Post,
   Get,
   Body,
   Param,
@@ -17,12 +18,41 @@ import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { QueryString } from 'src/common/api-features/api-features';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { CreateSchoolDto } from 'src/school/dto/create-school.dto';
 
 @ApiTags('Super Admin')
 @Controller('super-admin')
 export class SuperAdminController {
-  constructor(private readonly superAdminService: SuperAdminService) {}
+  constructor(
+    private readonly superAdminService: SuperAdminService,
+    private readonly tenantOnboarding: TenantOnboardingService,
+  ) {}
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('/schools')
+  @Roles(Role.SuperAdmin)
+  createSchool(@Body() dto: CreateSchoolDto) {
+    return this.tenantOnboarding.createAndProvisionSchool(dto);
+  }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('/schools/:id/provision')
+  @Roles(Role.SuperAdmin)
+  retryProvision(@Param('id') id: string) {
+    return this.tenantOnboarding.retryProvision(id);
+  }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Put('/schools/:id/disabled')
+  @Roles(Role.SuperAdmin)
+  setDisabled(
+    @Param('id') id: string,
+    @Body() body: { disabled: boolean },
+  ) {
+    return this.tenantOnboarding.setDisabled(id, body.disabled);
+  }
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('/admins')

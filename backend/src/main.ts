@@ -231,8 +231,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new SanitizeResponseInterceptor());
 
   await seedRoles(app);
-  await seedDefaultEventCategories(app);
-  await seedDefaultGradingSystems(app);
+  // Tenant event categories and grading seeds run during schema provision.
   // Sprint: skip one-time seeders/backfills so local restarts stay fast.
   // await seedSubtopicCompletionClassLevels(app);
   // await seedTopicAcademicTerms(app);

@@ -2,19 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { TeacherAuthService } from '../teacher.auth.service';
 import { Teacher } from '../teacher.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
-interface JwtPayload {
-  email: string;
-  role: string;
-  sub: string;
-}
-
-/** JWT user shape: entity fields plus schoolId for tenant resolution */
 type TeacherJwtUser = Partial<Teacher> & { schoolId?: string };
 
 @Injectable()
@@ -24,9 +15,7 @@ export class TeacherJwtStrategy extends PassportStrategy(
 ) {
   constructor(
     private configService: ConfigService,
-    private teacherAuthService: TeacherAuthService,
-    @InjectRepository(SchoolAdmin)
-    private schoolAdminRepository: Repository<SchoolAdmin>,
+    private readonly tenantConnection: TenantConnectionService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -35,38 +24,45 @@ export class TeacherJwtStrategy extends PassportStrategy(
     });
   }
 
-  async validate(payload: JwtPayload): Promise<TeacherJwtUser | null> {
-    if (payload.role !== 'teacher') {
+  async validate(payload: {
+    email: string;
+    role: string;
+    sub: string;
+    schoolId?: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<TeacherJwtUser | null> {
+    if (payload.role !== 'teacher' || !payload.schoolId) {
       return null;
     }
-    const teacher = await this.teacherAuthService.findByEmailOrTeacherId(
-      payload.email,
+    return this.tenantConnection.runForSchoolId(
+      payload.schoolId,
+      async (manager) => {
+        const teacher = await manager.findOne(Teacher, {
+          where: { id: payload.sub },
+          relations: ['role', 'school'],
+        });
+        if (!teacher || teacher.isSuspended) {
+          return null;
+        }
+        const hasSuspendedAdmin = await manager.findOne(SchoolAdmin, {
+          where: { isSuspended: true },
+        });
+        if (hasSuspendedAdmin) {
+          return null;
+        }
+        return {
+          id: teacher.id,
+          email: teacher.email,
+          firstName: teacher.firstName,
+          lastName: teacher.lastName,
+          status: teacher.status,
+          role: teacher.role,
+          teacherId: teacher.teacherId,
+          school: teacher.school,
+          schoolId: payload.schoolId,
+        };
+      },
     );
-    if (!teacher || teacher.isSuspended) {
-      return null;
-    }
-
-    // Check if any school admin for this school is suspended
-    // If yes, logout all students and teachers of that school
-    if (teacher.school?.id) {
-      const hasSuspendedAdmin = await this.schoolAdminRepository.findOne({
-        where: { school: { id: teacher.school.id }, isSuspended: true },
-      });
-      if (hasSuspendedAdmin) {
-        return null; // Logout teacher
-      }
-    }
-
-    return {
-      id: teacher.id,
-      email: teacher.email,
-      firstName: teacher.firstName,
-      lastName: teacher.lastName,
-      status: teacher.status,
-      role: teacher.role,
-      teacherId: teacher.teacherId,
-      school: teacher.school,
-      schoolId: teacher.school?.id,
-    };
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { TenantIterationService } from 'src/tenant/tenant-iteration.service';
 import { CleanupService } from './cleanup.service';
 
 /**
@@ -9,7 +10,10 @@ import { CleanupService } from './cleanup.service';
 export class ScheduledCleanupService {
   private readonly logger = new Logger(ScheduledCleanupService.name);
 
-  constructor(private cleanupService: CleanupService) {}
+  constructor(
+    private cleanupService: CleanupService,
+    private readonly tenantIteration: TenantIterationService,
+  ) {}
 
   /**
    * Run cleanup of orphaned users every week
@@ -19,8 +23,10 @@ export class ScheduledCleanupService {
     this.logger.log('Starting scheduled cleanup of orphaned users...');
 
     try {
-      const result = await this.cleanupService.cleanupOrphanedUsers();
-      this.logger.log(`Scheduled cleanup completed: ${JSON.stringify(result)}`);
+      await this.tenantIteration.forEachActiveSchool(async () => {
+        const result = await this.cleanupService.cleanupOrphanedUsers();
+        this.logger.log(`Scheduled cleanup completed: ${JSON.stringify(result)}`);
+      });
     } catch (error) {
       this.logger.error(
         'Error during scheduled cleanup of orphaned users:',
@@ -57,8 +63,10 @@ export class ScheduledCleanupService {
     this.logger.log('Getting pending users statistics...');
 
     try {
-      const stats = await this.cleanupService.getPendingUsersStats();
-      this.logger.log(`Pending users statistics: ${JSON.stringify(stats)}`);
+      await this.tenantIteration.forEachActiveSchool(async () => {
+        const stats = await this.cleanupService.getPendingUsersStats();
+        this.logger.log(`Pending users statistics: ${JSON.stringify(stats)}`);
+      });
     } catch (error) {
       this.logger.error('Error getting pending users statistics:', error);
     }

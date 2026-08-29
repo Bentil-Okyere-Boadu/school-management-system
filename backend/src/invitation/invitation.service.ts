@@ -27,6 +27,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
 import { TransactionUtil } from '../common/utils/transaction.util';
 
 @Injectable()
@@ -47,6 +48,7 @@ export class InvitationService {
     private emailService: EmailService,
     private emailRetryService: EmailRetryService,
     private transactionUtil: TransactionUtil,
+    private readonly tenantDirectory: TenantDirectoryService,
   ) {}
 
   /**
@@ -313,7 +315,7 @@ export class InvitationService {
       throw new ForbiddenException('Admin not associated with any school');
     }
 
-    return this.transactionUtil.executeInTransaction(
+    const savedStudent = await this.transactionUtil.executeInTransaction(
       async (manager: EntityManager) => {
         const existingUser = await manager.findOne(Student, {
           where: { email: inviteStudentDto.email },
@@ -379,11 +381,22 @@ export class InvitationService {
         return savedUser;
       },
     );
+    await this.tenantDirectory.upsert({
+      loginKey: savedStudent.email,
+      userType: 'student',
+      schoolId: adminUser.school.id,
+      tenantUserId: savedStudent.id,
+    });
+    if (savedStudent.studentId) {
+      await this.tenantDirectory.upsert({
+        loginKey: savedStudent.studentId,
+        userType: 'student',
+        schoolId: adminUser.school.id,
+        tenantUserId: savedStudent.id,
+      });
+    }
+    return savedStudent;
   }
-
-  /**
-   * Invite a teacher - Used by school admin
-   */
   async inviteTeacher(
     inviteTeacherDto: InviteTeacherDto,
     adminUser: Teacher,
@@ -396,7 +409,7 @@ export class InvitationService {
       throw new UnauthorizedException('Admin not associated with any school');
     }
 
-    return this.transactionUtil.executeInTransaction(
+    const savedTeacher = await this.transactionUtil.executeInTransaction(
       async (manager: EntityManager) => {
         const existingUser = await manager.findOne(Teacher, {
           where: { email: inviteTeacherDto.email },
@@ -462,6 +475,21 @@ export class InvitationService {
         return savedUser;
       },
     );
+    await this.tenantDirectory.upsert({
+      loginKey: savedTeacher.email,
+      userType: 'teacher',
+      schoolId: adminUser.school.id,
+      tenantUserId: savedTeacher.id,
+    });
+    if (savedTeacher.teacherId) {
+      await this.tenantDirectory.upsert({
+        loginKey: savedTeacher.teacherId,
+        userType: 'teacher',
+        schoolId: adminUser.school.id,
+        tenantUserId: savedTeacher.id,
+      });
+    }
+    return savedTeacher;
   }
 
   async verifyInvitationToken(token: string) {

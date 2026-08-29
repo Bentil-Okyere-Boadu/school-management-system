@@ -53,10 +53,7 @@ export class Student {
   @JoinColumn()
   role: Role;
 
-  @ManyToOne(() => School, (school) => school.students, {
-    onDelete: 'CASCADE',
-    eager: true,
-  })
+  @ManyToOne(() => School, { onDelete: 'CASCADE', eager: true })
   school: School;
 
   @OneToOne(() => Profile, (profile) => profile.student, {

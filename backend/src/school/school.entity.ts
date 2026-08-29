@@ -1,25 +1,11 @@
-import { ClassLevel } from '../class-level/class-level.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToOne,
 } from 'typeorm';
-import { AdmissionPolicy } from '../admission-policy/admission-policy.entity';
-import { GradingSystem } from '../grading-system/grading-system.entity';
-import { FeeStructure } from '../fee-structure/fee-structure.entity';
-import { AcademicCalendar } from '../academic-calendar/entitites/academic-calendar.entity';
-import { Profile } from 'src/profile/profile.entity';
-import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
-import { Student } from 'src/student/student.entity';
-import { Teacher } from '../teacher/teacher.entity';
-import { VirtualColumn } from 'typeorm/decorator/columns/VirtualColumn';
-import { EventCategory } from '../planner/entities/event-category.entity';
-import { PaymentTransaction } from 'src/payments/entities/payment-transaction.entity';
-import { PaymentReceipt } from 'src/payments/entities/payment-receipt.entity';
+import { SchoolProvisioningStatus } from 'src/tenant/school-provisioning-status';
 
 @Entity()
 export class School {
@@ -47,15 +33,8 @@ export class School {
   @Column({ type: 'varchar', nullable: true })
   mediaType: string | null;
 
-  @VirtualColumn({
-    query: (alias) => `(NULL)`, // Placeholder: handled dynamically in code
-  })
   logoUrl?: string;
 
-  /**
-   * School code used for generating IDs
-   * Format: 5-digit unique identifier
-   */
   @Column({ nullable: true, unique: true })
   schoolCode: string;
 
@@ -65,14 +44,9 @@ export class School {
   @Column({ type: 'float', default: 70 })
   examScorePercentage: number;
 
-  /**
-   * Hubtel merchant integration (per-tenant Direct Receive Money credentials).
-   * Funds settle directly into this school's Hubtel merchant account.
-   */
   @Column({ type: 'varchar', nullable: true })
   hubtelClientId: string | null;
 
-  /** AES-256-GCM ciphertext of the Hubtel API client secret. Never returned via API. */
   @Column({ type: 'varchar', nullable: true })
   hubtelClientSecretEnc: string | null;
 
@@ -82,7 +56,6 @@ export class School {
   @Column({ type: 'boolean', default: false })
   hubtelMerchantActive: boolean;
 
-  /** Last time a school admin requested payments / Hubtel onboarding (email to platform). */
   @Column({ type: 'timestamptz', nullable: true })
   paymentSetupRequestedAt: Date | null;
 
@@ -98,71 +71,23 @@ export class School {
   @Column({ type: 'boolean', default: true })
   parentShowFeedback: boolean;
 
-  @OneToMany(() => SchoolAdmin, (admin) => admin.school, {
-    onDelete: 'CASCADE',
+  @Column({ type: 'varchar', nullable: true, unique: true })
+  schemaName: string | null;
+
+  @Column({
+    type: 'varchar',
+    default: SchoolProvisioningStatus.NotProvisioned,
   })
-  admins: SchoolAdmin[];
+  provisioningStatus: SchoolProvisioningStatus;
 
-  @OneToMany(() => Student, (student) => student.school, {
-    onDelete: 'CASCADE',
-  })
-  students: Student[];
+  @Column({ type: 'timestamptz', nullable: true })
+  provisionedAt: Date | null;
 
-  @OneToMany(() => ClassLevel, (classLevel) => classLevel.school, {
-    onDelete: 'CASCADE',
-  })
-  classLevels: ClassLevel[];
+  @Column({ type: 'text', nullable: true })
+  lastProvisionError: string | null;
 
-  @OneToMany(
-    () => AdmissionPolicy,
-    (admissionPolicy) => admissionPolicy.school,
-    {
-      onDelete: 'CASCADE',
-    },
-  )
-  admissionPolicies: AdmissionPolicy[];
-
-  @OneToMany(() => GradingSystem, (gradingSystem) => gradingSystem.school, {
-    onDelete: 'CASCADE',
-  })
-  gradingSystems: GradingSystem[];
-
-  @OneToMany(() => FeeStructure, (feeStructure) => feeStructure.school, {
-    onDelete: 'CASCADE',
-  })
-  feeStructures: FeeStructure[];
-
-  @OneToOne(() => Profile, (profile) => profile.school, { cascade: true })
-  profile: Profile;
-
-  @OneToMany(
-    () => AcademicCalendar,
-    (academicCalendar) => academicCalendar.school,
-    {
-      onDelete: 'CASCADE',
-    },
-  )
-  academicCalendars: AcademicCalendar[];
-
-  @OneToMany(() => Teacher, (teacher) => teacher.school, {
-    onDelete: 'CASCADE',
-  })
-  teachers: Teacher[];
-
-  @OneToMany(() => EventCategory, (category) => category.school, {
-    onDelete: 'CASCADE',
-  })
-  eventCategories: EventCategory[];
-
-  @OneToMany(() => PaymentTransaction, (transaction) => transaction.school, {
-    onDelete: 'CASCADE',
-  })
-  paymentTransactions: PaymentTransaction[];
-
-  @OneToMany(() => PaymentReceipt, (receipt) => receipt.school, {
-    onDelete: 'CASCADE',
-  })
-  paymentReceipts: PaymentReceipt[];
+  @Column({ type: 'boolean', default: false })
+  isDisabled: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

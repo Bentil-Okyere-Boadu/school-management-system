@@ -63,6 +63,6 @@ export class Notification {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => School, (school) => school.admins, { eager: true })
+  @ManyToOne(() => School, { eager: true, onDelete: 'CASCADE' })
   school: School;
 }

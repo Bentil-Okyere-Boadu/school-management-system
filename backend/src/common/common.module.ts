@@ -11,7 +11,6 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
 import { TenantContextService } from './tenant/tenant-context.service';
-import { TenantScopedRepositoryService } from './tenant/tenant-scoped-repository.service';
 import { EncryptionService } from './utils/encryption.util';
 
 @Global()
@@ -28,7 +27,6 @@ import { EncryptionService } from './utils/encryption.util';
     CleanupService,
     ScheduledCleanupService,
     TenantContextService,
-    TenantScopedRepositoryService,
     EncryptionService,
   ],
   exports: [
@@ -39,7 +37,6 @@ import { EncryptionService } from './utils/encryption.util';
     CleanupService,
     ScheduledCleanupService,
     TenantContextService,
-    TenantScopedRepositoryService,
     EncryptionService,
   ],
 })

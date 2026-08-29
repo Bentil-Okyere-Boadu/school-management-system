@@ -14,10 +14,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Throttle } from '@nestjs/throttler';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { SuperAdmin } from '../super-admin/super-admin.entity';
+import { TenantUserLookupService } from 'src/tenant/tenant-user-lookup.service';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { Teacher } from '../teacher/teacher.entity';
 import { Student } from '../student/student.entity';
-import { SuperAdmin } from '../super-admin/super-admin.entity';
 import { Parent } from '../parent/parent.entity';
 
 export class RefreshTokenDto {
@@ -34,16 +35,9 @@ export class AuthController {
 
   constructor(
     private readonly authService: AuthService,
-    @InjectRepository(SchoolAdmin)
-    private schoolAdminRepository: Repository<SchoolAdmin>,
-    @InjectRepository(Teacher)
-    private teacherRepository: Repository<Teacher>,
-    @InjectRepository(Student)
-    private studentRepository: Repository<Student>,
+    private readonly tenantUserLookup: TenantUserLookupService,
     @InjectRepository(SuperAdmin)
     private superAdminRepository: Repository<SuperAdmin>,
-    @InjectRepository(Parent)
-    private parentRepository: Repository<Parent>,
   ) {}
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -69,33 +63,19 @@ export class AuthController {
 
     switch (refreshToken.userType) {
       case 'school_admin':
-        user = await this.schoolAdminRepository.findOne({
-          where: { id: refreshToken.userId },
-          relations: ['role', 'school'],
-        });
-        break;
       case 'teacher':
-        user = await this.teacherRepository.findOne({
-          where: { id: refreshToken.userId },
-          relations: ['role', 'school'],
-        });
-        break;
       case 'student':
-        user = await this.studentRepository.findOne({
-          where: { id: refreshToken.userId },
-          relations: ['role', 'school'],
-        });
+      case 'parent':
+        user = await this.tenantUserLookup.loadByRefresh(
+          refreshToken.userType,
+          refreshToken.userId,
+          refreshToken.schoolId,
+        );
         break;
       case 'super_admin':
         user = await this.superAdminRepository.findOne({
           where: { id: refreshToken.userId },
           relations: ['role'],
-        });
-        break;
-      case 'parent':
-        user = await this.parentRepository.findOne({
-          where: { id: refreshToken.userId },
-          relations: ['role', 'school'],
         });
         break;
     }
@@ -110,6 +90,10 @@ export class AuthController {
       lastName: user.lastName,
       sub: user.id,
       role: user.role?.name,
+      schoolId:
+        'school' in user && user.school
+          ? (user.school as { id?: string }).id
+          : undefined,
     };
 
     const accessToken = this.authService.generateAccessToken(payload);

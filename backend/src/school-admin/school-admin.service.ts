@@ -22,7 +22,6 @@ import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { Subject } from 'src/subject/subject.entity';
 import { TenantContextService } from 'src/common/tenant/tenant-context.service';
-import { TenantScopedRepositoryService } from 'src/common/tenant/tenant-scoped-repository.service';
 
 @Injectable()
 export class SchoolAdminService {
@@ -49,7 +48,6 @@ export class SchoolAdminService {
     @InjectRepository(Subject)
     private subjectRepository: Repository<Subject>,
     private readonly tenantContext: TenantContextService,
-    private readonly tenantScopedRepository: TenantScopedRepositoryService,
   ) {}
 
   private resolveSchoolId(schoolId?: string): string {
@@ -321,57 +319,14 @@ export class SchoolAdminService {
 
     const school = await this.schoolRepository.findOne({
       where: { id: user.school.id },
-      relations: [
-        'admissionPolicies',
-        'gradingSystems',
-        'feeStructures',
-        'profile',
-        'academicCalendars',
-        'academicCalendars.terms.holidays',
-        'classLevels',
-        'classLevels.teachers',
-        'classLevels.students',
-        'students',
-        'teachers',
-      ],
     });
 
     if (!school) {
       throw new NotFoundException(`School with ID ${user.school.id} not found`);
     }
 
-    const signedAdmissionPolicies = await Promise.all(
-      school.admissionPolicies.map(async (policy) => {
-        const result = { ...policy } as typeof policy & {
-          documentUrl?: string;
-        };
-        if (policy.documentPath) {
-          try {
-            result.documentUrl = await this.objectStorageService.getSignedUrl(
-              policy.documentPath,
-              86400, // 24 hours
-            );
-          } catch {
-            // If there's an error getting the signed URL, we just continue without it
-            this.logger.warn(
-              `Failed to get signed URL for admission policy document: ${policy.id}`,
-            );
-          }
-        }
-        return result;
-      }),
-    );
-
-    const signedProfile = school.profile
-      ? {
-          ...school.profile,
-          avatarUrl: school.profile.avatarPath
-            ? await this.objectStorageService.getSignedUrl(
-                school.profile.avatarPath,
-              )
-            : undefined,
-        }
-      : undefined;
+    const signedAdmissionPolicies: unknown[] = [];
+    const signedProfile = undefined;
 
     return {
       ...school,
@@ -716,15 +671,13 @@ export class SchoolAdminService {
 
   async getDashboardStats(schoolId?: string) {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
-    const totalTeachers = await this.tenantScopedRepository.count(
-      this.teacherRepository,
-      { isArchived: false } as Teacher,
-    );
+    const totalTeachers = await this.teacherRepository.count({
+      where: { isArchived: false },
+    });
 
-    const totalStudents = await this.tenantScopedRepository.count(
-      this.studentRepository,
-      { isArchived: false } as Student,
-    );
+    const totalStudents = await this.studentRepository.count({
+      where: { isArchived: false },
+    });
 
     const admissionRepo =
       this.schoolRepository.manager.getRepository('Admission');

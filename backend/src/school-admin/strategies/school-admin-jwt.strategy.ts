@@ -2,20 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { SchoolAdmin } from '../school-admin.entity';
 
 @Injectable()
 export class SchoolAdminJwtStrategy extends PassportStrategy(
   Strategy,
   'school-admin-jwt',
 ) {
-  constructor(
-    private configService: ConfigService,
-    @InjectRepository(SchoolAdmin)
-    private schoolAdminRepository: Repository<SchoolAdmin>,
-  ) {
+  constructor(private configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -23,30 +16,26 @@ export class SchoolAdminJwtStrategy extends PassportStrategy(
     });
   }
 
-  async validate(payload: any) {
-    // Check if the token is for a school admin (based on role name)
-    if (payload.role !== 'school_admin') {
+  async validate(payload: {
+    role?: string;
+    sub?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    schoolId?: string;
+  }) {
+    if (payload.role !== 'school_admin' || !payload.schoolId) {
       return null;
     }
-
-    const schoolAdmin = await this.schoolAdminRepository.findOne({
-      where: { id: payload.sub },
-    });
-
-    if (!schoolAdmin || schoolAdmin.isSuspended) {
-      return null;
-    }
-
-    // Return only necessary fields
     return {
-      id: schoolAdmin.id,
-      email: schoolAdmin.email,
-      firstName: schoolAdmin.firstName,
-      lastName: schoolAdmin.lastName,
-      status: schoolAdmin.status,
-      role: schoolAdmin.role,
-      school: schoolAdmin.school,
-      schoolId: schoolAdmin.school?.id,
+      id: payload.sub,
+      email: payload.email,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      status: 'active',
+      role: { name: payload.role },
+      school: { id: payload.schoolId },
+      schoolId: payload.schoolId,
     };
   }
 }
