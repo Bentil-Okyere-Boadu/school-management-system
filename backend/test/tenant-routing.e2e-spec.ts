@@ -3,11 +3,12 @@ import { DataSource, EntityManager } from 'typeorm';
 import { School } from '../src/school/school.entity';
 import { EventCategory } from '../src/planner/entities/event-category.entity';
 import { TenantProvisionerService } from '../src/tenant/tenant-provisioner.service';
+import { TenantSchemaInspector } from '../src/tenant/tenant-schema-inspector.service';
 import { TenantResolverService } from '../src/tenant/tenant-resolver.service';
 import { TenantConnectionService } from '../src/tenant/tenant-connection.service';
 import { SchoolProvisioningStatus } from '../src/tenant/school-provisioning-status';
 import { tenantSchemaName } from '../src/tenant/tenant-schema.util';
-import { applyPlatformTables } from '../src/tenant/tenant-ddl';
+import { bootstrapTenantE2eDataSource } from './helpers/tenant-e2e-bootstrap';
 
 config();
 
@@ -59,25 +60,14 @@ describe('Phase 2 tenant routing (two schools)', () => {
       synchronize: false,
     });
     await ds.initialize();
-    const qr = ds.createQueryRunner();
-    await qr.connect();
-    try {
-      await applyPlatformTables(qr);
-      await qr.query(`
-        ALTER TABLE IF EXISTS public.school
-          ADD COLUMN IF NOT EXISTS "schemaName" varchar,
-          ADD COLUMN IF NOT EXISTS "provisioningStatus" varchar DEFAULT 'not_provisioned',
-          ADD COLUMN IF NOT EXISTS "provisionedAt" timestamptz,
-          ADD COLUMN IF NOT EXISTS "lastProvisionError" text,
-          ADD COLUMN IF NOT EXISTS "isDisabled" boolean DEFAULT false
-      `);
-    } finally {
-      await qr.release();
-    }
+    await bootstrapTenantE2eDataSource(ds);
 
     const resolver = new TenantResolverService(ds.getRepository(School));
     tenantConnection = new TenantConnectionService(ds, resolver);
-    const provisioner = new TenantProvisionerService(ds);
+    const provisioner = new TenantProvisionerService(
+      ds,
+      new TenantSchemaInspector(ds),
+    );
     const schoolRepo = ds.getRepository(School);
 
     schoolA = await provisioner.provision(

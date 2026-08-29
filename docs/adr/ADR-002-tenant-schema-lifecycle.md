@@ -1,83 +1,86 @@
 # ADR-002: Tenant schema lifecycle and per-tenant migrations
 
-**Status:** Proposed (Phase 4.7 — future architectural follow-up)  
+**Status:** Accepted (Phase 6 — implemented 2026-08-29)  
 **Date:** 2026-08-29  
-**Related:** [ADR-001: Schema-per-school tenancy](./ADR-001-schema-per-school-tenancy.md)
+**Related:** [ADR-001: Schema-per-school tenancy](./ADR-001-schema-per-school-tenancy.md)  
+**Developer guide:** [tenant-schema-migrations.md](../tenant-schema-migrations.md)
 
 ## Context
 
 ADR-001 established schema-per-school tenancy: operational data lives in `tenant_<school-uuid>` schemas; the `public` schema holds the platform catalog only.
 
-Phase 4 cutover removed shared `public` operational tables. Platform migrations under `backend/src/migrations/` apply to catalog tables (e.g. `tenant_directory`, `platform_invitation`, `platform_prelogin_token`) and do **not** upgrade existing tenant schemas.
+Platform TypeORM migrations under `backend/src/migrations/` apply to catalog tables only and do **not** upgrade existing tenant schemas. New schools received the latest tenant DDL at provisioning time via [`applyTenantSchemaTables`](../../backend/src/tenant/tenant-ddl.ts), but existing active tenants had no versioned upgrade path when entity metadata changed.
 
-## What the current architecture supports
+Phase 6 closes this gap with a hybrid approach that preserves ADR-001 isolation, provisioning flow, and platform migration discipline.
 
-Today, **new schools receive the latest tenant schema at provisioning time**:
+## Decision
 
-1. Super Admin creates a school → `public.school` catalog row (`provisioning` → `active`).
-2. [`TenantProvisionerService`](../../backend/src/tenant/tenant-provisioner.service.ts) runs for that school.
-3. Postgres schema `tenant_<school-uuid>` is created ([`tenantSchemaName`](../../backend/src/tenant/tenant-schema.util.ts)).
-4. [`applyTenantSchemaTables`](../../backend/src/tenant/tenant-ddl.ts) creates tenant DDL from **current** TypeORM entity metadata.
-5. Default seeds (event categories, grading) are written into that schema only.
-6. School is marked `active` when provisioning completes.
+**Hybrid D — platform migrations unchanged + tenant-aware incremental migration runner**
 
-**New schools therefore always start on the schema shape defined by the code at provision time.**
+### Platform layer (`public`)
 
-## Known gap
+- Existing TypeORM migrations continue unchanged (`migrationsRun: true` on app boot).
+- Migration `SchoolTenantSchemaVersion1700000000006` adds per-school tracking on `public.school`:
+  - `tenantSchemaVersion` (int, default `0`)
+  - `tenantMigrationStatus` (`ok` \| `pending` \| `failed`)
+  - `lastTenantMigrationError`, `lastTenantMigrationAt`
 
-There is **no dedicated per-tenant schema migration mechanism** for schools that already exist.
+### Tenant layer (per schema)
 
-Example:
+- Incremental steps live in `backend/src/tenant-migrations/` as plain TS modules implementing `TenantMigrationStep` — **not** TypeORM `MigrationInterface`.
+- [`TenantSchemaMigrator`](../../backend/src/tenant/tenant-schema-migrator.service.ts) discovers active schools and runs pending steps per schema using a **dedicated `QueryRunner`** with `SET LOCAL search_path`.
+- The migrator does **not** use `TenantConnectionService`, HTTP ALS, or `TenantRequestInterceptor`.
+- Production registry is ordered by numeric `version`; duplicate versions fail at load time.
+- `TENANT_SCHEMA_HEAD` in code defines the expected version for the current release.
 
-```
-tenant_A   tenant_B   tenant_C   (existing active schools)
-        ↓
-Developer adds a new tenant column or table in entity metadata
-        ↓
-New school tenant_D provisions with the new DDL automatically
-        ↓
-tenant_A / tenant_B / tenant_C do NOT receive the change automatically
-        ↓
-Current implementation has no versioned upgrade path for existing tenants
-```
+### New school path
 
-This is a **conscious architectural follow-up (Phase 4.7)**, documented during Phase 5 validation. It is not an accidental omission.
+1. [`TenantProvisionerService`](../../backend/src/tenant/tenant-provisioner.service.ts) creates schema + baseline DDL + seeds (unchanged).
+2. [`TenantSchemaInspector`](../../backend/src/tenant/tenant-schema-inspector.service.ts) verifies live schema matches entity metadata at `TENANT_SCHEMA_HEAD`.
+3. Only on success: `tenantSchemaVersion = TENANT_SCHEMA_HEAD`, `tenantMigrationStatus = ok`.
+4. A school is **never** marked HEAD unless its actual schema matches HEAD.
 
-## Future requirements (Phase 4.7 — not designed or implemented)
+New schools do not replay incrementals if baseline DDL is kept current.
 
-When Phase 4.7 is scheduled, the migration framework must satisfy at least:
+### Existing school upgrade path
 
-1. **Versioning** — tenant schema changes must be versioned (explicit schema revision identity).
-2. **New schools** — must continue to receive the latest schema at provisioning time (preserve current provisioner behavior).
-3. **Existing schools** — active tenants must be upgraded when tenant DDL changes ship.
-4. **Failure handling** — a failed tenant migration must not silently leave a school in an inconsistent state; failures must be observable and recoverable.
-5. **Per-school tracking** — migration status and/or schema version should be recordable per school (catalog or companion table).
-6. **Deploy verification** — deployments should be able to determine whether every active tenant is on the expected schema version before or after rollout.
-7. **Architecture fit** — the solution must work with schema-per-school tenancy and must **not** recreate shared `public` operational tables.
+Deploy order (all environments):
 
-## Decision (proposed — deferred)
+1. Platform migrations
+2. `npm run tenant:migrate` (explicit CLI — **not** on HTTP requests or app startup)
+3. Fail deploy/CI if any active tenant failed
 
-**No migration framework is designed or implemented in Phase 5.**
+Per-tenant transaction: tenant A can succeed while tenant B fails; B retains its previous version with `failed` status. Retries are safe via idempotent steps (`IF NOT EXISTS`).
 
-Phase 4.7 will produce a revised ADR (or ADR-002 status change to Accepted) with a concrete approach — e.g. versioned DDL scripts applied per schema via a tenant migrator service, integrated with provisioning status and deploy health checks.
+### Concurrency control
 
-Until then:
+- PostgreSQL advisory lock (`pg_try_advisory_lock`) at migrator start prevents multiple deploy instances from migrating tenants concurrently.
+- Run as a single release job on Render/multi-instance deployments.
 
-- **Platform migrations** → `public` catalog only (existing TypeORM migration runner).
-- **New tenant DDL** → provisioner at school create time only.
-- **Existing tenants** → require manual intervention or a future Phase 4.7 tool; do not assume auto-upgrade on deploy.
+## Alternatives rejected
+
+| Option | Verdict | Reason |
+|--------|---------|--------|
+| Re-run `applyTenantSchemaTables` on deploy | Reject | `IF NOT EXISTS` skips existing tables; no column heals |
+| TypeORM migrations per tenant | Reject | Single global `migrationsRun`; fights platform-only migration culture |
+| `synchronize: true` | Reject | Violates ADR-001 safety |
+| HTTP-triggered migration as primary path | Reject | Must not run in request path |
+| Schema diff auto-migration | Reject | High risk for renames/constraints; hard to review |
 
 ## Consequences
 
-- Shipping a tenant entity change affects **new** schools immediately and **existing** schools only after Phase 4.7 is implemented (or via a one-off operational script outside the product path).
-- Phase 5 validation covers provisioning, platform migrations, and tenancy isolation — not per-tenant schema upgrade automation.
-- See [Phase 5 validation log](../phase-5-validation-log.md) for explicit deferral at sign-off time.
+- Shipping a tenant entity change requires both baseline entity metadata **and** an incremental tenant migration for existing schools.
+- Developers bump `TENANT_SCHEMA_HEAD` and register steps under `tenant-migrations/`.
+- Deploy pipelines must include `tenant:migrate` after platform migrations.
+- Failed tenants are observable via catalog fields; re-run `tenant:migrate` after fixing root cause.
+- E2E proof: `npm run test:tenant-lifecycle` (9 tests covering upgrade, skip, failure isolation, retry, and schema equivalence).
 
-## Options to evaluate in Phase 4.7 (not decided)
+## Validation
 
-- Sequential `forEachActiveSchool` migrator with idempotent DDL steps and per-school status on `public.school`.
-- Flyway/Liquibase-style version table per tenant schema.
-- Generated diff from entity metadata vs live schema (higher risk; needs careful review).
-- Blue/green schema swap per tenant (complex; likely overkill initially).
+Local Phase 6 gate (2026-08-29):
 
-These are exploration notes only. Phase 4.7 will select and document one approach.
+- `npm run test:tenant-proof` — PASS (17 tests)
+- `npm run test:tenant-lifecycle` — PASS (9 tests)
+- `npm run tenant:migrate` — PASS
+
+See [Phase 5/6 validation log](../phase-5-validation-log.md).

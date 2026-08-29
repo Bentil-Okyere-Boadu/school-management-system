@@ -105,9 +105,31 @@ Pending Test/Render sign-off does not reopen Phase 5 local engineering work unle
 
 ---
 
+## Phase 6 — Tenant schema lifecycle (LOCAL)
+
+**Status:** PASS  
+**Date:** 2026-08-29
+
+### Automated gate
+
+| Check | Result | Notes |
+|-------|--------|-------|
+| Platform migration `SchoolTenantSchemaVersion1700000000006` | PASS | Catalog columns on `public.school` |
+| `npm run build` | PASS | |
+| `npm run test:tenant-proof` | PASS | 8 suites, 17 tests |
+| `npm run test:tenant-lifecycle` | PASS | 9 tests — upgrade, skip, failure isolation, retry, schema equivalence |
+| `npm run tenant:migrate` | PASS | CLI summary; advisory lock; non-zero on failure |
+| Unit tests (registry + migrator) | PASS | 6 tests |
+
+### Deploy workflow documented
+
+See [tenant-schema-migrations.md](./tenant-schema-migrations.md) — LOCAL → DEV → TEST/RENDER order: platform migrations → `tenant:migrate` → fail deploy on error.
+
+---
+
 ## Known deferred follow-ups (not Phase 5 blockers)
 
-- **Phase 4.7 — Tenant schema lifecycle / per-tenant migrations:** Documented in [ADR-002](./adr/ADR-002-tenant-schema-lifecycle.md). Consciously deferred; not an accidental omission. Phase 5 validates current provisioning + platform migrations only. Existing active tenants are **not** auto-upgraded when tenant entity metadata changes; new schools receive latest schema at provision time.
+- **Phase 6 — Tenant schema lifecycle:** Implemented. See [ADR-002](./adr/ADR-002-tenant-schema-lifecycle.md) (Accepted) and [tenant-schema-migrations.md](./tenant-schema-migrations.md). Existing active tenants upgrade via explicit `npm run tenant:migrate`; new schools receive baseline DDL at provision and are marked HEAD only after schema verification.
 
 - **`npm run migration:run` CLI path aliases:** Operational workaround is app boot with `migrationsRun: true` (Render/deploy path). Fixing TypeORM CLI `src/*` resolution is optional tooling follow-up, not a tenancy architecture change.
 

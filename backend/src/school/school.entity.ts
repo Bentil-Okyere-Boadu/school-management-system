@@ -89,6 +89,18 @@ export class School {
   @Column({ type: 'boolean', default: false })
   isDisabled: boolean;
 
+  @Column({ type: 'int', default: 0 })
+  tenantSchemaVersion: number;
+
+  @Column({ type: 'varchar', default: 'ok' })
+  tenantMigrationStatus: string;
+
+  @Column({ type: 'text', nullable: true })
+  lastTenantMigrationError: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  lastTenantMigrationAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -12,6 +12,8 @@ import { TenantResolverService } from './tenant-resolver.service';
 import { TenantConnectionService } from './tenant-connection.service';
 import { TenantOrmService } from './tenant-orm.service';
 import { TenantProvisionerService } from './tenant-provisioner.service';
+import { TenantSchemaMigrator } from './tenant-schema-migrator.service';
+import { TenantSchemaInspector } from './tenant-schema-inspector.service';
 import { TenantOnboardingService } from './tenant-onboarding.service';
 import { TenantRequestInterceptor } from './tenant-request.interceptor';
 import { TenantIterationService } from './tenant-iteration.service';
@@ -35,6 +37,8 @@ import { bindTenantRepositories } from './tenant-repository-binder';
     TenantConnectionService,
     TenantOrmService,
     TenantProvisionerService,
+    TenantSchemaMigrator,
+    TenantSchemaInspector,
     TenantOnboardingService,
     TenantIterationService,
     TenantDirectoryService,
@@ -50,6 +54,8 @@ import { bindTenantRepositories } from './tenant-repository-binder';
     TenantConnectionService,
     TenantOrmService,
     TenantProvisionerService,
+    TenantSchemaMigrator,
+    TenantSchemaInspector,
     TenantOnboardingService,
     TenantIterationService,
     TenantDirectoryService,

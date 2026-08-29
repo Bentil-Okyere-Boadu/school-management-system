@@ -2,9 +2,11 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { School } from '../src/school/school.entity';
 import { TenantProvisionerService } from '../src/tenant/tenant-provisioner.service';
+import { TenantSchemaInspector } from '../src/tenant/tenant-schema-inspector.service';
+import { TENANT_SCHEMA_HEAD } from '../src/tenant/tenant-schema-version';
 import { SchoolProvisioningStatus } from '../src/tenant/school-provisioning-status';
 import { tenantSchemaName } from '../src/tenant/tenant-schema.util';
-import { applyPlatformTables } from '../src/tenant/tenant-ddl';
+import { bootstrapTenantE2eDataSource } from './helpers/tenant-e2e-bootstrap';
 
 config();
 
@@ -24,22 +26,11 @@ describe('Tenant provisioner (Phase 1)', () => {
       synchronize: false,
     });
     await ds.initialize();
-    const qr = ds.createQueryRunner();
-    await qr.connect();
-    try {
-      await applyPlatformTables(qr);
-      await qr.query(`
-        ALTER TABLE IF EXISTS public.school
-          ADD COLUMN IF NOT EXISTS "schemaName" varchar,
-          ADD COLUMN IF NOT EXISTS "provisioningStatus" varchar DEFAULT 'not_provisioned',
-          ADD COLUMN IF NOT EXISTS "provisionedAt" timestamptz,
-          ADD COLUMN IF NOT EXISTS "lastProvisionError" text,
-          ADD COLUMN IF NOT EXISTS "isDisabled" boolean DEFAULT false
-      `);
-    } finally {
-      await qr.release();
-    }
-    provisioner = new TenantProvisionerService(ds);
+    await bootstrapTenantE2eDataSource(ds);
+    provisioner = new TenantProvisionerService(
+      ds,
+      new TenantSchemaInspector(ds),
+    );
   });
 
   afterAll(async () => {
@@ -60,6 +51,8 @@ describe('Tenant provisioner (Phase 1)', () => {
     const provisioned = await provisioner.provision(school);
     expect(provisioned.provisioningStatus).toBe(SchoolProvisioningStatus.Active);
     expect(provisioned.schemaName).toBe(schema);
+    expect(provisioned.tenantSchemaVersion).toBe(TENANT_SCHEMA_HEAD);
+    expect(provisioned.tenantMigrationStatus).toBe('ok');
 
     const schemas: Array<{ nspname: string }> = await ds.query(
       `SELECT nspname FROM pg_namespace WHERE nspname = $1`,

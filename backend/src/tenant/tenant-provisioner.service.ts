@@ -6,12 +6,18 @@ import { quotePgIdent, tenantSchemaName } from './tenant-schema.util';
 import { EventCategory } from 'src/planner/entities/event-category.entity';
 import { GradingSystem } from 'src/grading-system/grading-system.entity';
 import { applyTenantSchemaTables } from './tenant-ddl';
+import { TenantSchemaInspector } from './tenant-schema-inspector.service';
+import { TenantMigrationStatus } from './tenant-migration-status';
+import { TENANT_SCHEMA_HEAD } from './tenant-schema-version';
 
 @Injectable()
 export class TenantProvisionerService {
   private readonly logger = new Logger(TenantProvisionerService.name);
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly schemaInspector: TenantSchemaInspector,
+  ) {}
 
   async provision(school: School): Promise<School> {
     const schemaName = tenantSchemaName(school.id);
@@ -31,11 +37,17 @@ export class TenantProvisionerService {
       );
       await this.seedDefaults(qr.manager, school);
 
+      await this.schemaInspector.assertSchemaMatchesHead(qr, schemaName);
+
       await qr.commitTransaction();
 
       school.provisioningStatus = SchoolProvisioningStatus.Active;
       school.provisionedAt = new Date();
       school.lastProvisionError = null;
+      school.tenantSchemaVersion = TENANT_SCHEMA_HEAD;
+      school.tenantMigrationStatus = TenantMigrationStatus.Ok;
+      school.lastTenantMigrationError = null;
+      school.lastTenantMigrationAt = new Date();
       return this.dataSource.getRepository(School).save(school);
     } catch (error) {
       await qr.rollbackTransaction();

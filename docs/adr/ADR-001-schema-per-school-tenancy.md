@@ -30,5 +30,5 @@ Shared `schoolId` filters (rejected), database-per-school (rejected: ops cost), 
 - Super Admin must not load tenant graphs via `School.students`.
 - Prototype filters, `TenantScopedRepositoryService`, and admin `POST /schools/create` are removed, not wrapped.
 - Phase 0a proved TypeORM hydrates `public.school` under `SET LOCAL search_path` with unqualified `"school"` joins and tenant→public FKs.
-- **Existing-tenant DDL lifecycle:** new schools receive current schema via the provisioner; upgrading already-active tenant schemas when entity metadata changes is **not** implemented. See [ADR-002: Tenant schema lifecycle](./ADR-002-tenant-schema-lifecycle.md) (Phase 4.7 follow-up).
+- **Existing-tenant DDL lifecycle:** implemented in Phase 6. New schools receive baseline DDL via the provisioner; existing tenants upgrade via explicit `npm run tenant:migrate`. See [ADR-002: Tenant schema lifecycle](./ADR-002-tenant-schema-lifecycle.md).
 - **Phase 5 local validation:** completed 2026-08-29 (see [phase-5-validation-log.md](../phase-5-validation-log.md)).

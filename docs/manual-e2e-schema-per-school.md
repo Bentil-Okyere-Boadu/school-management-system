@@ -1,13 +1,23 @@
 # Manual E2E: schema-per-school tenancy
 
-Run against a live API + Postgres after migrations (`npm run migration:run` in `backend`, or app boot with `migrationsRun: true`). Unit tests are not sufficient. Use `schemaName` from `public.school` (never invent it).
+Run against a live API + Postgres after migrations (`npm run migration:run` in `backend`, or app boot with `migrationsRun: true`). After platform migrations, run **`npm run tenant:migrate`** in `backend/` (Phase 6 — explicit deploy step; not automatic on app boot). Unit tests are not sufficient. Use `schemaName` from `public.school` (never invent it).
 
 ```sql
-SELECT id, name, "schemaName", "provisioningStatus" FROM public.school;
+SELECT id, name, "schemaName", "provisioningStatus", "tenantSchemaVersion", "tenantMigrationStatus" FROM public.school;
 SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%';
 SELECT table_name FROM information_schema.tables WHERE table_schema = '<schemaName>' ORDER BY 1;
 SELECT to_regclass('public.platform_prelogin_token');
 ```
+
+After deploy, confirm all active schools are at HEAD:
+
+```sql
+SELECT id, name, "tenantSchemaVersion", "tenantMigrationStatus", "lastTenantMigrationError"
+FROM public.school
+WHERE "provisioningStatus" = 'active' AND "isDisabled" = false;
+```
+
+See [tenant-schema-migrations.md](./tenant-schema-migrations.md) for full workflow.
 
 JWT: `schoolId` = catalog UUID; no authoritative `schemaName` in the token.
 
