@@ -215,6 +215,103 @@
         "tags": ["School Admin"]
       }
     },
+    "/api/v1/school-admin/students/{studentId}/parents": {
+      "post": {
+        "operationId": "SchoolAdminController_addStudentGuardian",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateParentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/students/{studentId}/parents/{parentId}": {
+      "patch": {
+        "operationId": "SchoolAdminController_updateStudentGuardian",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      },
+      "delete": {
+        "operationId": "SchoolAdminController_removeStudentGuardian",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
     "/api/v1/school-admin/admissions/{applicationId}": {
       "get": {
         "operationId": "SchoolAdminController_getAdmissionById",
@@ -986,6 +1083,62 @@
             "type": "string"
           },
           "optionalPhoneContactTwo": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateParentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "parent@example.com"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string",
+            "example": "Mother"
+          }
+        },
+        "required": ["firstName", "lastName", "email", "relationship"]
+      },
+      "UpdateParentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "parent@example.com"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "relationship": {
             "type": "string"
           }
         }

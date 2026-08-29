@@ -1,0 +1,353 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "School Management - Grading Schemes",
+    "description": "OpenAPI spec for Postman and other clients",
+    "version": "1.0",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "API Server"
+    }
+  ],
+  "paths": {
+    "/api/v1/grading-schemes": {
+      "get": {
+        "operationId": "GradingSchemeController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      },
+      "post": {
+        "operationId": "GradingSchemeController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGradingSchemeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}": {
+      "get": {
+        "operationId": "GradingSchemeController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      },
+      "patch": {
+        "operationId": "GradingSchemeController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGradingSchemeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      },
+      "delete": {
+        "operationId": "GradingSchemeController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/duplicate": {
+      "post": {
+        "operationId": "GradingSchemeController_duplicate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/activate": {
+      "post": {
+        "operationId": "GradingSchemeController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/deactivate": {
+      "post": {
+        "operationId": "GradingSchemeController_deactivate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/new-version": {
+      "post": {
+        "operationId": "GradingSchemeController_newVersion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateGradingSchemeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "WASSCE-style 2025/26"
+          },
+          "scoreScaleMin": {
+            "type": "number",
+            "example": 0,
+            "default": 0
+          },
+          "scoreScaleMax": {
+            "type": "number",
+            "example": 100,
+            "default": 100
+          },
+          "passMark": {
+            "type": "number",
+            "example": 50,
+            "default": 50
+          },
+          "rounding": {
+            "type": "string",
+            "enum": ["none", "nearest", "up", "down"],
+            "default": "nearest"
+          },
+          "allowManualOverride": {
+            "type": "boolean",
+            "default": false
+          },
+          "effectiveFrom": {
+            "type": "object",
+            "example": "2025/26 Term 1"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": ["school", "classLevels"],
+            "default": "school"
+          },
+          "classLevelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingSchemeBandDto"
+            }
+          },
+          "activate": {
+            "type": "boolean",
+            "description": "When true, activate immediately after create",
+            "default": false
+          }
+        },
+        "required": ["name", "bands"]
+      },
+      "GradingSchemeBandDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "A"
+          },
+          "label": {
+            "type": "string",
+            "example": "Excellent"
+          },
+          "description": {
+            "type": "object",
+            "example": "Outstanding performance"
+          },
+          "minScore": {
+            "type": "number",
+            "example": 80
+          },
+          "maxScore": {
+            "type": "number",
+            "example": 100
+          },
+          "sortOrder": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": ["code", "label", "minScore", "maxScore"]
+      },
+      "UpdateGradingSchemeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "scoreScaleMin": {
+            "type": "number"
+          },
+          "scoreScaleMax": {
+            "type": "number"
+          },
+          "passMark": {
+            "type": "number"
+          },
+          "rounding": {
+            "type": "string",
+            "enum": ["none", "nearest", "up", "down"]
+          },
+          "allowManualOverride": {
+            "type": "boolean"
+          },
+          "effectiveFrom": {
+            "type": "object"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": ["school", "classLevels"]
+          },
+          "classLevelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingSchemeBandDto"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "grading-schemes"
+    }
+  ]
+}

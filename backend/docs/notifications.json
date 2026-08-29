@@ -179,7 +179,17 @@
               "parentChildConfirmation",
               "parentChildConfirmed",
               "parentReviewRequired",
-              "parentAccessRevoked"
+              "parentAccessRevoked",
+              "assignmentPublished",
+              "assignmentUpdated",
+              "assignmentSubmitted",
+              "assignmentGraded",
+              "curriculumNote",
+              "curriculumNoteReply",
+              "gradesSubmitted",
+              "classResultsSubmitted",
+              "resultsReleased",
+              "resultsUnlocked"
             ]
           },
           "message": {

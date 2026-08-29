@@ -35,12 +35,12 @@
         "tags": ["Invitation"]
       }
     },
-    "/api/v1/invitations/admin/resend/{userId}": {
+    "/api/v1/invitations/admin/resend/{invitationId}": {
       "post": {
         "operationId": "InvitationController_resendAdminInvitation",
         "parameters": [
           {
-            "name": "userId",
+            "name": "invitationId",
             "required": true,
             "in": "path",
             "schema": {
@@ -48,6 +48,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendAdminInvitationDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -118,6 +128,7 @@
             "description": ""
           }
         },
+        "summary": "Resend PIN email for a pending tenant student. userId is the tenant student id, not a platform_invitation id.",
         "tags": ["Invitation"]
       }
     },
@@ -139,6 +150,7 @@
             "description": ""
           }
         },
+        "summary": "Resend PIN email for a pending tenant teacher. userId is the tenant teacher id, not a platform_invitation id.",
         "tags": ["Invitation"]
       }
     },
@@ -164,28 +176,6 @@
         "summary": "Complete invitation by setting a password (school admin or parent)",
         "tags": ["Invitation"]
       }
-    },
-    "/api/v1/invitations/forgot-pin": {
-      "post": {
-        "operationId": "InvitationController_forgotPin",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPinDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": ["Invitation"]
-      }
     }
   },
   "components": {
@@ -206,9 +196,29 @@
           "roleId": {
             "type": "string",
             "description": "Role UUID"
+          },
+          "schoolId": {
+            "type": "string",
+            "description": "Catalog school id to invite into"
           }
         },
-        "required": ["firstName", "lastName", "email", "roleId"]
+        "required": ["firstName", "lastName", "email", "roleId", "schoolId"]
+      },
+      "ResendAdminInvitationDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Corrected recipient address; omit to resend as invited",
+            "example": "admin@school.com"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        }
       },
       "InviteStudentDto": {
         "type": "object",
@@ -255,16 +265,6 @@
           }
         },
         "required": ["token", "password"]
-      },
-      "ForgotPinDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "example": "user@school.com"
-          }
-        },
-        "required": ["email"]
       }
     }
   },
