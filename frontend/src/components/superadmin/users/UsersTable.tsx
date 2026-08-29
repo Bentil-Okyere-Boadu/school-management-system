@@ -4,11 +4,10 @@ import Badge from "../../common/Badge";
 import { Menu } from '@mantine/core';
 import {
   IconDots,
-  IconSend2,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
-import { useResendAdminInvitation, useSuspendSchoolAdmin } from "@/hooks/super-admin";
+import { useSuspendSchoolAdmin } from "@/hooks/super-admin";
 import { toast } from "react-toastify";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { ErrorResponse } from "@/@types";
@@ -50,20 +49,6 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
     setSelectedUser(user);
   } 
 
-  const onResendInvitationMenuItemClick = (user: User) => {
-    setSelectedUser(user);
-
-    resendInvitationMutate(null as unknown as void, {
-      onSuccess: () => {
-        toast.success('Resend invitation successful.');
-      },
-      onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-      }
-    });
-  } 
-
-  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id})
   const isSuspended = selectedUser.isSuspended ?? false;
   const { mutate: suspendMutate, isPending: isSuspending } = useSuspendSchoolAdmin({
     id: selectedUser.id,
@@ -185,12 +170,6 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                             <IconDots className="cursor-pointer" />
                           </Menu.Target>
                           <Menu.Dropdown className="!-ml-8 !-mt-2">
-                            <Menu.Item 
-                              onClick={() => onResendInvitationMenuItemClick(user)} 
-                              disabled={user.status !== 'pending'}
-                              leftSection={<IconSend2 size={18} color="#AB58E7" />}>
-                              Resend Invitation
-                            </Menu.Item>
                             <Menu.Item 
                               onClick={() => onSuspendUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>

@@ -20,6 +20,10 @@ import { EventCategory } from 'src/planner/entities/event-category.entity';
 import { EncryptionService } from 'src/common/utils/encryption.util';
 import { UpdateHubtelMerchantDto } from './dto/update-hubtel-merchant.dto';
 import { buildReceiveMoneyPrimaryCallbackUrl } from 'src/integrations/hubtel/hubtel-callback-url.util';
+import { Student } from 'src/student/student.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { SchoolProvisioningStatus } from 'src/tenant/school-provisioning-status';
 
 export type HubtelMerchantPublicView = {
   clientId: string | null;
@@ -49,6 +53,7 @@ export class SchoolService {
     private attendanceService: AttendanceService,
     private readonly encryptionService: EncryptionService,
     private readonly configService: ConfigService,
+    private readonly tenantConnection: TenantConnectionService,
   ) {}
 
   /**
@@ -283,14 +288,6 @@ export class SchoolService {
 
     const school = await this.schoolRepository.findOne({
       where: { id: user.school.id },
-      relations: [
-        'admissionPolicies',
-        'gradingSystems',
-        'feeStructures',
-        'profile',
-        'academicCalendars',
-        'classLevels',
-      ],
     });
 
     if (!school) {
@@ -401,10 +398,40 @@ export class SchoolService {
     return this.schoolRepository.save(school);
   }
 
+  /**
+   * Students and teachers live in the school's own schema, so counts can only be
+   * read inside that tenant. Schools that are not provisioned (or are disabled)
+   * have no schema yet and count as empty.
+   */
+  private async countTenantMembers(
+    school: School,
+  ): Promise<{ students: number; teachers: number }> {
+    if (
+      !school.schemaName ||
+      school.isDisabled ||
+      school.provisioningStatus !== SchoolProvisioningStatus.Active
+    ) {
+      return { students: 0, teachers: 0 };
+    }
+
+    try {
+      return await this.tenantConnection.runForSchoolId(
+        school.id,
+        async (manager) => ({
+          students: await manager.getRepository(Student).count(),
+          teachers: await manager.getRepository(Teacher).count(),
+        }),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to read tenant counts for school ${school.id}: ${error}`,
+      );
+      return { students: 0, teachers: 0 };
+    }
+  }
+
   async getSuperAdminDashboardStats() {
-    const schools = await this.schoolRepository.find({
-      relations: ['academicCalendars.terms', 'classLevels.students'],
-    });
+    const schools = await this.schoolRepository.find();
 
     const performanceData: Array<{
       schoolName: string;
@@ -414,86 +441,23 @@ export class SchoolService {
       totalTeachers: number;
     }> = [];
 
-    let totalOverallAttendance = 0;
-    let schoolsWithAttendanceData = 0;
     let totalOverallTeachers = 0;
     let totalOverallStudents = 0;
 
     for (const school of schools) {
-      let schoolTotalGrades = 0;
-      let numGrades = 0;
-      let schoolAttendanceRate = 0;
-      let numClassesWithAttendance = 0;
+      const { students, teachers } = await this.countTenantMembers(school);
 
-      const latestTerm = null as { id: string } | null;
+      totalOverallStudents += students;
+      totalOverallTeachers += teachers;
 
-      if (latestTerm) {
-        // Calculate average grade
-        const grades = await this.studentGradeRepository.find({
-          where: { academicTerm: { id: latestTerm.id } },
-          relations: ['student.classLevels'],
-        });
-
-        grades.forEach((grade) => {
-          if (grade.totalScore == null) return;
-          schoolTotalGrades += grade.totalScore;
-          numGrades++;
-        });
-
-        // Calculate attendance rate per school
-        const classLevelsInSchool = await this.schoolRepository.manager
-          .getRepository('ClassLevel')
-          .find({
-            where: { school: { id: school.id } },
-            relations: ['students'],
-          });
-
-        for (const classLevel of classLevelsInSchool) {
-          if (classLevel.students.length > 0) {
-            const attendanceSummary =
-              await this.attendanceService.getClassAttendance({
-                classLevelId: classLevel.id,
-                filterType: 'month',
-              });
-            if (
-              attendanceSummary?.summary?.averageAttendanceRate !== undefined
-            ) {
-              schoolAttendanceRate +=
-                attendanceSummary.summary.averageAttendanceRate;
-              numClassesWithAttendance++;
-            }
-          }
-        }
-      }
-
-      const averageGrade = numGrades > 0 ? schoolTotalGrades / numGrades : 0;
-      const finalSchoolAttendanceRate =
-        numClassesWithAttendance > 0
-          ? schoolAttendanceRate / numClassesWithAttendance
-          : 0;
-
-      const totalStudentsInSchool = await this.schoolRepository.manager
-        .getRepository('Student')
-        .count({ where: { school: { id: school.id } } });
-      const totalTeachersInSchool = await this.schoolRepository.manager
-        .getRepository('Teacher')
-        .count({ where: { school: { id: school.id } } });
-
-      totalOverallStudents += totalStudentsInSchool;
-      totalOverallTeachers += totalTeachersInSchool;
-
+      // Grade and attendance aggregation across tenants is not implemented yet.
       performanceData.push({
         schoolName: school.name,
-        averageGrade,
-        averageAttendanceRate: finalSchoolAttendanceRate,
-        totalStudents: totalStudentsInSchool,
-        totalTeachers: totalTeachersInSchool,
+        averageGrade: 0,
+        averageAttendanceRate: 0,
+        totalStudents: students,
+        totalTeachers: teachers,
       });
-
-      if (finalSchoolAttendanceRate > 0) {
-        totalOverallAttendance += finalSchoolAttendanceRate;
-        schoolsWithAttendanceData++;
-      }
     }
 
     performanceData.sort((a, b) => b.averageGrade - a.averageGrade);
@@ -501,16 +465,11 @@ export class SchoolService {
     const bestPerformingSchools = performanceData.slice(0, 3);
     const worstPerformingSchools = performanceData.slice(-3).reverse();
 
-    const overallAverageAttendanceRate =
-      schoolsWithAttendanceData > 0
-        ? totalOverallAttendance / schoolsWithAttendanceData
-        : 0;
-
     return {
       totalSchools: schools.length,
       totalTeachers: totalOverallTeachers,
       totalStudents: totalOverallStudents,
-      averageAttendanceRate: overallAverageAttendanceRate,
+      averageAttendanceRate: 0,
       bestPerformingSchools: bestPerformingSchools.map((s) => ({
         schoolName: s.schoolName,
         averageGrade: s.averageGrade,

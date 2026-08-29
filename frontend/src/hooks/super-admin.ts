@@ -46,10 +46,62 @@ export const useGetUsers = () => {
 
 export const useInviteUser = () => {
     return useMutation({
-        mutationFn: (inviteDetails: {firstName:string, lastName:string, email: string, roleId: string}) => {
+        mutationFn: (inviteDetails: {firstName:string, lastName:string, email: string, roleId: string, schoolId: string}) => {
             return customAPI.post(`/invitations/admin`, inviteDetails)
         }
     })
+}
+
+export const useCreateSchool = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (school: { name: string; calendlyUrl: string }) =>
+            customAPI.post(`/super-admin/schools`, school),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+        },
+    });
+}
+
+export const useProvisionSchool = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (schoolId: string) =>
+            customAPI.post(`/super-admin/schools/${schoolId}/provision`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+        },
+    });
+}
+
+/**
+ * Takes the platform invitation id, not a user id, and accepts it per call so a
+ * list of schools can share one hook instance. Any fields sent alongside it
+ * correct the pending invitation before it goes out again.
+ */
+export const useResendSchoolAdminInvitation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            invitationId,
+            ...corrections
+        }: {
+            invitationId: string;
+            firstName?: string;
+            lastName?: string;
+            email?: string;
+        }) =>
+            customAPI.post(
+                `/invitations/admin/resend/${invitationId}`,
+                corrections,
+            ),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+        },
+    });
 }
 
 export const useGetAdminUsers = (page=1,search: string = "", status: string = "", role: string = "", limit?: number ) => {

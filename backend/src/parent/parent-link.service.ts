@@ -23,6 +23,8 @@ import { EmailService } from 'src/common/services/email.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
 import { NotificationType } from 'src/notification/notification.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { TenantIterationService } from 'src/tenant/tenant-iteration.service';
 
 @Injectable()
 export class ParentLinkService {
@@ -40,6 +42,8 @@ export class ParentLinkService {
     private readonly emailService: EmailService,
     private readonly notificationService: NotificationService,
     private readonly tenantDirectory: TenantDirectoryService,
+    private readonly tenantConnection: TenantConnectionService,
+    private readonly tenantIteration: TenantIterationService,
   ) {}
 
   generateToken(): string {
@@ -98,7 +102,8 @@ export class ParentLinkService {
 
     if (relationship?.status === ParentStudentStatus.Revoked) {
       relationship.status = ParentStudentStatus.PendingConfirmation;
-      relationship.relationship = input.relationship ?? relationship.relationship;
+      relationship.relationship =
+        input.relationship ?? relationship.relationship;
       relationship.source = source;
       relationship.revokedAt = null;
       relationship = await this.parentStudentRepository.save(relationship);
@@ -169,7 +174,10 @@ export class ParentLinkService {
     };
 
     if (email) {
-      const existing = await this.findParentForLinking(student.school.id, email);
+      const existing = await this.findParentForLinking(
+        student.school.id,
+        email,
+      );
       if (existing && existing.id !== current.id) {
         currentLink.status = ParentStudentStatus.Revoked;
         currentLink.revokedAt = new Date();
@@ -224,6 +232,26 @@ export class ParentLinkService {
   }
 
   async completeParentInvitation(token: string, password: string) {
+    if (this.tenantConnection.tryGetStore()) {
+      return this.completeParentInvitationInTenant(token, password);
+    }
+
+    let completed: Parent | null = null;
+    await this.tenantIteration.forEachActiveSchool(async () => {
+      if (!completed) {
+        completed = await this.completeParentInvitationInTenant(
+          token,
+          password,
+        );
+      }
+    });
+    return completed;
+  }
+
+  private async completeParentInvitationInTenant(
+    token: string,
+    password: string,
+  ): Promise<Parent | null> {
     const parent = await this.parentRepository.findOne({
       where: {
         invitationToken: token,
@@ -236,7 +264,10 @@ export class ParentLinkService {
       return null;
     }
 
-    if (!parent.invitationExpires || parent.invitationExpires.getTime() <= Date.now()) {
+    if (
+      !parent.invitationExpires ||
+      parent.invitationExpires.getTime() <= Date.now()
+    ) {
       throw new BadRequestException(
         'Invitation token has expired - please request a new invitation',
       );

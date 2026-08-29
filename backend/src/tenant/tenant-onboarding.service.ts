@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { School } from 'src/school/school.entity';
 import { CreateSchoolDto } from 'src/school/dto/create-school.dto';
@@ -98,6 +98,17 @@ export class TenantOnboardingService {
     if (existingDir) {
       throw new BadRequestException('School admin email already registered');
     }
+    const existingInvitation = await this.invitationRepository.findOne({
+      where: {
+        schoolId: school.id,
+        email: params.email.toLowerCase(),
+        userType: 'school_admin',
+        accepted: false,
+      },
+    });
+    if (existingInvitation) {
+      throw new BadRequestException('Pending school admin invitation exists');
+    }
 
     const invitation = this.invitationRepository.create({
       token: randomUUID(),
@@ -109,6 +120,99 @@ export class TenantOnboardingService {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       accepted: false,
     });
+    const saved = await this.invitationRepository.save(invitation);
+    await this.emailRetry.retrySendInvitationEmail({
+      email: saved.email,
+      firstName: saved.firstName,
+      lastName: saved.lastName,
+      invitationToken: saved.token,
+    } as SchoolAdmin);
+    return saved;
+  }
+
+  /**
+   * Invitations stay platform data until acceptance, so this is the only way to
+   * see that a school has been invited but has no tenant SchoolAdmin yet.
+   */
+  async findPendingSchoolAdminInvitations(
+    schoolIds: string[],
+  ): Promise<PlatformInvitation[]> {
+    if (schoolIds.length === 0) {
+      return [];
+    }
+    return this.invitationRepository.find({
+      where: {
+        schoolId: In(schoolIds),
+        userType: 'school_admin',
+        accepted: false,
+      },
+    });
+  }
+
+  /**
+   * Corrections are allowed on resend because a mistyped address can only be
+   * discovered after the first send, and the invitee cannot report it.
+   */
+  async resendSchoolAdminInvitation(
+    invitationId: string,
+    corrections?: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+    },
+  ): Promise<PlatformInvitation> {
+    const invitation = await this.invitationRepository.findOne({
+      where: {
+        id: invitationId,
+        userType: 'school_admin',
+        accepted: false,
+      },
+    });
+    if (!invitation) {
+      throw new NotFoundException('Pending invitation not found');
+    }
+
+    const school = await this.schoolRepository.findOne({
+      where: { id: invitation.schoolId },
+    });
+    if (
+      !school ||
+      school.provisioningStatus !== SchoolProvisioningStatus.Active ||
+      school.isDisabled
+    ) {
+      throw new BadRequestException('School is not active');
+    }
+
+    const correctedEmail = corrections?.email?.trim().toLowerCase();
+    if (correctedEmail && correctedEmail !== invitation.email) {
+      const registered = await this.directoryRepository.findOne({
+        where: { loginKey: correctedEmail, userType: 'school_admin' },
+      });
+      if (registered) {
+        throw new BadRequestException('School admin email already registered');
+      }
+      const duplicate = await this.invitationRepository.findOne({
+        where: {
+          schoolId: invitation.schoolId,
+          email: correctedEmail,
+          userType: 'school_admin',
+          accepted: false,
+        },
+      });
+      if (duplicate) {
+        throw new BadRequestException('Pending school admin invitation exists');
+      }
+      invitation.email = correctedEmail;
+    }
+    if (corrections?.firstName?.trim()) {
+      invitation.firstName = corrections.firstName.trim();
+    }
+    if (corrections?.lastName?.trim()) {
+      invitation.lastName = corrections.lastName.trim();
+    }
+
+    invitation.token = randomUUID();
+    invitation.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const saved = await this.invitationRepository.save(invitation);
     await this.emailRetry.retrySendInvitationEmail({
       email: saved.email,
@@ -148,11 +252,14 @@ export class TenantOnboardingService {
     const admin = await this.tenantConnection.runForSchoolId(
       school.id,
       async (manager) => {
-        const profile = manager.create(Profile, {
-          firstName: invitation.firstName,
-          lastName: invitation.lastName,
-          email: invitation.email,
-        });
+        const profile = await manager.save(
+          Profile,
+          manager.create(Profile, {
+            firstName: invitation.firstName,
+            lastName: invitation.lastName,
+            email: invitation.email,
+          }),
+        );
         const created = manager.create(SchoolAdmin, {
           firstName: invitation.firstName,
           lastName: invitation.lastName,
@@ -179,6 +286,12 @@ export class TenantOnboardingService {
       }),
     );
     return admin;
+  }
+
+  async hasPendingSchoolAdminInvitation(token: string): Promise<boolean> {
+    return this.invitationRepository.exists({
+      where: { token, userType: 'school_admin', accepted: false },
+    });
   }
 
   async validateSchoolAdminLogin(

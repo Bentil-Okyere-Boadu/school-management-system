@@ -49,6 +49,7 @@ import { UpdateSubtopicDto } from 'src/curriculum/dto/update-subtopic.dto';
 import { CreateCurriculumTopicNoteDto } from 'src/curriculum/dto/create-curriculum-topic-note.dto';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotificationRecipientRole } from 'src/notification/notification.entity';
+import { SkipTenantScope } from 'src/common/tenant/skip-tenant-scope.decorator';
 
 @ApiTags('Teacher')
 @Controller('teacher')
@@ -67,6 +68,7 @@ export class TeacherController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(TeacherLocalAuthGuard)
   @Post('login')
+  @SkipTenantScope()
   @Roles(Role.Teacher)
   login(@Request() req: { user: Teacher }) {
     return this.teacherAuthService.login(req.user);

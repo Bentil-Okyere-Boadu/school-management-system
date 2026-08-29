@@ -314,6 +314,12 @@ export class InvitationService {
     if (!adminUser.school) {
       throw new ForbiddenException('Admin not associated with any school');
     }
+    const school = await this.schoolRepository.findOne({
+      where: { id: adminUser.school.id },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
 
     const savedStudent = await this.transactionUtil.executeInTransaction(
       async (manager: EntityManager) => {
@@ -335,7 +341,7 @@ export class InvitationService {
         }
 
         const pin = this.generatePin();
-        const studentId = await this.generateStudentId(adminUser.school);
+        const studentId = await this.generateStudentId(school);
 
         const invitationExpires = new Date();
         invitationExpires.setHours(invitationExpires.getHours() + 24);
@@ -346,7 +352,7 @@ export class InvitationService {
           email: inviteStudentDto.email,
           password: await bcrypt.hash(pin, 10), // PIN is used as initial password
           role: studentRole,
-          school: adminUser.school,
+          school,
           invitationToken: uuidv4(),
           invitationExpires,
           isInvitationAccepted: false,
@@ -399,7 +405,7 @@ export class InvitationService {
   }
   async inviteTeacher(
     inviteTeacherDto: InviteTeacherDto,
-    adminUser: Teacher,
+    adminUser: SchoolAdmin,
   ): Promise<Teacher> {
     if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite teachers');
@@ -407,6 +413,12 @@ export class InvitationService {
 
     if (!adminUser.school) {
       throw new UnauthorizedException('Admin not associated with any school');
+    }
+    const school = await this.schoolRepository.findOne({
+      where: { id: adminUser.school.id },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
     }
 
     const savedTeacher = await this.transactionUtil.executeInTransaction(
@@ -428,7 +440,7 @@ export class InvitationService {
         }
 
         const pin = this.generatePin();
-        const teacherId = await this.generateTeacherId(adminUser.school);
+        const teacherId = await this.generateTeacherId(school);
 
         const invitationExpires = new Date();
         invitationExpires.setHours(invitationExpires.getHours() + 24);
@@ -439,7 +451,7 @@ export class InvitationService {
           email: inviteTeacherDto.email,
           password: await bcrypt.hash(pin, 10),
           role: teacherRole,
-          school: adminUser.school,
+          school,
           status: 'pending',
           invitationToken: uuidv4(),
           invitationExpires,

@@ -75,7 +75,7 @@ export const Dialog: React.FC<DialogProps> = ({
       style={{ backgroundColor: `rgba(217, 217, 217, ${backdropOpacity})` }}
       onClick={handleBackdropClick}
     >
-      <div className={`bg-white border border-[#AB58E7] rounded-xl shadow-lg py-5 px-1 z-50 max-h-[90vh] flex flex-col ${dialogWidth} mx-2 relative`}>
+      <div className={`bg-white border border-[#AB58E7] rounded-xl shadow-lg py-5 px-1 z-50 max-h-[90vh] flex flex-col text-left ${dialogWidth} mx-2 relative`}>
         {busy && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10 dialogOpacity">
             <HashLoader color="#AB58E7" size={40} />

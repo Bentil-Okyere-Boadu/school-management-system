@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { TenantDirectory } from './entities/tenant-directory.entity';
 
 @Injectable()
@@ -55,6 +55,27 @@ export class TenantDirectoryService {
     userType: TenantDirectory['userType'],
   ): Promise<TenantDirectory[]> {
     return this.directoryRepository.find({ where: { userType } });
+  }
+
+  /**
+   * Directory rows only exist once an invitation has been accepted, so these
+   * counts are the number of users of that type that actually exist per school.
+   */
+  async countByUserTypeForSchools(
+    userType: TenantDirectory['userType'],
+    schoolIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (schoolIds.length === 0) {
+      return counts;
+    }
+    const listings = await this.directoryRepository.find({
+      where: { userType, schoolId: In(schoolIds) },
+    });
+    for (const listing of listings) {
+      counts.set(listing.schoolId, (counts.get(listing.schoolId) ?? 0) + 1);
+    }
+    return counts;
   }
 
   async findByTenantUser(

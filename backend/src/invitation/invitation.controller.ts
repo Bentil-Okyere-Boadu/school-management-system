@@ -13,6 +13,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
 import { InvitationService } from './invitation.service';
 import { InviteUserDto } from './dto/invite-user.dto';
+import { ResendAdminInvitationDto } from './dto/resend-admin-invitation.dto';
 import { InviteStudentDto } from './dto/invite-student.dto';
 import { InviteTeacherDto } from './dto/invite-teacher.dto';
 import { CompleteRegistrationDto } from './dto/complete-registration.dto';
@@ -27,7 +28,6 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SchoolAdminAuthService } from 'src/school-admin/school-admin-auth.service';
 import { TeacherService } from 'src/teacher/teacher.service';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { Teacher } from 'src/teacher/teacher.entity';
 import { ParentLinkService } from 'src/parent/parent-link.service';
 import { ParentAuthService } from 'src/parent/parent-auth.service';
 import { EmailService } from 'src/common/services/email.service';
@@ -66,12 +66,15 @@ export class InvitationController {
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SuperAdmin)
-  @Post('admin/resend/:userId')
+  @Post('admin/resend/:invitationId')
   async resendAdminInvitation(
-    @Param('userId') userId: string,
-    @CurrentUser() user: SuperAdmin,
+    @Param('invitationId') invitationId: string,
+    @Body() resendDto: ResendAdminInvitationDto,
   ) {
-    return this.invitationService.resendAdminInvitation(userId, user);
+    return this.tenantOnboarding.resendSchoolAdminInvitation(
+      invitationId,
+      resendDto,
+    );
   }
 
   // School admin endpoints
@@ -90,7 +93,7 @@ export class InvitationController {
   @Post('teacher')
   inviteTeacher(
     @Body() inviteTeacherDto: InviteTeacherDto,
-    @CurrentUser() currentUser: Teacher,
+    @CurrentUser() currentUser: SchoolAdmin,
   ) {
     return this.invitationService.inviteTeacher(inviteTeacherDto, currentUser);
   }
@@ -127,15 +130,17 @@ export class InvitationController {
       throw new BadRequestException('Token and password are required');
     }
 
-    try {
+    if (
+      await this.tenantOnboarding.hasPendingSchoolAdminInvitation(
+        completeRegDto.token,
+      )
+    ) {
       const schoolAdmin =
         await this.tenantOnboarding.acceptSchoolAdminInvitation(
           completeRegDto.token,
           completeRegDto.password,
         );
       return this.schoolAdminAuthService.login(schoolAdmin);
-    } catch {
-      // Fall through to legacy parent invitation tokens.
     }
 
     const parent = await this.parentLinkService.completeParentInvitation(

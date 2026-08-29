@@ -20,6 +20,22 @@ import { ProfileService } from 'src/profile/profile.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { StudentGrade } from 'src/subject/student-grade.entity';
 import { SuperAdminProfile } from './super-admin-profile.entity';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
+
+export type PendingInvitationView = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  expiresAt: Date;
+};
+
+export type SchoolWithAdminSummary = School & {
+  adminSummary: {
+    activeAdmins: number;
+    pendingInvitation: PendingInvitationView | null;
+  };
+};
 
 @Injectable()
 export class SuperAdminService {
@@ -37,6 +53,7 @@ export class SuperAdminService {
     private readonly objectStorageService: ObjectStorageServiceService,
     private readonly tenantDirectory: TenantDirectoryService,
     private readonly tenantConnection: TenantConnectionService,
+    private readonly tenantOnboarding: TenantOnboardingService,
     @InjectRepository(SuperAdminProfile)
     private superAdminProfileRepository: Repository<SuperAdminProfile>,
   ) {}
@@ -127,12 +144,14 @@ export class SuperAdminService {
       }),
     );
 
+    const withAdminSummary = await this.attachAdminSummary(schools);
+
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
     const totalPages = Math.ceil(total / limit || 1);
 
     return {
-      data: schools,
+      data: withAdminSummary,
       meta: {
         total,
         page,
@@ -141,6 +160,42 @@ export class SuperAdminService {
       },
     };
   }
+
+  /**
+   * Both the directory and the invitation table are platform data, so this
+   * reads admin state without opening a tenant connection - schools that are
+   * not provisioned yet have no schema to connect to.
+   */
+  private async attachAdminSummary(
+    schools: School[],
+  ): Promise<SchoolWithAdminSummary[]> {
+    const schoolIds = schools.map((school) => school.id);
+    const [adminCounts, pendingInvitations] = await Promise.all([
+      this.tenantDirectory.countByUserTypeForSchools('school_admin', schoolIds),
+      this.tenantOnboarding.findPendingSchoolAdminInvitations(schoolIds),
+    ]);
+
+    const pendingBySchool = new Map<string, PendingInvitationView>();
+    for (const invitation of pendingInvitations) {
+      pendingBySchool.set(invitation.schoolId, {
+        id: invitation.id,
+        email: invitation.email,
+        firstName: invitation.firstName,
+        lastName: invitation.lastName,
+        expiresAt: invitation.expiresAt,
+      });
+    }
+
+    return schools.map((school) =>
+      Object.assign(school, {
+        adminSummary: {
+          activeAdmins: adminCounts.get(school.id) ?? 0,
+          pendingInvitation: pendingBySchool.get(school.id) ?? null,
+        },
+      }),
+    );
+  }
+
   async getSchoolsPerformance(options?: {
     topThreshold?: number;
     lowThreshold?: number;

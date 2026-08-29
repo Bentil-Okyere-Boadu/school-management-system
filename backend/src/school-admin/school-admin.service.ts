@@ -18,10 +18,12 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { Admission } from 'src/admission/admission.entity';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { Subject } from 'src/subject/subject.entity';
 import { TenantContextService } from 'src/common/tenant/tenant-context.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
 @Injectable()
 export class SchoolAdminService {
@@ -48,6 +50,7 @@ export class SchoolAdminService {
     @InjectRepository(Subject)
     private subjectRepository: Repository<Subject>,
     private readonly tenantContext: TenantContextService,
+    private readonly tenantConnection: TenantConnectionService,
   ) {}
 
   private resolveSchoolId(schoolId?: string): string {
@@ -679,11 +682,9 @@ export class SchoolAdminService {
       where: { isArchived: false },
     });
 
-    const admissionRepo =
-      this.schoolRepository.manager.getRepository('Admission');
-    const totalApplications = await admissionRepo.count({
-      where: { school: { id: resolvedSchoolId }, isArchived: false },
-    });
+    const totalApplications = await this.tenantConnection.manager
+      .getRepository(Admission)
+      .count({ where: { isArchived: false } });
 
     const classLevels = await this.classLevelRepository.find({
       where: { school: { id: resolvedSchoolId } },
