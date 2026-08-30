@@ -12,7 +12,7 @@ User-facing product docs for the school management app. Each file describes what
 | Grading | School Admin, Teacher | [grading.md](./grading.md) |
 | Notifications | School Admin, Teacher, Student | [notifications.md](./notifications.md) |
 | Payments | School Admin, Student, Parent, Super Admin | [payments.md](./payments.md) |
-| Performance analytics | School Admin, Teacher, Student | [performance-analytics.md](./performance-analytics.md) |
+| Performance analytics | School Admin, Teacher, Student, Parent | [performance-analytics.md](./performance-analytics.md) |
 | Planner | School Admin, Teacher, Student | [planner.md](./planner.md) |
 | Results | School Admin, Teacher, Student, Parent | [results.md](./results.md) |
 | Settings | School Admin | [settings.md](./settings.md) |

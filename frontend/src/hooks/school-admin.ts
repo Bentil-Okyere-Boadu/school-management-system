@@ -1960,6 +1960,17 @@ export const useUpdateParentResultVisibility = () => {
   });
 };
 
+export const useUpdatePerformanceAnalyticsEnabled = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { performanceAnalyticsEnabled: boolean }) =>
+      customAPI.patch("/schools/performance-analytics-enabled", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mySchool"] });
+    },
+  });
+};
+
 /**
  * ASSIGNMENTS CRUD
  */

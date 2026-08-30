@@ -4,9 +4,14 @@ import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, PaymentsIcon, SubjectIcon, ScoreIcon, PlannerIcon, PerformanceIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
-import { useGetMe } from "@/hooks/school-admin";
+import { useGetMe, useGetMySchool } from "@/hooks/school-admin";
 import NotificationCard from "@/components/common/NotificationCard";
 import { Roles } from "@/@types";
+import {
+  isPerformanceAnalyticsEnabled,
+  isPerformanceAnalyticsEnabledResolved,
+  isPerformanceAnalyticsRoute,
+} from "@/utils/performanceAnalytics";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -29,7 +34,20 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     setIsMobileSidebarOpen((open) => !open);
   };
 
-  const {me} = useGetMe();
+  const {me, isPending: meLoading} = useGetMe();
+  const { school, isLoading: schoolLoading } = useGetMySchool();
+  const schoolContext = school ?? me?.school;
+  const flagLoading = meLoading || schoolLoading;
+  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(schoolContext, {
+    isLoading: flagLoading,
+  });
+
+  useEffect(() => {
+    if (flagLoading) return;
+    if (isPerformanceAnalyticsEnabledResolved(schoolContext)) return;
+    if (!isPerformanceAnalyticsRoute(pathname, "admin")) return;
+    router.replace("/admin/dashboard");
+  }, [flagLoading, pathname, router, schoolContext]);
 
   const sidebarItems = [
     {
@@ -52,10 +70,14 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: ScoreIcon,
       label: "Scores"
     },
-    {
-      icon: PerformanceIcon,
-      label: "Performance Analytics"
-    },
+    ...(performanceAnalyticsEnabled
+      ? [
+          {
+            icon: PerformanceIcon,
+            label: "Performance Analytics",
+          },
+        ]
+      : []),
     {
       icon: AdmissionsIcon,      
       label: "Admissions",
