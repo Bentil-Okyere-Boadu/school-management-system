@@ -86,7 +86,10 @@ export class ParentDashboardService {
 
     const finance = await Promise.all(
       children.map((child) =>
-        this.financeService.getStudentDetail(parent.school.id, child.id),
+        this.financeService.getStudentDetail(parent.school.id, child.id, {
+          academicTermId: query.termId?.trim() || undefined,
+          academicCalendarId: query.calendarId?.trim() || undefined,
+        }),
       ),
     );
 

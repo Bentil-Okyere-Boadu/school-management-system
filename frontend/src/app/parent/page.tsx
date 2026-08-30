@@ -103,11 +103,14 @@ const ParentDashboard = () => {
   }, [calendarId, calendars, month, replaceParams, tabFromUrl, termId, year]);
 
   const { overview, isLoading: overviewLoading, error: overviewError } =
-    useParentOverview({
-      studentId: apiStudentId,
-      calendarId: calendarId || undefined,
-      termId: termId || undefined,
-    });
+    useParentOverview(
+      {
+        studentId: apiStudentId,
+        calendarId: calendarId || undefined,
+        termId: termId || undefined,
+      },
+      hasChildren && Boolean(termId),
+    );
 
   const attendanceMonth = Number.isFinite(month) ? month : now.getMonth() + 1;
   const attendanceYear = Number.isFinite(year) ? year : now.getFullYear();
