@@ -1,8 +1,9 @@
 "use client";
 
 import { IconX } from "@tabler/icons-react";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { HashLoader } from "react-spinners";
+import { Pagination } from "@/components/common/Pagination";
 import { useGetFinanceStudentDetail } from "@/hooks/school-admin";
 import {
   formatFinanceDate,
@@ -53,13 +54,21 @@ function PeriodBadge({ label }: { label: string }) {
 export const FinanceStudentDetailDrawer: React.FC<
   FinanceStudentDetailDrawerProps
 > = ({ studentId, calendarId, termId, periodLabel, onClose }) => {
+  const paymentLimit = 15;
+  const [paymentPage, setPaymentPage] = useState(1);
+
+  useEffect(() => {
+    setPaymentPage(1);
+  }, [studentId, calendarId, termId]);
+
   const filters = useMemo(
     () => ({
       academicCalendarId: calendarId || undefined,
       academicTermId: termId || undefined,
-      paymentLimit: 15,
+      paymentPage,
+      paymentLimit,
     }),
-    [calendarId, termId]
+    [calendarId, termId, paymentPage]
   );
 
   const { detail, isLoading } = useGetFinanceStudentDetail(
@@ -233,9 +242,24 @@ export const FinanceStudentDetailDrawer: React.FC<
               </section>
 
               <section className="mt-6">
-                <h3 className="mb-3 text-sm font-semibold text-zinc-900">
-                  Payment history
-                </h3>
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-zinc-900">
+                    Payment history
+                  </h3>
+                  {detail.paymentMeta && detail.paymentMeta.total > 0 ? (
+                    <p className="text-xs text-zinc-500">
+                      Showing{" "}
+                      {(detail.paymentMeta.page - 1) * detail.paymentMeta.limit +
+                        1}
+                      –
+                      {Math.min(
+                        detail.paymentMeta.page * detail.paymentMeta.limit,
+                        detail.paymentMeta.total
+                      )}{" "}
+                      of {detail.paymentMeta.total}
+                    </p>
+                  ) : null}
+                </div>
                 <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[560px] border-collapse text-left text-sm">
@@ -325,6 +349,15 @@ export const FinanceStudentDetailDrawer: React.FC<
                     </table>
                   </div>
                 </div>
+                {detail.paymentMeta && detail.paymentMeta.totalPages > 1 ? (
+                  <div className="mt-3">
+                    <Pagination
+                      currentPage={paymentPage}
+                      totalPages={detail.paymentMeta.totalPages}
+                      onPageChange={setPaymentPage}
+                    />
+                  </div>
+                ) : null}
               </section>
 
               <p className="mt-5 text-xs leading-relaxed text-zinc-500">

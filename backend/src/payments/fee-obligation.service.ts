@@ -132,6 +132,102 @@ export class FeeObligationService {
   }
 
   /**
+   * Bulk-create missing term:{termId} obligations for many students (finance read path).
+   */
+  async ensureTermObligationsForStudentsBatch(
+    students: Student[],
+    schoolFees: FeeStructure[],
+    termId: string,
+    schoolId: string,
+    filterApplicable: (
+      student: Student,
+      fees: FeeStructure[],
+    ) => FeeStructure[],
+  ): Promise<void> {
+    if (students.length === 0) {
+      return;
+    }
+
+    const ctx = await this.resolveAcademicContext(schoolId);
+    if (!ctx) {
+      return;
+    }
+
+    let term: AcademicTerm | undefined =
+      ctx.calendar.terms?.find((row) => row.id === termId);
+    let calendar = ctx.calendar;
+    if (!term) {
+      const loadedTerm = await this.obligationRepository.manager.findOne(
+        AcademicTerm,
+        {
+          where: { id: termId },
+          relations: ['academicCalendar'],
+        },
+      );
+      if (!loadedTerm) {
+        return;
+      }
+      term = loadedTerm;
+      calendar = term.academicCalendar ?? ctx.calendar;
+    }
+
+    if (this.cmpIso(term.endDate, ctx.legacyCutover) < 0) {
+      return;
+    }
+
+    const periodKey = `term:${termId}`;
+    const studentIds = students.map((student) => student.id);
+    const existing = await this.obligationRepository.find({
+      where: {
+        student: { id: In(studentIds) },
+        periodKey,
+      },
+      relations: ['student', 'feeStructure'],
+    });
+
+    const existingKeys = new Set(
+      existing.map((row) => `${row.student.id}:${row.feeStructure.id}`),
+    );
+
+    const toCreate: StudentFeeObligation[] = [];
+    for (const student of students) {
+      const studentFrom = this.toIsoDate(student.createdAt);
+      if (this.cmpIso(studentFrom, term.endDate) > 0) {
+        continue;
+      }
+
+      for (const fee of filterApplicable(student, schoolFees)) {
+        if (this.normalizeCadence(fee.feeType) !== 'term') {
+          continue;
+        }
+        const key = `${student.id}:${fee.id}`;
+        if (existingKeys.has(key)) {
+          continue;
+        }
+
+        toCreate.push(
+          this.obligationRepository.create({
+            student,
+            feeStructure: fee,
+            periodKey,
+            periodStart: term.startDate,
+            periodEnd: term.endDate,
+            amountDue: fee.amount,
+            isLegacy: false,
+            academicTerm: term,
+            academicCalendar: calendar,
+          }),
+        );
+        existingKeys.add(key);
+      }
+    }
+
+    if (toCreate.length > 0) {
+      await this.obligationRepository.save(toCreate);
+    }
+  }
+
+  /**
    * Legacy row for pre-cutover / migrated payments (amountDue set by backfill).
    * Only creates when old allocations still have null obligation (pre-backfill edge).
    */

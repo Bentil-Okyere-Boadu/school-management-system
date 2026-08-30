@@ -14,6 +14,7 @@ import {
 } from './entities/payment-transaction.entity';
 import { PaymentQueryDto } from './dto/payment-query.dto';
 import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { StudentFeeObligation } from './entities/student-fee-obligation.entity';
 
@@ -49,6 +50,22 @@ type PeriodFilterQuery = {
   academicCalendarId?: string;
 };
 
+type TermFilterContext = {
+  termId: string;
+  termStart: string;
+  termEnd: string;
+  calendarId: string | null;
+};
+
+type PeriodScopedFeeLine = {
+  academicTermId?: string | null;
+  academicCalendarId?: string | null;
+  periodStart?: string;
+  periodEnd?: string;
+  isArrear?: boolean;
+  outstanding?: number;
+};
+
 @Injectable()
 export class FinanceService {
   constructor(
@@ -56,6 +73,8 @@ export class FinanceService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(ClassLevel)
     private readonly classLevelRepository: Repository<ClassLevel>,
+    @InjectRepository(AcademicTerm)
+    private readonly academicTermRepository: Repository<AcademicTerm>,
     private readonly feeObligationService: FeeObligationService,
     private readonly studentCreditService: StudentCreditService,
     private readonly paymentsService: PaymentsService,
@@ -306,21 +325,106 @@ export class FinanceService {
     };
   }
 
-  private filterFeeLines<
-    T extends {
-      academicTermId?: string | null;
-      academicCalendarId?: string | null;
-    },
-  >(lines: T[], query?: PeriodFilterQuery): T[] {
+  private async resolveTermFilterContext(
+    query?: PeriodFilterQuery,
+  ): Promise<TermFilterContext | null> {
     const termId = query?.academicTermId?.trim();
+    if (!termId) {
+      return null;
+    }
+
+    const term = await this.academicTermRepository.findOne({
+      where: { id: termId },
+      relations: ['academicCalendar'],
+    });
+    if (!term) {
+      return null;
+    }
+
+    return {
+      termId: term.id,
+      termStart: term.startDate,
+      termEnd: term.endDate,
+      calendarId:
+        term.academicCalendar?.id ??
+        query?.academicCalendarId?.trim() ??
+        null,
+    };
+  }
+
+  private periodsOverlap(
+    aStart: string,
+    aEnd: string,
+    bStart: string,
+    bEnd: string,
+  ): boolean {
+    return aStart <= bEnd && aEnd >= bStart;
+  }
+
+  private lineMatchesTermFilter(
+    line: PeriodScopedFeeLine,
+    ctx: TermFilterContext,
+  ): boolean {
+    const outstanding = line.outstanding ?? 0;
+
+    if (outstanding > 0 && line.isArrear) {
+      return true;
+    }
+
+    if (
+      outstanding > 0 &&
+      line.academicTermId &&
+      line.academicTermId !== ctx.termId &&
+      line.periodEnd &&
+      line.periodEnd < ctx.termStart
+    ) {
+      return true;
+    }
+
+    if (line.academicTermId === ctx.termId) {
+      return true;
+    }
+
+    if (
+      !line.academicTermId &&
+      line.periodStart &&
+      line.periodEnd &&
+      ctx.calendarId &&
+      line.academicCalendarId === ctx.calendarId &&
+      this.periodsOverlap(
+        line.periodStart,
+        line.periodEnd,
+        ctx.termStart,
+        ctx.termEnd,
+      )
+    ) {
+      return true;
+    }
+
+    if (
+      outstanding > 0 &&
+      !line.academicTermId &&
+      !line.academicCalendarId
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private filterFeeLines<
+    T extends PeriodScopedFeeLine,
+  >(lines: T[], query?: PeriodFilterQuery, termContext?: TermFilterContext | null): T[] {
     const calendarId = query?.academicCalendarId?.trim();
-    if (!termId && !calendarId) {
+    if (!termContext && !calendarId) {
       return lines;
     }
+
+    if (termContext) {
+      return lines.filter((line) => this.lineMatchesTermFilter(line, termContext));
+    }
+
     return lines.filter((line) => {
-      if (termId && line.academicTermId !== termId) {
-        return false;
-      }
       if (calendarId && line.academicCalendarId !== calendarId) {
         return false;
       }
@@ -337,10 +441,21 @@ export class FinanceService {
   private computeTotalsFromLines(
     lines: FinanceObligationLine[],
     prepayment = 0,
+    termContext?: TermFilterContext | null,
+    periodScoped = false,
   ): StudentFinanceTotals {
     const round = (n: number) => Math.round(n * 100) / 100;
     const totalPayable = round(
-      lines.reduce((sum, line) => sum + line.amountDue, 0),
+      lines.reduce((sum, line) => {
+        if (
+          termContext &&
+          line.isArrear &&
+          line.academicTermId !== termContext.termId
+        ) {
+          return sum;
+        }
+        return sum + line.amountDue;
+      }, 0),
     );
     const totalPaid = round(lines.reduce((sum, line) => sum + line.paid, 0));
     const outstanding = round(
@@ -352,7 +467,9 @@ export class FinanceService {
         .reduce((sum, line) => sum + line.outstanding, 0),
     );
     const roundedPrepayment = round(prepayment);
-    const netBalance = round(outstanding - roundedPrepayment);
+    const netBalance = periodScoped
+      ? outstanding
+      : round(outstanding - roundedPrepayment);
     const today = new Date().toISOString().slice(0, 10);
     let nextDueDate: string | null = null;
     for (const line of lines) {
@@ -376,6 +493,76 @@ export class FinanceService {
     };
   }
 
+  private static readonly FULL_LEDGER_ENSURE_THRESHOLD = 25;
+
+  private async materializeStudentLedgersBeforeRead(
+    students: Student[],
+    schoolId: string,
+    query?: PeriodFilterQuery,
+  ): Promise<void> {
+    if (students.length === 0) {
+      return;
+    }
+
+    const schoolFees =
+      await this.paymentsService.getSchoolFeeStructures(schoolId);
+    const filterApplicable = (student: Student) =>
+      this.paymentsService.filterApplicableFeeStructuresForStudent(
+        student,
+        schoolFees,
+        { ussdEligibleOnly: false },
+      );
+
+    const termId = query?.academicTermId?.trim();
+    const useFullEnsure =
+      students.length <= FinanceService.FULL_LEDGER_ENSURE_THRESHOLD;
+
+    if (useFullEnsure) {
+      for (const student of students) {
+        await this.feeObligationService.ensureObligationsForStudent(
+          student,
+          filterApplicable(student),
+        );
+      }
+    } else if (termId) {
+      await this.feeObligationService.ensureTermObligationsForStudentsBatch(
+        students,
+        schoolFees,
+        termId,
+        schoolId,
+        (student, fees) =>
+          this.paymentsService.filterApplicableFeeStructuresForStudent(
+            student,
+            fees,
+            { ussdEligibleOnly: false },
+          ),
+      );
+    } else {
+      for (const student of students) {
+        await this.feeObligationService.ensureObligationsForStudent(
+          student,
+          filterApplicable(student),
+        );
+      }
+    }
+
+    const creditsByStudentId =
+      await this.studentCreditService.getAvailableCreditsByStudentIds(
+        students.map((student) => student.id),
+      );
+
+    for (const student of students) {
+      if ((creditsByStudentId.get(student.id) ?? 0) <= 0) {
+        continue;
+      }
+      await this.studentCreditService.applyAvailableCredit(
+        student,
+        filterApplicable(student),
+        { ussdEligibleOnly: false },
+      );
+    }
+  }
+
   private async buildStudentFinanceSnapshot(
     student: Student,
     query: PeriodFilterQuery,
@@ -384,7 +571,10 @@ export class FinanceService {
     filteredFeeLines: FinanceObligationLine[];
     scopedTotals: StudentFinanceTotals;
   }> {
+    await this.materializeStudentLedgersBeforeRead([student], schoolId, query);
+
     const context = await this.loadFinanceBatchContext(schoolId, [student.id]);
+    const termContext = await this.resolveTermFilterContext(query);
     const applicableFees =
       this.paymentsService.filterApplicableFeeStructuresForStudent(
         student,
@@ -400,10 +590,15 @@ export class FinanceService {
         prepayment,
         context.arrearsCutoff,
       );
-    const filteredFeeLines = this.filterFeeLines(lines, query);
-    const prepaymentForScope = this.hasPeriodFilter(query) ? 0 : prepayment;
-    const scopedTotals = this.hasPeriodFilter(query)
-      ? this.computeTotalsFromLines(filteredFeeLines, prepaymentForScope)
+    const filteredFeeLines = this.filterFeeLines(lines, query, termContext);
+    const periodScoped = this.hasPeriodFilter(query);
+    const scopedTotals = periodScoped
+      ? this.computeTotalsFromLines(
+          filteredFeeLines,
+          prepayment,
+          termContext,
+          true,
+        )
       : globalTotals;
 
     return { filteredFeeLines, scopedTotals };
@@ -467,10 +662,13 @@ export class FinanceService {
       return [];
     }
 
+    await this.materializeStudentLedgersBeforeRead(students, schoolId, query);
+
     const context = await this.loadFinanceBatchContext(
       schoolId,
       students.map((student) => student.id),
     );
+    const termContext = await this.resolveTermFilterContext(query);
 
     return students.map((student) => {
       const applicableFees =
@@ -488,9 +686,15 @@ export class FinanceService {
           prepayment,
           context.arrearsCutoff,
         );
-      const filteredLines = this.filterFeeLines(lines, query);
-      const totals = this.hasPeriodFilter(query)
-        ? this.computeTotalsFromLines(filteredLines, prepayment)
+      const filteredLines = this.filterFeeLines(lines, query, termContext);
+      const periodScoped = this.hasPeriodFilter(query);
+      const totals = periodScoped
+        ? this.computeTotalsFromLines(
+            filteredLines,
+            prepayment,
+            termContext,
+            true,
+          )
         : globalTotals;
 
       return this.toFinanceStudentRow(student, totals);
@@ -573,14 +777,18 @@ export class FinanceService {
     schoolId: string,
     query: FinanceQueryDto,
   ): Promise<FinanceSchoolSummary> {
-    // Summary respects class/search filters but not balanceStatus (school-wide filtered cohort).
+    const balanceStatus = query.balanceStatus ?? 'all';
     const summaryQuery: FinanceQueryDto = {
       ...query,
-      balanceStatus: 'all',
       page: 1,
       limit: 1_000_000,
     };
-    const rows = await this.collectFilteredRows(schoolId, summaryQuery);
+    let rows = await this.collectFilteredRows(schoolId, summaryQuery);
+    if (balanceStatus !== 'all') {
+      rows = rows.filter((row) =>
+        this.matchesBalanceStatus(row, balanceStatus),
+      );
+    }
     return this.summarizeRows(rows);
   }
 
