@@ -33,6 +33,7 @@ import { PaymentsModule } from 'src/payments/payments.module';
 import { SubjectModule } from 'src/subject/subject.module';
 import { MessageReminder } from 'src/notification/entities/message-reminder.entity';
 import { HubtelModule } from 'src/integrations/hubtel/hubtel.module';
+import { StudentAnalyticsModule } from 'src/student-analytics/student-analytics.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { HubtelModule } from 'src/integrations/hubtel/hubtel.module';
     PaymentsModule,
     SubjectModule,
     HubtelModule,
+    StudentAnalyticsModule,
   ],
   providers: [
     ParentService,

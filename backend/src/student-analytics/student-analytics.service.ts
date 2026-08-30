@@ -15,6 +15,10 @@ import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.enti
 import { ClassLevel } from 'src/class-level/class-level.entity';
 import { GradingSystem } from 'src/grading-system/grading-system.entity';
 import { GradingSystemService } from 'src/grading-system/grading-system.service';
+import {
+  getParentResultVisibility,
+  ParentResultVisibility,
+} from 'src/common/utils/authUtil';
 
 export type ClusterName =
   | 'Below Expectations'
@@ -149,6 +153,7 @@ export class StudentAnalyticsService {
     studentId: string,
     academicTermId: string,
   ): Promise<PerformanceAnalyticsResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(admin.school);
     await this.ensureAdminCanAccessStudent(admin, studentId);
     return this.buildPerformanceAnalytics(studentId, academicTermId, null);
   }
@@ -158,6 +163,7 @@ export class StudentAnalyticsService {
     studentId: string,
     academicTermId: string,
   ): Promise<PerformanceAnalyticsResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(teacher.school);
     await this.ensureTeacherCanAccessStudent(teacher, studentId);
     const catalogIds = await this.getTeacherSubjectCatalogIdsForStudent(
       teacher.id,
@@ -174,7 +180,67 @@ export class StudentAnalyticsService {
     student: Student,
     academicTermId: string,
   ): Promise<PerformanceAnalyticsResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(student.school);
     return this.buildPerformanceAnalytics(student.id, academicTermId, null);
+  }
+
+  static assertPerformanceAnalyticsEnabled(school: {
+    performanceAnalyticsEnabled?: boolean;
+  }): void {
+    if (school.performanceAnalyticsEnabled === false) {
+      throw new ForbiddenException(
+        'Performance analytics is not enabled for this school',
+      );
+    }
+  }
+
+  async getPerformanceAnalyticsForChild(
+    studentId: string,
+    academicTermId: string,
+  ): Promise<PerformanceAnalyticsResponse> {
+    return this.buildPerformanceAnalytics(studentId, academicTermId, null);
+  }
+
+  maskPerformanceAnalyticsForParent(
+    payload: PerformanceAnalyticsResponse,
+    visibility: ParentResultVisibility,
+  ): PerformanceAnalyticsResponse {
+    if (visibility.showScores) {
+      return payload;
+    }
+
+    return {
+      ...payload,
+      summary: {
+        ...payload.summary,
+        assignmentAveragePercent: null,
+      },
+      subjectAssignmentPerformance: payload.subjectAssignmentPerformance.map(
+        (subject) => ({
+          ...subject,
+          averagePercent: null,
+          topics: subject.topics.map((topic) => ({
+            ...topic,
+            averagePercent: null,
+            assignments: (topic.assignments ?? []).map((assignment) => ({
+              ...assignment,
+              score: 0,
+              maxScore: 0,
+              percentage: 0,
+            })),
+          })),
+        }),
+      ),
+    };
+  }
+
+  getParentVisibilityFromSchool(school: {
+    parentShowScores?: boolean;
+    parentShowGrades?: boolean;
+    parentShowLabels?: boolean;
+    parentShowFeedback?: boolean;
+  }): ParentResultVisibility {
+    return getParentResultVisibility(school);
   }
 
   private async ensureAdminCanAccessStudent(
@@ -374,6 +440,7 @@ export class StudentAnalyticsService {
     teacher: Teacher,
     classLevelId: string,
   ): Promise<TeacherAnalyticsSubjectsResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(teacher.school);
     await this.ensureTeacherCanAccessClassForAnalytics(teacher, classLevelId);
 
     const isClassTeacher = await this.isTeacherClassTeacherOfClass(
@@ -789,6 +856,7 @@ export class StudentAnalyticsService {
     subjectCatalogId: string,
     filters: ClassSubjectPerformanceFilters = {},
   ): Promise<ClassSubjectPerformanceResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(admin.school);
     return this.buildClassSubjectPerformance(
       admin.school.id,
       classLevelId,
@@ -805,6 +873,7 @@ export class StudentAnalyticsService {
     subjectCatalogId: string,
     filters: ClassSubjectPerformanceFilters = {},
   ): Promise<ClassSubjectPerformanceResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(teacher.school);
     await this.ensureTeacherCanAccessSubjectInClass(
       teacher,
       classLevelId,
@@ -1023,6 +1092,7 @@ export class StudentAnalyticsService {
     academicTermId: string,
     subjectCatalogId: string,
   ): Promise<StudentTopicPerformanceResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(admin.school);
     await this.ensureAdminCanAccessStudent(admin, studentId);
     return this.buildStudentTopicPerformance(
       admin.school.id,
@@ -1038,6 +1108,7 @@ export class StudentAnalyticsService {
     academicTermId: string,
     subjectCatalogId: string,
   ): Promise<StudentTopicPerformanceResponse> {
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(teacher.school);
     await this.ensureTeacherCanAccessTopicPerformance(
       teacher,
       studentId,
