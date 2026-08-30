@@ -5,13 +5,11 @@ import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import FullPageSpinner from "@/components/common/FullPageSpinner";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { DashboardIcon, PerformanceIcon } from "@/utils/icons";
+import { DashboardIcon } from "@/utils/icons";
 import { useParentGetMe } from "@/hooks/parent";
 import type { User } from "@/@types";
-import { isPerformanceAnalyticsEnabled } from "@/utils/performanceAnalytics";
 
 const FAMILY_DASHBOARD = "Family Dashboard";
-const PERFORMANCE_ANALYTICS = "Performance Analytics";
 
 const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
@@ -22,39 +20,21 @@ const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
 
-  const { me, isLoading: meLoading } = useParentGetMe();
-  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(me?.school, {
-    isLoading: meLoading,
-  });
+  const { me } = useParentGetMe();
 
   const sidebarItems = useMemo(
-    () => [
-      { icon: DashboardIcon, label: FAMILY_DASHBOARD },
-      ...(performanceAnalyticsEnabled
-        ? [{ icon: PerformanceIcon, label: PERFORMANCE_ANALYTICS }]
-        : []),
-    ],
-    [performanceAnalyticsEnabled],
+    () => [{ icon: DashboardIcon, label: FAMILY_DASHBOARD }],
+    [],
   );
 
   useEffect(() => {
-    if (pathname === "/parent/performance-analytics") {
-      setActiveMenuItem(PERFORMANCE_ANALYTICS);
-      setIsOverviewPage(true);
-      return;
-    }
-
     setActiveMenuItem(FAMILY_DASHBOARD);
     setIsOverviewPage(pathname === "/parent");
   }, [pathname]);
 
-  const handleSidebarClick = (item: string) => {
+  const handleSidebarClick = (_item: string) => {
     const query = searchParams.toString();
-    const base =
-      item === PERFORMANCE_ANALYTICS
-        ? "/parent/performance-analytics"
-        : "/parent";
-    router.push(query ? `${base}?${query}` : base);
+    router.push(query ? `/parent?${query}` : "/parent");
     setIsSidebarOpen(false);
   };
 
