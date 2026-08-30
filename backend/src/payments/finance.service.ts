@@ -17,6 +17,10 @@ import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { StudentFeeObligation } from './entities/student-fee-obligation.entity';
+import {
+  lineMatchesTermFilter,
+  TermFilterContext,
+} from './term-period-filter';
 
 export type FinanceStudentRow = {
   studentId: string;
@@ -48,22 +52,6 @@ export type FinanceSchoolSummary = {
 type PeriodFilterQuery = {
   academicTermId?: string;
   academicCalendarId?: string;
-};
-
-type TermFilterContext = {
-  termId: string;
-  termStart: string;
-  termEnd: string;
-  calendarId: string | null;
-};
-
-type PeriodScopedFeeLine = {
-  academicTermId?: string | null;
-  academicCalendarId?: string | null;
-  periodStart?: string;
-  periodEnd?: string;
-  isArrear?: boolean;
-  outstanding?: number;
 };
 
 @Injectable()
@@ -355,68 +343,15 @@ export class FinanceService {
     };
   }
 
-  private periodsOverlap(
-    aStart: string,
-    aEnd: string,
-    bStart: string,
-    bEnd: string,
-  ): boolean {
-    return aStart <= bEnd && aEnd >= bStart;
-  }
-
-  private lineMatchesTermFilter(
-    line: PeriodScopedFeeLine,
-    ctx: TermFilterContext,
-  ): boolean {
-    const outstanding = line.outstanding ?? 0;
-
-    if (outstanding > 0 && line.isArrear) {
-      return true;
-    }
-
-    if (
-      outstanding > 0 &&
-      line.academicTermId &&
-      line.academicTermId !== ctx.termId &&
-      line.periodEnd &&
-      line.periodEnd < ctx.termStart
-    ) {
-      return true;
-    }
-
-    if (line.academicTermId === ctx.termId) {
-      return true;
-    }
-
-    if (
-      !line.academicTermId &&
-      line.periodStart &&
-      line.periodEnd &&
-      ctx.calendarId &&
-      line.academicCalendarId === ctx.calendarId &&
-      this.periodsOverlap(
-        line.periodStart,
-        line.periodEnd,
-        ctx.termStart,
-        ctx.termEnd,
-      )
-    ) {
-      return true;
-    }
-
-    if (
-      outstanding > 0 &&
-      !line.academicTermId &&
-      !line.academicCalendarId
-    ) {
-      return true;
-    }
-
-    return false;
-  }
-
   private filterFeeLines<
-    T extends PeriodScopedFeeLine,
+    T extends {
+      academicTermId?: string | null;
+      academicCalendarId?: string | null;
+      periodStart?: string;
+      periodEnd?: string;
+      isArrear?: boolean;
+      outstanding?: number;
+    },
   >(lines: T[], query?: PeriodFilterQuery, termContext?: TermFilterContext | null): T[] {
     const calendarId = query?.academicCalendarId?.trim();
     if (!termContext && !calendarId) {
@@ -424,7 +359,7 @@ export class FinanceService {
     }
 
     if (termContext) {
-      return lines.filter((line) => this.lineMatchesTermFilter(line, termContext));
+      return lines.filter((line) => lineMatchesTermFilter(line, termContext));
     }
 
     return lines.filter((line) => {
@@ -551,6 +486,7 @@ export class FinanceService {
         termId,
         schoolId,
         filterApplicablePair,
+        { includeDaily: students.length === 1 },
       );
     } else {
       for (

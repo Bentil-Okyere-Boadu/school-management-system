@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, QueryFailedError, Repository } from 'typeorm';
 import { Student } from 'src/student/student.entity';
 import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
 import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
@@ -10,6 +10,10 @@ import { PaymentAllocation } from './entities/payment-allocation.entity';
 import {
   PaymentTransactionStatus,
 } from './entities/payment-transaction.entity';
+import {
+  lineMatchesTermFilter,
+  TermFilterContext,
+} from './term-period-filter';
 
 /** Max calendar days of daily fee lines to materialise (lookback from today). */
 export const DAILY_FEE_LOOKBACK_MAX_DAYS = 120;
@@ -143,6 +147,7 @@ export class FeeObligationService {
       student: Student,
       fees: FeeStructure[],
     ) => FeeStructure[],
+    options?: { includeDaily?: boolean },
   ): Promise<void> {
     if (students.length === 0) {
       return;
@@ -192,14 +197,16 @@ export class FeeObligationService {
       ctx,
       filterApplicable,
     );
-    await this.ensureOverlappingDailyObligationsForStudentsBatch(
-      students,
-      schoolFees,
-      term,
-      calendar,
-      ctx,
-      filterApplicable,
-    );
+    if (options?.includeDaily !== false) {
+      await this.ensureOverlappingDailyObligationsForStudentsBatch(
+        students,
+        schoolFees,
+        term,
+        calendar,
+        ctx,
+        filterApplicable,
+      );
+    }
   }
 
   /**
@@ -335,7 +342,7 @@ export class FeeObligationService {
     }
 
     if (toCreate.length > 0) {
-      await this.obligationRepository.save(toCreate);
+      await this.saveObligationsInChunks(toCreate);
     }
   }
 
@@ -569,7 +576,7 @@ export class FeeObligationService {
     }
 
     if (toCreate.length > 0) {
-      await this.obligationRepository.save(toCreate);
+      await this.saveObligationsInChunks(toCreate);
     }
   }
 
@@ -580,6 +587,41 @@ export class FeeObligationService {
     bEnd: string,
   ): boolean {
     return aStart <= bEnd && aEnd >= bStart;
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    if (!(error instanceof QueryFailedError)) {
+      return false;
+    }
+    const driverError = (
+      error as QueryFailedError & { driverError?: { code?: string } }
+    ).driverError;
+    return driverError?.code === '23505';
+  }
+
+  private async saveObligationsInChunks(
+    rows: StudentFeeObligation[],
+    chunkSize = 500,
+  ): Promise<void> {
+    for (let index = 0; index < rows.length; index += chunkSize) {
+      const chunk = rows.slice(index, index + chunkSize);
+      try {
+        await this.obligationRepository.save(chunk);
+      } catch (error) {
+        if (!this.isUniqueViolation(error)) {
+          throw error;
+        }
+        for (const row of chunk) {
+          try {
+            await this.obligationRepository.save(row);
+          } catch (rowError) {
+            if (!this.isUniqueViolation(rowError)) {
+              throw rowError;
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -948,17 +990,37 @@ export class FeeObligationService {
     student: Student,
     applicableFees: FeeStructure[],
     academicTermId: string,
-    options?: { ussdEligibleOnly?: boolean },
+    options?: { ussdEligibleOnly?: boolean; academicCalendarId?: string },
   ): Promise<number> {
-    const lines = await this.getOutstandingLines(
+    const term = await this.obligationRepository.manager.findOne(
+      AcademicTerm,
+      {
+        where: { id: academicTermId },
+        relations: ['academicCalendar'],
+      },
+    );
+    if (!term) {
+      return 0;
+    }
+
+    const termContext: TermFilterContext = {
+      termId: term.id,
+      termStart: term.startDate,
+      termEnd: term.endDate,
+      calendarId:
+        term.academicCalendar?.id ?? options?.academicCalendarId ?? null,
+    };
+
+    const { lines } = await this.getFinanceLinesForStudent(
       student,
       applicableFees,
-      options,
     );
-    const t = lines
-      .filter((line) => line.academicTermId === academicTermId)
-      .reduce((s, r) => s + r.outstanding, 0);
-    return Math.round(t * 100) / 100;
+
+    const total = lines
+      .filter((line) => lineMatchesTermFilter(line, termContext))
+      .reduce((sum, line) => sum + line.outstanding, 0);
+
+    return Math.round(total * 100) / 100;
   }
 
   /**

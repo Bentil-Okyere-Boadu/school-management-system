@@ -427,7 +427,10 @@ export class PaymentsService {
   async getTermOutstandingForStudent(
     student: Student,
     academicTermId: string,
-    options?: { ussdEligibleOnly?: boolean },
+    options?: {
+      ussdEligibleOnly?: boolean;
+      academicCalendarId?: string;
+    },
   ): Promise<number> {
     const ussdOnly = options?.ussdEligibleOnly ?? true;
     const fees = await this.findApplicableFeeStructuresForStudent(student, {
@@ -437,7 +440,10 @@ export class PaymentsService {
       student,
       fees,
       academicTermId,
-      { ussdEligibleOnly: ussdOnly },
+      {
+        ussdEligibleOnly: ussdOnly,
+        academicCalendarId: options?.academicCalendarId,
+      },
     );
   }
 
