@@ -111,6 +111,9 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | `/admin/performance-analytics/[studentId]` | School Admin — student detail |
 | `/teacher/performance-analytics` | Teacher |
 | `/teacher/performance-analytics/[studentId]` | Teacher — student detail |
+| `/parent/performance-analytics` | Parent — redirect → `/parent?tab=academics` (assignment analytics; gated by school setting) |
+
+Parent assignment analytics also lives on the Family Dashboard **Academics** tab (`/parent?tab=academics`). There is no separate Analytics tab. See `docs/features/performance-analytics.md` (Parent section).
 
 ### Results
 
@@ -120,7 +123,7 @@ Lock/unlock for School Admin is on **Classes** (`/admin/classes`), not a separat
 |------|------|
 | `/admin/classes` | School Admin — lock/unlock term results |
 | `/student/results` | Student |
-| `/parent/results` | Parent — Family Dashboard, Academics tab |
+| `/parent/results` | Parent — redirect → `/parent?tab=academics` (analytics, not published term grades; see `docs/features/results.md`) |
 
 ### Notifications
 
