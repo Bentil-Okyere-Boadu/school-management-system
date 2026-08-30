@@ -1,7 +1,7 @@
 # Performance analytics
 
 **Who can use this:** School Admin, Teacher, Student, Parent  
-**Where:** School Admin → Performance Analytics; Teacher → Performance Analytics; Student → Profile → Analytics tab; Parent → Performance Analytics (sidebar)
+**Where:** School Admin → Performance Analytics; Teacher → Performance Analytics; Student → Profile → Analytics tab; Parent → Family Dashboard → Academics tab
 
 ## Overview
 
@@ -37,12 +37,13 @@ School admins can enable or disable Performance Analytics for the whole school i
 
 | Action | Result |
 |--------|--------|
-| Open **Performance Analytics** from the parent sidebar (when enabled for your school). | Read-only assignment performance analytics load for your linked child or children. Ward and term filters from the Family Dashboard carry over when you switch pages. |
+| On **Family Dashboard**, open the **Academics** tab (when enabled for your school). | Read-only assignment performance analytics load for your linked child or children. Ward, calendar, and term filters from the dashboard apply to the analytics view. |
 | Use the ward filter to pick one child or **All wards**. | Analytics refresh for the selected child, or one card per child when all wards are selected. |
-| Change the academic term in the page header. | Analytics update for the selected term. |
+| Change the academic calendar or term in the dashboard filters. | Analytics update for the selected term. |
 | Expand a subject in **Topics & assignments**. | Topics and individual assignments appear with title, due date, submission and graded dates, class level, modality, and submission status. |
 | View analytics when the school has hidden scores from parents. | Assignment titles, dates, counts, and status remain visible; percentages, averages, and score badges are hidden per parent visibility settings. |
-| Open the Family Dashboard with an old **Analytics** tab link. | You are redirected to the dedicated **Performance Analytics** page with your filters preserved. |
+| Follow an old **Performance Analytics** sidebar bookmark, `/parent/performance-analytics` link, or `/parent/results` link. | You are redirected to **Family Dashboard** with the **Academics** tab selected and your filters preserved when analytics is enabled; otherwise you land on the dashboard without changing tabs. |
+| Open **Family Dashboard** with `?tab=analytics` or `?tab=academics` while analytics is disabled for your school. | You are redirected to the **Attendance** tab. |
 
 ## Empty, error, and blocked states
 

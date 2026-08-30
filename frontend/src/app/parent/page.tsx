@@ -29,13 +29,26 @@ import { IconWallet } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { HashLoader } from "react-spinners";
 import React, { useEffect, useMemo, useState } from "react";
-import { isPerformanceAnalyticsEnabled } from "@/utils/performanceAnalytics";
+import {
+  isPerformanceAnalyticsEnabled,
+  isPerformanceAnalyticsEnabledResolved,
+} from "@/utils/performanceAnalytics";
 
 const BASE_FAMILY_TABS: ParentTabItem[] = [
   { tabLabel: "Attendance", tabKey: "attendance" },
   { tabLabel: "Finance", tabKey: "finance" },
-  { tabLabel: "Academics", tabKey: "academics" },
 ];
+
+const KNOWN_TAB_KEYS = new Set([
+  "attendance",
+  "finance",
+  "academics",
+  "analytics",
+]);
+
+function normalizeTabKey(tab: string): string {
+  return tab === "analytics" ? "academics" : tab;
+}
 
 const ParentDashboard = () => {
   const router = useRouter();
@@ -57,19 +70,28 @@ const ParentDashboard = () => {
   });
 
   const familyTabs = useMemo(
-    () =>
-      performanceAnalyticsEnabled
-        ? BASE_FAMILY_TABS
-        : BASE_FAMILY_TABS.filter((tab) => tab.tabKey !== "academics"),
+    () => [
+      ...BASE_FAMILY_TABS,
+      ...(performanceAnalyticsEnabled
+        ? [{ tabLabel: "Academics", tabKey: "academics" }]
+        : []),
+    ],
     [performanceAnalyticsEnabled],
   );
+
   const validTabs = useMemo(
     () => new Set(familyTabs.map((tab) => tab.tabKey)),
     [familyTabs],
   );
 
   const tabFromUrl = searchParams.get("tab") ?? "";
-  const activeTabKey = validTabs.has(tabFromUrl) ? tabFromUrl : "attendance";
+  const normalizedTabFromUrl = normalizeTabKey(tabFromUrl);
+  const activeTabKey =
+    childrenLoading && KNOWN_TAB_KEYS.has(tabFromUrl)
+      ? normalizedTabFromUrl
+      : validTabs.has(normalizedTabFromUrl)
+        ? normalizedTabFromUrl
+        : "attendance";
   const hasChildren = children.length > 0;
 
   const { calendars } = useParentCalendars(true);
@@ -84,13 +106,27 @@ const ParentDashboard = () => {
   );
 
   useEffect(() => {
+    if (childrenLoading) return;
+
     if (tabFromUrl === "analytics") {
-      replaceParams({ tab: performanceAnalyticsEnabled ? "academics" : "attendance" });
+      replaceParams({
+        tab: isPerformanceAnalyticsEnabledResolved(me?.school)
+          ? "academics"
+          : "attendance",
+      });
+      return;
+    }
+
+    if (
+      normalizedTabFromUrl === "academics" &&
+      !isPerformanceAnalyticsEnabledResolved(me?.school)
+    ) {
+      replaceParams({ tab: "attendance" });
       return;
     }
 
     if (!calendars.length) {
-      if (!validTabs.has(tabFromUrl)) {
+      if (tabFromUrl && !KNOWN_TAB_KEYS.has(tabFromUrl)) {
         replaceParams({ tab: "attendance" });
       }
       return;
@@ -111,19 +147,31 @@ const ParentDashboard = () => {
       nextTermId === termId &&
       nextMonth === month &&
       nextYear === year &&
-      validTabs.has(tabFromUrl)
+      validTabs.has(normalizedTabFromUrl)
     ) {
       return;
     }
 
     replaceParams({
-      tab: validTabs.has(tabFromUrl) ? tabFromUrl : "attendance",
+      tab: validTabs.has(normalizedTabFromUrl) ? normalizedTabFromUrl : "attendance",
       calendarId: nextCalendarId || undefined,
       termId: nextTermId || undefined,
       month: String(nextMonth),
       year: String(nextYear),
     });
-  }, [calendarId, calendars, month, performanceAnalyticsEnabled, replaceParams, searchParams, tabFromUrl, termId, validTabs, year]);
+  }, [
+    calendarId,
+    calendars,
+    childrenLoading,
+    me?.school,
+    month,
+    normalizedTabFromUrl,
+    replaceParams,
+    tabFromUrl,
+    termId,
+    validTabs,
+    year,
+  ]);
 
   const { overview, isLoading: overviewLoading, error: overviewError } =
     useParentOverview({
@@ -315,7 +363,11 @@ const ParentDashboard = () => {
               )}
 
               {activeTabKey === "academics" &&
-                (performanceAnalyticsErrorMessage ? (
+                (childrenLoading || !performanceAnalyticsEnabled ? (
+                  <div className="flex min-h-[240px] items-center justify-center">
+                    <HashLoader color="#AB58E7" size={40} />
+                  </div>
+                ) : performanceAnalyticsErrorMessage ? (
                   <NoAvailableEmptyState
                     message={performanceAnalyticsErrorMessage}
                   />
