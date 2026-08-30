@@ -5,9 +5,9 @@
 
 ## Overview
 
-Performance analytics shows how students are performing by class, term, and subject. School admins and teachers can filter, export, and drill into individual students. Students see their own analytics on their profile. Parents see read-only analytics for linked children when the school enables the feature.
+Performance analytics shows how students are performing by class, term, and subject. School admins and teachers can filter, export, and drill into individual students. Students see their own analytics on their profile. Parents see read-only assignment analytics for linked children when the school enables the feature.
 
-School admins can enable or disable Performance Analytics for the whole school in **Settings → Performance Analytics**.
+School admins can enable or disable Performance Analytics for the whole school in **Settings → School Settings → Performance Analytics**.
 
 ## School Admin
 
@@ -17,7 +17,7 @@ School admins can enable or disable Performance Analytics for the whole school i
 | Click **Export CSV**. | A CSV file downloads. If there is no data to export, an informational message appears instead. |
 | Click a student row in the table. | You navigate to that student’s topic-level performance breakdown, carrying over term and subject from your filters. |
 | On the student detail page, click **Back to Performance Breakdown**. | You return to the overview with your previous filters preserved. |
-| Toggle **Enable Performance Analytics** in Settings and save. | Analytics is shown or hidden for admins, teachers, students, and parents according to the setting. |
+| Check or uncheck **Enable Performance Analytics** in School Settings and click **Save analytics setting**. | A success or error message appears. When enabled, analytics appears for admins, teachers, students, and parents. When disabled, the menu item and tabs are hidden for all roles. |
 
 ## Teacher
 
@@ -31,15 +31,18 @@ School admins can enable or disable Performance Analytics for the whole school i
 | Action | Result |
 |--------|--------|
 | Open **Profile**, go to the **Analytics** tab, and select a term. | Your own performance analytics charts and metrics display for the selected term. |
+| View analytics when your school has disabled Performance Analytics. | The **Analytics** tab is hidden from your profile. |
 
 ## Parent
 
 | Action | Result |
 |--------|--------|
-| Open **Performance Analytics** from the parent sidebar (when enabled for your school). | Read-only assignment performance analytics load for your linked child or children. |
+| Open **Performance Analytics** from the parent sidebar (when enabled for your school). | Read-only assignment performance analytics load for your linked child or children. Ward and term filters from the Family Dashboard carry over when you switch pages. |
 | Use the ward filter to pick one child or **All wards**. | Analytics refresh for the selected child, or one card per child when all wards are selected. |
-| Change the academic term in the dashboard filters. | Analytics update for the selected term. |
-| View analytics when the school has hidden scores from parents. | Assignment titles, dates, counts, and status remain visible; percentages and scores are hidden per parent visibility settings. |
+| Change the academic term in the page header. | Analytics update for the selected term. |
+| Expand a subject in **Topics & assignments**. | Topics and individual assignments appear with title, due date, submission and graded dates, class level, modality, and submission status. |
+| View analytics when the school has hidden scores from parents. | Assignment titles, dates, counts, and status remain visible; percentages, averages, and score badges are hidden per parent visibility settings. |
+| Open the Family Dashboard with an old **Analytics** tab link. | You are redirected to the dedicated **Performance Analytics** page with your filters preserved. |
 
 ## Empty, error, and blocked states
 
@@ -47,5 +50,8 @@ School admins can enable or disable Performance Analytics for the whole school i
 - A loading spinner appears while data loads.
 - “No performance data available for this selection” when filters return no results.
 - Student detail shows empty states when required parameters or data are missing.
-- When Performance Analytics is disabled for the school, the feature is hidden from all personas and APIs return forbidden.
-- Parents cannot access analytics for students they are not actively linked to.
+- When Performance Analytics is disabled for the school, the feature is hidden from all personas and access is blocked.
+- Parents with no active linked children see “No active children yet. Confirm any pending child invitations from your email.”
+- Parents cannot access analytics for students they are not actively linked to; an invalid ward selection is cleared automatically.
+- Assignment and profile views show “No academic calendars are configured…” or “No academic terms are configured yet…” when calendars or terms are missing.
+- “No graded assignments with scores for this term yet” or “No topic-linked graded work for this term yet” when there is nothing to chart or list.
