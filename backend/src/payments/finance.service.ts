@@ -195,6 +195,7 @@ export class FinanceService {
 
     const rows = await this.buildStudentRowsBatch(students, query, schoolId);
     const rowByStudentId = new Map(rows.map((row) => [row.studentId, row]));
+    const periodScoped = this.hasPeriodFilter(query);
 
     const data: Array<{
       classLevelId: string;
@@ -241,7 +242,9 @@ export class FinanceService {
         outstanding: round(outstanding),
         arrears: round(arrears),
         prepayment: round(prepayment),
-        netBalance: round(outstanding - prepayment),
+        netBalance: periodScoped
+          ? round(outstanding)
+          : round(outstanding - prepayment),
       });
     }
 
@@ -438,6 +441,20 @@ export class FinanceService {
     );
   }
 
+  private lineCountsTowardTermPayable(
+    line: FinanceObligationLine,
+    termContext?: TermFilterContext | null,
+  ): boolean {
+    if (
+      termContext &&
+      line.isArrear &&
+      line.academicTermId !== termContext.termId
+    ) {
+      return false;
+    }
+    return true;
+  }
+
   private computeTotalsFromLines(
     lines: FinanceObligationLine[],
     prepayment = 0,
@@ -447,17 +464,20 @@ export class FinanceService {
     const round = (n: number) => Math.round(n * 100) / 100;
     const totalPayable = round(
       lines.reduce((sum, line) => {
-        if (
-          termContext &&
-          line.isArrear &&
-          line.academicTermId !== termContext.termId
-        ) {
+        if (!this.lineCountsTowardTermPayable(line, termContext)) {
           return sum;
         }
         return sum + line.amountDue;
       }, 0),
     );
-    const totalPaid = round(lines.reduce((sum, line) => sum + line.paid, 0));
+    const totalPaid = round(
+      lines.reduce((sum, line) => {
+        if (!this.lineCountsTowardTermPayable(line, termContext)) {
+          return sum;
+        }
+        return sum + line.paid;
+      }, 0),
+    );
     const outstanding = round(
       lines.reduce((sum, line) => sum + line.outstanding, 0),
     );
@@ -493,7 +513,7 @@ export class FinanceService {
     };
   }
 
-  private static readonly FULL_LEDGER_ENSURE_THRESHOLD = 25;
+  private static readonly FULL_LEDGER_ENSURE_CHUNK_SIZE = 25;
 
   private async materializeStudentLedgersBeforeRead(
     students: Student[],
@@ -512,37 +532,42 @@ export class FinanceService {
         schoolFees,
         { ussdEligibleOnly: false },
       );
+    const filterApplicablePair = (
+      student: Student,
+      fees: typeof schoolFees,
+    ) =>
+      this.paymentsService.filterApplicableFeeStructuresForStudent(
+        student,
+        fees,
+        { ussdEligibleOnly: false },
+      );
 
     const termId = query?.academicTermId?.trim();
-    const useFullEnsure =
-      students.length <= FinanceService.FULL_LEDGER_ENSURE_THRESHOLD;
 
-    if (useFullEnsure) {
-      for (const student of students) {
-        await this.feeObligationService.ensureObligationsForStudent(
-          student,
-          filterApplicable(student),
-        );
-      }
-    } else if (termId) {
-      await this.feeObligationService.ensureTermObligationsForStudentsBatch(
+    if (termId) {
+      await this.feeObligationService.ensurePeriodScopedObligationsForStudentsBatch(
         students,
         schoolFees,
         termId,
         schoolId,
-        (student, fees) =>
-          this.paymentsService.filterApplicableFeeStructuresForStudent(
-            student,
-            fees,
-            { ussdEligibleOnly: false },
-          ),
+        filterApplicablePair,
       );
     } else {
-      for (const student of students) {
-        await this.feeObligationService.ensureObligationsForStudent(
-          student,
-          filterApplicable(student),
+      for (
+        let index = 0;
+        index < students.length;
+        index += FinanceService.FULL_LEDGER_ENSURE_CHUNK_SIZE
+      ) {
+        const chunk = students.slice(
+          index,
+          index + FinanceService.FULL_LEDGER_ENSURE_CHUNK_SIZE,
         );
+        for (const student of chunk) {
+          await this.feeObligationService.ensureObligationsForStudent(
+            student,
+            filterApplicable(student),
+          );
+        }
       }
     }
 

@@ -15,26 +15,7 @@ export function fullName(firstName?: string | null, lastName?: string | null) {
   return `${firstName ?? ""} ${lastName ?? ""}`.trim() || "Ward";
 }
 
-export function termOutstanding(
-  child: ParentFinanceChild,
-  termId?: string,
-  termName?: string,
-): number {
-  const lines = child.feeLines ?? [];
-  if (termId) {
-    const matched = lines.filter(
-      (line) =>
-        line.academicTermId === termId ||
-        (!line.academicTermId &&
-          termName &&
-          line.periodLabel?.toLowerCase() === termName.toLowerCase()),
-    );
-    if (matched.length > 0 || lines.some((line) => line.academicTermId)) {
-      return roundMoney(
-        matched.reduce((sum, line) => sum + (line.outstanding ?? 0), 0),
-      );
-    }
-  }
+export function termOutstanding(child: ParentFinanceChild): number {
   return roundMoney(child.totals?.outstanding ?? 0);
 }
 

@@ -131,7 +131,7 @@ const ParentDashboard = () => {
   const { finance, isLoading: financeLoading, error: financeError } =
     useParentFinance(
       apiStudentId,
-      hasChildren && activeTabKey === "finance",
+      hasChildren && Boolean(termId),
       {
         academicCalendarId: calendarId || undefined,
         academicTermId: termId || undefined,
@@ -190,7 +190,7 @@ const ParentDashboard = () => {
           text="Pay fees"
           icon={<IconWallet size={16} />}
           onClick={() => openPay()}
-          disabled={!hasOutstanding}
+          disabled={!hasOutstanding || financeLoading}
           className="print:hidden py-[4px] px-[8px]"
         />
       </div>

@@ -132,6 +132,77 @@ export class FeeObligationService {
   }
 
   /**
+   * Bulk-create obligations visible in term-scoped finance reads.
+   */
+  async ensurePeriodScopedObligationsForStudentsBatch(
+    students: Student[],
+    schoolFees: FeeStructure[],
+    termId: string,
+    schoolId: string,
+    filterApplicable: (
+      student: Student,
+      fees: FeeStructure[],
+    ) => FeeStructure[],
+  ): Promise<void> {
+    if (students.length === 0) {
+      return;
+    }
+
+    const ctx = await this.resolveAcademicContext(schoolId);
+    if (!ctx) {
+      return;
+    }
+
+    const resolved = await this.resolveTermAndCalendar(termId, ctx);
+    if (!resolved) {
+      return;
+    }
+
+    const { term, calendar } = resolved;
+    if (this.cmpIso(term.endDate, ctx.legacyCutover) < 0) {
+      return;
+    }
+
+    const priorTerms = (calendar.terms ?? []).filter(
+      (row) =>
+        this.cmpIso(row.endDate, ctx.legacyCutover) >= 0 &&
+        this.cmpIso(row.endDate, term.startDate) < 0,
+    );
+
+    await this.ensureTermObligationsForStudentsBatchForTerms(
+      students,
+      schoolFees,
+      [term, ...priorTerms],
+      calendar,
+      filterApplicable,
+    );
+    await this.ensureOverlappingYearlyObligationsForStudentsBatch(
+      students,
+      schoolFees,
+      term,
+      calendar,
+      ctx,
+      filterApplicable,
+    );
+    await this.ensureOverlappingMonthlyObligationsForStudentsBatch(
+      students,
+      schoolFees,
+      term,
+      calendar,
+      ctx,
+      filterApplicable,
+    );
+    await this.ensureOverlappingDailyObligationsForStudentsBatch(
+      students,
+      schoolFees,
+      term,
+      calendar,
+      ctx,
+      filterApplicable,
+    );
+  }
+
+  /**
    * Bulk-create missing term:{termId} obligations for many students (finance read path).
    */
   async ensureTermObligationsForStudentsBatch(
@@ -153,8 +224,32 @@ export class FeeObligationService {
       return;
     }
 
-    let term: AcademicTerm | undefined =
-      ctx.calendar.terms?.find((row) => row.id === termId);
+    const resolved = await this.resolveTermAndCalendar(termId, ctx);
+    if (!resolved) {
+      return;
+    }
+
+    const { term, calendar } = resolved;
+    if (this.cmpIso(term.endDate, ctx.legacyCutover) < 0) {
+      return;
+    }
+
+    await this.ensureTermObligationsForStudentsBatchForTerms(
+      students,
+      schoolFees,
+      [term],
+      calendar,
+      filterApplicable,
+    );
+  }
+
+  private async resolveTermAndCalendar(
+    termId: string,
+    ctx: AcademicContext,
+  ): Promise<{ term: AcademicTerm; calendar: AcademicCalendar } | null> {
+    let term: AcademicTerm | undefined = ctx.calendar.terms?.find(
+      (row) => row.id === termId,
+    );
     let calendar = ctx.calendar;
     if (!term) {
       const loadedTerm = await this.obligationRepository.manager.findOne(
@@ -165,66 +260,326 @@ export class FeeObligationService {
         },
       );
       if (!loadedTerm) {
-        return;
+        return null;
       }
       term = loadedTerm;
       calendar = term.academicCalendar ?? ctx.calendar;
     }
+    return { term, calendar };
+  }
 
-    if (this.cmpIso(term.endDate, ctx.legacyCutover) < 0) {
+  private async ensureTermObligationsForStudentsBatchForTerms(
+    students: Student[],
+    schoolFees: FeeStructure[],
+    terms: AcademicTerm[],
+    calendar: AcademicCalendar,
+    filterApplicable: (
+      student: Student,
+      fees: FeeStructure[],
+    ) => FeeStructure[],
+  ): Promise<void> {
+    if (students.length === 0 || terms.length === 0) {
       return;
     }
 
-    const periodKey = `term:${termId}`;
+    const periodKeys = terms.map((row) => `term:${row.id}`);
     const studentIds = students.map((student) => student.id);
     const existing = await this.obligationRepository.find({
       where: {
         student: { id: In(studentIds) },
-        periodKey,
+        periodKey: In(periodKeys),
       },
       relations: ['student', 'feeStructure'],
     });
 
     const existingKeys = new Set(
-      existing.map((row) => `${row.student.id}:${row.feeStructure.id}`),
+      existing.map(
+        (row) => `${row.student.id}:${row.feeStructure.id}:${row.periodKey}`,
+      ),
     );
 
     const toCreate: StudentFeeObligation[] = [];
-    for (const student of students) {
-      const studentFrom = this.toIsoDate(student.createdAt);
-      if (this.cmpIso(studentFrom, term.endDate) > 0) {
-        continue;
-      }
-
-      for (const fee of filterApplicable(student, schoolFees)) {
-        if (this.normalizeCadence(fee.feeType) !== 'term') {
-          continue;
-        }
-        const key = `${student.id}:${fee.id}`;
-        if (existingKeys.has(key)) {
+    for (const term of terms) {
+      const periodKey = `term:${term.id}`;
+      for (const student of students) {
+        const studentFrom = this.toIsoDate(student.createdAt);
+        if (this.cmpIso(studentFrom, term.endDate) > 0) {
           continue;
         }
 
-        toCreate.push(
-          this.obligationRepository.create({
-            student,
-            feeStructure: fee,
-            periodKey,
-            periodStart: term.startDate,
-            periodEnd: term.endDate,
-            amountDue: fee.amount,
-            isLegacy: false,
-            academicTerm: term,
-            academicCalendar: calendar,
-          }),
-        );
-        existingKeys.add(key);
+        for (const fee of filterApplicable(student, schoolFees)) {
+          if (this.normalizeCadence(fee.feeType) !== 'term') {
+            continue;
+          }
+          const key = `${student.id}:${fee.id}:${periodKey}`;
+          if (existingKeys.has(key)) {
+            continue;
+          }
+
+          toCreate.push(
+            this.obligationRepository.create({
+              student,
+              feeStructure: fee,
+              periodKey,
+              periodStart: term.startDate,
+              periodEnd: term.endDate,
+              amountDue: fee.amount,
+              isLegacy: false,
+              academicTerm: term,
+              academicCalendar: calendar,
+            }),
+          );
+          existingKeys.add(key);
+        }
       }
     }
 
     if (toCreate.length > 0) {
       await this.obligationRepository.save(toCreate);
     }
+  }
+
+  private async ensureOverlappingYearlyObligationsForStudentsBatch(
+    students: Student[],
+    schoolFees: FeeStructure[],
+    term: AcademicTerm,
+    calendar: AcademicCalendar,
+    ctx: AcademicContext,
+    filterApplicable: (
+      student: Student,
+      fees: FeeStructure[],
+    ) => FeeStructure[],
+  ): Promise<void> {
+    const groups = this.groupTermsBySchoolYear(calendar.terms ?? []).filter(
+      (group) =>
+        this.periodsOverlap(
+          group.start,
+          group.end,
+          term.startDate,
+          term.endDate,
+        ),
+    );
+    if (groups.length === 0) {
+      return;
+    }
+
+    const specs = groups.map((group) => ({
+      periodKey: `year:${calendar.id}:${group.key}`,
+      periodStart: group.start,
+      periodEnd: group.end,
+      academicTerm: null as AcademicTerm | null,
+    }));
+
+    await this.batchCreateCadenceObligations(
+      students,
+      schoolFees,
+      specs,
+      calendar,
+      ctx,
+      'yearly',
+      filterApplicable,
+      (studentFrom, spec) => this.cmpIso(studentFrom, spec.periodEnd) <= 0,
+    );
+  }
+
+  private async ensureOverlappingMonthlyObligationsForStudentsBatch(
+    students: Student[],
+    schoolFees: FeeStructure[],
+    term: AcademicTerm,
+    calendar: AcademicCalendar,
+    ctx: AcademicContext,
+    filterApplicable: (
+      student: Student,
+      fees: FeeStructure[],
+    ) => FeeStructure[],
+  ): Promise<void> {
+    const months = this.iterateMonthsOverlapping(
+      term.startDate,
+      term.endDate,
+    );
+    if (months.length === 0) {
+      return;
+    }
+
+    const specs = months.map((month) => ({
+      periodKey: `month:${month.start.slice(0, 7)}`,
+      periodStart: month.start,
+      periodEnd: month.end,
+      academicTerm: null as AcademicTerm | null,
+    }));
+
+    await this.batchCreateCadenceObligations(
+      students,
+      schoolFees,
+      specs,
+      calendar,
+      ctx,
+      'monthly',
+      filterApplicable,
+      (studentFrom, spec) =>
+        this.cmpIso(
+          this.maxIso(ctx.legacyCutover, studentFrom, ctx.envelopeStart),
+          spec.periodEnd,
+        ) <= 0,
+    );
+  }
+
+  private async ensureOverlappingDailyObligationsForStudentsBatch(
+    students: Student[],
+    schoolFees: FeeStructure[],
+    term: AcademicTerm,
+    calendar: AcademicCalendar,
+    ctx: AcademicContext,
+    filterApplicable: (
+      student: Student,
+      fees: FeeStructure[],
+    ) => FeeStructure[],
+  ): Promise<void> {
+    const today = this.todayIso();
+    const lookbackStart = this.addDays(today, -DAILY_FEE_LOOKBACK_MAX_DAYS);
+    const windowStart = this.maxIso(
+      term.startDate,
+      lookbackStart,
+      ctx.legacyCutover,
+    );
+    const windowEnd = this.minIso(term.endDate, today);
+    if (this.cmpIso(windowStart, windowEnd) > 0) {
+      return;
+    }
+
+    const specs: Array<{
+      periodKey: string;
+      periodStart: string;
+      periodEnd: string;
+      academicTerm: AcademicTerm | null;
+    }> = [];
+    let day = windowStart;
+    while (this.cmpIso(day, windowEnd) <= 0) {
+      specs.push({
+        periodKey: `day:${day}`,
+        periodStart: day,
+        periodEnd: day,
+        academicTerm: null,
+      });
+      day = this.addDays(day, 1);
+    }
+
+    await this.batchCreateCadenceObligations(
+      students,
+      schoolFees,
+      specs,
+      calendar,
+      ctx,
+      'daily',
+      filterApplicable,
+      (studentFrom, spec) => {
+        const start = this.maxIso(
+          ctx.legacyCutover,
+          studentFrom,
+          ctx.envelopeStart,
+          windowStart,
+        );
+        return (
+          this.cmpIso(start, spec.periodEnd) <= 0 &&
+          this.cmpIso(spec.periodStart, windowEnd) <= 0
+        );
+      },
+    );
+  }
+
+  private async batchCreateCadenceObligations(
+    students: Student[],
+    schoolFees: FeeStructure[],
+    specs: Array<{
+      periodKey: string;
+      periodStart: string;
+      periodEnd: string;
+      academicTerm: AcademicTerm | null;
+    }>,
+    calendar: AcademicCalendar,
+    ctx: AcademicContext,
+    cadence: 'yearly' | 'monthly' | 'daily',
+    filterApplicable: (
+      student: Student,
+      fees: FeeStructure[],
+    ) => FeeStructure[],
+    includeStudentForSpec: (
+      studentFrom: string,
+      spec: {
+        periodKey: string;
+        periodStart: string;
+        periodEnd: string;
+        academicTerm: AcademicTerm | null;
+      },
+    ) => boolean,
+  ): Promise<void> {
+    if (students.length === 0 || specs.length === 0) {
+      return;
+    }
+
+    const periodKeys = specs.map((spec) => spec.periodKey);
+    const studentIds = students.map((student) => student.id);
+    const existing = await this.obligationRepository.find({
+      where: {
+        student: { id: In(studentIds) },
+        periodKey: In(periodKeys),
+      },
+      relations: ['student', 'feeStructure'],
+    });
+
+    const existingKeys = new Set(
+      existing.map(
+        (row) => `${row.student.id}:${row.feeStructure.id}:${row.periodKey}`,
+      ),
+    );
+
+    const toCreate: StudentFeeObligation[] = [];
+    for (const student of students) {
+      const studentFrom = this.toIsoDate(student.createdAt);
+      for (const fee of filterApplicable(student, schoolFees)) {
+        if (this.normalizeCadence(fee.feeType) !== cadence) {
+          continue;
+        }
+
+        for (const spec of specs) {
+          if (!includeStudentForSpec(studentFrom, spec)) {
+            continue;
+          }
+          const key = `${student.id}:${fee.id}:${spec.periodKey}`;
+          if (existingKeys.has(key)) {
+            continue;
+          }
+
+          toCreate.push(
+            this.obligationRepository.create({
+              student,
+              feeStructure: fee,
+              periodKey: spec.periodKey,
+              periodStart: spec.periodStart,
+              periodEnd: spec.periodEnd,
+              amountDue: fee.amount,
+              isLegacy: false,
+              academicTerm: spec.academicTerm,
+              academicCalendar: calendar,
+            }),
+          );
+          existingKeys.add(key);
+        }
+      }
+    }
+
+    if (toCreate.length > 0) {
+      await this.obligationRepository.save(toCreate);
+    }
+  }
+
+  private periodsOverlap(
+    aStart: string,
+    aEnd: string,
+    bStart: string,
+    bEnd: string,
+  ): boolean {
+    return aStart <= bEnd && aEnd >= bStart;
   }
 
   /**
