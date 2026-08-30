@@ -5,6 +5,10 @@ import StudentPerformanceAnalytics from '@/components/common/StudentPerformanceA
 import TabBar from '@/components/common/TabBar';
 import { useGetCalendars, useStudentGetMe, useStudentPerformanceAnalytics } from '@/hooks/student';
 import { getSortedSchoolTerms } from '@/utils/schoolTerms';
+import {
+  isPerformanceAnalyticsEnabled,
+  isPerformanceAnalyticsEnabledResolved,
+} from '@/utils/performanceAnalytics';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react'
 
@@ -20,10 +24,11 @@ const StudentDashboard = () => {
   const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || "student-profile");
   const [selectedAnalyticsTerm, setSelectedAnalyticsTerm] = useState("");
 
-  const { me, refetch } = useStudentGetMe();
+  const { me, refetch, isPending: meLoading } = useStudentGetMe();
   const { studentCalendars, isLoading: calendarsLoading } = useGetCalendars();
-  const performanceAnalyticsEnabled =
-    me?.school?.performanceAnalyticsEnabled ?? true;
+  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(me?.school, {
+    isLoading: meLoading,
+  });
 
   const sortedAnalyticsTerms = useMemo(
     () => getSortedSchoolTerms(studentCalendars ?? []),
@@ -56,14 +61,15 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     if (
-      performanceAnalyticsEnabled ||
+      meLoading ||
+      isPerformanceAnalyticsEnabledResolved(me?.school) ||
       activeTabKey !== "analytics"
     ) {
       return;
     }
     setActiveTabKey("student-profile");
     setTabInUrl("student-profile");
-  }, [performanceAnalyticsEnabled, activeTabKey, searchParams, router]);
+  }, [activeTabKey, me?.school, meLoading, searchParams, router]);
 
   const { analytics: performanceAnalytics, isLoading: analyticsLoading } =
     useStudentPerformanceAnalytics(selectedAnalyticsTerm, {

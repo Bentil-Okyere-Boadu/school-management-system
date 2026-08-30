@@ -5,10 +5,14 @@ import StudentProfile from '@/components/admin/students/StudentProfile';
 import StudentResults from '@/components/admin/students/StudentResults';
 import TabBar from '@/components/common/TabBar';
 import StudentPerformanceAnalytics from '@/components/common/StudentPerformanceAnalytics';
-import { useAdminStudentPerformanceAnalytics, useAdminViewStudentAttendance, useGetCalendars, useGetSchoolUserById, useGetStudentResults } from '@/hooks/school-admin';
+import { useAdminStudentPerformanceAnalytics, useAdminViewStudentAttendance, useGetCalendars, useGetMe, useGetMySchool, useGetSchoolUserById, useGetStudentResults } from '@/hooks/school-admin';
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from 'react'
 import { getSortedSchoolTerms } from '@/utils/schoolTerms';
+import {
+  isPerformanceAnalyticsEnabled,
+  isPerformanceAnalyticsEnabledResolved,
+} from '@/utils/performanceAnalytics';
 
 export type TabListItem = {
   tabLabel: string;
@@ -27,6 +31,13 @@ const ViewStudentPage = () => {
     const router = useRouter();
 
     const {schoolUser, refetch} = useGetSchoolUserById(id as string)
+    const { me, isPending: meLoading } = useGetMe();
+    const { school, isLoading: schoolLoading } = useGetMySchool();
+    const schoolContext = school ?? me?.school;
+    const flagLoading = meLoading || schoolLoading;
+    const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(schoolContext, {
+      isLoading: flagLoading,
+    });
     
     const tabFromUrl = searchParams.get("tab");
     const [activeTabKey, setActiveTabKey] = useState(tabFromUrl || 'student-profile');
@@ -42,12 +53,29 @@ const ViewStudentPage = () => {
       router.push(`?${params.toString()}`);
     };
 
-    const defaultNavItems: TabListItem[] = [
+    const defaultNavItems: TabListItem[] = useMemo(
+      () => [
         { tabLabel: "Student Profile", tabKey: "student-profile" },
         { tabLabel: "Attendance", tabKey: "attendance" },
         { tabLabel: "Results", tabKey: "results" },
-        { tabLabel: "Analytics", tabKey: "analytics" },
-      ];
+        ...(performanceAnalyticsEnabled
+          ? [{ tabLabel: "Analytics", tabKey: "analytics" }]
+          : []),
+      ],
+      [performanceAnalyticsEnabled],
+    );
+
+    useEffect(() => {
+      if (
+        flagLoading ||
+        isPerformanceAnalyticsEnabledResolved(schoolContext) ||
+        activeTabKey !== "analytics"
+      ) {
+        return;
+      }
+      setActiveTabKey("student-profile");
+      setTabInUrl("student-profile");
+    }, [activeTabKey, flagLoading, schoolContext, searchParams, router]);
     
     const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
     const [selectedResultYear, setSelectedResultYear] = useState("");
@@ -85,6 +113,7 @@ const ViewStudentPage = () => {
     const { analytics: performanceAnalytics, isLoading: analyticsLoading } =
       useAdminStudentPerformanceAnalytics(id as string, selectedAnalyticsTerm, {
         enabled:
+          performanceAnalyticsEnabled &&
           !!id &&
           !!selectedAnalyticsTerm &&
           activeTabKey === "analytics",
@@ -124,7 +153,7 @@ const ViewStudentPage = () => {
                 />
             </div>
         )}
-        { activeTabKey === "analytics" && (
+        { activeTabKey === "analytics" && performanceAnalyticsEnabled && (
             <div className='mt-6'>
               <StudentPerformanceAnalytics
                 calendars={(calendars as Calendar[]) ?? []}

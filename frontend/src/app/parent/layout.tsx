@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DashboardIcon, PerformanceIcon } from "@/utils/icons";
 import { useParentGetMe } from "@/hooks/parent";
 import type { User } from "@/@types";
+import { isPerformanceAnalyticsEnabled } from "@/utils/performanceAnalytics";
 
 const FAMILY_DASHBOARD = "Family Dashboard";
 const PERFORMANCE_ANALYTICS = "Performance Analytics";
@@ -21,9 +22,10 @@ const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
 
-  const { me } = useParentGetMe();
-  const performanceAnalyticsEnabled =
-    me?.school?.performanceAnalyticsEnabled ?? true;
+  const { me, isLoading: meLoading } = useParentGetMe();
+  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(me?.school, {
+    isLoading: meLoading,
+  });
 
   const sidebarItems = useMemo(
     () => [

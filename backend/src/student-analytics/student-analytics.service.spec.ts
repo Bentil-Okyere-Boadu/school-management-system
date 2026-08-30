@@ -124,9 +124,9 @@ describe('StudentAnalyticsService', () => {
       ).toBeNull();
       const assignment =
         masked.subjectAssignmentPerformance[0].topics[0].assignments[0];
-      expect(assignment.score).toBe(0);
-      expect(assignment.maxScore).toBe(0);
-      expect(assignment.percentage).toBe(0);
+      expect(assignment.score).toBeNull();
+      expect(assignment.maxScore).toBeNull();
+      expect(assignment.percentage).toBeNull();
       expect(assignment.title).toBe('Quiz 1');
     });
   });

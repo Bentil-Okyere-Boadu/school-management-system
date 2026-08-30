@@ -7,6 +7,11 @@ import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import { useGetMe, useGetMySchool } from "@/hooks/school-admin";
 import NotificationCard from "@/components/common/NotificationCard";
 import { Roles } from "@/@types";
+import {
+  isPerformanceAnalyticsEnabled,
+  isPerformanceAnalyticsEnabledResolved,
+  isPerformanceAnalyticsRoute,
+} from "@/utils/performanceAnalytics";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -29,10 +34,20 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
     setIsMobileSidebarOpen((open) => !open);
   };
 
-  const {me} = useGetMe();
-  const { school } = useGetMySchool();
-  const performanceAnalyticsEnabled =
-    school?.performanceAnalyticsEnabled ?? me?.school?.performanceAnalyticsEnabled ?? true;
+  const {me, isPending: meLoading} = useGetMe();
+  const { school, isLoading: schoolLoading } = useGetMySchool();
+  const schoolContext = school ?? me?.school;
+  const flagLoading = meLoading || schoolLoading;
+  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(schoolContext, {
+    isLoading: flagLoading,
+  });
+
+  useEffect(() => {
+    if (flagLoading) return;
+    if (isPerformanceAnalyticsEnabledResolved(schoolContext)) return;
+    if (!isPerformanceAnalyticsRoute(pathname, "admin")) return;
+    router.replace("/admin/dashboard");
+  }, [flagLoading, pathname, router, schoolContext]);
 
   const sidebarItems = [
     {

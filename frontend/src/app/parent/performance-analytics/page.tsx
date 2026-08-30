@@ -9,6 +9,8 @@ import { useParentPageFilters } from "@/components/parent/useParentPageFilters";
 import {
   useParentCalendars,
   useParentPerformanceAnalytics,
+  getParentApiErrorMessage,
+  isParentChildAccessError,
 } from "@/hooks/parent";
 import {
   findCalendarIdForTerm,
@@ -16,6 +18,11 @@ import {
 } from "@/utils/schoolTerms";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo } from "react";
+import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
+import {
+  isPerformanceAnalyticsEnabled,
+  isPerformanceAnalyticsEnabledResolved,
+} from "@/utils/performanceAnalytics";
 
 const ParentPerformanceAnalyticsPage = () => {
   const router = useRouter();
@@ -31,8 +38,12 @@ const ParentPerformanceAnalyticsPage = () => {
     handleChildAccessError,
   } = useParentPageFilters();
 
-  const performanceAnalyticsEnabled =
-    me?.school?.performanceAnalyticsEnabled ?? true;
+  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(me?.school, {
+    isLoading: childrenLoading,
+  });
+  const performanceAnalyticsResolved = isPerformanceAnalyticsEnabledResolved(
+    me?.school,
+  );
 
   const { calendars, isLoading: calendarsLoading } = useParentCalendars(true);
   const calendarId = searchParams.get("calendarId") ?? "";
@@ -49,9 +60,10 @@ const ParentPerformanceAnalyticsPage = () => {
   const latestTermId = sortedTerms[0]?.id ?? "";
 
   useEffect(() => {
-    if (performanceAnalyticsEnabled) return;
+    if (childrenLoading) return;
+    if (performanceAnalyticsResolved) return;
     router.replace("/parent");
-  }, [performanceAnalyticsEnabled, router]);
+  }, [childrenLoading, performanceAnalyticsResolved, router]);
 
   useEffect(() => {
     if (!calendars.length || !performanceAnalyticsEnabled) return;
@@ -122,10 +134,19 @@ const ParentPerformanceAnalyticsPage = () => {
   );
 
   useEffect(() => {
+    if (!isParentChildAccessError(performanceAnalyticsError)) return;
     handleChildAccessError(performanceAnalyticsError);
   }, [handleChildAccessError, performanceAnalyticsError]);
 
-  if (!performanceAnalyticsEnabled) {
+  const performanceAnalyticsErrorMessage =
+    performanceAnalyticsError && !isParentChildAccessError(performanceAnalyticsError)
+      ? getParentApiErrorMessage(
+          performanceAnalyticsError,
+          "Unable to load performance analytics.",
+        )
+      : null;
+
+  if (!performanceAnalyticsEnabled && !childrenLoading) {
     return null;
   }
 
@@ -149,6 +170,8 @@ const ParentPerformanceAnalyticsPage = () => {
 
       {children.length === 0 ? (
         childrenLoading ? null : <ParentEmptyChildren />
+      ) : performanceAnalyticsErrorMessage ? (
+        <NoAvailableEmptyState message={performanceAnalyticsErrorMessage} />
       ) : (
         <ParentPerformanceAnalyticsTab
           childrenCount={children.length}

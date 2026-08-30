@@ -99,9 +99,9 @@ export type TopicAssignmentGradeDetail = {
   submissionId: string;
   assignmentId: string;
   title: string;
-  score: number;
-  maxScore: number;
-  percentage: number;
+  score: number | null;
+  maxScore: number | null;
+  percentage: number | null;
   dueDate: string;
   assignmentType: 'online' | 'offline';
   submissionStatus: string;
@@ -224,9 +224,9 @@ export class StudentAnalyticsService {
             averagePercent: null,
             assignments: (topic.assignments ?? []).map((assignment) => ({
               ...assignment,
-              score: 0,
-              maxScore: 0,
-              percentage: 0,
+              score: null,
+              maxScore: null,
+              percentage: null,
             })),
           })),
         }),
@@ -623,8 +623,8 @@ export class StudentAnalyticsService {
     const gradedAssignmentsCount = assignmentRows.length;
     const assignmentAvg = this.weightedAveragePercent(
       assignmentRows.map((r) => ({
-        score: r.detail.score,
-        maxScore: r.detail.maxScore,
+        score: r.detail.score!,
+        maxScore: r.detail.maxScore!,
       })),
     );
 
@@ -647,7 +647,10 @@ export class StudentAnalyticsService {
     >();
 
     for (const row of assignmentRows) {
-      const pair = { score: row.detail.score, maxScore: row.detail.maxScore };
+      const pair = {
+        score: row.detail.score!,
+        maxScore: row.detail.maxScore!,
+      };
       let subj = bySubject.get(row.catalogId);
       if (!subj) {
         subj = {

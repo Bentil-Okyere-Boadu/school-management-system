@@ -86,7 +86,6 @@ function AnalyticsCard({
           parentVisibility={child.parentVisibility}
           showHeaderBar={false}
           showTermFilter={false}
-          readOnly
         />
       </div>
     </section>

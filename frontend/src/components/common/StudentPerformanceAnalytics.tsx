@@ -145,7 +145,6 @@ export interface StudentPerformanceAnalyticsProps {
   showTermFilter?: boolean;
   /** When false, hides the gradient title bar (e.g. parent portal page-level header) */
   showHeaderBar?: boolean;
-  readOnly?: boolean;
 }
 
 const StudentPerformanceAnalytics: React.FC<

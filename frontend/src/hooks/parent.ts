@@ -196,8 +196,11 @@ export function getParentApiErrorMessage(
 }
 
 export function isParentChildAccessError(error: unknown): boolean {
-  const status = (error as AxiosError)?.response?.status;
-  return status === 403 || status === 404;
+  const axiosError = error as AxiosError<ErrorResponse["response"]["data"]>;
+  if (axiosError?.response?.status !== 403) return false;
+  const message = axiosError.response.data?.message;
+  const text = Array.isArray(message) ? message.join(", ") : message;
+  return text === "You are not authorized to access this student";
 }
 
 function optionalParams(params: Record<string, string | number | undefined>) {
