@@ -18,7 +18,13 @@ import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
+import { SubmitGradesDto } from './dto/submit-grades.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
+import {
+  AdminResultActionDto,
+  AdminReturnResultsDto,
+} from './dto/admin-results.dto';
+import { SubmitTermRemarksDto } from './dto/submit-term-remarks.dto';
 import { TeacherJwtAuthGuard } from '../teacher/guards/teacher-jwt-auth.guard';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
@@ -137,6 +143,92 @@ export class SubjectController {
     return this.subjectService.getAllClassResultsApprovalStatus(schoolAdmin);
   }
 
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/check-results')
+  async adminCheckResults(
+    @Body() body: AdminResultActionDto,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.adminCheckResults(
+      body.classLevelId,
+      body.academicTermId,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/return-results')
+  async adminReturnResults(
+    @Body() body: AdminReturnResultsDto,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.adminReturnResults(
+      body.classLevelId,
+      body.academicTermId,
+      body.returnNote,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('school-admin/publish-results')
+  async adminPublishResults(
+    @Body() body: AdminResultActionDto,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.adminPublishResults(
+      body.classLevelId,
+      body.academicTermId,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/results-review')
+  async getAdminResultsReview(
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+    @Query('classLevelId') classLevelId?: string,
+    @Query('subjectId') subjectId?: string,
+    @Query('teacherId') teacherId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.subjectService.getAdminResultsReview(schoolAdmin, {
+      classLevelId,
+      subjectId,
+      teacherId,
+      academicTermId,
+    });
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Get('school-admin/submission-history/:classLevelId')
+  async getGradeSubmissionHistory(
+    @Param('classLevelId') classLevelId: string,
+    @Query('academicTermId') academicTermId: string,
+    @CurrentUser() schoolAdmin: SchoolAdmin,
+  ) {
+    return this.subjectService.getGradeSubmissionHistory(
+      classLevelId,
+      academicTermId,
+      schoolAdmin,
+    );
+  }
+
+  @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.Teacher)
+  @Get('grading-legend')
+  async getGradingLegend(
+    @CurrentUser() teacher: Teacher,
+    @Query('classLevelId') classLevelId?: string,
+    @Query('academicTermId') academicTermId?: string,
+  ) {
+    return this.subjectService.getActiveGradingLegend(
+      teacher.school.id,
+      classLevelId,
+      academicTermId,
+    );
+  }
+
   @UseGuards(TeacherJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get('my-classes')
   async getMyClasses(
@@ -190,7 +282,7 @@ export class SubjectController {
     @CurrentUser() teacher: Teacher,
     @Param('studentId') studentId: string,
     @Param('termId') termId: string,
-    @Body() body: { remarks: string },
+    @Body() body: SubmitTermRemarksDto,
   ) {
     return this.subjectService.submitTermRemarks(teacher.id, {
       studentId,
@@ -228,13 +320,9 @@ export class SubjectController {
     // If only term is provided, infer calendar from term
     if (termId && !calendarId) {
       // Use repository call to get the term with calendar
-      const term = await this.academicCalendarService['termRepository'].findOne(
-        {
-          where: { id: termId },
-          relations: ['academicCalendar'],
-        },
+      const term = await this.academicCalendarService.getTermWithCalendar(
+        termId,
       );
-      if (!term) throw new NotFoundException('Academic term not found');
       calendarId = term.academicCalendar.id;
     }
 
@@ -271,6 +359,7 @@ export class SubjectController {
       classLevelId,
       subjectId,
       String(termId),
+      teacher.id,
     );
   }
 
@@ -283,17 +372,7 @@ export class SubjectController {
   @Post('submit-grades')
   async submitGrades(
     @CurrentUser() teacher: Teacher,
-    @Body()
-    body: {
-      classLevelId: string;
-      subjectId: string;
-      academicTermId: string;
-      grades: Array<{
-        studentId: string;
-        classScore: number; // 30%
-        examScore: number; // 70%
-      }>;
-    },
+    @Body() body: SubmitGradesDto,
   ) {
     return this.subjectService.submitGrades({
       ...body,

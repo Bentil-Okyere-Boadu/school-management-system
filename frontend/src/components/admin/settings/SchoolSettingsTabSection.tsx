@@ -4,7 +4,9 @@ import React, { useEffect, useState } from "react";
 import NoAvailableEmptyState from "../../common/NoAvailableEmptyState";
 import CustomUnderlinedButton from "../../common/CustomUnderlinedButton";
 import InputField from "@/components/InputField";
-import { GradingSystemTable } from "./GradingSystemTable";
+import { GradingSchemesSection } from "./grading-schemes/GradingSchemesSection";
+import { ParentVisibilitySection } from "./ParentVisibilitySection";
+import { PerformanceAnalyticsSection } from "./PerformanceAnalyticsSection";
 import { GradingPercentagesSection } from "./GradingPercentagesSection";
 import SchoolCard from "@/components/common/SchoolCard";
 import { Dialog } from "@/components/common/Dialog";
@@ -383,11 +385,19 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       </div>
 
       <div className="mt-8">
-        <GradingSystemTable />
+        <GradingSchemesSection />
       </div>
 
       <div className="mt-8">
         <GradingPercentagesSection schoolData={schoolData} />
+      </div>
+
+      <div className="mt-8">
+        <ParentVisibilitySection schoolData={schoolData} />
+      </div>
+
+      <div className="mt-8">
+        <PerformanceAnalyticsSection schoolData={schoolData} />
       </div>
 
       <div className="mt-8">

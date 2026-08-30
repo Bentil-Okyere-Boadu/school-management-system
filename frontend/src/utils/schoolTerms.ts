@@ -58,3 +58,25 @@ export function buildTermSelectData(
     return { value: t.id, label };
   });
 }
+
+/** Human-readable label for a stored term id (or legacy name/id string). */
+export function getTermLabel(
+  calendars: Calendar[] | undefined | null,
+  termId: string | null | undefined,
+  emptyLabel = "All terms",
+): string {
+  if (!termId?.trim()) return emptyLabel;
+  const sorted = getSortedSchoolTerms(calendars);
+  const match = buildTermSelectData(calendars ?? [], sorted).find(
+    (opt) => opt.value === termId,
+  );
+  if (match) return match.label;
+  const byName = sorted.find((t) => t.termName === termId);
+  if (byName) {
+    const cal = calendars?.find((c) =>
+      c.terms?.some((term) => term.id === byName.id),
+    );
+    return cal ? `${byName.termName} — ${cal.name}` : byName.termName;
+  }
+  return termId;
+}

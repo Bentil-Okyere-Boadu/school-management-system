@@ -287,6 +287,8 @@ export class ClassLevelService {
             approvedAt: approval?.approvedAt,
             schoolAdminApproved: approval?.schoolAdminApproved || false,
             schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+            resultStatus: approval?.resultStatus ?? 'draft',
+            returnNote: approval?.returnNote ?? null,
           };
         });
       }
@@ -322,6 +324,8 @@ export class ClassLevelService {
           approvedAt: approval?.approvedAt,
           schoolAdminApproved: approval?.schoolAdminApproved || false,
           schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+          resultStatus: approval?.resultStatus ?? 'draft',
+          returnNote: approval?.returnNote ?? null,
         };
       });
     }
@@ -412,6 +416,8 @@ export class ClassLevelService {
         approvedAt: approval?.approvedAt,
         schoolAdminApproved: approval?.schoolAdminApproved || false,
         schoolAdminApprovedAt: approval?.schoolAdminApprovedAt,
+        resultStatus: approval?.resultStatus ?? 'draft',
+        returnNote: approval?.returnNote ?? null,
       };
     });
 

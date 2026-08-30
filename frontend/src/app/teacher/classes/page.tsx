@@ -95,15 +95,26 @@ const ClassesPage = () => {
   }
 
   const onApproveOrDisApproveClassResult = (classData: ClassLevel) => {
-    if (classData?.schoolAdminApproved) {
+    if (
+      classData?.schoolAdminApproved ||
+      classData?.resultStatus === "published" ||
+      classData?.resultStatus === "approved"
+    ) {
       return;
     }
-    if (classData?.isApproved) {
-      onDisApproveClassResult(classData)
+    if (
+      classData?.isApproved ||
+      classData?.resultStatus === "submitted"
+    ) {
+      if (classData?.resultStatus === "returned") {
+        onApproveClassResult(classData);
+        return;
+      }
+      onDisApproveClassResult(classData);
     } else {
-      onApproveClassResult(classData)
+      onApproveClassResult(classData);
     }
-  }
+  };
 
   const onApproveClassResult = (classData: ClassLevel) => {
     if(approveResultPending) return;
@@ -233,25 +244,34 @@ const ClassesPage = () => {
         </div>
       </div>
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 py-6 px-0.5">
-        {classLevels?.map((data, index) => (
-          <AdminClassResultsCard
-            key={data.id ?? index}
-            classData={data}
-            studentCount={data?.studentCount ?? data?.students?.length ?? 0}
-            isAdminLocked={!!data?.schoolAdminApproved}
-            teacherSubmitted={!!data?.isApproved}
-            action="submit"
-            actionDisabled={!!data?.schoolAdminApproved}
-            actionTooltip={
-              data?.schoolAdminApproved
-                ? "Results are locked by the school admin. You cannot submit or unsubmit for this term."
-                : ""
-            }
-            onSubmitToggle={onApproveOrDisApproveClassResult}
-            onCardClick={onNavigateToAttendance}
-            busy={busyCardId === data.id}
-          />
-        ))}
+        {classLevels?.map((data, index) => {
+          const isLockedOrApproved =
+            !!data?.schoolAdminApproved ||
+            data?.resultStatus === "published" ||
+            data?.resultStatus === "approved";
+          const actionTooltip =
+            data?.schoolAdminApproved || data?.resultStatus === "published"
+              ? "Results are locked by the school admin. You cannot submit or unsubmit for this term."
+              : data?.resultStatus === "approved"
+                ? "Results have been checked and approved by an administrator. You cannot unsubmit for this term."
+                : "";
+
+          return (
+            <AdminClassResultsCard
+              key={data.id ?? index}
+              classData={data}
+              studentCount={data?.studentCount ?? data?.students?.length ?? 0}
+              isAdminLocked={!!data?.schoolAdminApproved}
+              teacherSubmitted={!!data?.isApproved}
+              action="submit"
+              actionDisabled={isLockedOrApproved}
+              actionTooltip={actionTooltip}
+              onSubmitToggle={onApproveOrDisApproveClassResult}
+              onCardClick={onNavigateToAttendance}
+              busy={busyCardId === data.id}
+            />
+          );
+        })}
       </section>
       {
         classLevels.length === 0 && (

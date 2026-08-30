@@ -13,6 +13,8 @@ import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calen
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { Student } from 'src/student/student.entity';
 import { GradingSystem } from 'src/grading-system/grading-system.entity';
+import { GradingScheme } from 'src/grading-scheme/grading-scheme.entity';
+import { GradingSchemeBand } from 'src/grading-scheme/grading-scheme-band.entity';
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
 import { StudentTermRemark } from './student-term-remark.entity';
@@ -24,6 +26,7 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
+import { GradeSubmissionHistory } from 'src/class-level/grade-submission-history.entity';
 import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
@@ -42,9 +45,12 @@ import { NotificationModule } from 'src/notification/notification.module';
       SchoolAdmin,
       Profile,
       GradingSystem,
+      GradingScheme,
+      GradingSchemeBand,
       Holiday,
       StudentTermRemark,
       ClassLevelResultApproval,
+      GradeSubmissionHistory,
     ]),
     NotificationModule,
   ],

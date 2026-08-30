@@ -2,10 +2,10 @@
 
 import { ParentChildHeader } from "@/components/parent/ParentChildHeader";
 import { ParentEmptyChildren } from "@/components/parent/ParentEmptyChildren";
+import { GradingLegendPanel } from "@/components/common/GradingLegendPanel";
+import { GradeBadge } from "@/components/common/GradeBadge";
 import {
   averagePercentage,
-  gradeCircleClass,
-  gradeRemark,
   overallPerformanceBand,
   performanceBandClass,
 } from "@/components/parent/parent-utils";
@@ -56,6 +56,13 @@ function AcademicsCard({
   child: ParentAcademicsChild;
   selectedTermName?: string;
 }) {
+  const visibility = child.parentVisibility ?? {
+    showScores: true,
+    showGrades: true,
+    showLabels: true,
+    showFeedback: true,
+  };
+
   const terms = useMemo(() => {
     const allTerms = child.results?.terms ?? [];
     if (!selectedTermName) return allTerms;
@@ -66,8 +73,10 @@ function AcademicsCard({
   }, [child.results?.terms, selectedTermName]);
 
   const subjects = terms.flatMap((term) => term.subjects ?? []);
-  const avg = averagePercentage(subjects.map((subject) => subject.percentage));
-  const band = overallPerformanceBand(avg);
+  const avg = visibility.showScores
+    ? averagePercentage(subjects.map((subject) => subject.percentage))
+    : null;
+  const band = visibility.showScores ? overallPerformanceBand(avg) : null;
   const pending = child.resultsPending || subjects.length === 0;
   const teacherRemarks =
     terms.find((term) => term.teacherRemarks)?.teacherRemarks ||
@@ -96,7 +105,7 @@ function AcademicsCard({
                   {band}
                 </span>
               ) : null}
-              {avg != null ? (
+              {visibility.showScores && avg != null ? (
                 <span className="text-sm font-medium text-zinc-600">
                   {avg}% avg
                 </span>
@@ -113,7 +122,7 @@ function AcademicsCard({
             published yet
           </p>
           <p className="mt-1 text-sm text-zinc-400">
-            Results appear here once the school approves them.
+            Results appear here once the school publishes them.
           </p>
         </div>
       ) : (
@@ -125,15 +134,26 @@ function AcademicsCard({
                   <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
                     Subject
                   </th>
-                  <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-                    Score
-                  </th>
-                  <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-                    Grade
-                  </th>
-                  <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-                    Remark
-                  </th>
+                  {visibility.showScores && (
+                    <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                      Score
+                    </th>
+                  )}
+                  {visibility.showGrades && (
+                    <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                      Grade
+                    </th>
+                  )}
+                  {visibility.showLabels && (
+                    <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                      Label
+                    </th>
+                  )}
+                  {visibility.showFeedback && (
+                    <th className="py-2 text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                      Feedback
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -145,29 +165,43 @@ function AcademicsCard({
                     <td className="py-3 text-sm text-[#252C32]">
                       {subject.subject}
                     </td>
-                    <td className="py-3 text-sm text-[#252C32]">
-                      {subject.percentage}
-                    </td>
-                    <td className="py-3">
-                      <span
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white ${gradeCircleClass(subject.grade)}`}
-                      >
-                        {subject.grade}
-                      </span>
-                    </td>
-                    <td className="py-3 text-sm text-zinc-600">
-                      {gradeRemark(subject.grade)}
-                    </td>
+                    {visibility.showScores && (
+                      <td className="py-3 text-sm text-[#252C32]">
+                        {subject.percentage}
+                      </td>
+                    )}
+                    {visibility.showGrades && (
+                      <td className="py-3">
+                        <GradeBadge grade={subject.grade} />
+                      </td>
+                    )}
+                    {visibility.showLabels && (
+                      <td className="py-3 text-sm text-zinc-600">
+                        {subject.gradeLabel || subject.bandDescription || "—"}
+                      </td>
+                    )}
+                    {visibility.showFeedback && (
+                      <td className="py-3 text-sm text-zinc-600 max-w-[220px]">
+                        {subject.feedback || "—"}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {teacherRemarks ? (
+          {visibility.showFeedback && teacherRemarks ? (
             <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3">
+              <p className="text-xs font-medium text-zinc-500 mb-1">
+                Class teacher remark
+              </p>
               <p className="text-sm italic text-zinc-600">{teacherRemarks}</p>
             </div>
           ) : null}
+          <GradingLegendPanel
+            bands={child.results?.gradingLegend}
+            passMark={child.results?.passMark}
+          />
         </div>
       )}
     </article>

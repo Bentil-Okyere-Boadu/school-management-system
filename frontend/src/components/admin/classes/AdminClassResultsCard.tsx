@@ -51,8 +51,8 @@ export const AdminClassResultsCard: React.FC<AdminClassResultsCardProps> = ({
 }) => {
   const isSubmitAction = action === "submit";
   const isGradeAction = action === "grade";
-  const footerTooltip = isSubmitAction || isGradeAction ? actionTooltip : lockTooltip;
-  const footerDisabled = (isSubmitAction || isGradeAction) && actionDisabled;
+  const footerTooltip = actionTooltip || lockTooltip;
+  const footerDisabled = actionDisabled;
 
   return (
     <div
