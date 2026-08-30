@@ -1,35 +1,58 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import FullPageSpinner from "@/components/common/FullPageSpinner";
-import { usePathname, useRouter } from "next/navigation";
-import { DashboardIcon } from "@/utils/icons";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { DashboardIcon, PerformanceIcon } from "@/utils/icons";
 import { useParentGetMe } from "@/hooks/parent";
 import type { User } from "@/@types";
 
 const FAMILY_DASHBOARD = "Family Dashboard";
+const PERFORMANCE_ANALYTICS = "Performance Analytics";
 
-const sidebarItems = [{ icon: DashboardIcon, label: FAMILY_DASHBOARD }];
-
-export const Layout = ({ children }: { children: React.ReactNode }) => {
+const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [activeMenuItem, setActiveMenuItem] = useState(FAMILY_DASHBOARD);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOverviewPage, setIsOverviewPage] = useState(true);
 
   const { me } = useParentGetMe();
+  const performanceAnalyticsEnabled =
+    me?.school?.performanceAnalyticsEnabled ?? true;
+
+  const sidebarItems = useMemo(
+    () => [
+      { icon: DashboardIcon, label: FAMILY_DASHBOARD },
+      ...(performanceAnalyticsEnabled
+        ? [{ icon: PerformanceIcon, label: PERFORMANCE_ANALYTICS }]
+        : []),
+    ],
+    [performanceAnalyticsEnabled],
+  );
 
   useEffect(() => {
+    if (pathname === "/parent/performance-analytics") {
+      setActiveMenuItem(PERFORMANCE_ANALYTICS);
+      setIsOverviewPage(true);
+      return;
+    }
+
     setActiveMenuItem(FAMILY_DASHBOARD);
     setIsOverviewPage(pathname === "/parent");
   }, [pathname]);
 
-  const handleSidebarClick = () => {
-    router.push("/parent");
+  const handleSidebarClick = (item: string) => {
+    const query = searchParams.toString();
+    const base =
+      item === PERFORMANCE_ANALYTICS
+        ? "/parent/performance-analytics"
+        : "/parent";
+    router.push(query ? `${base}?${query}` : base);
     setIsSidebarOpen(false);
   };
 
@@ -71,6 +94,14 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         </main>
       </section>
     </div>
+  );
+};
+
+export const Layout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Suspense fallback={<FullPageSpinner />}>
+      <ParentLayoutShell>{children}</ParentLayoutShell>
+    </Suspense>
   );
 };
 

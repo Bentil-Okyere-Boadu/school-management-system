@@ -6,6 +6,7 @@ import {
   PaginatedSchoolPaymentsResponse,
   SchoolPaymentReceiptDetail,
   SchoolPaymentTransaction,
+  StudentPerformanceAnalytics,
   StudentResultsResponse,
   User,
 } from "@/@types";
@@ -106,6 +107,22 @@ export type ParentAcademicsChild = {
   };
   announcements: ParentAnnouncement[];
   requiredActions: ParentRequiredAction[];
+};
+
+export type ParentPerformanceAnalyticsChild = {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  studentCode: string;
+  grade: string | null;
+  photoUrl: string | null;
+  parentVisibility?: {
+    showScores: boolean;
+    showGrades: boolean;
+    showLabels: boolean;
+    showFeedback: boolean;
+  };
+  analytics: StudentPerformanceAnalytics | null;
 };
 
 export type ParentFinanceUpcoming = {
@@ -292,6 +309,34 @@ export const useParentAcademics = (
       : [];
 
   return { academics, isLoading, isFetching, error, refetch };
+};
+
+export const useParentPerformanceAnalytics = (
+  params: { academicTermId?: string; studentId?: string },
+  enabled = true,
+) => {
+  const { academicTermId, studentId } = params;
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["parent-performance-analytics", academicTermId, studentId],
+    queryFn: () =>
+      customAPI.get(
+        `/parent/performance-analytics${optionalParams({ academicTermId, studentId })}`,
+      ),
+    enabled: enabled && Boolean(academicTermId),
+    retry: (failureCount, error) =>
+      !isParentChildAccessError(error) && failureCount < 2,
+  });
+
+  const rows = data?.data;
+  const performanceAnalytics: ParentPerformanceAnalyticsChild[] = Array.isArray(
+    rows,
+  )
+    ? rows
+    : rows
+      ? [rows as ParentPerformanceAnalyticsChild]
+      : [];
+
+  return { performanceAnalytics, isLoading, isFetching, error, refetch };
 };
 
 export const useParentFinance = (studentId?: string, enabled = true) => {

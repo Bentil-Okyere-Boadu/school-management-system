@@ -18,6 +18,8 @@ interface ParentFiltersProps {
   selectedTermId?: string;
   onTermChange?: (termId: string) => void;
   extraFilters?: React.ReactNode;
+  /** When false, hides the footer hint (e.g. on standalone analytics page). */
+  showFilterHint?: boolean;
 }
 
 export const ParentFilters: React.FC<ParentFiltersProps> = ({
@@ -31,6 +33,7 @@ export const ParentFilters: React.FC<ParentFiltersProps> = ({
   selectedTermId,
   onTermChange,
   extraFilters,
+  showFilterHint = true,
 }) => {
   const wardOptions = [
     { value: ALL_CHILDREN_VALUE, label: "All wards" },
@@ -41,7 +44,7 @@ export const ParentFilters: React.FC<ParentFiltersProps> = ({
   ];
 
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+    <div className="mb-1 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
         <CustomSelectTag
           variant="outline"
@@ -70,7 +73,9 @@ export const ParentFilters: React.FC<ParentFiltersProps> = ({
         )}
         {extraFilters}
       </div>
-      <p className="text-xs text-zinc-400">Filters apply to every tab.</p>
+      {showFilterHint ? (
+        <p className="text-xs text-zinc-400">Filters apply to every tab.</p>
+      ) : null}
     </div>
   );
 };

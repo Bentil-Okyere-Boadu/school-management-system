@@ -66,6 +66,18 @@ const ParentDashboard = () => {
   );
 
   useEffect(() => {
+    if (tabFromUrl === "analytics") {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("tab");
+      const query = next.toString();
+      router.replace(
+        query
+          ? `/parent/performance-analytics?${query}`
+          : "/parent/performance-analytics",
+      );
+      return;
+    }
+
     if (!calendars.length) {
       if (!VALID_TABS.has(tabFromUrl)) {
         replaceParams({ tab: "attendance" });
@@ -100,7 +112,7 @@ const ParentDashboard = () => {
       month: String(nextMonth),
       year: String(nextYear),
     });
-  }, [calendarId, calendars, month, replaceParams, tabFromUrl, termId, year]);
+  }, [calendarId, calendars, month, replaceParams, router, searchParams, tabFromUrl, termId, year]);
 
   const { overview, isLoading: overviewLoading, error: overviewError } =
     useParentOverview({

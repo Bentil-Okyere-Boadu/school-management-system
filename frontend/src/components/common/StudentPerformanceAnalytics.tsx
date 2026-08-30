@@ -17,7 +17,7 @@ import type {
   TopicAssignmentGradeDetail,
 } from "@/@types";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
-import { TermFilterCard } from "@/components/common/TermFilterCard";
+import { PerformanceAnalyticsHeaderBar } from "@/components/common/PerformanceAnalyticsHeaderBar";
 import { getSortedSchoolTerms } from "@/utils/schoolTerms";
 import { formatPercent, roundPercent } from "@/utils/formatPercent";
 
@@ -26,7 +26,13 @@ function formatTs(iso: string) {
   return d.isValid() ? d.format("MMM D, YYYY · h:mm A") : iso;
 }
 
-function AssignmentGradeRow({ row }: { row: TopicAssignmentGradeDetail }) {
+function AssignmentGradeRow({
+  row,
+  showScores = true,
+}: {
+  row: TopicAssignmentGradeDetail;
+  showScores?: boolean;
+}) {
   return (
     <div className="rounded-lg border border-zinc-200/90 bg-white p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -50,10 +56,12 @@ function AssignmentGradeRow({ row }: { row: TopicAssignmentGradeDetail }) {
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-          <Badge variant="filled" color="violet" size="lg" radius="sm">
-            {row.score} / {row.maxScore}{" "}
-            <span className="opacity-90">({formatPercent(row.percentage, "")})</span>
-          </Badge>
+          {showScores ? (
+            <Badge variant="filled" color="violet" size="lg" radius="sm">
+              {row.score} / {row.maxScore}{" "}
+              <span className="opacity-90">({formatPercent(row.percentage, "")})</span>
+            </Badge>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-1.5">
             <Badge variant="outline" color="gray" size="xs">
               {row.assignmentType === "online" ? "Online" : "Offline"}
@@ -115,6 +123,13 @@ function StatCard({
   );
 }
 
+export type ParentResultVisibility = {
+  showScores: boolean;
+  showGrades: boolean;
+  showLabels: boolean;
+  showFeedback: boolean;
+};
+
 export interface StudentPerformanceAnalyticsProps {
   calendars: Calendar[];
   calendarsLoading?: boolean;
@@ -124,6 +139,13 @@ export interface StudentPerformanceAnalyticsProps {
   isLoading: boolean;
   /** When true, copy clarifies that assignment/topic stats are limited to subjects the teacher teaches */
   teacherScoped?: boolean;
+  /** When set, hides score-related UI according to parent portal visibility rules */
+  parentVisibility?: ParentResultVisibility;
+  /** When false, term picker is hidden (e.g. parent dashboard global filters) */
+  showTermFilter?: boolean;
+  /** When false, hides the gradient title bar (e.g. parent portal page-level header) */
+  showHeaderBar?: boolean;
+  readOnly?: boolean;
 }
 
 const StudentPerformanceAnalytics: React.FC<
@@ -136,7 +158,12 @@ const StudentPerformanceAnalytics: React.FC<
   analytics,
   isLoading,
   teacherScoped,
+  parentVisibility,
+  showTermFilter = true,
+  showHeaderBar = true,
 }) => {
+  const showScores = parentVisibility?.showScores ?? true;
+
   const sortedTerms = useMemo(
     () => getSortedSchoolTerms(calendars ?? []),
     [calendars],
@@ -145,7 +172,7 @@ const StudentPerformanceAnalytics: React.FC<
   const hasTerms = sortedTerms.length > 0;
 
   const assignmentChartData = useMemo(() => {
-    if (!analytics?.subjectAssignmentPerformance?.length) return [];
+    if (!showScores || !analytics?.subjectAssignmentPerformance?.length) return [];
     return analytics.subjectAssignmentPerformance
       .filter((s) => s.averagePercent != null)
       .map((s) => ({
@@ -155,37 +182,21 @@ const StudentPerformanceAnalytics: React.FC<
             : s.subjectName,
         Average: roundPercent(s.averagePercent as number),
       }));
-  }, [analytics]);
+      }, [analytics, showScores]);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-[1px] shadow-lg">
-        <div className="rounded-2xl bg-white/95 px-5 py-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-zinc-900">
-                Performance analytics
-              </h2>
-              <p className="mt-1 text-sm text-zinc-600">
-                Assignment outcomes by subject and topic-level averages for one
-                academic period (term + calendar).
-                {teacherScoped
-                  ? " Scoped to subjects you teach this learner."
-                  : ""}
-              </p>
-            </div>
-            <TermFilterCard
-              calendars={calendars ?? []}
-              calendarsLoading={calendarsLoading}
-              sortedTerms={sortedTerms}
-              value={selectedTermId}
-              onChange={onTermChange}
-              fitFilterGrid
-              className="w-full min-w-0 shrink-0  max-w-95"
-            />
-          </div>
-        </div>
-      </div>
+      {showHeaderBar ? (
+        <PerformanceAnalyticsHeaderBar
+          calendars={calendars ?? []}
+          calendarsLoading={calendarsLoading}
+          sortedTerms={sortedTerms}
+          selectedTermId={selectedTermId}
+          onTermChange={onTermChange}
+          teacherScoped={teacherScoped}
+          showTermFilter={showTermFilter}
+        />
+      ) : null}
 
       {!calendars?.length ? (
         <NoAvailableEmptyState message="No academic calendars are configured for this school yet." />
@@ -206,17 +217,19 @@ const StudentPerformanceAnalytics: React.FC<
       {!isLoading && analytics && selectedTermId && (
         <>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <StatCard
-              title="Assignments average"
-              value={
-                analytics.summary.assignmentAveragePercent != null
-                  ? formatPercent(analytics.summary.assignmentAveragePercent)
-                  : "0%"
-              }
-              subtitle="Graded submissions for this term"
-              accent="violet"
-              icon={<IconTrendingUp size={22} />}
-            />
+            {showScores ? (
+              <StatCard
+                title="Assignments average"
+                value={
+                  analytics.summary.assignmentAveragePercent != null
+                    ? formatPercent(analytics.summary.assignmentAveragePercent)
+                    : "0%"
+                }
+                subtitle="Graded submissions for this term"
+                accent="violet"
+                icon={<IconTrendingUp size={22} />}
+              />
+            ) : null}
             <StatCard
               title="Graded assignments"
               value={`${analytics.summary.gradedAssignmentsCount}`}
@@ -226,6 +239,7 @@ const StudentPerformanceAnalytics: React.FC<
             />
           </div>
 
+          {showScores ? (
           <div className="rounded-xl border border-zinc-200 bg-white p-4">
             <h3 className="font-bold text-zinc-900">
               Assignment performance by subject
@@ -259,6 +273,7 @@ const StudentPerformanceAnalytics: React.FC<
               />
             )}
           </div>
+          ) : null}
 
           <div className="rounded-xl border border-zinc-200 bg-white p-4">
             <h3 className="font-bold text-zinc-900">
@@ -287,10 +302,12 @@ const StudentPerformanceAnalytics: React.FC<
                         </span>
                         <div className="flex items-center gap-3 text-sm text-zinc-600">
                           <span>{subj.gradedCount} graded</span>
-                          <Badge variant="light" color="indigo" size="xs">
-                            Avg{" "}
-                            {formatPercent(subj.averagePercent)}
-                          </Badge>
+                          {showScores ? (
+                            <Badge variant="light" color="indigo" size="xs">
+                              Avg{" "}
+                              {formatPercent(subj.averagePercent)}
+                            </Badge>
+                          ) : null}
                         </div>
                       </div>
                     </Accordion.Control>
@@ -309,23 +326,26 @@ const StudentPerformanceAnalytics: React.FC<
                                 </span>
                                 <span className="text-zinc-600">
                                   {t.gradedCount} graded
-                                  {t.averagePercent != null
+                                  {showScores && t.averagePercent != null
                                     ? ` · avg ${formatPercent(t.averagePercent)}`
                                     : ""}
                                 </span>
                               </div>
-                              <Progress
-                                value={roundPercent(t.averagePercent ?? 0)}
-                                color="violet"
-                                radius="xl"
-                                size="sm"
-                                mb="sm"
-                              />
+                              {showScores ? (
+                                <Progress
+                                  value={roundPercent(t.averagePercent ?? 0)}
+                                  color="violet"
+                                  radius="xl"
+                                  size="sm"
+                                  mb="sm"
+                                />
+                              ) : null}
                               <div className="flex flex-col gap-2">
                                 {(t.assignments ?? []).map((row) => (
                                   <AssignmentGradeRow
                                     key={row.submissionId}
                                     row={row}
+                                    showScores={showScores}
                                   />
                                 ))}
                               </div>

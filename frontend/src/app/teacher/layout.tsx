@@ -19,6 +19,8 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [showNotification, setShowNotification] = useState(false);
 
   const {me} = useTeacherGetMe();
+  const performanceAnalyticsEnabled =
+    me?.school?.performanceAnalyticsEnabled ?? true;
 
   const sidebarItems = [
     {
@@ -41,10 +43,14 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: PlannerIcon,      
       label: "Planner",
     },
-    {
-      icon: PerformanceIcon,
-      label: "Performance Analytics",
-    },
+    ...(performanceAnalyticsEnabled
+      ? [
+          {
+            icon: PerformanceIcon,
+            label: "Performance Analytics",
+          },
+        ]
+      : []),
     {
       icon: ProfileIcon,      
       label: "Profile",

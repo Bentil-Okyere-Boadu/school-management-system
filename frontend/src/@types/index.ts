@@ -217,6 +217,7 @@ export interface School {
   parentShowGrades?: boolean;
   parentShowLabels?: boolean;
   parentShowFeedback?: boolean;
+  performanceAnalyticsEnabled?: boolean;
 }
 
 export enum AdmissionStatus {

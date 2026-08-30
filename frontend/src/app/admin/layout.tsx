@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/common/Sidebar";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardIcon, ClassroomIcon, UsersIcon, AdmissionsIcon, AttendanceIcon, StudentsIcon, PaymentsIcon, SubjectIcon, ScoreIcon, PlannerIcon, PerformanceIcon } from "@/utils/icons";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
-import { useGetMe } from "@/hooks/school-admin";
+import { useGetMe, useGetMySchool } from "@/hooks/school-admin";
 import NotificationCard from "@/components/common/NotificationCard";
 import { Roles } from "@/@types";
 
@@ -30,6 +30,9 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   };
 
   const {me} = useGetMe();
+  const { school } = useGetMySchool();
+  const performanceAnalyticsEnabled =
+    school?.performanceAnalyticsEnabled ?? me?.school?.performanceAnalyticsEnabled ?? true;
 
   const sidebarItems = [
     {
@@ -52,10 +55,14 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: ScoreIcon,
       label: "Scores"
     },
-    {
-      icon: PerformanceIcon,
-      label: "Performance Analytics"
-    },
+    ...(performanceAnalyticsEnabled
+      ? [
+          {
+            icon: PerformanceIcon,
+            label: "Performance Analytics",
+          },
+        ]
+      : []),
     {
       icon: AdmissionsIcon,      
       label: "Admissions",
