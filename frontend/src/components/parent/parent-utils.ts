@@ -1,4 +1,5 @@
-import type { Calendar, Term } from "@/@types";
+import type { Calendar, SchoolPaymentTransaction, Term } from "@/@types";
+import { paymentPeriodLabel } from "@/components/admin/payments/paymentUtils";
 import type { ParentFinanceChild } from "@/hooks/parent";
 
 export const ALL_CHILDREN_VALUE = "all";
@@ -176,15 +177,17 @@ export function financeHistory(child: ParentFinanceChild): Array<{
   date: string | null;
   method: string;
   amount: number;
+  periodLabel: string;
 }> {
   const rows = Array.isArray(child.history)
     ? child.history
     : child.history?.data ?? [];
-  return rows.map((tx) => ({
+  return rows.map((tx: SchoolPaymentTransaction) => ({
     id: tx.id,
     date: tx.paymentDate ?? tx.createdAt,
     method: tx.paymentMethod || tx.provider || "Payment",
     amount: tx.amount,
+    periodLabel: paymentPeriodLabel(tx),
   }));
 }
 

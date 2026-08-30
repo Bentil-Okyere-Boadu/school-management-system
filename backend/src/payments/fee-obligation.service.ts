@@ -56,6 +56,7 @@ export type FinanceObligationLine = {
   isArrear: boolean;
   dueDate: string | null;
   academicTermId: string | null;
+  academicCalendarId: string | null;
 };
 
 export type StudentFinanceTotals = {
@@ -371,6 +372,49 @@ export class FeeObligationService {
     return Number(row?.sum ?? 0);
   }
 
+  async sumPaidByObligationIds(
+    obligationIds: string[],
+  ): Promise<Map<string, number>> {
+    const paidByObligationId = new Map<string, number>();
+    if (obligationIds.length === 0) {
+      return paidByObligationId;
+    }
+
+    const rows = await this.paymentAllocationRepository
+      .createQueryBuilder('allocation')
+      .innerJoin('allocation.obligation', 'obligation')
+      .innerJoin('allocation.transaction', 'transaction')
+      .where('obligation.id IN (:...obligationIds)', { obligationIds })
+      .andWhere('transaction.status = :status', {
+        status: PaymentTransactionStatus.PAID,
+      })
+      .select('obligation.id', 'obligationId')
+      .addSelect('COALESCE(SUM(allocation.allocatedAmount), 0)', 'sum')
+      .groupBy('obligation.id')
+      .getRawMany<{ obligationId: string; sum: string }>();
+
+    for (const row of rows) {
+      paidByObligationId.set(row.obligationId, Number(row.sum ?? 0));
+    }
+    return paidByObligationId;
+  }
+
+  async findObligationsForStudents(studentIds: string[]) {
+    if (studentIds.length === 0) {
+      return [];
+    }
+    return this.obligationRepository
+      .createQueryBuilder('obligation')
+      .innerJoinAndSelect('obligation.student', 'student')
+      .leftJoinAndSelect('obligation.feeStructure', 'feeStructure')
+      .leftJoinAndSelect('feeStructure.classLevels', 'feeClassLevels')
+      .leftJoinAndSelect('obligation.academicTerm', 'academicTerm')
+      .leftJoinAndSelect('academicTerm.academicCalendar', 'termCalendar')
+      .leftJoinAndSelect('obligation.academicCalendar', 'academicCalendar')
+      .where('student.id IN (:...studentIds)', { studentIds })
+      .getMany();
+  }
+
   async getOutstandingLines(
     student: Student,
     applicableFees: FeeStructure[],
@@ -549,7 +593,13 @@ export class FeeObligationService {
     }
     const key = ob.periodKey;
     if (key.startsWith('term:') && ob.academicTerm) {
-      return ob.academicTerm.termName;
+      const calendarName =
+        ob.academicCalendar?.name ??
+        ob.academicTerm.academicCalendar?.name ??
+        null;
+      return calendarName
+        ? `${ob.academicTerm.termName} ${calendarName}`
+        : ob.academicTerm.termName;
     }
     if (key.startsWith('month:')) {
       const m = key.slice('month:'.length);
@@ -559,16 +609,17 @@ export class FeeObligationService {
       return key.slice('day:'.length);
     }
     if (key.startsWith('year:')) {
+      if (ob.academicCalendar?.name) {
+        return ob.academicCalendar.name;
+      }
       const parts = key.split(':');
       const yk = parts[parts.length - 1] ?? '';
-      return `Year ${yk}`;
+      return yk ? `Year ${yk}` : 'School year';
     }
     return ob.periodStart;
   }
 
-  private obligationAcademicTermId(
-    ob: StudentFeeObligation,
-  ): string | null {
+  obligationAcademicTermId(ob: StudentFeeObligation): string | null {
     if (ob.academicTerm?.id) {
       return ob.academicTerm.id;
     }
@@ -576,6 +627,22 @@ export class FeeObligationService {
     if (key.startsWith('term:')) {
       const termId = key.slice('term:'.length);
       return termId || null;
+    }
+    return null;
+  }
+
+  obligationAcademicCalendarId(ob: StudentFeeObligation): string | null {
+    if (ob.academicCalendar?.id) {
+      return ob.academicCalendar.id;
+    }
+    if (ob.academicTerm?.academicCalendar?.id) {
+      return ob.academicTerm.academicCalendar.id;
+    }
+    const key = ob.periodKey ?? '';
+    if (key.startsWith('year:')) {
+      const parts = key.split(':');
+      const calendarId = parts.length >= 2 ? parts[1] : null;
+      return calendarId || null;
     }
     return null;
   }
@@ -601,16 +668,41 @@ export class FeeObligationService {
       await this.ensureObligationsForStudent(student, applicableFees);
     }
 
-    const feeIds = new Set(applicableFees.map((f) => f.id));
-    const feeById = new Map(applicableFees.map((f) => [f.id, f]));
     const arrearsCutoff = student.school?.id
       ? await this.getArrearsCutoffDate(student.school.id)
       : null;
 
     const obligations = await this.obligationRepository.find({
       where: { student: { id: student.id } },
-      relations: ['feeStructure', 'feeStructure.classLevels', 'academicTerm'],
+      relations: [
+        'feeStructure',
+        'feeStructure.classLevels',
+        'academicTerm',
+        'academicTerm.academicCalendar',
+        'academicCalendar',
+      ],
     });
+
+    const paidByObligationId =
+      await this.sumPaidByObligationIds(obligations.map((ob) => ob.id));
+
+    return this.computeFinanceLines(
+      applicableFees,
+      obligations,
+      paidByObligationId,
+      options?.prepayment ?? 0,
+      arrearsCutoff,
+    );
+  }
+
+  computeFinanceLines(
+    applicableFees: FeeStructure[],
+    obligations: StudentFeeObligation[],
+    paidByObligationId: Map<string, number>,
+    prepayment: number,
+    arrearsCutoff: string | null,
+  ): { lines: FinanceObligationLine[]; totals: StudentFinanceTotals } {
+    const feeIds = new Set(applicableFees.map((f) => f.id));
 
     const lines: FinanceObligationLine[] = [];
     for (const ob of obligations) {
@@ -618,7 +710,7 @@ export class FeeObligationService {
       if (!fee || !feeIds.has(fee.id)) {
         continue;
       }
-      const paid = await this.sumPaidForObligation(student.id, ob.id);
+      const paid = paidByObligationId.get(ob.id) ?? 0;
       const outstanding = Math.max(
         0,
         Math.round((ob.amountDue - paid) * 100) / 100,
@@ -641,6 +733,7 @@ export class FeeObligationService {
         isArrear,
         dueDate: fee.dueDate ?? null,
         academicTermId: this.obligationAcademicTermId(ob),
+        academicCalendarId: this.obligationAcademicCalendarId(ob),
       });
     }
 
@@ -669,8 +762,8 @@ export class FeeObligationService {
       lines.filter((l) => l.isArrear).reduce((s, l) => s + l.outstanding, 0) *
         100,
     ) / 100;
-    const prepayment = Math.round((options?.prepayment ?? 0) * 100) / 100;
-    const netBalance = Math.round((outstanding - prepayment) * 100) / 100;
+    const prepaymentRounded = Math.round(prepayment * 100) / 100;
+    const netBalance = Math.round((outstanding - prepaymentRounded) * 100) / 100;
 
     const today = this.todayIso();
     let nextDueDate: string | null = null;
@@ -704,7 +797,7 @@ export class FeeObligationService {
         totalPaid,
         outstanding,
         arrears,
-        prepayment,
+        prepayment: prepaymentRounded,
         netBalance,
         nextDueDate,
       },

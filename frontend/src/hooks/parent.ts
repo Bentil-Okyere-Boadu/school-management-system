@@ -294,11 +294,24 @@ export const useParentAcademics = (
   return { academics, isLoading, isFetching, error, refetch };
 };
 
-export const useParentFinance = (studentId?: string, enabled = true) => {
+export const useParentFinance = (
+  studentId?: string,
+  enabled = true,
+  filters?: {
+    academicTermId?: string;
+    academicCalendarId?: string;
+  },
+) => {
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["parent-finance", studentId],
+    queryKey: ["parent-finance", studentId, filters],
     queryFn: () =>
-      customAPI.get(`/parent/finance${optionalParams({ studentId })}`),
+      customAPI.get(
+        `/parent/finance${optionalParams({
+          studentId,
+          academicTermId: filters?.academicTermId,
+          academicCalendarId: filters?.academicCalendarId,
+        })}`,
+      ),
     enabled,
     retry: (failureCount, error) =>
       !isParentChildAccessError(error) && failureCount < 2,

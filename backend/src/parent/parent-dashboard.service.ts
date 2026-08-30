@@ -11,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ParentStudent } from './parent-student.entity';
 import { ParentStudentStatus } from './parent.enums';
+import { ParentFinanceQueryDto } from './dto/parent-query.dto';
 import { PaymentQueryDto } from 'src/payments/dto/payment-query.dto';
 import { PaymentTransactionStatus } from 'src/payments/entities/payment-transaction.entity';
 import { MessageReminder } from 'src/notification/entities/message-reminder.entity';
@@ -164,13 +165,16 @@ export class ParentDashboardService {
     return this.attendanceService.getMonthSheet(student, year, month);
   }
 
-  async getFinance(parentId: string, studentId?: string) {
+  async getFinance(
+    parentId: string,
+    query: ParentFinanceQueryDto = {},
+  ) {
     const parent = await this.getMe(parentId);
     let children = await this.authorization.getActiveChildren(parentId);
-    if (studentId) {
+    if (query.studentId) {
       const { student } = await this.authorization.requireActiveParentStudent(
         parentId,
-        studentId,
+        query.studentId,
       );
       children = [student];
     }
@@ -180,11 +184,17 @@ export class ParentDashboardService {
         const detail = await this.financeService.getStudentDetail(
           parent.school.id,
           child.id,
+          {
+            academicTermId: query.academicTermId,
+            academicCalendarId: query.academicCalendarId,
+          },
         );
         const historyQuery: PaymentQueryDto = {
           page: 1,
-          limit: 20,
+          limit: 50,
           status: PaymentTransactionStatus.PAID,
+          academicTermId: query.academicTermId,
+          academicCalendarId: query.academicCalendarId,
         };
         const history = await this.paymentsService.listStudentPayments(
           child.id,
@@ -207,7 +217,10 @@ export class ParentDashboardService {
               amount: line.outstanding,
               overdue: line.isArrear,
             })),
-          history: history.data ?? [],
+          history: (history.data ?? []).map((tx) => ({
+            ...tx,
+            ...this.paymentsService.getPaymentPeriodSummary(tx),
+          })),
         };
       }),
     );

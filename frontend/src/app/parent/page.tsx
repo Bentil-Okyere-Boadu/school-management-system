@@ -129,7 +129,14 @@ const ParentDashboard = () => {
     );
 
   const { finance, isLoading: financeLoading, error: financeError } =
-    useParentFinance(apiStudentId, hasChildren);
+    useParentFinance(
+      apiStudentId,
+      hasChildren && activeTabKey === "finance",
+      {
+        academicCalendarId: calendarId || undefined,
+        academicTermId: termId || undefined,
+      },
+    );
 
   useEffect(() => {
     handleChildAccessError(overviewError);

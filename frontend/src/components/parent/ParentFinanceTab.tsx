@@ -152,25 +152,36 @@ function FinanceCard({
                 {history.map((row) => (
                   <li
                     key={row.id}
-                    className="flex items-center gap-3 rounded-[10px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm"
+                    className="rounded-[10px] border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm"
                   >
-                    <span className="shrink-0 text-slate-500">
-                      {formatParentDate(row.date)}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-slate-600">
-                      {row.method}
-                    </span>
-                    <span className="shrink-0 tabular-nums font-semibold text-slate-800">
-                      {formatGHSCurrency(row.amount)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onReceipt(row.id)}
-                      className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
-                      aria-label="Download receipt"
-                    >
-                      <IconDownload size={16} stroke={1.6} />
-                    </button>
+                    <div className="flex items-start gap-3">
+                      <span className="shrink-0 text-slate-500">
+                        {formatParentDate(row.date)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="truncate text-slate-600">
+                            {row.method}
+                          </span>
+                          {row.periodLabel ? (
+                            <span className="inline-flex max-w-full truncate rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-800 ring-1 ring-violet-100">
+                              {row.periodLabel}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <span className="shrink-0 tabular-nums font-semibold text-slate-800">
+                        {formatGHSCurrency(row.amount)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onReceipt(row.id)}
+                        className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                        aria-label="Download receipt"
+                      >
+                        <IconDownload size={16} stroke={1.6} />
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -10,8 +10,10 @@ import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useDebouncer } from "@/hooks/generalHooks";
 import {
+  useGetClassLevels,
   useGetFinanceClasses,
   useGetFinanceStudents,
+  useGetFinanceSummary,
 } from "@/hooks/school-admin";
 import { getInitials } from "@/utils/helpers";
 import { IconEye, IconX } from "@tabler/icons-react";
@@ -43,19 +45,25 @@ function SummaryCard({
   label,
   value,
   valueClassName = "text-zinc-900",
+  isLoading = false,
 }: {
   label: string;
   value: string;
   valueClassName?: string;
+  isLoading?: boolean;
 }) {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4">
       <p className="text-sm tracking-wide text-zinc-500">{label}</p>
-      <p
-        className={`mt-2 text-xl font-semibold tabular-nums sm:text-2xl ${valueClassName}`}
-      >
-        {value}
-      </p>
+      {isLoading ? (
+        <div className="mt-3 h-8 w-24 animate-pulse rounded-md bg-zinc-100" />
+      ) : (
+        <p
+          className={`mt-2 text-xl font-semibold tabular-nums sm:text-2xl ${valueClassName}`}
+        >
+          {value}
+        </p>
+      )}
     </div>
   );
 }
@@ -97,7 +105,12 @@ function SegmentedControl({
   );
 }
 
-export const FinanceTabSection: React.FC = () => {
+export const FinanceTabSection: React.FC<{
+  calendarId: string;
+  termId: string;
+  periodLabel: string;
+  periodReady: boolean;
+}> = ({ calendarId, termId, periodLabel, periodReady }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("student");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,32 +122,51 @@ export const FinanceTabSection: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedClassId, balanceStatus]);
+  }, [debouncedSearch, selectedClassId, balanceStatus, calendarId, termId]);
 
   const studentsEnabled = viewMode === "student";
-  const { students, meta, summary, isLoading: studentsLoading } =
-    useGetFinanceStudents(
-      {
-        page: currentPage,
-        limit: PAGE_SIZE,
-        search: debouncedSearch,
-        classLevelId: selectedClassId || undefined,
-        balanceStatus,
-      },
-      studentsEnabled
-    );
+  const financeFilters = {
+    search: debouncedSearch,
+    classLevelId: selectedClassId || undefined,
+    balanceStatus,
+    academicTermId: termId || undefined,
+    academicCalendarId: calendarId || undefined,
+  };
 
-  const { classes, isLoading: classesLoading } = useGetFinanceClasses(true);
+  const { students, meta, isLoading: studentsLoading } = useGetFinanceStudents(
+    {
+      page: currentPage,
+      limit: PAGE_SIZE,
+      ...financeFilters,
+    },
+    studentsEnabled && periodReady
+  );
+
+  const { summary, isLoading: summaryLoading } = useGetFinanceSummary(
+    financeFilters,
+    studentsEnabled && periodReady
+  );
+
+  const { classLevels } = useGetClassLevels("", termId || undefined);
+
+  const classesEnabled = viewMode === "class";
+  const { classes, isLoading: classesLoading } = useGetFinanceClasses(
+    {
+      academicTermId: termId || undefined,
+      academicCalendarId: calendarId || undefined,
+    },
+    classesEnabled && periodReady
+  );
 
   const classOptions = useMemo(
     () => [
       { value: "", label: "All classes" },
-      ...classes.map((c) => ({
-        value: c.classLevelId,
-        label: c.className,
+      ...classLevels.map((c) => ({
+        value: c.id,
+        label: c.name,
       })),
     ],
-    [classes]
+    [classLevels]
   );
 
   const classSummary = useMemo(() => {
@@ -167,6 +199,9 @@ export const FinanceTabSection: React.FC = () => {
           prepayment: summary?.prepayment ?? 0,
         }
       : classSummary;
+
+  const summaryCardsLoading =
+    viewMode === "student" ? summaryLoading : classesLoading;
 
   const totalPages = meta?.totalPages ?? 1;
   const resultCount = meta?.total ?? 0;
@@ -201,7 +236,8 @@ export const FinanceTabSection: React.FC = () => {
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-zinc-900">Finance</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Track student balances, arrears, and class financial summaries.
+          Track student balances, arrears, and class financial summaries
+          {periodLabel ? ` for ${periodLabel}.` : "."}
         </p>
       </header>
 
@@ -209,26 +245,31 @@ export const FinanceTabSection: React.FC = () => {
         <SummaryCard
           label="Total payable"
           value={formatGHSCurrency(displaySummary.totalPayable)}
+          isLoading={summaryCardsLoading}
         />
         <SummaryCard
           label="Total paid"
           value={formatGHSCurrency(displaySummary.totalPaid)}
           valueClassName="text-emerald-600"
+          isLoading={summaryCardsLoading}
         />
         <SummaryCard
           label="Outstanding"
           value={formatGHSCurrency(displaySummary.outstanding)}
           valueClassName="text-amber-600"
+          isLoading={summaryCardsLoading}
         />
         <SummaryCard
           label="Arrears"
           value={formatGHSCurrency(displaySummary.arrears)}
           valueClassName="text-red-600"
+          isLoading={summaryCardsLoading}
         />
         <SummaryCard
           label="Prepayments"
           value={formatGHSCurrency(displaySummary.prepayment)}
           valueClassName="text-emerald-600"
+          isLoading={summaryCardsLoading}
         />
       </div>
 
@@ -313,6 +354,9 @@ export const FinanceTabSection: React.FC = () => {
       {drawerStudentId && (
         <FinanceStudentDetailDrawer
           studentId={drawerStudentId}
+          calendarId={calendarId}
+          termId={termId}
+          periodLabel={periodLabel}
           onClose={closeDrawer}
         />
       )}

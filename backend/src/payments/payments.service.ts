@@ -35,11 +35,26 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { RequestPaymentSetupDto } from './dto/request-payment-setup.dto';
 import { FeeObligationService } from './fee-obligation.service';
 import { StudentCreditService } from './student-credit.service';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 
 const OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
 const BILLING_CODE_PREFIX = 'SBC';
 const BILLING_CODE_DIGITS = 6;
+
+export type PaymentAppliedFee = {
+  feeTitle: string;
+  periodLabel: string;
+  amount: number;
+};
+
+export type PaymentPeriodSummary = {
+  periodLabel: string | null;
+  periodLabels: string[];
+  academicTermId: string | null;
+  academicCalendarId: string | null;
+  appliedFees: PaymentAppliedFee[];
+};
 
 export interface CreateCheckoutOtpInput {
   student: Student;
@@ -772,6 +787,38 @@ export class PaymentsService {
     return this.findApplicableFeeStructuresForStudent(student, options);
   }
 
+  async getSchoolFeeStructures(schoolId: string): Promise<FeeStructure[]> {
+    return this.feeStructureRepository
+      .createQueryBuilder('fee')
+      .leftJoinAndSelect('fee.classLevels', 'classLevel')
+      .leftJoinAndSelect('fee.school', 'school')
+      .where('school.id = :schoolId', { schoolId })
+      .orderBy('fee.dueDate', 'ASC', 'NULLS LAST')
+      .addOrderBy('fee.id', 'ASC')
+      .getMany();
+  }
+
+  filterApplicableFeeStructuresForStudent(
+    student: Student,
+    schoolFees: FeeStructure[],
+    options?: { ussdEligibleOnly?: boolean },
+  ): FeeStructure[] {
+    const classLevelIds = student.classLevels?.map((c) => c.id) ?? [];
+    return schoolFees.filter((fee) => {
+      if (options?.ussdEligibleOnly && fee.allowUssdPayment === false) {
+        return false;
+      }
+      const levels = fee.classLevels ?? [];
+      if (levels.length === 0) {
+        return true;
+      }
+      if (classLevelIds.length === 0) {
+        return false;
+      }
+      return levels.some((c) => classLevelIds.includes(c.id));
+    });
+  }
+
   private async findApplicableFeeStructuresForStudent(
     student: Student,
     options?: { ussdEligibleOnly?: boolean },
@@ -1024,10 +1071,9 @@ export class PaymentsService {
     const qb = this.paymentTransactionRepository
       .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.student', 'student')
-      .leftJoinAndSelect('payment.receipt', 'receipt')
-      .leftJoinAndSelect('payment.allocations', 'allocations')
-      .leftJoinAndSelect('allocations.feeStructure', 'feeStructure')
-      .where('payment.school.id = :schoolId', { schoolId })
+      .leftJoinAndSelect('payment.receipt', 'receipt');
+    this.applyAllocationJoins(qb);
+    qb.where('payment.school.id = :schoolId', { schoolId })
       .andWhere('payment.provider != :internalCredit', {
         internalCredit: PaymentProvider.INTERNAL_CREDIT,
       });
@@ -1038,6 +1084,7 @@ export class PaymentsService {
     if (query.studentId) {
       qb.andWhere('student.id = :studentId', { studentId: query.studentId });
     }
+    this.applyPeriodFilters(qb, query);
     if (query.search) {
       qb.andWhere(
         new Brackets((builder) => {
@@ -1076,13 +1123,18 @@ export class PaymentsService {
 
     const summary = await this.buildSchoolPaymentsSummary(qb);
 
-    qb.orderBy('payment.createdAt', 'DESC')
+    qb.distinct(true)
+      .orderBy('payment.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
     const [data, total] = await qb.getManyAndCount();
+    const enriched = data.map((tx) => ({
+      ...tx,
+      ...this.getPaymentPeriodSummary(tx),
+    }));
 
     return {
-      data,
+      data: enriched,
       summary,
       meta: {
         total,
@@ -1120,19 +1172,32 @@ export class PaymentsService {
     return this.listSchoolPaymentsByStudent(studentId, query);
   }
 
+  async listRecentStudentPaymentsForFinance(
+    studentId: string,
+    query: PaymentQueryDto,
+  ) {
+    return this.listSchoolPaymentsByStudent(studentId, query, {
+      includeSummary: false,
+      includeFeeTypeFilters: false,
+    });
+  }
+
   private async listSchoolPaymentsByStudent(
     studentId: string,
     query: PaymentQueryDto,
+    options?: {
+      includeSummary?: boolean;
+      includeFeeTypeFilters?: boolean;
+    },
   ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const qb = this.paymentTransactionRepository
       .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.receipt', 'receipt')
-      .leftJoinAndSelect('payment.allocations', 'allocations')
-      .leftJoinAndSelect('allocations.feeStructure', 'feeStructure')
-      .leftJoinAndSelect('payment.student', 'student')
-      .where('student.id = :studentId', { studentId })
+      .leftJoinAndSelect('payment.student', 'student');
+    this.applyAllocationJoins(qb);
+    qb.where('student.id = :studentId', { studentId })
       .andWhere('payment.provider != :internalCredit', {
         internalCredit: PaymentProvider.INTERNAL_CREDIT,
       })
@@ -1146,6 +1211,7 @@ export class PaymentsService {
         feeStructureId: query.feeStructureId,
       });
     }
+    this.applyPeriodFilters(qb, query);
     if (query.search) {
       qb.andWhere(
         new Brackets((builder) => {
@@ -1178,18 +1244,29 @@ export class PaymentsService {
       qb.andWhere('payment.createdAt <= :dateTo', { dateTo: query.dateTo });
     }
 
-    const summary = await this.buildStudentPaymentsSummary(qb);
-    const feeTypes = await this.buildStudentFeeTypeFilters(studentId);
+    const includeSummary = options?.includeSummary !== false;
+    const includeFeeTypeFilters = options?.includeFeeTypeFilters !== false;
+
+    const summary = includeSummary
+      ? await this.buildStudentPaymentsSummary(qb)
+      : undefined;
+    const feeTypes = includeFeeTypeFilters
+      ? await this.buildStudentFeeTypeFilters(studentId)
+      : undefined;
 
     qb.orderBy('payment.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
     const [data, total] = await qb.getManyAndCount();
+    const enriched = data.map((tx) => ({
+      ...tx,
+      ...this.getPaymentPeriodSummary(tx),
+    }));
 
     return {
-      data,
-      summary,
-      filters: { feeTypes },
+      data: enriched,
+      ...(summary ? { summary } : {}),
+      ...(feeTypes ? { filters: { feeTypes } } : {}),
       meta: {
         total,
         page,
@@ -1354,5 +1431,166 @@ export class PaymentsService {
     }
 
     return receipt;
+  }
+
+  getPaymentPeriodSummary(
+    transaction: PaymentTransaction,
+  ): PaymentPeriodSummary {
+    const appliedFees: PaymentAppliedFee[] = [];
+    const periodLabelSet = new Set<string>();
+    let academicTermId: string | null =
+      transaction.targetAcademicTermId ?? null;
+    let academicCalendarId: string | null = null;
+
+    for (const alloc of transaction.allocations ?? []) {
+      const feeTitle =
+        (alloc.feeStructure?.feeTitle ?? 'Fee').trim() || 'Fee';
+      const ob = alloc.obligation;
+      if (ob) {
+        const periodLabel = this.feeObligationService.formatPeriodLabel(ob);
+        if (periodLabel) {
+          periodLabelSet.add(periodLabel);
+        }
+        const termId = this.feeObligationService.obligationAcademicTermId(ob);
+        if (termId) {
+          academicTermId = termId;
+        }
+        const calendarId =
+          this.feeObligationService.obligationAcademicCalendarId(ob);
+        if (calendarId) {
+          academicCalendarId = calendarId;
+        }
+        appliedFees.push({
+          feeTitle,
+          periodLabel,
+          amount: alloc.allocatedAmount,
+        });
+      } else {
+        appliedFees.push({
+          feeTitle,
+          periodLabel: '—',
+          amount: alloc.allocatedAmount,
+        });
+      }
+    }
+
+    const periodLabels = [...periodLabelSet];
+    const periodLabel =
+      periodLabels.length === 0
+        ? null
+        : periodLabels.length === 1
+          ? periodLabels[0]
+          : periodLabels.join(' · ');
+
+    return {
+      periodLabel,
+      periodLabels,
+      academicTermId,
+      academicCalendarId,
+      appliedFees,
+    };
+  }
+
+  private applyAllocationJoins(
+    qb: SelectQueryBuilder<PaymentTransaction>,
+  ): SelectQueryBuilder<PaymentTransaction> {
+    return qb
+      .leftJoinAndSelect('payment.allocations', 'allocations')
+      .leftJoinAndSelect('allocations.feeStructure', 'feeStructure')
+      .leftJoinAndSelect('allocations.obligation', 'obligation')
+      .leftJoinAndSelect('obligation.academicTerm', 'obligationTerm')
+      .leftJoinAndSelect('obligation.academicCalendar', 'obligationCalendar')
+      .leftJoin('obligationTerm.academicCalendar', 'termCalendar');
+  }
+
+  private applyPeriodFilters(
+    qb: SelectQueryBuilder<PaymentTransaction>,
+    query: PaymentQueryDto,
+  ): void {
+    const academicTermId = query.academicTermId?.trim();
+    const academicCalendarId = query.academicCalendarId?.trim();
+
+    if (academicTermId) {
+      const periodKey = `term:${academicTermId}`;
+      qb.andWhere(
+        new Brackets((outer) => {
+          outer
+            .where('payment.targetAcademicTermId = :periodFilterTermId', {
+              periodFilterTermId: academicTermId,
+            })
+            .orWhere((subQb) => {
+              const sq = subQb
+                .subQuery()
+                .select('1')
+                .from(PaymentAllocation, 'periodPa')
+                .innerJoin('periodPa.obligation', 'periodOb')
+                .leftJoin('periodOb.academicTerm', 'periodTerm')
+                .where('periodPa.transactionId = payment.id')
+                .andWhere(
+                  new Brackets((inner) => {
+                    inner
+                      .where('periodOb.academicTermId = :periodFilterTermId')
+                      .orWhere('periodOb.periodKey = :periodFilterPeriodKey')
+                      .orWhere('periodTerm.id = :periodFilterTermId');
+                  }),
+                )
+                .getQuery();
+              return `EXISTS ${sq}`;
+            })
+            .orWhere((subQb) => {
+              const sq = subQb
+                .subQuery()
+                .select('1')
+                .from(PaymentAllocation, 'legacyPa')
+                .innerJoin('legacyPa.obligation', 'legacyOb')
+                .innerJoin(
+                  AcademicTerm,
+                  'legacyTerm',
+                  'legacyTerm.id = :periodFilterTermId',
+                )
+                .where('legacyPa.transactionId = payment.id')
+                .andWhere('legacyOb.isLegacy = true')
+                .andWhere('payment.paymentDate IS NOT NULL')
+                .andWhere('payment.paymentDate >= legacyTerm.startDate')
+                .andWhere('payment.paymentDate <= legacyTerm.endDate')
+                .getQuery();
+              return `EXISTS ${sq}`;
+            });
+        }),
+      );
+      qb.setParameters({
+        periodFilterTermId: academicTermId,
+        periodFilterPeriodKey: periodKey,
+      });
+      return;
+    }
+
+    if (academicCalendarId) {
+      qb.andWhere((subQb) => {
+        const sq = subQb
+          .subQuery()
+          .select('1')
+          .from(PaymentAllocation, 'calPa')
+          .innerJoin('calPa.obligation', 'calOb')
+          .leftJoin('calOb.academicTerm', 'calTerm')
+          .leftJoin('calOb.academicCalendar', 'calObCal')
+          .leftJoin('calTerm.academicCalendar', 'calTermCal')
+          .where('calPa.transactionId = payment.id')
+          .andWhere(
+            new Brackets((inner) => {
+              inner
+                .where('calOb.academicCalendarId = :periodFilterCalendarId')
+                .orWhere('calTermCal.id = :periodFilterCalendarId')
+                .orWhere('calOb.periodKey LIKE :periodFilterYearPrefix');
+            }),
+          )
+          .getQuery();
+        return `EXISTS ${sq}`;
+      });
+      qb.setParameters({
+        periodFilterCalendarId: academicCalendarId,
+        periodFilterYearPrefix: `year:${academicCalendarId}:%`,
+      });
+    }
   }
 }
