@@ -14,7 +14,7 @@ User-facing product docs for the school management app. Each file describes what
 | Payments | School Admin, Student, Parent, Super Admin | [payments.md](./payments.md) |
 | Performance analytics | School Admin, Teacher, Student, Parent | [performance-analytics.md](./performance-analytics.md) |
 | Planner | School Admin, Teacher, Student | [planner.md](./planner.md) |
-| Results | School Admin, Teacher, Student, Parent | [results.md](./results.md) |
+| Results | School Admin, Teacher, Student | [results.md](./results.md) |
 | Settings | School Admin | [settings.md](./settings.md) |
 | Students | School Admin, Teacher, Student, Parent | [students.md](./students.md) |
 | Subjects and curriculum | School Admin, Teacher | [subjects.md](./subjects.md) |

@@ -7,7 +7,6 @@ import {
   SchoolPaymentReceiptDetail,
   SchoolPaymentTransaction,
   StudentPerformanceAnalytics,
-  StudentResultsResponse,
   User,
 } from "@/@types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -74,39 +73,6 @@ export type ParentAttendanceChild = {
   month: number;
   year: number;
   days: ParentAttendanceDay[];
-};
-
-export type ParentAnnouncement = {
-  id: string;
-  title: string;
-  message: string;
-  createdAt: string;
-};
-
-export type ParentRequiredAction = {
-  id: string;
-  type: "child_confirmation" | string;
-  message: string;
-  status: string;
-};
-
-export type ParentAcademicsChild = {
-  studentId: string;
-  firstName: string;
-  lastName: string;
-  studentCode: string;
-  grade: string | null;
-  photoUrl: string | null;
-  resultsPending: boolean;
-  results: StudentResultsResponse | null;
-  parentVisibility?: {
-    showScores: boolean;
-    showGrades: boolean;
-    showLabels: boolean;
-    showFeedback: boolean;
-  };
-  announcements: ParentAnnouncement[];
-  requiredActions: ParentRequiredAction[];
 };
 
 export type ParentPerformanceAnalyticsChild = {
@@ -288,32 +254,6 @@ export const useParentAttendance = (
   return { attendance, isLoading, isFetching, error, refetch };
 };
 
-export const useParentAcademics = (
-  params: { calendarId?: string; studentId?: string },
-  enabled = true,
-) => {
-  const { calendarId, studentId } = params;
-  const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["parent-academics", calendarId, studentId],
-    queryFn: () =>
-      customAPI.get(
-        `/parent/academics${optionalParams({ calendarId, studentId })}`,
-      ),
-    enabled: enabled && Boolean(calendarId),
-    retry: (failureCount, error) =>
-      !isParentChildAccessError(error) && failureCount < 2,
-  });
-
-  const rows = data?.data;
-  const academics: ParentAcademicsChild[] = Array.isArray(rows)
-    ? rows
-    : rows
-      ? [rows as ParentAcademicsChild]
-      : [];
-
-  return { academics, isLoading, isFetching, error, refetch };
-};
-
 export const useParentPerformanceAnalytics = (
   params: { academicTermId?: string; studentId?: string },
   enabled = true,
@@ -438,7 +378,7 @@ export const useConfirmParentChild = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["parent-me"] });
       queryClient.invalidateQueries({ queryKey: ["parent-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["parent-academics"] });
+      queryClient.invalidateQueries({ queryKey: ["parent-performance-analytics"] });
     },
   });
 };
