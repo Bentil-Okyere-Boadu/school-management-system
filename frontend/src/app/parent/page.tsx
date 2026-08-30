@@ -59,10 +59,10 @@ const ParentDashboard = () => {
 
   const familyTabs = useMemo(
     () =>
-      performanceAnalyticsEnabled
+      performanceAnalyticsEnabled || childrenLoading
         ? BASE_FAMILY_TABS
         : BASE_FAMILY_TABS.filter((tab) => tab.tabKey !== "academics"),
-    [performanceAnalyticsEnabled],
+    [performanceAnalyticsEnabled, childrenLoading],
   );
 
   const validTabs = useMemo(
@@ -86,10 +86,17 @@ const ParentDashboard = () => {
   );
 
   useEffect(() => {
+    if (childrenLoading) return;
+
     if (tabFromUrl === "analytics") {
       replaceParams({
         tab: performanceAnalyticsEnabled ? "academics" : "attendance",
       });
+      return;
+    }
+
+    if (!performanceAnalyticsEnabled && tabFromUrl === "academics") {
+      replaceParams({ tab: "attendance" });
       return;
     }
 
@@ -130,6 +137,7 @@ const ParentDashboard = () => {
   }, [
     calendarId,
     calendars,
+    childrenLoading,
     month,
     performanceAnalyticsEnabled,
     replaceParams,
