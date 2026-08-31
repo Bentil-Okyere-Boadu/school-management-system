@@ -36,7 +36,7 @@ Students are the core users of the school. School admins manage the full student
 
 | Action | Result |
 |--------|--------|
-| On **Family Dashboard**, select a ward from the ward selector. | KPIs and tab content (Attendance, Finance, Academics) refresh for the selected child. |
+| On **Family Dashboard**, select a ward from the ward selector. | KPIs and tab content (Attendance, Finance, Academics, Analytics when enabled) refresh for the selected child. |
 | If a child confirmation is pending, follow the banner link to confirm the child from your email. | After confirming (see [authentication.md](./authentication.md)), the ward appears fully linked to your account. |
 
 ## Empty, error, and blocked states
