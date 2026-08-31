@@ -61,23 +61,30 @@ const ParentDashboard = () => {
     isLoading: childrenLoading,
   });
 
+  const tabFromUrl = searchParams.get("tab") ?? "";
+
+  const isTabFromUrlValid = useMemo(() => {
+    if (!tabFromUrl) return false;
+    if (BASE_FAMILY_TABS.some((tab) => tab.tabKey === tabFromUrl)) return true;
+    if (tabFromUrl === "analytics") {
+      if (childrenLoading) return true;
+      return isPerformanceAnalyticsEnabledResolved(me?.school);
+    }
+    return false;
+  }, [childrenLoading, me?.school, tabFromUrl]);
+
   const familyTabs = useMemo(
     () => [
       ...BASE_FAMILY_TABS,
-      ...(performanceAnalyticsEnabled
+      ...(performanceAnalyticsEnabled ||
+      (childrenLoading && tabFromUrl === "analytics")
         ? [{ tabLabel: "Analytics", tabKey: "analytics" }]
         : []),
     ],
-    [performanceAnalyticsEnabled],
+    [childrenLoading, performanceAnalyticsEnabled, tabFromUrl],
   );
 
-  const validTabs = useMemo(
-    () => new Set(familyTabs.map((tab) => tab.tabKey)),
-    [familyTabs],
-  );
-
-  const tabFromUrl = searchParams.get("tab") ?? "";
-  const activeTabKey = validTabs.has(tabFromUrl) ? tabFromUrl : "attendance";
+  const activeTabKey = isTabFromUrlValid ? tabFromUrl : "attendance";
   const hasChildren = children.length > 0;
 
   const { calendars } = useParentCalendars(true);
@@ -92,9 +99,12 @@ const ParentDashboard = () => {
   );
 
   useEffect(() => {
+    if (tabFromUrl === "analytics" && childrenLoading) {
+      return;
+    }
+
     if (
       tabFromUrl === "analytics" &&
-      !childrenLoading &&
       !isPerformanceAnalyticsEnabledResolved(me?.school)
     ) {
       replaceParams({ tab: "attendance" });
@@ -102,7 +112,7 @@ const ParentDashboard = () => {
     }
 
     if (!calendars.length) {
-      if (!validTabs.has(tabFromUrl)) {
+      if (!isTabFromUrlValid) {
         replaceParams({ tab: "attendance" });
       }
       return;
@@ -123,19 +133,19 @@ const ParentDashboard = () => {
       nextTermId === termId &&
       nextMonth === month &&
       nextYear === year &&
-      validTabs.has(tabFromUrl)
+      isTabFromUrlValid
     ) {
       return;
     }
 
     replaceParams({
-      tab: validTabs.has(tabFromUrl) ? tabFromUrl : "attendance",
+      tab: isTabFromUrlValid ? tabFromUrl : "attendance",
       calendarId: nextCalendarId || undefined,
       termId: nextTermId || undefined,
       month: String(nextMonth),
       year: String(nextYear),
     });
-  }, [calendarId, calendars, childrenLoading, me?.school, month, replaceParams, searchParams, tabFromUrl, termId, validTabs, year]);
+  }, [calendarId, calendars, childrenLoading, isTabFromUrlValid, me?.school, month, replaceParams, searchParams, tabFromUrl, termId, year]);
 
   const { overview, isLoading: overviewLoading, error: overviewError } =
     useParentOverview({

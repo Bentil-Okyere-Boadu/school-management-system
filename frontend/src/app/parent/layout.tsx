@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useState } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import FullPageSpinner from "@/components/common/FullPageSpinner";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DashboardIcon } from "@/utils/icons";
 import { useParentGetMe } from "@/hooks/parent";
 import type { User } from "@/@types";
@@ -14,7 +14,9 @@ const FAMILY_DASHBOARD = "Family Dashboard";
 const sidebarItems = [{ icon: DashboardIcon, label: FAMILY_DASHBOARD }];
 
 const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [activeMenuItem, setActiveMenuItem] = useState(FAMILY_DASHBOARD);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -24,8 +26,22 @@ const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     setActiveMenuItem(FAMILY_DASHBOARD);
-    setIsOverviewPage(pathname === "/parent");
+    setIsOverviewPage(
+      pathname === "/parent" || pathname.startsWith("/parent/payments"),
+    );
   }, [pathname]);
+
+  const handleSidebarClick = (item: string) => {
+    if (item === FAMILY_DASHBOARD) {
+      if (pathname.startsWith("/parent/payments")) {
+        router.push("/parent?tab=finance");
+      } else {
+        const query = searchParams.toString();
+        router.push(query ? `/parent?${query}` : "/parent");
+      }
+    }
+    setIsSidebarOpen(false);
+  };
 
   return (
     <div className="flex flex-row mx-auto w-full min-h-screen max-w-none bg-zinc-100 max-md:flex-col max-md:max-w-[991px] max-sm:max-w-screen-sm">
@@ -33,7 +49,7 @@ const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
         <Sidebar
           activeItem={activeMenuItem}
           sidebarItems={sidebarItems}
-          onItemChange={() => setIsSidebarOpen(false)}
+          onItemChange={handleSidebarClick}
         />
       </div>
 
@@ -43,7 +59,7 @@ const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
             <Sidebar
               activeItem={activeMenuItem}
               sidebarItems={sidebarItems}
-              onItemChange={() => setIsSidebarOpen(false)}
+              onItemChange={handleSidebarClick}
             />
           </div>
           <div
