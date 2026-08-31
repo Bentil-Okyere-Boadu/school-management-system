@@ -48,7 +48,7 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | `/admin/attendance` | School Admin — sheet & summary tabs |
 | `/teacher/classes/[classId]/attendance` | Teacher — record for class |
 | `/student/attendance` | Student — view |
-| `/parent` | Parent — Family Dashboard (Attendance, Finance, Academics, Analytics tabs) |
+| `/parent` | Parent — Family Dashboard (Attendance, Finance, Analytics tab when enabled) |
 | `/parent/attendance` | Parent — redirects to Family Dashboard, Attendance tab |
 
 ### Assignments and grading
@@ -123,7 +123,7 @@ Lock/unlock for School Admin is on **Classes** (`/admin/classes`), not a separat
 |------|------|
 | `/admin/classes` | School Admin — lock/unlock term results |
 | `/student/results` | Student |
-| `/parent/results` | Parent — redirects to Family Dashboard, Academics tab |
+| `/parent/results` | Parent — redirects to Family Dashboard (Academics tab temporarily hidden; lands on Attendance) |
 
 ### Notifications
 

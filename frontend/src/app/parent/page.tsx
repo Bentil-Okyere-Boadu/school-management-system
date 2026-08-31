@@ -2,7 +2,6 @@
 
 import CustomButton from "@/components/Button";
 import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
-import { ParentAcademicsTab } from "@/components/parent/ParentAcademicsTab";
 import { ParentAttendanceTab } from "@/components/parent/ParentAttendanceTab";
 import { ParentEmptyChildren } from "@/components/parent/ParentEmptyChildren";
 import { ParentFilters } from "@/components/parent/ParentFilters";
@@ -20,7 +19,6 @@ import { useParentPageFilters } from "@/components/parent/useParentPageFilters";
 import {
   getParentApiErrorMessage,
   isParentChildAccessError,
-  useParentAcademics,
   useParentAttendance,
   useParentCalendars,
   useParentFinance,
@@ -36,10 +34,15 @@ import {
   isPerformanceAnalyticsEnabledResolved,
 } from "@/utils/performanceAnalytics";
 
+/** Temporarily hidden on Family Dashboard; keep implementation for a future release. */
+const PARENT_ACADEMICS_TAB_ENABLED = false;
+
 const BASE_FAMILY_TABS: ParentTabItem[] = [
   { tabLabel: "Attendance", tabKey: "attendance" },
   { tabLabel: "Finance", tabKey: "finance" },
-  { tabLabel: "Academics", tabKey: "academics" },
+  ...(PARENT_ACADEMICS_TAB_ENABLED
+    ? [{ tabLabel: "Academics", tabKey: "academics" }]
+    : []),
 ];
 
 const ParentDashboard = () => {
@@ -78,7 +81,7 @@ const ParentDashboard = () => {
       ...BASE_FAMILY_TABS,
       ...(performanceAnalyticsEnabled ||
       (childrenLoading && tabFromUrl === "analytics")
-        ? [{ tabLabel: "Analytics", tabKey: "analytics" }]
+        ? [{ tabLabel: "Academics", tabKey: "analytics" }]
         : []),
     ],
     [childrenLoading, performanceAnalyticsEnabled, tabFromUrl],
@@ -107,6 +110,11 @@ const ParentDashboard = () => {
       tabFromUrl === "analytics" &&
       !isPerformanceAnalyticsEnabledResolved(me?.school)
     ) {
+      replaceParams({ tab: "attendance" });
+      return;
+    }
+
+    if (tabFromUrl === "academics" && !PARENT_ACADEMICS_TAB_ENABLED) {
       replaceParams({ tab: "attendance" });
       return;
     }
@@ -167,12 +175,6 @@ const ParentDashboard = () => {
       hasChildren && activeTabKey === "attendance",
     );
 
-  const { academics, isLoading: academicsLoading, error: academicsError } =
-    useParentAcademics(
-      { calendarId: calendarId || undefined, studentId: apiStudentId },
-      hasChildren && activeTabKey === "academics" && Boolean(calendarId),
-    );
-
   const { finance, isLoading: financeLoading, error: financeError } =
     useParentFinance(apiStudentId, hasChildren);
 
@@ -191,11 +193,9 @@ const ParentDashboard = () => {
   useEffect(() => {
     handleChildAccessError(overviewError);
     handleChildAccessError(attendanceError);
-    handleChildAccessError(academicsError);
     handleChildAccessError(financeError);
     handleChildAccessError(performanceAnalyticsError);
   }, [
-    academicsError,
     attendanceError,
     financeError,
     handleChildAccessError,
@@ -341,16 +341,6 @@ const ParentDashboard = () => {
                       `/parent/payments/receipt/${transactionId}?studentId=${studentId}`,
                     )
                   }
-                />
-              )}
-
-              {activeTabKey === "academics" && (
-                <ParentAcademicsTab
-                  childrenCount={children.length}
-                  childrenLoading={childrenLoading}
-                  academics={academics}
-                  isLoading={academicsLoading}
-                  selectedTermName={selectedTerm?.termName}
                 />
               )}
 

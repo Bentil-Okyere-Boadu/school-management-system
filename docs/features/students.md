@@ -5,7 +5,7 @@
 
 ## Overview
 
-Students are the core users of the school. School admins manage the full student roster, guardians, and profiles. Teachers view students in their classes. Students manage their own profile and guardians. Parents select wards to view attendance, finance, and academics.
+Students are the core users of the school. School admins manage the full student roster, guardians, and profiles. Teachers view students in their classes. Students manage their own profile and guardians. Parents select wards to view attendance and finance, and assignment analytics when enabled.
 
 ## School Admin
 
@@ -36,7 +36,7 @@ Students are the core users of the school. School admins manage the full student
 
 | Action | Result |
 |--------|--------|
-| On **Family Dashboard**, select a ward from the ward selector. | KPIs and tab content (Attendance, Finance, Academics, Analytics when enabled) refresh for the selected child. |
+| On **Family Dashboard**, select a ward from the ward selector. | KPIs and tab content (Attendance, Finance, Analytics when enabled) refresh for the selected child. The **Academics** tab is temporarily hidden. |
 | If a child confirmation is pending, follow the banner link to confirm the child from your email. | After confirming (see [authentication.md](./authentication.md)), the ward appears fully linked to your account. |
 
 ## Empty, error, and blocked states
