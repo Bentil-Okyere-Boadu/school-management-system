@@ -1,13 +1,14 @@
 "use client";
 
 import CustomButton from "@/components/Button";
-import { ParentAcademicsTab } from "@/components/parent/ParentAcademicsTab";
+import NoAvailableEmptyState from "@/components/common/NoAvailableEmptyState";
 import { ParentAttendanceTab } from "@/components/parent/ParentAttendanceTab";
 import { ParentEmptyChildren } from "@/components/parent/ParentEmptyChildren";
 import { ParentFilters } from "@/components/parent/ParentFilters";
 import { ParentFinanceTab } from "@/components/parent/ParentFinanceTab";
 import { ParentKpiRow } from "@/components/parent/ParentKpiRow";
 import { ParentPayFeesDrawer } from "@/components/parent/ParentPayFeesDrawer";
+import { ParentPerformanceAnalyticsTab } from "@/components/parent/ParentPerformanceAnalyticsTab";
 import { ParentPillTabBar, ParentTabItem } from "@/components/parent/ParentPillTabBar";
 import {
   pickAttendancePeriod,
@@ -16,27 +17,33 @@ import {
 } from "@/components/parent/parent-utils";
 import { useParentPageFilters } from "@/components/parent/useParentPageFilters";
 import {
-  useParentAcademics,
+  getParentApiErrorMessage,
+  isParentChildAccessError,
   useParentAttendance,
   useParentCalendars,
   useParentFinance,
   useParentOverview,
+  useParentPerformanceAnalytics,
 } from "@/hooks/parent";
 import { IconWallet } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { HashLoader } from "react-spinners";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  isPerformanceAnalyticsEnabled,
   isPerformanceAnalyticsEnabledResolved,
 } from "@/utils/performanceAnalytics";
 
-const FAMILY_TABS: ParentTabItem[] = [
+/** Temporarily hidden on Family Dashboard; keep implementation for a future release. */
+const PARENT_ACADEMICS_TAB_ENABLED = false;
+
+const BASE_FAMILY_TABS: ParentTabItem[] = [
   { tabLabel: "Attendance", tabKey: "attendance" },
   { tabLabel: "Finance", tabKey: "finance" },
-  { tabLabel: "Academics", tabKey: "academics" },
+  ...(PARENT_ACADEMICS_TAB_ENABLED
+    ? [{ tabLabel: "Academics", tabKey: "academics" }]
+    : []),
 ];
-
-const VALID_TABS = new Set(FAMILY_TABS.map((tab) => tab.tabKey));
 
 const ParentDashboard = () => {
   const router = useRouter();
@@ -53,8 +60,34 @@ const ParentDashboard = () => {
     handleChildAccessError,
   } = useParentPageFilters();
 
+  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(me?.school, {
+    isLoading: childrenLoading,
+  });
+
   const tabFromUrl = searchParams.get("tab") ?? "";
-  const activeTabKey = VALID_TABS.has(tabFromUrl) ? tabFromUrl : "attendance";
+
+  const isTabFromUrlValid = useMemo(() => {
+    if (!tabFromUrl) return false;
+    if (BASE_FAMILY_TABS.some((tab) => tab.tabKey === tabFromUrl)) return true;
+    if (tabFromUrl === "analytics") {
+      if (childrenLoading) return true;
+      return isPerformanceAnalyticsEnabledResolved(me?.school);
+    }
+    return false;
+  }, [childrenLoading, me?.school, tabFromUrl]);
+
+  const familyTabs = useMemo(
+    () => [
+      ...BASE_FAMILY_TABS,
+      ...(performanceAnalyticsEnabled ||
+      (childrenLoading && tabFromUrl === "analytics")
+        ? [{ tabLabel: "Academics", tabKey: "analytics" }]
+        : []),
+    ],
+    [childrenLoading, performanceAnalyticsEnabled, tabFromUrl],
+  );
+
+  const activeTabKey = isTabFromUrlValid ? tabFromUrl : "attendance";
   const hasChildren = children.length > 0;
 
   const { calendars } = useParentCalendars(true);
@@ -69,27 +102,25 @@ const ParentDashboard = () => {
   );
 
   useEffect(() => {
-    if (tabFromUrl === "analytics") {
-      if (childrenLoading) return;
+    if (tabFromUrl === "analytics" && childrenLoading) {
+      return;
+    }
 
-      if (isPerformanceAnalyticsEnabledResolved(me?.school)) {
-        const next = new URLSearchParams(searchParams.toString());
-        next.delete("tab");
-        const query = next.toString();
-        router.replace(
-          query
-            ? `/parent/performance-analytics?${query}`
-            : "/parent/performance-analytics",
-        );
-        return;
-      }
+    if (
+      tabFromUrl === "analytics" &&
+      !isPerformanceAnalyticsEnabledResolved(me?.school)
+    ) {
+      replaceParams({ tab: "attendance" });
+      return;
+    }
 
+    if (tabFromUrl === "academics" && !PARENT_ACADEMICS_TAB_ENABLED) {
       replaceParams({ tab: "attendance" });
       return;
     }
 
     if (!calendars.length) {
-      if (!VALID_TABS.has(tabFromUrl)) {
+      if (!isTabFromUrlValid) {
         replaceParams({ tab: "attendance" });
       }
       return;
@@ -110,19 +141,19 @@ const ParentDashboard = () => {
       nextTermId === termId &&
       nextMonth === month &&
       nextYear === year &&
-      VALID_TABS.has(tabFromUrl)
+      isTabFromUrlValid
     ) {
       return;
     }
 
     replaceParams({
-      tab: VALID_TABS.has(tabFromUrl) ? tabFromUrl : "attendance",
+      tab: isTabFromUrlValid ? tabFromUrl : "attendance",
       calendarId: nextCalendarId || undefined,
       termId: nextTermId || undefined,
       month: String(nextMonth),
       year: String(nextYear),
     });
-  }, [calendarId, calendars, childrenLoading, me?.school, month, replaceParams, router, searchParams, tabFromUrl, termId, year]);
+  }, [calendarId, calendars, childrenLoading, isTabFromUrlValid, me?.school, month, replaceParams, searchParams, tabFromUrl, termId, year]);
 
   const { overview, isLoading: overviewLoading, error: overviewError } =
     useParentOverview({
@@ -144,27 +175,42 @@ const ParentDashboard = () => {
       hasChildren && activeTabKey === "attendance",
     );
 
-  const { academics, isLoading: academicsLoading, error: academicsError } =
-    useParentAcademics(
-      { calendarId: calendarId || undefined, studentId: apiStudentId },
-      hasChildren && activeTabKey === "academics" && Boolean(calendarId),
-    );
-
   const { finance, isLoading: financeLoading, error: financeError } =
     useParentFinance(apiStudentId, hasChildren);
+
+  const {
+    performanceAnalytics,
+    isLoading: performanceAnalyticsLoading,
+    error: performanceAnalyticsError,
+  } = useParentPerformanceAnalytics(
+    { academicTermId: termId || undefined, studentId: apiStudentId },
+    hasChildren &&
+      activeTabKey === "analytics" &&
+      performanceAnalyticsEnabled &&
+      Boolean(termId),
+  );
 
   useEffect(() => {
     handleChildAccessError(overviewError);
     handleChildAccessError(attendanceError);
-    handleChildAccessError(academicsError);
     handleChildAccessError(financeError);
+    handleChildAccessError(performanceAnalyticsError);
   }, [
-    academicsError,
     attendanceError,
     financeError,
     handleChildAccessError,
     overviewError,
+    performanceAnalyticsError,
   ]);
+
+  const performanceAnalyticsErrorMessage =
+    performanceAnalyticsError &&
+    !isParentChildAccessError(performanceAnalyticsError)
+      ? getParentApiErrorMessage(
+          performanceAnalyticsError,
+          "Unable to load performance analytics.",
+        )
+      : null;
 
   const calendarOptions = calendars.map((calendar) => ({
     value: calendar.id,
@@ -260,7 +306,7 @@ const ParentDashboard = () => {
           ) : (
             <>
               <ParentPillTabBar
-                items={FAMILY_TABS}
+                items={familyTabs}
                 activeTabKey={activeTabKey}
                 onItemClick={(item) => replaceParams({ tab: item.tabKey })}
                 trackClassName="rounded-xl px-2 py-1.5"
@@ -298,14 +344,30 @@ const ParentDashboard = () => {
                 />
               )}
 
-              {activeTabKey === "academics" && (
-                <ParentAcademicsTab
-                  childrenCount={children.length}
-                  childrenLoading={childrenLoading}
-                  academics={academics}
-                  isLoading={academicsLoading}
-                  selectedTermName={selectedTerm?.termName}
-                />
+              {activeTabKey === "analytics" && performanceAnalyticsEnabled && (
+                performanceAnalyticsErrorMessage ? (
+                  <NoAvailableEmptyState message={performanceAnalyticsErrorMessage} />
+                ) : (
+                  <ParentPerformanceAnalyticsTab
+                    childrenCount={children.length}
+                    childrenLoading={childrenLoading}
+                    performanceAnalytics={performanceAnalytics}
+                    isLoading={performanceAnalyticsLoading}
+                    calendars={calendars}
+                    selectedTermId={termId}
+                    onTermChange={(value) => {
+                      const nextTerm = selectedCalendar?.terms?.find(
+                        (term) => term.id === value,
+                      );
+                      const period = pickAttendancePeriod(nextTerm);
+                      replaceParams({
+                        termId: value,
+                        month: String(period.month),
+                        year: String(period.year),
+                      });
+                    }}
+                  />
+                )
               )}
             </>
           )}
