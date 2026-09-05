@@ -3,15 +3,24 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { Student } from 'src/student/student.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
-import { FeeObligationService } from './fee-obligation.service';
+import { FeeObligationService, FinanceObligationLine, StudentFinanceTotals } from './fee-obligation.service';
 import { StudentCreditService } from './student-credit.service';
 import { PaymentsService } from './payments.service';
 import { FinanceQueryDto } from './dto/finance-query.dto';
+import { FinanceStudentDetailQueryDto } from './dto/finance-student-detail-query.dto';
 import {
   PaymentProvider,
   PaymentTransactionStatus,
 } from './entities/payment-transaction.entity';
 import { PaymentQueryDto } from './dto/payment-query.dto';
+import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { PaymentTransaction } from './entities/payment-transaction.entity';
+import { StudentFeeObligation } from './entities/student-fee-obligation.entity';
+import {
+  lineMatchesTermFilter,
+  TermFilterContext,
+} from './term-period-filter';
 
 export type FinanceStudentRow = {
   studentId: string;
@@ -40,6 +49,11 @@ export type FinanceSchoolSummary = {
   prepaidCount: number;
 };
 
+type PeriodFilterQuery = {
+  academicTermId?: string;
+  academicCalendarId?: string;
+};
+
 @Injectable()
 export class FinanceService {
   constructor(
@@ -47,6 +61,8 @@ export class FinanceService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(ClassLevel)
     private readonly classLevelRepository: Repository<ClassLevel>,
+    @InjectRepository(AcademicTerm)
+    private readonly academicTermRepository: Repository<AcademicTerm>,
     private readonly feeObligationService: FeeObligationService,
     private readonly studentCreditService: StudentCreditService,
     private readonly paymentsService: PaymentsService,
@@ -92,15 +108,19 @@ export class FinanceService {
         .take(limit)
         .getManyAndCount();
 
-      const data: FinanceStudentRow[] = [];
-      for (const student of students) {
-        data.push(await this.buildStudentRow(student));
-      }
+      const data = await this.buildStudentRowsBatch(students, query, schoolId);
 
-      const summary = await this.buildSchoolSummary(schoolId, query);
-      return {
+      const response: {
+        data: FinanceStudentRow[];
+        meta: {
+          total: number;
+          page: number;
+          limit: number;
+          totalPages: number;
+        };
+        summary?: FinanceSchoolSummary;
+      } = {
         data,
-        summary,
         meta: {
           total,
           page,
@@ -108,25 +128,29 @@ export class FinanceService {
           totalPages: Math.max(1, Math.ceil(total / limit)),
         },
       };
+
+      if (query.includeSummary) {
+        response.summary = await this.buildSchoolSummary(schoolId, query);
+      }
+
+      return response;
     }
 
     const students = await qb.getMany();
-    const allRows: FinanceStudentRow[] = [];
-    for (const student of students) {
-      const row = await this.buildStudentRow(student);
-      if (this.matchesBalanceStatus(row, balanceStatus)) {
-        allRows.push(row);
-      }
-    }
+    const allRows = (await this.buildStudentRowsBatch(students, query, schoolId)).filter(
+      (row) => this.matchesBalanceStatus(row, balanceStatus),
+    );
 
     const total = allRows.length;
     const start = (page - 1) * limit;
     const data = allRows.slice(start, start + limit);
-    const summary = this.summarizeRows(allRows);
+    const summary = query.includeSummary
+      ? this.summarizeRows(allRows)
+      : undefined;
 
     return {
       data,
-      summary,
+      ...(summary ? { summary } : {}),
       meta: {
         total,
         page,
@@ -136,11 +160,30 @@ export class FinanceService {
     };
   }
 
-  async listClasses(schoolId: string) {
+  async getSchoolSummary(
+    schoolId: string,
+    query: FinanceQueryDto,
+  ): Promise<FinanceSchoolSummary> {
+    return this.buildSchoolSummary(schoolId, query);
+  }
+
+  async listClasses(schoolId: string, query: FinanceQueryDto = {}) {
     const classes = await this.classLevelRepository.find({
       where: { school: { id: schoolId } },
       order: { name: 'ASC' },
     });
+
+    const students = await this.studentRepository
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.classLevels', 'classLevel')
+      .leftJoinAndSelect('student.school', 'school')
+      .where('school.id = :schoolId', { schoolId })
+      .andWhere('student.isArchived = false')
+      .getMany();
+
+    const rows = await this.buildStudentRowsBatch(students, query, schoolId);
+    const rowByStudentId = new Map(rows.map((row) => [row.studentId, row]));
+    const periodScoped = this.hasPeriodFilter(query);
 
     const data: Array<{
       classLevelId: string;
@@ -153,15 +196,11 @@ export class FinanceService {
       prepayment: number;
       netBalance: number;
     }> = [];
+
     for (const cls of classes) {
-      const students = await this.studentRepository
-        .createQueryBuilder('student')
-        .leftJoinAndSelect('student.classLevels', 'classLevel')
-        .leftJoinAndSelect('student.school', 'school')
-        .where('school.id = :schoolId', { schoolId })
-        .andWhere('student.isArchived = false')
-        .andWhere('classLevel.id = :classId', { classId: cls.id })
-        .getMany();
+      const classStudents = students.filter((student) =>
+        (student.classLevels ?? []).some((level) => level.id === cls.id),
+      );
 
       let totalPayable = 0;
       let totalPaid = 0;
@@ -169,8 +208,11 @@ export class FinanceService {
       let arrears = 0;
       let prepayment = 0;
 
-      for (const student of students) {
-        const row = await this.buildStudentRow(student);
+      for (const student of classStudents) {
+        const row = rowByStudentId.get(student.id);
+        if (!row) {
+          continue;
+        }
         totalPayable += row.totalPayable;
         totalPaid += row.totalPaid;
         outstanding += row.outstanding;
@@ -182,20 +224,26 @@ export class FinanceService {
       data.push({
         classLevelId: cls.id,
         className: cls.name,
-        studentCount: students.length,
+        studentCount: classStudents.length,
         totalPayable: round(totalPayable),
         totalPaid: round(totalPaid),
         outstanding: round(outstanding),
         arrears: round(arrears),
         prepayment: round(prepayment),
-        netBalance: round(outstanding - prepayment),
+        netBalance: periodScoped
+          ? round(outstanding)
+          : round(outstanding - prepayment),
       });
     }
 
     return { data };
   }
 
-  async getStudentDetail(schoolId: string, studentId: string) {
+  async getStudentDetail(
+    schoolId: string,
+    studentId: string,
+    query: FinanceStudentDetailQueryDto = {},
+  ) {
     const student = await this.studentRepository.findOne({
       where: { id: studentId, school: { id: schoolId }, isArchived: false },
       relations: ['classLevels', 'school'],
@@ -204,24 +252,21 @@ export class FinanceService {
       throw new NotFoundException('Student not found');
     }
 
-    const fees =
-      await this.paymentsService.getApplicableFeeStructuresForStudent(student, {
-        ussdEligibleOnly: false,
-      });
-    await this.feeObligationService.ensureObligationsForStudent(student, fees);
-    await this.studentCreditService.applyAvailableCredit(student, fees, {
-      ussdEligibleOnly: false,
-    });
+    const paymentQuery: PaymentQueryDto = {
+      page: query.paymentPage ?? 1,
+      limit: query.paymentLimit ?? 15,
+      status: PaymentTransactionStatus.PAID,
+      academicTermId: query.academicTermId?.trim() || undefined,
+      academicCalendarId: query.academicCalendarId?.trim() || undefined,
+    };
 
-    const prepayment = await this.studentCreditService.getAvailableCredit(
-      student.id,
-    );
-    const { lines, totals } =
-      await this.feeObligationService.getFinanceLinesForStudent(
-        student,
-        fees,
-        { ensure: false, prepayment },
-      );
+    const [financeSnapshot, paymentsResult] = await Promise.all([
+      this.buildStudentFinanceSnapshot(student, query, schoolId),
+      this.paymentsService.listRecentStudentPaymentsForFinance(
+        student.id,
+        paymentQuery,
+      ),
+    ]);
 
     const primaryClass = student.classLevels?.[0] ?? null;
     const studentIdentity = {
@@ -233,70 +278,394 @@ export class FinanceService {
       className: primaryClass?.name ?? null,
     };
 
-    const paymentQuery: PaymentQueryDto = {
-      page: 1,
-      limit: 10,
-      status: PaymentTransactionStatus.PAID,
-    };
-    const paymentsResult = await this.paymentsService.listStudentPayments(
-      student.id,
-      paymentQuery,
-    );
-
     const recentPayments = (paymentsResult.data ?? [])
       .filter((tx) => tx.provider !== PaymentProvider.INTERNAL_CREDIT)
-      .map((tx) => ({
-        id: tx.id,
-        date: tx.paymentDate ?? tx.createdAt,
-        amount: tx.amountAfterCharges > 0 ? tx.amountAfterCharges : tx.amount,
-        status: tx.status,
-        channel: tx.paymentMethod ?? tx.provider,
-        studentName: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
-        studentCode: student.studentId,
-        sessionId: tx.sessionId,
-      }));
+      .map((tx) => this.mapRecentPayment(tx, student));
 
     return {
       student: studentIdentity,
       totals: {
-        ...totals,
-        hasPendingBalance: totals.netBalance > 0,
+        ...financeSnapshot.scopedTotals,
+        hasPendingBalance: financeSnapshot.scopedTotals.netBalance > 0,
       },
-      feeLines: lines,
+      feeLines: financeSnapshot.filteredFeeLines,
       recentPayments,
+      paymentMeta: paymentsResult.meta,
     };
   }
 
-  private async buildStudentRow(student: Student): Promise<FinanceStudentRow> {
-    if (!student.classLevels) {
-      const full = await this.studentRepository.findOne({
-        where: { id: student.id },
-        relations: ['classLevels', 'school'],
-      });
-      if (full) {
-        student = full;
+  private mapRecentPayment(transaction: PaymentTransaction, student: Student) {
+    const period = this.paymentsService.getPaymentPeriodSummary(transaction);
+    return {
+      id: transaction.id,
+      date: transaction.paymentDate ?? transaction.createdAt,
+      amount:
+        transaction.amountAfterCharges > 0
+          ? transaction.amountAfterCharges
+          : transaction.amount,
+      status: transaction.status,
+      channel: transaction.paymentMethod ?? transaction.provider,
+      studentName: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
+      studentCode: student.studentId,
+      sessionId: transaction.sessionId,
+      periodLabel: period.periodLabel,
+      periodLabels: period.periodLabels,
+      academicTermId: period.academicTermId,
+      academicCalendarId: period.academicCalendarId,
+      appliedFees: period.appliedFees,
+    };
+  }
+
+  private async resolveTermFilterContext(
+    query?: PeriodFilterQuery,
+  ): Promise<TermFilterContext | null> {
+    const termId = query?.academicTermId?.trim();
+    if (!termId) {
+      return null;
+    }
+
+    const term = await this.academicTermRepository.findOne({
+      where: { id: termId },
+      relations: ['academicCalendar'],
+    });
+    if (!term) {
+      return null;
+    }
+
+    return {
+      termId: term.id,
+      termStart: term.startDate,
+      termEnd: term.endDate,
+      calendarId:
+        term.academicCalendar?.id ??
+        query?.academicCalendarId?.trim() ??
+        null,
+    };
+  }
+
+  private filterFeeLines<
+    T extends {
+      academicTermId?: string | null;
+      academicCalendarId?: string | null;
+      periodStart?: string;
+      periodEnd?: string;
+      isArrear?: boolean;
+      outstanding?: number;
+    },
+  >(lines: T[], query?: PeriodFilterQuery, termContext?: TermFilterContext | null): T[] {
+    const calendarId = query?.academicCalendarId?.trim();
+    if (!termContext && !calendarId) {
+      return lines;
+    }
+
+    if (termContext) {
+      return lines.filter((line) => lineMatchesTermFilter(line, termContext));
+    }
+
+    return lines.filter((line) => {
+      if (calendarId && line.academicCalendarId !== calendarId) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private hasPeriodFilter(query?: PeriodFilterQuery): boolean {
+    return Boolean(
+      query?.academicTermId?.trim() || query?.academicCalendarId?.trim(),
+    );
+  }
+
+  private lineCountsTowardTermPayable(
+    line: FinanceObligationLine,
+    termContext?: TermFilterContext | null,
+  ): boolean {
+    if (
+      termContext &&
+      line.isArrear &&
+      line.academicTermId !== termContext.termId
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  private computeTotalsFromLines(
+    lines: FinanceObligationLine[],
+    prepayment = 0,
+    termContext?: TermFilterContext | null,
+    periodScoped = false,
+  ): StudentFinanceTotals {
+    const round = (n: number) => Math.round(n * 100) / 100;
+    const totalPayable = round(
+      lines.reduce((sum, line) => {
+        if (!this.lineCountsTowardTermPayable(line, termContext)) {
+          return sum;
+        }
+        return sum + line.amountDue;
+      }, 0),
+    );
+    const totalPaid = round(
+      lines.reduce((sum, line) => {
+        if (!this.lineCountsTowardTermPayable(line, termContext)) {
+          return sum;
+        }
+        return sum + line.paid;
+      }, 0),
+    );
+    const outstanding = round(
+      lines.reduce((sum, line) => sum + line.outstanding, 0),
+    );
+    const arrears = round(
+      lines
+        .filter((line) => line.isArrear)
+        .reduce((sum, line) => sum + line.outstanding, 0),
+    );
+    const roundedPrepayment = round(prepayment);
+    const netBalance = periodScoped
+      ? outstanding
+      : round(outstanding - roundedPrepayment);
+    const today = new Date().toISOString().slice(0, 10);
+    let nextDueDate: string | null = null;
+    for (const line of lines) {
+      if (line.outstanding <= 0 || !line.dueDate) {
+        continue;
+      }
+      if (line.dueDate >= today) {
+        if (!nextDueDate || line.dueDate < nextDueDate) {
+          nextDueDate = line.dueDate;
+        }
+      }
+    }
+    return {
+      totalPayable,
+      totalPaid,
+      outstanding,
+      arrears,
+      prepayment: roundedPrepayment,
+      netBalance,
+      nextDueDate,
+    };
+  }
+
+  private static readonly FULL_LEDGER_ENSURE_CHUNK_SIZE = 25;
+
+  private async materializeStudentLedgersBeforeRead(
+    students: Student[],
+    schoolId: string,
+    query?: PeriodFilterQuery,
+  ): Promise<void> {
+    if (students.length === 0) {
+      return;
+    }
+
+    const schoolFees =
+      await this.paymentsService.getSchoolFeeStructures(schoolId);
+    const filterApplicable = (student: Student) =>
+      this.paymentsService.filterApplicableFeeStructuresForStudent(
+        student,
+        schoolFees,
+        { ussdEligibleOnly: false },
+      );
+    const filterApplicablePair = (
+      student: Student,
+      fees: typeof schoolFees,
+    ) =>
+      this.paymentsService.filterApplicableFeeStructuresForStudent(
+        student,
+        fees,
+        { ussdEligibleOnly: false },
+      );
+
+    const termId = query?.academicTermId?.trim();
+
+    if (termId) {
+      await this.feeObligationService.ensurePeriodScopedObligationsForStudentsBatch(
+        students,
+        schoolFees,
+        termId,
+        schoolId,
+        filterApplicablePair,
+        { includeDaily: students.length === 1 },
+      );
+    } else {
+      for (
+        let index = 0;
+        index < students.length;
+        index += FinanceService.FULL_LEDGER_ENSURE_CHUNK_SIZE
+      ) {
+        const chunk = students.slice(
+          index,
+          index + FinanceService.FULL_LEDGER_ENSURE_CHUNK_SIZE,
+        );
+        for (const student of chunk) {
+          await this.feeObligationService.ensureObligationsForStudent(
+            student,
+            filterApplicable(student),
+          );
+        }
       }
     }
 
-    const fees =
-      await this.paymentsService.getApplicableFeeStructuresForStudent(student, {
-        ussdEligibleOnly: false,
-      });
-    await this.feeObligationService.ensureObligationsForStudent(student, fees);
-    await this.studentCreditService.applyAvailableCredit(student, fees, {
-      ussdEligibleOnly: false,
-    });
-
-    const prepayment = await this.studentCreditService.getAvailableCredit(
-      student.id,
-    );
-    const { totals } =
-      await this.feeObligationService.getFinanceLinesForStudent(
-        student,
-        fees,
-        { ensure: false, prepayment },
+    const creditsByStudentId =
+      await this.studentCreditService.getAvailableCreditsByStudentIds(
+        students.map((student) => student.id),
       );
 
+    for (const student of students) {
+      if ((creditsByStudentId.get(student.id) ?? 0) <= 0) {
+        continue;
+      }
+      await this.studentCreditService.applyAvailableCredit(
+        student,
+        filterApplicable(student),
+        { ussdEligibleOnly: false },
+      );
+    }
+  }
+
+  private async buildStudentFinanceSnapshot(
+    student: Student,
+    query: PeriodFilterQuery,
+    schoolId: string,
+  ): Promise<{
+    filteredFeeLines: FinanceObligationLine[];
+    scopedTotals: StudentFinanceTotals;
+  }> {
+    await this.materializeStudentLedgersBeforeRead([student], schoolId, query);
+
+    const context = await this.loadFinanceBatchContext(schoolId, [student.id]);
+    const termContext = await this.resolveTermFilterContext(query);
+    const applicableFees =
+      this.paymentsService.filterApplicableFeeStructuresForStudent(
+        student,
+        context.schoolFees,
+        { ussdEligibleOnly: false },
+      );
+    const prepayment = context.creditsByStudentId.get(student.id) ?? 0;
+    const { lines, totals: globalTotals } =
+      this.feeObligationService.computeFinanceLines(
+        applicableFees,
+        context.obligationsByStudentId.get(student.id) ?? [],
+        context.paidByObligationId,
+        prepayment,
+        context.arrearsCutoff,
+      );
+    const filteredFeeLines = this.filterFeeLines(lines, query, termContext);
+    const periodScoped = this.hasPeriodFilter(query);
+    const scopedTotals = periodScoped
+      ? this.computeTotalsFromLines(
+          filteredFeeLines,
+          prepayment,
+          termContext,
+          true,
+        )
+      : globalTotals;
+
+    return { filteredFeeLines, scopedTotals };
+  }
+
+  private async loadFinanceBatchContext(
+    schoolId: string,
+    studentIds: string[],
+  ): Promise<{
+    schoolFees: FeeStructure[];
+    obligationsByStudentId: Map<string, StudentFeeObligation[]>;
+    paidByObligationId: Map<string, number>;
+    creditsByStudentId: Map<string, number>;
+    arrearsCutoff: string | null;
+  }> {
+    const schoolFees =
+      await this.paymentsService.getSchoolFeeStructures(schoolId);
+    const obligations =
+      studentIds.length === 0
+        ? []
+        : await this.feeObligationService.findObligationsForStudents(
+            studentIds,
+          );
+    const paidByObligationId =
+      await this.feeObligationService.sumPaidByObligationIds(
+        obligations.map((ob) => ob.id),
+      );
+    const creditsByStudentId =
+      await this.studentCreditService.getAvailableCreditsByStudentIds(
+        studentIds,
+      );
+    const arrearsCutoff =
+      await this.feeObligationService.getArrearsCutoffDate(schoolId);
+
+    const obligationsByStudentId = new Map<string, StudentFeeObligation[]>();
+    for (const obligation of obligations) {
+      const studentId = obligation.student?.id;
+      if (!studentId) {
+        continue;
+      }
+      const bucket = obligationsByStudentId.get(studentId) ?? [];
+      bucket.push(obligation);
+      obligationsByStudentId.set(studentId, bucket);
+    }
+
+    return {
+      schoolFees,
+      obligationsByStudentId,
+      paidByObligationId,
+      creditsByStudentId,
+      arrearsCutoff,
+    };
+  }
+
+  private async buildStudentRowsBatch(
+    students: Student[],
+    query: PeriodFilterQuery | undefined,
+    schoolId: string,
+  ): Promise<FinanceStudentRow[]> {
+    if (students.length === 0) {
+      return [];
+    }
+
+    await this.materializeStudentLedgersBeforeRead(students, schoolId, query);
+
+    const context = await this.loadFinanceBatchContext(
+      schoolId,
+      students.map((student) => student.id),
+    );
+    const termContext = await this.resolveTermFilterContext(query);
+
+    return students.map((student) => {
+      const applicableFees =
+        this.paymentsService.filterApplicableFeeStructuresForStudent(
+          student,
+          context.schoolFees,
+          { ussdEligibleOnly: false },
+        );
+      const prepayment = context.creditsByStudentId.get(student.id) ?? 0;
+      const { lines, totals: globalTotals } =
+        this.feeObligationService.computeFinanceLines(
+          applicableFees,
+          context.obligationsByStudentId.get(student.id) ?? [],
+          context.paidByObligationId,
+          prepayment,
+          context.arrearsCutoff,
+        );
+      const filteredLines = this.filterFeeLines(lines, query, termContext);
+      const periodScoped = this.hasPeriodFilter(query);
+      const totals = periodScoped
+        ? this.computeTotalsFromLines(
+            filteredLines,
+            prepayment,
+            termContext,
+            true,
+          )
+        : globalTotals;
+
+      return this.toFinanceStudentRow(student, totals);
+    });
+  }
+
+  private toFinanceStudentRow(
+    student: Student,
+    totals: StudentFinanceTotals,
+  ): FinanceStudentRow {
     const primaryClass = student.classLevels?.[0] ?? null;
     return {
       studentId: student.id,
@@ -362,29 +731,25 @@ export class FinanceService {
     }
 
     const students = await qb.getMany();
-    const rows: FinanceStudentRow[] = [];
-    const balanceStatus = query.balanceStatus ?? 'all';
-    for (const student of students) {
-      const row = await this.buildStudentRow(student);
-      if (this.matchesBalanceStatus(row, balanceStatus)) {
-        rows.push(row);
-      }
-    }
-    return rows;
+    return this.buildStudentRowsBatch(students, query, schoolId);
   }
 
   private async buildSchoolSummary(
     schoolId: string,
     query: FinanceQueryDto,
   ): Promise<FinanceSchoolSummary> {
-    // Summary respects class/search filters but not balanceStatus (school-wide filtered cohort).
+    const balanceStatus = query.balanceStatus ?? 'all';
     const summaryQuery: FinanceQueryDto = {
       ...query,
-      balanceStatus: 'all',
       page: 1,
       limit: 1_000_000,
     };
-    const rows = await this.collectFilteredRows(schoolId, summaryQuery);
+    let rows = await this.collectFilteredRows(schoolId, summaryQuery);
+    if (balanceStatus !== 'all') {
+      rows = rows.filter((row) =>
+        this.matchesBalanceStatus(row, balanceStatus),
+      );
+    }
     return this.summarizeRows(rows);
   }
 

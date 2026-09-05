@@ -314,6 +314,39 @@ export const useParentAcademics = (
   return { academics, isLoading, isFetching, error, refetch };
 };
 
+export const useParentFinance = (
+  studentId?: string,
+  enabled = true,
+  filters?: {
+    academicTermId?: string;
+    academicCalendarId?: string;
+  },
+) => {
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["parent-finance", studentId, filters],
+    queryFn: () =>
+      customAPI.get(
+        `/parent/finance${optionalParams({
+          studentId,
+          academicTermId: filters?.academicTermId,
+          academicCalendarId: filters?.academicCalendarId,
+        })}`,
+      ),
+    enabled,
+    retry: (failureCount, error) =>
+      !isParentChildAccessError(error) && failureCount < 2,
+  });
+
+  const rows = data?.data;
+  const finance: ParentFinanceChild[] = Array.isArray(rows)
+    ? rows
+    : rows
+      ? [rows as ParentFinanceChild]
+      : [];
+
+  return { finance, isLoading, isFetching, error, refetch };
+};
+
 export const useParentPerformanceAnalytics = (
   params: { academicTermId?: string; studentId?: string },
   enabled = true,
@@ -340,26 +373,6 @@ export const useParentPerformanceAnalytics = (
       : [];
 
   return { performanceAnalytics, isLoading, isFetching, error, refetch };
-};
-
-export const useParentFinance = (studentId?: string, enabled = true) => {
-  const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["parent-finance", studentId],
-    queryFn: () =>
-      customAPI.get(`/parent/finance${optionalParams({ studentId })}`),
-    enabled,
-    retry: (failureCount, error) =>
-      !isParentChildAccessError(error) && failureCount < 2,
-  });
-
-  const rows = data?.data;
-  const finance: ParentFinanceChild[] = Array.isArray(rows)
-    ? rows
-    : rows
-      ? [rows as ParentFinanceChild]
-      : [];
-
-  return { finance, isLoading, isFetching, error, refetch };
 };
 
 export const useParentPaymentReceipt = (

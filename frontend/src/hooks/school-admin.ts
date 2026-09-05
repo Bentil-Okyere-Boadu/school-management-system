@@ -63,9 +63,11 @@ import {
   FinanceStudentsListParams,
   PaginatedFinanceStudentsResponse,
   FinanceStudentRow,
+  FinanceSchoolSummary,
   FinanceClassesResponse,
   FinanceClassRow,
   FinanceStudentDetailResponse,
+  FinanceStudentDetailFilters,
 } from "@/@types";
 
 export const useGetMySchool = (enabled: boolean = true) => {
@@ -2410,12 +2412,14 @@ export const useGetSchoolPayments = (params: SchoolPaymentsListParams, queryEnab
     studentId = "",
     dateFrom = "",
     dateTo = "",
+    academicTermId = "",
+    academicCalendarId = "",
   } = params;
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
       "schoolPayments",
-      { page, limit, search, status, studentId, dateFrom, dateTo },
+      { page, limit, search, status, studentId, dateFrom, dateTo, academicTermId, academicCalendarId },
     ],
     queryFn: () => {
       const queryBuilder: string[] = [];
@@ -2426,6 +2430,14 @@ export const useGetSchoolPayments = (params: SchoolPaymentsListParams, queryEnab
       if (studentId) queryBuilder.push(`studentId=${encodeURIComponent(studentId)}`);
       if (dateFrom) queryBuilder.push(`dateFrom=${encodeURIComponent(dateFrom)}`);
       if (dateTo) queryBuilder.push(`dateTo=${encodeURIComponent(dateTo)}`);
+      if (academicTermId) {
+        queryBuilder.push(`academicTermId=${encodeURIComponent(academicTermId)}`);
+      }
+      if (academicCalendarId) {
+        queryBuilder.push(
+          `academicCalendarId=${encodeURIComponent(academicCalendarId)}`
+        );
+      }
       return customAPI.get(`/payments/my-school?${queryBuilder.join("&")}`);
     },
     enabled: queryEnabled,
@@ -2469,29 +2481,19 @@ export const useGetFinanceStudents = (
     search = "",
     classLevelId = "",
     balanceStatus = "all",
+    academicTermId = "",
+    academicCalendarId = "",
   } = params;
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
       "financeStudents",
-      { page, limit, search, classLevelId, balanceStatus },
+      { page, limit, search, classLevelId, balanceStatus, academicTermId, academicCalendarId },
     ],
-    queryFn: () => {
-      const queryBuilder: string[] = [];
-      queryBuilder.push(`page=${page}`);
-      queryBuilder.push(`limit=${limit}`);
-      if (search) queryBuilder.push(`search=${encodeURIComponent(search)}`);
-      if (classLevelId)
-        queryBuilder.push(`classLevelId=${encodeURIComponent(classLevelId)}`);
-      if (balanceStatus && balanceStatus !== "all") {
-        queryBuilder.push(
-          `balanceStatus=${encodeURIComponent(balanceStatus)}`
-        );
-      }
-      return customAPI.get(
-        `/finance/my-school/students?${queryBuilder.join("&")}`
-      );
-    },
+    queryFn: () =>
+      customAPI.get(
+        `/finance/my-school/students?${buildFinanceQueryString(params)}`
+      ),
     enabled: queryEnabled,
     refetchOnWindowFocus: true,
   });
@@ -2504,10 +2506,125 @@ export const useGetFinanceStudents = (
   return { students, meta, summary, isLoading, refetch };
 };
 
-export const useGetFinanceClasses = (queryEnabled: boolean = true) => {
+function buildFinanceQueryString(
+  params: FinanceStudentsListParams,
+  options?: { includeSummary?: boolean }
+): string {
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    classLevelId = "",
+    balanceStatus = "all",
+    academicTermId = "",
+    academicCalendarId = "",
+  } = params;
+
+  const queryBuilder: string[] = [];
+  queryBuilder.push(`page=${page}`);
+  queryBuilder.push(`limit=${limit}`);
+  if (search) queryBuilder.push(`search=${encodeURIComponent(search)}`);
+  if (classLevelId)
+    queryBuilder.push(`classLevelId=${encodeURIComponent(classLevelId)}`);
+  if (balanceStatus && balanceStatus !== "all") {
+    queryBuilder.push(`balanceStatus=${encodeURIComponent(balanceStatus)}`);
+  }
+  if (academicTermId) {
+    queryBuilder.push(`academicTermId=${encodeURIComponent(academicTermId)}`);
+  }
+  if (academicCalendarId) {
+    queryBuilder.push(
+      `academicCalendarId=${encodeURIComponent(academicCalendarId)}`
+    );
+  }
+  if (options?.includeSummary) {
+    queryBuilder.push("includeSummary=true");
+  }
+  return queryBuilder.join("&");
+}
+
+function buildFinanceFilterQueryString(
+  params: Omit<FinanceStudentsListParams, "page" | "limit">
+): string {
+  const {
+    search = "",
+    classLevelId = "",
+    balanceStatus = "all",
+    academicTermId = "",
+    academicCalendarId = "",
+  } = params;
+
+  const queryBuilder: string[] = [];
+  if (search) queryBuilder.push(`search=${encodeURIComponent(search)}`);
+  if (classLevelId)
+    queryBuilder.push(`classLevelId=${encodeURIComponent(classLevelId)}`);
+  if (balanceStatus && balanceStatus !== "all") {
+    queryBuilder.push(`balanceStatus=${encodeURIComponent(balanceStatus)}`);
+  }
+  if (academicTermId) {
+    queryBuilder.push(`academicTermId=${encodeURIComponent(academicTermId)}`);
+  }
+  if (academicCalendarId) {
+    queryBuilder.push(
+      `academicCalendarId=${encodeURIComponent(academicCalendarId)}`
+    );
+  }
+  return queryBuilder.join("&");
+}
+
+export const useGetFinanceSummary = (
+  params: Omit<FinanceStudentsListParams, "page" | "limit">,
+  queryEnabled: boolean = true
+) => {
+  const {
+    search = "",
+    classLevelId = "",
+    balanceStatus = "all",
+    academicTermId = "",
+    academicCalendarId = "",
+  } = params;
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["financeClasses"],
-    queryFn: () => customAPI.get("/finance/my-school/classes"),
+    queryKey: [
+      "financeSummary",
+      { search, classLevelId, balanceStatus, academicTermId, academicCalendarId },
+    ],
+    queryFn: () => {
+      const query = buildFinanceFilterQueryString(params);
+      return customAPI.get(
+        `/finance/my-school/summary${query ? `?${query}` : ""}`
+      );
+    },
+    enabled: queryEnabled,
+    refetchOnWindowFocus: true,
+  });
+
+  const summary = data?.data as FinanceSchoolSummary | undefined;
+  return { summary, isLoading, refetch };
+};
+
+export const useGetFinanceClasses = (
+  params?: Pick<FinanceStudentsListParams, "academicTermId" | "academicCalendarId">,
+  queryEnabled: boolean = true
+) => {
+  const academicTermId = params?.academicTermId ?? "";
+  const academicCalendarId = params?.academicCalendarId ?? "";
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["financeClasses", { academicTermId, academicCalendarId }],
+    queryFn: () => {
+      const queryBuilder: string[] = [];
+      if (academicTermId) {
+        queryBuilder.push(`academicTermId=${encodeURIComponent(academicTermId)}`);
+      }
+      if (academicCalendarId) {
+        queryBuilder.push(
+          `academicCalendarId=${encodeURIComponent(academicCalendarId)}`
+        );
+      }
+      const query = queryBuilder.length ? `?${queryBuilder.join("&")}` : "";
+      return customAPI.get(`/finance/my-school/classes${query}`);
+    },
     enabled: queryEnabled,
     refetchOnWindowFocus: true,
   });
@@ -2520,14 +2637,32 @@ export const useGetFinanceClasses = (queryEnabled: boolean = true) => {
 
 export const useGetFinanceStudentDetail = (
   studentId: string | null,
-  enabled: boolean = true
+  enabled: boolean = true,
+  filters?: FinanceStudentDetailFilters
 ) => {
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["financeStudentDetail", studentId],
-    queryFn: () =>
-      customAPI.get(
-        `/finance/my-school/students/${encodeURIComponent(studentId as string)}`
-      ),
+    queryKey: ["financeStudentDetail", studentId, filters],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filters?.academicTermId) {
+        params.set("academicTermId", filters.academicTermId);
+      }
+      if (filters?.academicCalendarId) {
+        params.set("academicCalendarId", filters.academicCalendarId);
+      }
+      if (filters?.paymentPage) {
+        params.set("paymentPage", String(filters.paymentPage));
+      }
+      if (filters?.paymentLimit) {
+        params.set("paymentLimit", String(filters.paymentLimit));
+      }
+      const query = params.toString();
+      return customAPI.get(
+        `/finance/my-school/students/${encodeURIComponent(studentId as string)}${
+          query ? `?${query}` : ""
+        }`
+      );
+    },
     enabled: Boolean(studentId) && enabled,
     refetchOnWindowFocus: false,
   });

@@ -46,6 +46,18 @@ export class PaymentQueryDto {
   @IsString()
   feeStructureId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by academic term UUID' })
+  @IsOptional()
+  @IsString()
+  academicTermId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by academic calendar (school year) UUID',
+  })
+  @IsOptional()
+  @IsString()
+  academicCalendarId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsDateString()

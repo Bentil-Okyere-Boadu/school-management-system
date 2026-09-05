@@ -156,11 +156,14 @@ const ParentDashboard = () => {
   }, [calendarId, calendars, childrenLoading, isTabFromUrlValid, me?.school, month, replaceParams, searchParams, tabFromUrl, termId, year]);
 
   const { overview, isLoading: overviewLoading, error: overviewError } =
-    useParentOverview({
-      studentId: apiStudentId,
-      calendarId: calendarId || undefined,
-      termId: termId || undefined,
-    });
+    useParentOverview(
+      {
+        studentId: apiStudentId,
+        calendarId: calendarId || undefined,
+        termId: termId || undefined,
+      },
+      hasChildren && Boolean(termId),
+    );
 
   const attendanceMonth = Number.isFinite(month) ? month : now.getMonth() + 1;
   const attendanceYear = Number.isFinite(year) ? year : now.getFullYear();
@@ -176,7 +179,14 @@ const ParentDashboard = () => {
     );
 
   const { finance, isLoading: financeLoading, error: financeError } =
-    useParentFinance(apiStudentId, hasChildren);
+    useParentFinance(
+      apiStudentId,
+      hasChildren && Boolean(termId),
+      {
+        academicCalendarId: calendarId || undefined,
+        academicTermId: termId || undefined,
+      },
+    );
 
   const {
     performanceAnalytics,
@@ -251,7 +261,7 @@ const ParentDashboard = () => {
           text="Pay fees"
           icon={<IconWallet size={16} />}
           onClick={() => openPay()}
-          disabled={!hasOutstanding}
+          disabled={!hasOutstanding || financeLoading}
           className="print:hidden py-[4px] px-[8px]"
         />
       </div>

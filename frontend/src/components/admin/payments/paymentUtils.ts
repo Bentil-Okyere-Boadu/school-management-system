@@ -1,4 +1,6 @@
 import {
+  FinanceRecentPayment,
+  PaymentAppliedFee,
   SchoolPaymentAllocation,
   SchoolPaymentTransaction,
   SchoolPaymentTransactionStatus,
@@ -96,6 +98,38 @@ export function feeLabel(allocation: SchoolPaymentAllocation): string {
   const fs = allocation.feeStructure;
   if (!fs) return "Fee";
   return fs.feeTitle?.trim() || fs.feeType || "Fee";
+}
+
+export function paymentPeriodLabel(
+  payment: Pick<
+    SchoolPaymentTransaction | FinanceRecentPayment,
+    "periodLabel" | "appliedFees" | "periodLabels"
+  >
+): string {
+  if (payment.periodLabel?.trim()) {
+    return payment.periodLabel.trim();
+  }
+  if (payment.periodLabels?.length) {
+    return payment.periodLabels.join(" · ");
+  }
+  const applied = payment.appliedFees ?? [];
+  const labels = [
+    ...new Set(
+      applied
+        .map((fee) => fee.periodLabel?.trim())
+        .filter((label): label is string => Boolean(label && label !== "—"))
+    ),
+  ];
+  return labels.join(" · ");
+}
+
+export function paymentAppliedFeesPreview(
+  appliedFees: PaymentAppliedFee[] | undefined,
+  maxLines = 2
+): { lines: string[]; more: number } {
+  const list = appliedFees ?? [];
+  const lines = list.slice(0, maxLines).map((fee) => fee.feeTitle);
+  return { lines, more: Math.max(0, list.length - maxLines) };
 }
 
 export function allocationSummaryLine(

@@ -66,7 +66,7 @@ import { StudentAnalyticsModule } from './student-analytics/student-analytics.mo
       entities: [__dirname + '/**/*.entity.{ts,js}'],
       synchronize: true,
       // ssl: {
-      //   rejectUnauthorized : false,
+      //   rejectUnauthorized: false,
       // },
       logging: false,
     }),

@@ -65,12 +65,8 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
   const activeTermId = selectedTerm?.id ?? termId ?? "";
 
   const payableChildren = useMemo(
-    () =>
-      finance.filter(
-        (child) =>
-          termOutstanding(child, activeTermId, selectedTerm?.termName) > 0,
-      ),
-    [activeTermId, finance, selectedTerm?.termName],
+    () => finance.filter((child) => termOutstanding(child) > 0),
+    [finance],
   );
 
   const [step, setStep] = useState<PayStep>("select");
@@ -122,7 +118,7 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
     const defaults = Object.fromEntries(
       payableChildren.map((child) => [
         child.studentId,
-        termOutstanding(child, activeTermId, selectedTerm?.termName).toFixed(2),
+        termOutstanding(child).toFixed(2),
       ]),
     );
     const preferred =
@@ -142,7 +138,6 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
     open,
     payableChildren,
     preselectStudentId,
-    selectedTerm?.termName,
     step,
   ]);
 
@@ -204,8 +199,6 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
       childrenPayload.some((child) => {
         const max = termOutstanding(
           payableChildren.find((row) => row.studentId === child.studentId)!,
-          activeTermId,
-          selectedTerm?.termName,
         );
         return (
           !Number.isFinite(child.amount) ||
@@ -360,11 +353,7 @@ export const ParentPayFeesDrawer: React.FC<ParentPayFeesDrawerProps> = ({
               <ul className="space-y-3">
                 {payableChildren.map((child) => {
                   const selected = selectedIds.includes(child.studentId);
-                  const max = termOutstanding(
-                    child,
-                    activeTermId,
-                    selectedTerm?.termName,
-                  );
+                  const max = termOutstanding(child);
                   return (
                     <li key={child.studentId}>
                       <div

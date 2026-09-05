@@ -1,4 +1,5 @@
-import type { Calendar, Term } from "@/@types";
+import type { Calendar, SchoolPaymentTransaction, Term } from "@/@types";
+import { paymentPeriodLabel } from "@/components/admin/payments/paymentUtils";
 import type { ParentFinanceChild } from "@/hooks/parent";
 
 export const ALL_CHILDREN_VALUE = "all";
@@ -14,26 +15,7 @@ export function fullName(firstName?: string | null, lastName?: string | null) {
   return `${firstName ?? ""} ${lastName ?? ""}`.trim() || "Ward";
 }
 
-export function termOutstanding(
-  child: ParentFinanceChild,
-  termId?: string,
-  termName?: string,
-): number {
-  const lines = child.feeLines ?? [];
-  if (termId) {
-    const matched = lines.filter(
-      (line) =>
-        line.academicTermId === termId ||
-        (!line.academicTermId &&
-          termName &&
-          line.periodLabel?.toLowerCase() === termName.toLowerCase()),
-    );
-    if (matched.length > 0 || lines.some((line) => line.academicTermId)) {
-      return roundMoney(
-        matched.reduce((sum, line) => sum + (line.outstanding ?? 0), 0),
-      );
-    }
-  }
+export function termOutstanding(child: ParentFinanceChild): number {
   return roundMoney(child.totals?.outstanding ?? 0);
 }
 
@@ -176,15 +158,17 @@ export function financeHistory(child: ParentFinanceChild): Array<{
   date: string | null;
   method: string;
   amount: number;
+  periodLabel: string;
 }> {
   const rows = Array.isArray(child.history)
     ? child.history
     : child.history?.data ?? [];
-  return rows.map((tx) => ({
+  return rows.map((tx: SchoolPaymentTransaction) => ({
     id: tx.id,
     date: tx.paymentDate ?? tx.createdAt,
     method: tx.paymentMethod || tx.provider || "Payment",
     amount: tx.amount,
+    periodLabel: paymentPeriodLabel(tx),
   }));
 }
 
