@@ -43,6 +43,7 @@ const SchoolCardStatus: React.FC<SchoolCardStatusProps> = ({ school }) => {
   const { inviteSchoolAdmin, isInviting } = useInviteSchoolAdmin();
 
   const status = school.provisioningStatus ?? "not_provisioned";
+  const migrationStatus = school.tenantMigrationStatus ?? "ok";
   const summary = school.adminSummary;
   const pendingInvitation = summary?.pendingInvitation ?? null;
   const hasAdmin = (summary?.activeAdmins ?? 0) > 0;
@@ -139,6 +140,33 @@ const SchoolCardStatus: React.FC<SchoolCardStatusProps> = ({ school }) => {
             onClick={handleProvision}
             loading={isProvisioning}
           />
+        </>
+      );
+    }
+
+    if (status === "active" && migrationStatus !== "ok") {
+      const migrationFailed = migrationStatus === "failed";
+      return (
+        <>
+          <span
+            className={`${pillClasses} ${migrationFailed ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-800"}`}
+            title={
+              migrationFailed
+                ? (school.lastTenantMigrationError ?? undefined)
+                : undefined
+            }
+          >
+            {migrationFailed ? "Migration failed" : "Migration pending"}
+          </span>
+          {migrationFailed && (
+            <CustomButton
+              text={isProvisioning ? "Retrying..." : "Retry provision"}
+              variant="outline"
+              className={actionClasses}
+              onClick={handleProvision}
+              loading={isProvisioning}
+            />
+          )}
         </>
       );
     }

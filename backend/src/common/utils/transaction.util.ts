@@ -14,7 +14,15 @@ export class TransactionUtil {
   ): Promise<T> {
     const store = this.tenantConnection?.tryGetStore();
     if (store) {
-      return fn(store.manager);
+      await store.queryRunner.startTransaction();
+      try {
+        const result = await fn(store.manager);
+        await store.queryRunner.commitTransaction();
+        return result;
+      } catch (error) {
+        await store.queryRunner.rollbackTransaction();
+        throw error;
+      }
     }
 
     const queryRunner = this.dataSource.createQueryRunner();

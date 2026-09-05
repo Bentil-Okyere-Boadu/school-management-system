@@ -23,7 +23,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:tenant-proof": "jest --config ./test/jest-e2e.json --runInBand --testPathPattern=\"tenant-search-path|tenant-provisioner|tenant-routing|tenant-identity|tenant-cutover|tenant-pin-onboarding|tenant-oversight|tenant-parent-admin-prelogin\"",
+    "test:tenant-proof": "jest --config ./test/jest-e2e.json --runInBand --testPathPattern=\"tenant-search-path|tenant-provisioner|tenant-routing|tenant-identity|tenant-cutover|tenant-pin-onboarding|tenant-oversight|tenant-parent-admin-prelogin|tenant-admin-eligibility\"",
     "test:tenant-lifecycle": "jest --config ./test/jest-e2e.json --runInBand tenant-schema-lifecycle.e2e-spec.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",

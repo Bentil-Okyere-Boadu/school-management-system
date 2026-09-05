@@ -171,7 +171,9 @@ export class SuperAdminService {
   ): Promise<SchoolWithAdminSummary[]> {
     const schoolIds = schools.map((school) => school.id);
     const [adminCounts, pendingInvitations] = await Promise.all([
-      this.tenantDirectory.countByUserTypeForSchools('school_admin', schoolIds),
+      this.tenantDirectory.countByUserTypeForSchools('school_admin', schoolIds, {
+        loginEligibleOnly: true,
+      }),
       this.tenantOnboarding.findPendingSchoolAdminInvitations(schoolIds),
     ]);
 
@@ -353,7 +355,13 @@ export class SuperAdminService {
       }
       admin.isArchived = archive;
       admin.status = archive ? 'archived' : 'active';
-      return this.adminRepository.save(admin);
+      const saved = await this.adminRepository.save(admin);
+      await this.tenantDirectory.setLoginEligible(
+        id,
+        'school_admin',
+        !archive && !admin.isSuspended,
+      );
+      return saved;
     });
   }
 
@@ -369,7 +377,13 @@ export class SuperAdminService {
       }
       admin.isSuspended = suspend;
       admin.status = suspend ? 'suspended' : 'active';
-      return this.adminRepository.save(admin);
+      const saved = await this.adminRepository.save(admin);
+      await this.tenantDirectory.setLoginEligible(
+        id,
+        'school_admin',
+        !suspend && !admin.isArchived,
+      );
+      return saved;
     });
   }
   async findAllArchivedUsers(queryString: QueryString) {

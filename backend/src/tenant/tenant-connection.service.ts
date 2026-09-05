@@ -61,10 +61,9 @@ export class TenantConnectionService {
   ): Promise<T> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
     try {
       await queryRunner.query(
-        `SET LOCAL search_path TO ${quotePgIdent(schemaName)}, public`,
+        `SET search_path TO ${quotePgIdent(schemaName)}, public`,
       );
       const store: TenantStore = {
         schoolId,
@@ -72,13 +71,9 @@ export class TenantConnectionService {
         queryRunner,
         manager: queryRunner.manager,
       };
-      const result = await this.als.run(store, () => fn(queryRunner.manager));
-      await queryRunner.commitTransaction();
-      return result;
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
+      return await this.als.run(store, () => fn(queryRunner.manager));
     } finally {
+      await queryRunner.query(`SET search_path TO public`);
       await queryRunner.release();
     }
   }

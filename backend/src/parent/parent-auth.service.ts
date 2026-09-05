@@ -92,7 +92,10 @@ export class ParentAuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const resolved = await this.preloginTokens.resolve(token, 'password_reset');
+    const resolved = await this.preloginTokens.claimForUse(
+      token,
+      'password_reset',
+    );
     if (resolved.userType !== 'parent') {
       throw new NotFoundException('Invalid or expired token');
     }
@@ -118,7 +121,6 @@ export class ParentAuthService {
       }
     });
 
-    await this.preloginTokens.consume(token, 'password_reset');
     return { success: true };
   }
 

@@ -68,32 +68,58 @@ export class TenantUserLookupService {
       return null;
     }
     return this.tenantConnection.runForSchoolId(schoolId, async (manager) => {
+      let user: SchoolAdmin | Teacher | Student | Parent | null = null;
+
       if (userType === 'school_admin') {
-        return manager.findOne(SchoolAdmin, {
+        user = await manager.findOne(SchoolAdmin, {
+          where: { id: userId },
+          relations: ['role', 'school'],
+        });
+      } else if (userType === 'teacher') {
+        user = await manager.findOne(Teacher, {
+          where: { id: userId },
+          relations: ['role', 'school'],
+        });
+      } else if (userType === 'student') {
+        user = await manager.findOne(Student, {
+          where: { id: userId },
+          relations: ['role', 'school'],
+        });
+      } else if (userType === 'parent') {
+        user = await manager.findOne(Parent, {
           where: { id: userId },
           relations: ['role', 'school'],
         });
       }
-      if (userType === 'teacher') {
-        return manager.findOne(Teacher, {
-          where: { id: userId },
-          relations: ['role', 'school'],
-        });
+
+      if (!user || !this.isRefreshEligible(userType, user)) {
+        return null;
       }
-      if (userType === 'student') {
-        return manager.findOne(Student, {
-          where: { id: userId },
-          relations: ['role', 'school'],
-        });
-      }
-      if (userType === 'parent') {
-        return manager.findOne(Parent, {
-          where: { id: userId },
-          relations: ['role', 'school'],
-        });
-      }
-      return null;
+      return user;
     });
+  }
+
+  private isRefreshEligible(
+    userType: string,
+    user: SchoolAdmin | Teacher | Student | Parent,
+  ): boolean {
+    if (userType === 'school_admin') {
+      const admin = user as SchoolAdmin;
+      return !admin.isSuspended && !admin.isArchived;
+    }
+    if (userType === 'teacher') {
+      const teacher = user as Teacher;
+      return !teacher.isSuspended && !teacher.isArchived;
+    }
+    if (userType === 'student') {
+      const student = user as Student;
+      return !student.isArchived;
+    }
+    if (userType === 'parent') {
+      const parent = user as Parent;
+      return !parent.isSuspended && !parent.isArchived;
+    }
+    return false;
   }
 
   private async findPinUser<T>(

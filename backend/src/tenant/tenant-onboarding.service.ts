@@ -1,12 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { School } from 'src/school/school.entity';
 import { CreateSchoolDto } from 'src/school/dto/create-school.dto';
@@ -20,7 +20,9 @@ import { Role } from 'src/role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { EmailRetryService } from 'src/common/services/email-retry.service';
 import { TenantDirectoryService } from './tenant-directory.service';
-import { tenantSchemaName } from './tenant-schema.util';
+import { tenantSchemaName, quotePgIdent } from './tenant-schema.util';
+
+const STALE_PROVISIONING_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class TenantOnboardingService {
@@ -34,6 +36,7 @@ export class TenantOnboardingService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly provisioner: TenantProvisionerService,
+    private readonly dataSource: DataSource,
     private readonly tenantConnection: TenantConnectionService,
     private readonly tenantDirectory: TenantDirectoryService,
     private readonly emailRetry: EmailRetryService,
@@ -61,6 +64,30 @@ export class TenantOnboardingService {
     if (!school) {
       throw new NotFoundException('School not found');
     }
+
+    if (school.provisioningStatus === SchoolProvisioningStatus.Active) {
+      return school;
+    }
+
+    if (school.provisioningStatus === SchoolProvisioningStatus.Provisioning) {
+      const staleAt = Date.now() - STALE_PROVISIONING_MS;
+      if (school.updatedAt.getTime() > staleAt) {
+        throw new ConflictException(
+          'School provisioning is already in progress',
+        );
+      }
+    }
+
+    if (
+      school.provisioningStatus !== SchoolProvisioningStatus.NotProvisioned &&
+      school.provisioningStatus !== SchoolProvisioningStatus.Failed &&
+      school.provisioningStatus !== SchoolProvisioningStatus.Provisioning
+    ) {
+      throw new BadRequestException(
+        `Cannot reprovision school in status: ${school.provisioningStatus}`,
+      );
+    }
+
     return this.provisioner.provision(school);
   }
 
@@ -229,40 +256,54 @@ export class TenantOnboardingService {
     token: string,
     password: string,
   ): Promise<SchoolAdmin> {
-    const invitation = await this.invitationRepository.findOne({
-      where: { token, accepted: false },
-    });
-    if (!invitation || invitation.expiresAt < new Date()) {
-      throw new BadRequestException('Invalid or expired invitation');
-    }
-    const school = await this.schoolRepository.findOne({
-      where: { id: invitation.schoolId },
-    });
-    if (
-      !school ||
-      school.provisioningStatus !== SchoolProvisioningStatus.Active ||
-      school.isDisabled
-    ) {
-      throw new BadRequestException('School cannot accept invitations');
-    }
-
     const hashed = await bcrypt.hash(password, 10);
     const role = await this.roleRepository.findOne({
       where: { name: 'school_admin' },
     });
 
-    const admin = await this.tenantConnection.runForSchoolId(
-      school.id,
-      async (manager) => {
-        const profile = await manager.save(
-          Profile,
-          manager.create(Profile, {
-            firstName: invitation.firstName,
-            lastName: invitation.lastName,
-            email: invitation.email,
-          }),
-        );
-        const created = manager.create(SchoolAdmin, {
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      const invitation = await qr.manager
+        .createQueryBuilder(PlatformInvitation, 'invitation')
+        .setLock('pessimistic_write')
+        .where('invitation.token = :token AND invitation.accepted = false', {
+          token,
+        })
+        .getOne();
+
+      if (!invitation || invitation.expiresAt < new Date()) {
+        throw new BadRequestException('Invalid or expired invitation');
+      }
+
+      const school = await qr.manager.findOne(School, {
+        where: { id: invitation.schoolId },
+      });
+      if (
+        !school ||
+        school.provisioningStatus !== SchoolProvisioningStatus.Active ||
+        school.isDisabled
+      ) {
+        throw new BadRequestException('School cannot accept invitations');
+      }
+
+      const schemaName = tenantSchemaName(school.id);
+      await qr.query(
+        `SET LOCAL search_path TO ${quotePgIdent(schemaName)}, public`,
+      );
+
+      const profile = await qr.manager.save(
+        Profile,
+        qr.manager.create(Profile, {
+          firstName: invitation.firstName,
+          lastName: invitation.lastName,
+          email: invitation.email,
+        }),
+      );
+      const admin = await qr.manager.save(
+        SchoolAdmin,
+        qr.manager.create(SchoolAdmin, {
           firstName: invitation.firstName,
           lastName: invitation.lastName,
           email: invitation.email,
@@ -272,22 +313,32 @@ export class TenantOnboardingService {
           role: role ?? undefined,
           school,
           profile,
-        });
-        return manager.save(SchoolAdmin, created);
-      },
-    );
+        }),
+      );
 
-    invitation.accepted = true;
-    await this.invitationRepository.save(invitation);
-    await this.directoryRepository.save(
-      this.directoryRepository.create({
-        loginKey: invitation.email,
-        userType: 'school_admin',
-        schoolId: school.id,
-        tenantUserId: admin.id,
-      }),
-    );
-    return admin;
+      await qr.query(`SET LOCAL search_path TO public`);
+
+      invitation.accepted = true;
+      await qr.manager.save(PlatformInvitation, invitation);
+      await qr.manager.save(
+        TenantDirectory,
+        qr.manager.create(TenantDirectory, {
+          loginKey: invitation.email,
+          userType: 'school_admin',
+          schoolId: school.id,
+          tenantUserId: admin.id,
+          loginEligible: true,
+        }),
+      );
+
+      await qr.commitTransaction();
+      return admin;
+    } catch (error) {
+      await qr.rollbackTransaction();
+      throw error;
+    } finally {
+      await qr.release();
+    }
   }
 
   async hasPendingSchoolAdminInvitation(token: string): Promise<boolean> {
@@ -322,7 +373,7 @@ export class TenantOnboardingService {
           where: { id: directory.tenantUserId },
           relations: ['role', 'school'],
         });
-        if (!admin?.password || admin.isSuspended) {
+        if (!admin?.password || admin.isSuspended || admin.isArchived) {
           return null;
         }
         const ok = await bcrypt.compare(password, admin.password);

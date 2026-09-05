@@ -229,6 +229,8 @@ export interface School {
   schemaName?: string;
   provisioningStatus?: "not_provisioned" | "provisioning" | "active" | "failed";
   lastProvisionError?: string | null;
+  tenantMigrationStatus?: "ok" | "pending" | "failed" | string;
+  lastTenantMigrationError?: string | null;
   isDisabled?: boolean;
   adminSummary?: SchoolAdminSummary;
   parentShowScores?: boolean;

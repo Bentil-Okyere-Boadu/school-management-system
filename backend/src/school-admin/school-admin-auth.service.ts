@@ -86,12 +86,15 @@ export class SchoolAdminAuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const resolved = await this.preloginTokens.resolve(token, 'password_reset');
+    const resolved = await this.preloginTokens.claimForUse(
+      token,
+      'password_reset',
+    );
     if (resolved.userType !== 'school_admin') {
       throw new NotFoundException('Invalid or expired token');
     }
 
-    const result = await this.tenantConnection.runForSchoolId(
+    return this.tenantConnection.runForSchoolId(
       resolved.schoolId,
       async (manager) =>
         this.authService.handleResetPassword(
@@ -100,8 +103,5 @@ export class SchoolAdminAuthService {
           manager.getRepository(SchoolAdmin),
         ),
     );
-
-    await this.preloginTokens.consume(token, 'password_reset');
-    return result;
   }
 }

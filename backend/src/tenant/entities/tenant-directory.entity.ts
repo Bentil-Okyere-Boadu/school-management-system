@@ -24,6 +24,9 @@ export class TenantDirectory {
   @Column('uuid')
   tenantUserId: string;
 
+  @Column({ default: true })
+  loginEligible: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 }

@@ -15,6 +15,7 @@ export class TenantDirectoryService {
     userType: TenantDirectory['userType'];
     schoolId: string;
     tenantUserId: string;
+    loginEligible?: boolean;
   }): Promise<void> {
     const loginKey = params.loginKey.trim().toLowerCase();
     const existing = await this.directoryRepository.findOne({
@@ -26,6 +27,9 @@ export class TenantDirectoryService {
     });
     if (existing) {
       existing.tenantUserId = params.tenantUserId;
+      if (params.loginEligible !== undefined) {
+        existing.loginEligible = params.loginEligible;
+      }
       await this.directoryRepository.save(existing);
       return;
     }
@@ -35,6 +39,7 @@ export class TenantDirectoryService {
         userType: params.userType,
         schoolId: params.schoolId,
         tenantUserId: params.tenantUserId,
+        loginEligible: params.loginEligible ?? true,
       }),
     );
   }
@@ -65,18 +70,40 @@ export class TenantDirectoryService {
   async countByUserTypeForSchools(
     userType: TenantDirectory['userType'],
     schoolIds: string[],
+    options?: { loginEligibleOnly?: boolean },
   ): Promise<Map<string, number>> {
     const counts = new Map<string, number>();
     if (schoolIds.length === 0) {
       return counts;
     }
-    const listings = await this.directoryRepository.find({
-      where: { userType, schoolId: In(schoolIds) },
-    });
+    const where: {
+      userType: TenantDirectory['userType'];
+      schoolId: ReturnType<typeof In>;
+      loginEligible?: boolean;
+    } = { userType, schoolId: In(schoolIds) };
+    if (options?.loginEligibleOnly) {
+      where.loginEligible = true;
+    }
+    const listings = await this.directoryRepository.find({ where });
     for (const listing of listings) {
       counts.set(listing.schoolId, (counts.get(listing.schoolId) ?? 0) + 1);
     }
     return counts;
+  }
+
+  async setLoginEligible(
+    tenantUserId: string,
+    userType: TenantDirectory['userType'],
+    loginEligible: boolean,
+  ): Promise<void> {
+    const row = await this.directoryRepository.findOne({
+      where: { tenantUserId, userType },
+    });
+    if (!row) {
+      return;
+    }
+    row.loginEligible = loginEligible;
+    await this.directoryRepository.save(row);
   }
 
   async findByTenantUser(

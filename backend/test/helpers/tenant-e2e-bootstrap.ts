@@ -6,6 +6,10 @@ export async function ensurePlatformSchoolCatalog(
 ): Promise<void> {
   await applyPlatformTables(queryRunner);
   await queryRunner.query(`
+    ALTER TABLE IF EXISTS public.tenant_directory
+      ADD COLUMN IF NOT EXISTS "loginEligible" boolean NOT NULL DEFAULT true
+  `);
+  await queryRunner.query(`
     ALTER TABLE IF EXISTS public.school
       ADD COLUMN IF NOT EXISTS "schemaName" varchar,
       ADD COLUMN IF NOT EXISTS "provisioningStatus" varchar DEFAULT 'not_provisioned',

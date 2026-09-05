@@ -83,11 +83,38 @@ function assertSafePgTableName(name: string): string {
   return name;
 }
 
+async function assertSafeToDropPublicTable(
+  queryRunner: QueryRunner,
+  tableName: string,
+): Promise<void> {
+  if (process.env.ALLOW_PUBLIC_TENANT_TABLE_DROP === 'true') {
+    return;
+  }
+  const safeName = assertSafePgTableName(tableName);
+  const rows: Array<{ count: string }> = await queryRunner.query(
+    `SELECT COUNT(*)::text AS count FROM public."${safeName}"`,
+  );
+  const count = parseInt(rows[0]?.count ?? '0', 10);
+  if (count > 0) {
+    throw new Error(
+      `Refusing to drop public."${safeName}" (${count} rows). ` +
+        'Set ALLOW_PUBLIC_TENANT_TABLE_DROP=true to override.',
+    );
+  }
+}
+
 async function dropPublicTable(
   queryRunner: QueryRunner,
   tableName: string,
 ): Promise<void> {
   const name = assertSafePgTableName(tableName);
+  const exists: Array<{ regclass: string | null }> = await queryRunner.query(
+    `SELECT to_regclass('public."${name}"') AS regclass`,
+  );
+  if (!exists[0]?.regclass) {
+    return;
+  }
+  await assertSafeToDropPublicTable(queryRunner, name);
   await queryRunner.query(`DROP TABLE IF EXISTS public."${name}" CASCADE`);
 }
 
@@ -107,7 +134,7 @@ export async function dropPublicTenantTables(
     `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
   );
   for (const row of leftoverPublic) {
-    if (names.has(row.tablename) || row.tablename.startsWith('planner_')) {
+    if (names.has(row.tablename)) {
       await dropPublicTable(queryRunner, row.tablename);
     }
   }

@@ -153,6 +153,18 @@ Test-only migration steps live under `backend/test/fixtures/tenant-migrations/` 
 
 ---
 
+## Public tenant table drop safety
+
+Platform migrations `1700000000002`–`0004` remove legacy operational tenant tables from `public` via the shared `dropPublicTenantTables` helper. Before dropping a table that still exists, the helper counts rows and **aborts** if any are found unless:
+
+```bash
+ALLOW_PUBLIC_TENANT_TABLE_DROP=true
+```
+
+Use this only on prototype databases where losing leftover `public.student` / `public.teacher` rows is intentional (see ADR-001: no production shared-schema data).
+
+---
+
 ## What tenant migrations never do
 
 - Run on HTTP requests or app startup by default

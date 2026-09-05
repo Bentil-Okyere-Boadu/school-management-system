@@ -47,7 +47,7 @@ export class InvitationService {
    * Generate a random PIN
    */
   generatePin(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return String(randomInt(100000, 1_000_000));
   }
 
   /**

@@ -59,6 +59,37 @@ export class PlatformPreloginTokenService {
     );
   }
 
+  async claimForUse(
+    token: string,
+    purpose: PreloginTokenPurpose,
+  ): Promise<ResolvedPreloginToken> {
+    const rows: Array<{
+      schoolId: string;
+      userType: PreloginUserType;
+      subjectId: string;
+      expiresAt: Date;
+    }> = await this.tokenRepository.query(
+      `UPDATE platform_prelogin_token
+       SET "consumedAt" = NOW()
+       WHERE token = $1
+         AND purpose = $2
+         AND "consumedAt" IS NULL
+         AND "expiresAt" > NOW()
+       RETURNING "schoolId", "userType", "subjectId", "expiresAt"`,
+      [token, purpose],
+    );
+    const row = rows[0];
+    if (!row) {
+      throw new NotFoundException('Invalid or expired token');
+    }
+    return {
+      schoolId: row.schoolId,
+      userType: row.userType,
+      subjectId: row.subjectId,
+      expiresAt: row.expiresAt,
+    };
+  }
+
   async resolve(
     token: string,
     purpose: PreloginTokenPurpose,

@@ -232,7 +232,7 @@ export class ParentLinkService {
   }
 
   async completeParentInvitation(token: string, password: string) {
-    const resolved = await this.preloginTokens.resolve(
+    const resolved = await this.preloginTokens.claimForUse(
       token,
       'parent_invitation',
     );
@@ -241,9 +241,8 @@ export class ParentLinkService {
       () => this.completeParentInvitationInTenant(token, password),
     );
     if (!parent) {
-      return null;
+      throw new BadRequestException('Invalid or expired invitation');
     }
-    await this.preloginTokens.consume(token, 'parent_invitation');
     return parent;
   }
 
@@ -315,7 +314,7 @@ export class ParentLinkService {
   }
 
   async confirmChildByToken(token: string) {
-    const resolved = await this.preloginTokens.resolve(
+    const resolved = await this.preloginTokens.claimForUse(
       token,
       'child_confirmation',
     );
@@ -354,12 +353,10 @@ export class ParentLinkService {
       );
     }
 
-    const saved = await this.tenantConnection.runForSchoolId(
+    return this.tenantConnection.runForSchoolId(
       resolved.schoolId,
       () => this.activateRelationship(link),
     );
-    await this.preloginTokens.consume(token, 'child_confirmation');
-    return saved;
   }
 
   async confirmChildAsParent(parentId: string, linkId: string) {
