@@ -22,6 +22,7 @@ import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateCalendlyUrlDto } from './dto/update-calendly-url.dto';
 import { UpdateParentResultVisibilityDto } from './dto/update-parent-result-visibility.dto';
+import { UpdatePerformanceAnalyticsEnabledDto } from './dto/update-performance-analytics-enabled.dto';
 import { UpdateGradingPercentagesDto } from './dto/update-grading-percentages.dto';
 import { UpdateHubtelMerchantDto } from './dto/update-hubtel-merchant.dto';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
@@ -169,6 +170,24 @@ export class SchoolController {
     );
     return {
       message: 'Parent result visibility updated',
+      school: updatedSchool,
+    };
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Patch('performance-analytics-enabled')
+  @Roles(Role.SchoolAdmin)
+  async updatePerformanceAnalyticsEnabled(
+    @CurrentUser() user: SchoolAdmin,
+    @Body() body: UpdatePerformanceAnalyticsEnabledDto,
+  ) {
+    const updatedSchool =
+      await this.schoolService.updatePerformanceAnalyticsEnabled(
+        user.school.id,
+        body.performanceAnalyticsEnabled,
+      );
+    return {
+      message: 'Performance analytics setting updated',
       school: updatedSchool,
     };
   }

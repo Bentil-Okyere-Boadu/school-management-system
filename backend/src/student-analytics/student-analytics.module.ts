@@ -32,5 +32,6 @@ import { StudentAnalyticsClassController } from './student-analytics-class.contr
     StudentAnalyticsClassController,
   ],
   providers: [StudentAnalyticsService],
+  exports: [StudentAnalyticsService],
 })
 export class StudentAnalyticsModule {}

@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useState } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { HeaderSection } from "@/components/superadmin/HeaderSection";
 import FullPageSpinner from "@/components/common/FullPageSpinner";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DashboardIcon } from "@/utils/icons";
 import { useParentGetMe } from "@/hooks/parent";
 import type { User } from "@/@types";
@@ -13,9 +13,10 @@ const FAMILY_DASHBOARD = "Family Dashboard";
 
 const sidebarItems = [{ icon: DashboardIcon, label: FAMILY_DASHBOARD }];
 
-export const Layout = ({ children }: { children: React.ReactNode }) => {
+const ParentLayoutShell = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [activeMenuItem, setActiveMenuItem] = useState(FAMILY_DASHBOARD);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -25,11 +26,20 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     setActiveMenuItem(FAMILY_DASHBOARD);
-    setIsOverviewPage(pathname === "/parent");
+    setIsOverviewPage(
+      pathname === "/parent" || pathname.startsWith("/parent/payments"),
+    );
   }, [pathname]);
 
-  const handleSidebarClick = () => {
-    router.push("/parent");
+  const handleSidebarClick = (item: string) => {
+    if (item === FAMILY_DASHBOARD) {
+      if (pathname.startsWith("/parent/payments")) {
+        router.push("/parent?tab=finance");
+      } else {
+        const query = searchParams.toString();
+        router.push(query ? `/parent?${query}` : "/parent");
+      }
+    }
     setIsSidebarOpen(false);
   };
 
@@ -71,6 +81,14 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         </main>
       </section>
     </div>
+  );
+};
+
+export const Layout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Suspense fallback={<FullPageSpinner />}>
+      <ParentLayoutShell>{children}</ParentLayoutShell>
+    </Suspense>
   );
 };
 

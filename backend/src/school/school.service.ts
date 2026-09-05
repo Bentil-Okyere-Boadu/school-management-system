@@ -275,6 +275,20 @@ export class SchoolService {
     return this.schoolRepository.save(school);
   }
 
+  async updatePerformanceAnalyticsEnabled(
+    schoolId: string,
+    performanceAnalyticsEnabled: boolean,
+  ): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${schoolId} not found`);
+    }
+    school.performanceAnalyticsEnabled = performanceAnalyticsEnabled;
+    return this.schoolRepository.save(school);
+  }
+
   async updateGradingPercentages(
     schoolId: string,
     classScorePercentage: number,

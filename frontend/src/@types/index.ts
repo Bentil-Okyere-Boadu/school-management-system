@@ -235,6 +235,7 @@ export interface School {
   parentShowGrades?: boolean;
   parentShowLabels?: boolean;
   parentShowFeedback?: boolean;
+  performanceAnalyticsEnabled?: boolean;
 }
 
 export enum AdmissionStatus {
@@ -1056,9 +1057,9 @@ export interface TopicAssignmentGradeDetail {
   submissionId: string;
   assignmentId: string;
   title: string;
-  score: number;
-  maxScore: number;
-  percentage: number;
+  score: number | null;
+  maxScore: number | null;
+  percentage: number | null;
   dueDate: string;
   assignmentType: "online" | "offline";
   submissionStatus: string;

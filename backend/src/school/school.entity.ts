@@ -71,6 +71,9 @@ export class School {
   @Column({ type: 'boolean', default: true })
   parentShowFeedback: boolean;
 
+  @Column({ type: 'boolean', default: true })
+  performanceAnalyticsEnabled: boolean;
+
   @Column({ type: 'varchar', nullable: true, unique: true })
   schemaName: string | null;
 
