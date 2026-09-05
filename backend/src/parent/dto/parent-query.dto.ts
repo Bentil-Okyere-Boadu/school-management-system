@@ -87,3 +87,16 @@ export class ParentAcademicsQueryDto {
   @IsUUID()
   studentId?: string;
 }
+
+export class ParentPerformanceAnalyticsQueryDto {
+  @ApiProperty({ description: 'Academic term to load performance analytics for' })
+  @IsUUID()
+  academicTermId: string;
+
+  @ApiPropertyOptional({
+    description: 'Limit performance analytics to one active child',
+  })
+  @IsOptional()
+  @IsUUID()
+  studentId?: string;
+}

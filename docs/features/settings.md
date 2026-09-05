@@ -16,6 +16,7 @@ Settings is where school admins configure their school — fee structures, brand
 | Edit the Calendly scheduling URL used for admission interview invites. | A success message confirms the URL was saved. |
 | Add, edit, or delete grading system grades and grading percentages. | Success messages appear and the grading tables refresh. |
 | Create, edit, or delete admission policies. | Policy changes save with success messages and the list refreshes. |
+| Check or uncheck **Enable Performance Analytics** and click **Save analytics setting**. | A success or error message appears. When enabled, school admins, teachers, students, and parents can use performance analytics. When disabled, analytics is removed from all of those portals. |
 
 ## Configuration tab
 

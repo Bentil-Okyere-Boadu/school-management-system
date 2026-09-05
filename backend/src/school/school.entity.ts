@@ -98,6 +98,9 @@ export class School {
   @Column({ type: 'boolean', default: true })
   parentShowFeedback: boolean;
 
+  @Column({ type: 'boolean', default: true })
+  performanceAnalyticsEnabled: boolean;
+
   @OneToMany(() => SchoolAdmin, (admin) => admin.school, {
     onDelete: 'CASCADE',
   })

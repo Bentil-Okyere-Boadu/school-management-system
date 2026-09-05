@@ -8,6 +8,11 @@ import { ClassroomIcon, StudentsIcon, ProfileIcon, SubjectIcon, ClipboardIcon, P
 
 import { useTeacherGetMe } from "@/hooks/teacher";
 import NotificationCard from "@/components/common/NotificationCard";
+import {
+  isPerformanceAnalyticsEnabled,
+  isPerformanceAnalyticsEnabledResolved,
+  isPerformanceAnalyticsRoute,
+} from "@/utils/performanceAnalytics";
 
 export const Layout = ({ children }: {children: React.ReactNode}) => {
   const router = useRouter();
@@ -18,7 +23,17 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
   const [isOverviewPage, setIsOverviewPage] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
 
-  const {me} = useTeacherGetMe();
+  const {me, isPending: meLoading} = useTeacherGetMe();
+  const performanceAnalyticsEnabled = isPerformanceAnalyticsEnabled(me?.school, {
+    isLoading: meLoading,
+  });
+
+  useEffect(() => {
+    if (meLoading) return;
+    if (isPerformanceAnalyticsEnabledResolved(me?.school)) return;
+    if (!isPerformanceAnalyticsRoute(pathname, "teacher")) return;
+    router.replace("/teacher/students");
+  }, [me?.school, meLoading, pathname, router]);
 
   const sidebarItems = [
     {
@@ -41,10 +56,14 @@ export const Layout = ({ children }: {children: React.ReactNode}) => {
       icon: PlannerIcon,      
       label: "Planner",
     },
-    {
-      icon: PerformanceIcon,
-      label: "Performance Analytics",
-    },
+    ...(performanceAnalyticsEnabled
+      ? [
+          {
+            icon: PerformanceIcon,
+            label: "Performance Analytics",
+          },
+        ]
+      : []),
     {
       icon: ProfileIcon,      
       label: "Profile",

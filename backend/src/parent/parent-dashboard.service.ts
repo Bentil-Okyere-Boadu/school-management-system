@@ -16,6 +16,7 @@ import { PaymentQueryDto } from 'src/payments/dto/payment-query.dto';
 import { PaymentTransactionStatus } from 'src/payments/entities/payment-transaction.entity';
 import { MessageReminder } from 'src/notification/entities/message-reminder.entity';
 import { ReminderStatus } from 'src/notification/entities/message-reminder.entity';
+import { StudentAnalyticsService } from 'src/student-analytics/student-analytics.service';
 
 @Injectable()
 export class ParentDashboardService {
@@ -26,6 +27,7 @@ export class ParentDashboardService {
     private readonly paymentsService: PaymentsService,
     private readonly academicCalendarService: AcademicCalendarService,
     private readonly subjectService: SubjectService,
+    private readonly studentAnalyticsService: StudentAnalyticsService,
     @InjectRepository(Parent)
     private readonly parentRepository: Repository<Parent>,
     @InjectRepository(ParentStudent)
@@ -295,6 +297,58 @@ export class ParentDashboardService {
             message: 'Confirm this child to grant parent portal access',
             status: link.status,
           })),
+        };
+      }),
+    );
+  }
+
+  async getPerformanceAnalytics(
+    parentId: string,
+    academicTermId: string,
+    studentId?: string,
+  ) {
+    const parent = await this.getMe(parentId);
+    StudentAnalyticsService.assertPerformanceAnalyticsEnabled(parent.school);
+
+    let children = await this.authorization.getActiveChildren(parentId);
+    if (studentId) {
+      const { student } = await this.authorization.requireActiveParentStudent(
+        parentId,
+        studentId,
+      );
+      children = [student];
+    }
+
+    const parentVisibility =
+      this.studentAnalyticsService.getParentVisibilityFromSchool(parent.school);
+
+    return Promise.all(
+      children.map(async (child) => {
+        const raw =
+          await this.studentAnalyticsService.getPerformanceAnalyticsForChild(
+            child.id,
+            academicTermId,
+          );
+        const analytics =
+          this.studentAnalyticsService.maskPerformanceAnalyticsForParent(
+            raw,
+            parentVisibility,
+          );
+
+        return {
+          studentId: child.id,
+          firstName: child.firstName,
+          lastName: child.lastName,
+          studentCode: child.studentId,
+          grade: child.classLevels?.[0]?.name ?? null,
+          photoUrl: child.profile?.avatarUrl ?? null,
+          parentVisibility: {
+            showScores: parentVisibility.showScores,
+            showGrades: parentVisibility.showGrades,
+            showLabels: parentVisibility.showLabels,
+            showFeedback: parentVisibility.showFeedback,
+          },
+          analytics,
         };
       }),
     );

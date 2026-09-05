@@ -6,6 +6,7 @@ import {
   PaginatedSchoolPaymentsResponse,
   SchoolPaymentReceiptDetail,
   SchoolPaymentTransaction,
+  StudentPerformanceAnalytics,
   StudentResultsResponse,
   User,
 } from "@/@types";
@@ -108,6 +109,22 @@ export type ParentAcademicsChild = {
   requiredActions: ParentRequiredAction[];
 };
 
+export type ParentPerformanceAnalyticsChild = {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  studentCode: string;
+  grade: string | null;
+  photoUrl: string | null;
+  parentVisibility?: {
+    showScores: boolean;
+    showGrades: boolean;
+    showLabels: boolean;
+    showFeedback: boolean;
+  };
+  analytics: StudentPerformanceAnalytics | null;
+};
+
 export type ParentFinanceUpcoming = {
   label: string;
   dueDate: string | null;
@@ -179,8 +196,11 @@ export function getParentApiErrorMessage(
 }
 
 export function isParentChildAccessError(error: unknown): boolean {
-  const status = (error as AxiosError)?.response?.status;
-  return status === 403 || status === 404;
+  const axiosError = error as AxiosError<ErrorResponse["response"]["data"]>;
+  if (axiosError?.response?.status !== 403) return false;
+  const message = axiosError.response.data?.message;
+  const text = Array.isArray(message) ? message.join(", ") : message;
+  return text === "You are not authorized to access this student";
 }
 
 function optionalParams(params: Record<string, string | number | undefined>) {
@@ -325,6 +345,34 @@ export const useParentFinance = (
       : [];
 
   return { finance, isLoading, isFetching, error, refetch };
+};
+
+export const useParentPerformanceAnalytics = (
+  params: { academicTermId?: string; studentId?: string },
+  enabled = true,
+) => {
+  const { academicTermId, studentId } = params;
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["parent-performance-analytics", academicTermId, studentId],
+    queryFn: () =>
+      customAPI.get(
+        `/parent/performance-analytics${optionalParams({ academicTermId, studentId })}`,
+      ),
+    enabled: enabled && Boolean(academicTermId),
+    retry: (failureCount, error) =>
+      !isParentChildAccessError(error) && failureCount < 2,
+  });
+
+  const rows = data?.data;
+  const performanceAnalytics: ParentPerformanceAnalyticsChild[] = Array.isArray(
+    rows,
+  )
+    ? rows
+    : rows
+      ? [rows as ParentPerformanceAnalyticsChild]
+      : [];
+
+  return { performanceAnalytics, isLoading, isFetching, error, refetch };
 };
 
 export const useParentPaymentReceipt = (

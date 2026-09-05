@@ -41,6 +41,7 @@ import {
   ParentChildAttendanceQueryDto,
   ParentFinanceQueryDto,
   ParentOverviewQueryDto,
+  ParentPerformanceAnalyticsQueryDto,
 } from './dto/parent-query.dto';
 import { VerifyAndPayPublicPaymentDto } from 'src/integrations/hubtel/dto/initiate-receive-money.dto';
 
@@ -223,6 +224,25 @@ export class ParentController {
     return this.dashboardService.getAcademics(
       parent.id,
       query.calendarId,
+      query.studentId,
+    );
+  }
+
+  @UseGuards(ParentJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.Parent)
+  @Get('performance-analytics')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Read-only assignment performance analytics for active linked children',
+  })
+  getPerformanceAnalytics(
+    @CurrentUser() parent: Parent,
+    @Query() query: ParentPerformanceAnalyticsQueryDto,
+  ) {
+    return this.dashboardService.getPerformanceAnalytics(
+      parent.id,
+      query.academicTermId,
       query.studentId,
     );
   }

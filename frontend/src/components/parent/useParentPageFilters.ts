@@ -55,9 +55,9 @@ export function useParentPageFilters() {
   const handleChildAccessError = useCallback(
     (queryError: unknown) => {
       if (!isParentChildAccessError(queryError)) return;
-      router.replace("/parent");
+      replaceParams({ studentId: undefined });
     },
-    [router],
+    [replaceParams],
   );
 
   return {
