@@ -31,11 +31,10 @@ import { CurriculumModule } from './curriculum/curriculum.module';
 import { PlannerModule } from './planner/planner.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { APP_INTERCEPTOR } from '@nestjs/core';
-import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { PaymentsModule } from './payments/payments.module';
 import { HubtelModule } from './integrations/hubtel/hubtel.module';
 import { StudentAnalyticsModule } from './student-analytics/student-analytics.module';
+import { TenantModule } from './tenant/tenant.module';
 
 @Module({
   imports: [
@@ -64,13 +63,16 @@ import { StudentAnalyticsModule } from './student-analytics/student-analytics.mo
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity.{ts,js}'],
-      synchronize: true,
+      migrations: [__dirname + '/migrations/*.{ts,js}'],
+      migrationsRun: true,
+      synchronize: false,
       // ssl: {
       //   rejectUnauthorized : false,
       // },
       logging: false,
     }),
     CommonModule,
+    TenantModule,
     RoleModule,
     PermissionModule,
     AuthModule,
@@ -105,10 +107,6 @@ import { StudentAnalyticsModule } from './student-analytics/student-analytics.mo
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TenantContextInterceptor,
     },
   ],
 })

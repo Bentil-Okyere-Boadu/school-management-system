@@ -27,7 +27,7 @@ import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.enti
 import { AcademicCalendarService } from 'src/academic-calendar/academic-calendar.service';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
-import { Subject } from 'rxjs';
+import { Subject } from 'src/subject/subject.entity';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 import { ParentModule } from 'src/parent/parent.module';
 import { NotificationModule } from 'src/notification/notification.module';

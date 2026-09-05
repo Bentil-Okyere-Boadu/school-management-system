@@ -53,10 +53,7 @@ export class Student {
   @JoinColumn()
   role: Role;
 
-  @ManyToOne(() => School, (school) => school.students, {
-    onDelete: 'CASCADE',
-    eager: true,
-  })
+  @ManyToOne(() => School, { onDelete: 'CASCADE', eager: true })
   school: School;
 
   @OneToOne(() => Profile, (profile) => profile.student, {
@@ -67,12 +64,6 @@ export class Student {
 
   @Column({ default: 'pending' })
   status: string;
-
-  @Column({ nullable: true })
-  invitationToken: string;
-
-  @Column({ nullable: true })
-  invitationExpires: Date;
 
   @Column({ default: false })
   isInvitationAccepted: boolean;

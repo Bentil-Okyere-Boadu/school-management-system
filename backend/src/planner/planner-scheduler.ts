@@ -16,6 +16,7 @@ import { getContactParents } from '../parent/parent.helpers';
 import { Subject } from '../subject/subject.entity';
 import { SubjectCatalog } from '../subject/subject-catalog.entity';
 import { In } from 'typeorm';
+import { TenantIterationService } from 'src/tenant/tenant-iteration.service';
 import { VisibilityScope } from './entities/event.entity';
 
 @Injectable()
@@ -39,28 +40,30 @@ export class PlannerScheduler {
     private readonly plannerService: PlannerService,
     private readonly emailService: EmailService,
     private readonly smsService: SmsService,
+    private readonly tenantIteration: TenantIterationService,
   ) {}
 
   @Cron('0 2 * * *')
   async cleanupExpiredAssignmentEvents() {
-    // Keep assignment reminders for 7 days after they occur
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 7);
+    await this.tenantIteration.forEachActiveSchool(async () => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7);
 
-    const stale = await this.eventRepository
-      .createQueryBuilder('event')
-      .select('event.id')
-      .innerJoin('event.category', 'category')
-      .where('category.name = :name', { name: 'Class Assignment' })
-      .andWhere('event.startDate <= :cutoff', { cutoff })
-      .getMany();
+      const stale = await this.eventRepository
+        .createQueryBuilder('event')
+        .select('event.id')
+        .innerJoin('event.category', 'category')
+        .where('category.name = :name', { name: 'Class Assignment' })
+        .andWhere('event.startDate <= :cutoff', { cutoff })
+        .getMany();
 
-    if (stale.length === 0) return;
+      if (stale.length === 0) return;
 
-    await this.eventRepository.delete(stale.map((e) => e.id));
-    this.logger.log(
-      `Cleaned up ${stale.length} expired assignment planner events`,
-    );
+      await this.eventRepository.delete(stale.map((e) => e.id));
+      this.logger.log(
+        `Cleaned up ${stale.length} expired assignment planner events`,
+      );
+    });
   }
 
   @Cron(process.env.EVENT_REMINDER_CRON ?? '0 */5 * * * *')
@@ -69,37 +72,39 @@ export class PlannerScheduler {
     this.running = true;
 
     try {
-      const now = new Date();
-      const dueReminders = await this.reminderRepository.find({
-        where: {
-          reminderTime: LessThanOrEqual(now),
-          sent: false,
-        },
-        relations: [
-          'event',
-          'event.category',
-          'event.school',
-          'event.targetClassLevels',
-          'event.targetSubjects',
-        ],
-        take: 50,
-      });
+      await this.tenantIteration.forEachActiveSchool(async () => {
+        const now = new Date();
+        const dueReminders = await this.reminderRepository.find({
+          where: {
+            reminderTime: LessThanOrEqual(now),
+            sent: false,
+          },
+          relations: [
+            'event',
+            'event.category',
+            'event.school',
+            'event.targetClassLevels',
+            'event.targetSubjects',
+          ],
+          take: 50,
+        });
 
-      for (const reminder of dueReminders) {
-        try {
-          await this.sendReminder(reminder);
-          reminder.sent = true;
-          await this.reminderRepository.save(reminder);
-          this.logger.log(
-            `Sent event reminder ${reminder.id} for event ${reminder.event.id}`,
-          );
-        } catch (error) {
-          this.logger.error(
-            `Failed to send reminder ${reminder.id}: ${(error as Error).message}`,
-            error,
-          );
+        for (const reminder of dueReminders) {
+          try {
+            await this.sendReminder(reminder);
+            reminder.sent = true;
+            await this.reminderRepository.save(reminder);
+            this.logger.log(
+              `Sent event reminder ${reminder.id} for event ${reminder.event.id}`,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to send reminder ${reminder.id}: ${(error as Error).message}`,
+              error,
+            );
+          }
         }
-      }
+      });
     } finally {
       this.running = false;
     }

@@ -3,19 +3,21 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Parent } from './parent.entity';
 import { AuthService } from 'src/auth/auth.service';
 import { ParentAccountStatus } from './parent.enums';
-import { normalizeEmail, pickCanonicalParent } from './parent.helpers';
+import { normalizeEmail } from './parent.helpers';
+import { TenantUserLookupService } from 'src/tenant/tenant-user-lookup.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { PlatformPreloginTokenService } from 'src/tenant/platform-prelogin-token.service';
 
 @Injectable()
 export class ParentAuthService {
   constructor(
-    @InjectRepository(Parent)
-    private readonly parentRepository: Repository<Parent>,
+    private readonly tenantUserLookup: TenantUserLookupService,
+    private readonly tenantConnection: TenantConnectionService,
+    private readonly preloginTokens: PlatformPreloginTokenService,
     private readonly authService: AuthService,
   ) {}
 
@@ -25,24 +27,18 @@ export class ParentAuthService {
       return null;
     }
 
-    const candidates = await this.findCandidatesByEmail(normalized);
-
-    const unlocked: Parent[] = [];
-    for (const candidate of candidates) {
-      if (candidate.isSuspended || candidate.isArchived || !candidate.password) {
-        continue;
-      }
-      if (await bcrypt.compare(password, candidate.password)) {
-        unlocked.push(candidate);
-      }
-    }
-    if (unlocked.length === 0) {
+    const parent = await this.tenantUserLookup.findParentByEmail(normalized);
+    if (
+      !parent ||
+      parent.isSuspended ||
+      parent.isArchived ||
+      !parent.password
+    ) {
       return null;
     }
 
-    const parent = pickCanonicalParent(candidates);
-
-    return parent ?? unlocked[0];
+    const ok = await bcrypt.compare(password, parent.password);
+    return ok ? parent : null;
   }
 
   async findByEmail(email: string): Promise<Parent | null> {
@@ -50,16 +46,7 @@ export class ParentAuthService {
     if (!normalized) {
       return null;
     }
-    return pickCanonicalParent(await this.findCandidatesByEmail(normalized));
-  }
-
-  private async findCandidatesByEmail(email: string): Promise<Parent[]> {
-    return this.parentRepository
-      .createQueryBuilder('parent')
-      .leftJoinAndSelect('parent.role', 'role')
-      .leftJoinAndSelect('parent.school', 'school')
-      .where('LOWER(parent.email) = :email', { email })
-      .getMany();
+    return this.tenantUserLookup.findParentByEmail(normalized);
   }
 
   login(parent: Parent) {
@@ -74,38 +61,67 @@ export class ParentAuthService {
       );
     }
     const parent = await this.findByEmail(normalized);
-    if (!parent) {
+    if (!parent?.school?.id) {
       throw new NotFoundException(
         'No user found with the provided credentials',
       );
     }
-    return this.authService.issuePasswordReset(
-      parent,
-      this.parentRepository,
-      '/auth/parent/forgotPassword/resetPassword',
+    const result = await this.tenantConnection.runForSchoolId(
+      parent.school.id,
+      (manager) =>
+        this.authService.issuePasswordReset(
+          parent,
+          manager.getRepository(Parent),
+          '/auth/parent/forgotPassword/resetPassword',
+        ),
     );
+    if (result.resetToken && result.resetTokenExpires) {
+      await this.preloginTokens.register({
+        token: result.resetToken,
+        schoolId: parent.school.id,
+        userType: 'parent',
+        purpose: 'password_reset',
+        subjectId: parent.id,
+        expiresAt: result.resetTokenExpires,
+      });
+    }
+    return {
+      success: result.success,
+      message: result.message,
+    };
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const parent = await this.parentRepository.findOne({
-      where: { resetPasswordToken: token },
-    });
-    const result = await this.authService.handleResetPassword(
+    const resolved = await this.preloginTokens.claimForUse(
       token,
-      newPassword,
-      this.parentRepository,
+      'password_reset',
     );
-    if (
-      parent &&
-      parent.status !== ParentAccountStatus.Suspended &&
-      parent.status !== ParentAccountStatus.Archived
-    ) {
-      await this.parentRepository.update(parent.id, {
-        status: ParentAccountStatus.Active,
-        isInvitationAccepted: true,
-      });
+    if (resolved.userType !== 'parent') {
+      throw new NotFoundException('Invalid or expired token');
     }
-    return result;
+
+    await this.tenantConnection.runForSchoolId(resolved.schoolId, async (manager) => {
+      const parent = await manager.findOne(Parent, {
+        where: { id: resolved.subjectId },
+      });
+      await this.authService.handleResetPassword(
+        token,
+        newPassword,
+        manager.getRepository(Parent),
+      );
+      if (
+        parent &&
+        parent.status !== ParentAccountStatus.Suspended &&
+        parent.status !== ParentAccountStatus.Archived
+      ) {
+        await manager.update(Parent, parent.id, {
+          status: ParentAccountStatus.Active,
+          isInvitationAccepted: true,
+        });
+      }
+    });
+
+    return { success: true };
   }
 
   async assertNotSuspended(email: string) {

@@ -41,10 +41,7 @@ export class Teacher {
   @ManyToOne(() => Role, { eager: true, nullable: true, onDelete: 'SET NULL' })
   role: Role;
 
-  @ManyToOne(() => School, (school) => school.teachers, {
-    eager: true,
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => School, { eager: true, onDelete: 'CASCADE' })
   school: School;
 
   @Column({ default: 'pending' })
@@ -58,12 +55,6 @@ export class Teacher {
 
   @Column({ default: false })
   isInvitationAccepted: boolean;
-
-  @Column({ nullable: true })
-  invitationToken: string;
-
-  @Column({ nullable: true, type: 'timestamp' })
-  invitationExpires: Date;
 
   @CreateDateColumn()
   createdAt: Date;

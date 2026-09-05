@@ -1,17 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SchoolAdmin } from './school-admin.entity';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
 import { AuthService } from 'src/auth/auth.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { PlatformPreloginTokenService } from 'src/tenant/platform-prelogin-token.service';
 
 @Injectable()
 export class SchoolAdminAuthService {
-  //private readonly logger = new Logger(SchoolAdminAuthService.name);
-
   constructor(
-    @InjectRepository(SchoolAdmin)
-    private readonly schoolAdminRepository: Repository<SchoolAdmin>,
+    private readonly tenantOnboarding: TenantOnboardingService,
+    private readonly tenantConnection: TenantConnectionService,
+    private readonly preloginTokens: PlatformPreloginTokenService,
     private readonly authService: AuthService,
   ) {}
 
@@ -19,34 +18,23 @@ export class SchoolAdminAuthService {
     email: string,
     password: string,
   ): Promise<SchoolAdmin | null> {
-    const schoolAdmin = await this.schoolAdminRepository.findOne({
-      where: { email },
-    });
-
-    if (!schoolAdmin) {
-      return null;
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      schoolAdmin.password,
-    );
-
-    if (!isPasswordValid) {
-      return null;
-    }
-
-    if (schoolAdmin.isSuspended) {
-      return null;
-    }
-
-    return schoolAdmin;
+    return this.tenantOnboarding.validateSchoolAdminLogin(email, password);
   }
 
   async findByEmail(email: string): Promise<SchoolAdmin | null> {
-    return this.schoolAdminRepository.findOne({
-      where: { email },
-    });
+    const directory = await this.tenantOnboarding.resolveSchoolAdminDirectory(
+      email,
+    );
+    if (!directory) {
+      return null;
+    }
+    return this.tenantConnection.runForSchoolId(
+      directory.schoolId,
+      async (manager) =>
+        manager.findOne(SchoolAdmin, {
+          where: { id: directory.tenantUserId },
+        }),
+    );
   }
 
   login(schoolAdmin: SchoolAdmin) {
@@ -54,17 +42,66 @@ export class SchoolAdminAuthService {
   }
 
   async forgotPassword(email: string) {
-    return this.authService.handleForgotPassword(
+    const directory = await this.tenantOnboarding.resolveSchoolAdminDirectory(
       email,
-      this.schoolAdminRepository,
     );
+    if (!directory) {
+      throw new NotFoundException('No user found with the provided credentials');
+    }
+
+    const admin = await this.tenantConnection.runForSchoolId(
+      directory.schoolId,
+      async (manager) =>
+        manager.findOne(SchoolAdmin, {
+          where: { id: directory.tenantUserId },
+        }),
+    );
+    if (!admin) {
+      throw new NotFoundException('No user found with the provided credentials');
+    }
+
+    const result = await this.tenantConnection.runForSchoolId(
+      directory.schoolId,
+      async (manager) => {
+        const repo = manager.getRepository(SchoolAdmin);
+        return this.authService.issuePasswordReset(admin, repo);
+      },
+    );
+
+    if (result.resetToken && result.resetTokenExpires) {
+      await this.preloginTokens.register({
+        token: result.resetToken,
+        schoolId: directory.schoolId,
+        userType: 'school_admin',
+        purpose: 'password_reset',
+        subjectId: admin.id,
+        expiresAt: result.resetTokenExpires,
+      });
+    }
+
+    return {
+      success: result.success,
+      message: result.message,
+    };
   }
 
   async resetPassword(token: string, newPassword: string) {
-    return this.authService.handleResetPassword(
+    const resolved = await this.preloginTokens.claimForUse(
       token,
-      newPassword,
-      this.schoolAdminRepository,
+      'password_reset',
+    );
+    if (resolved.userType !== 'school_admin') {
+      throw new NotFoundException('Invalid or expired token');
+    }
+
+    return this.tenantConnection.runForSchoolId(
+      resolved.schoolId,
+      async (manager) =>
+        this.authService.handleResetPassword(
+          token,
+          newPassword,
+          manager.getRepository(SchoolAdmin),
+        ),
     );
   }
 }

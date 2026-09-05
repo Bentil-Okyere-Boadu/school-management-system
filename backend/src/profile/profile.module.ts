@@ -7,6 +7,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SchoolAdminService } from 'src/school-admin/school-admin.service';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
+import { SuperAdminProfile } from 'src/super-admin/super-admin-profile.entity';
 import { SuperAdminService } from 'src/super-admin/super-admin.service';
 import { Student } from 'src/student/student.entity';
 import { StudentModule } from 'src/student/student.module';
@@ -39,6 +40,7 @@ import { NotificationModule } from 'src/notification/notification.module';
       School,
       SchoolAdmin,
       SuperAdmin,
+      SuperAdminProfile,
       Student,
       Teacher,
       Role,

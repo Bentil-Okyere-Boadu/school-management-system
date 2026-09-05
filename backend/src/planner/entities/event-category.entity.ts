@@ -25,9 +25,7 @@ export class EventCategory {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @ManyToOne(() => School, (school) => school.eventCategories, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => School, { onDelete: 'CASCADE' })
   @JoinColumn()
   school: School;
 

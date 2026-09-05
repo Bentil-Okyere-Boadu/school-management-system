@@ -1,5 +1,7 @@
 # Orphaned Users Solution
 
+> **Deprecation note (2026-08-29):** This document describes legacy invitation/cleanup patterns from the shared-schema prototype. School admin invitations now use `public.platform_invitation` and tenant provisioning per [ADR-001](../docs/adr/ADR-001-schema-per-school-tenancy.md). Super Admin invites school admins via `POST /api/v1/invitations/admin`; there is no `InvitationService.inviteAdmin` on the old public tenant path. See current OpenAPI under `backend/docs/invitation.json`.
+
 ## Problem Description
 
 Previously, when email sending failed during user invitation (super admin inviting school admin, school admin inviting teachers/students), the system would create orphaned users in a pending state. These users would remain in the database even though the invitation email was never sent, leading to:

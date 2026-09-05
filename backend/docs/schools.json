@@ -13,28 +13,6 @@
     }
   ],
   "paths": {
-    "/api/v1/schools/create": {
-      "post": {
-        "operationId": "SchoolController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateSchoolDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": ["School"]
-      }
-    },
     "/api/v1/schools": {
       "get": {
         "operationId": "SchoolController_findAll",
@@ -143,6 +121,28 @@
         "tags": ["School"]
       }
     },
+    "/api/v1/schools/parent-result-visibility": {
+      "patch": {
+        "operationId": "SchoolController_updateParentResultVisibility",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParentResultVisibilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
     "/api/v1/schools/{id}/hubtel-merchant": {
       "get": {
         "operationId": "SchoolController_getHubtelMerchant",
@@ -237,29 +237,6 @@
   },
   "components": {
     "schemas": {
-      "CreateSchoolDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "address": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "example": "school@example.com"
-          },
-          "calendlyUrl": {
-            "type": "string",
-            "example": "https://calendly.com/school"
-          }
-        },
-        "required": ["name", "calendlyUrl"]
-      },
       "UpdateCalendlyUrlDto": {
         "type": "object",
         "properties": {
@@ -273,6 +250,29 @@
           }
         },
         "required": ["calendlyUrl", "schoolId"]
+      },
+      "UpdateParentResultVisibilityDto": {
+        "type": "object",
+        "properties": {
+          "parentShowScores": {
+            "type": "boolean"
+          },
+          "parentShowGrades": {
+            "type": "boolean"
+          },
+          "parentShowLabels": {
+            "type": "boolean"
+          },
+          "parentShowFeedback": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parentShowScores",
+          "parentShowGrades",
+          "parentShowLabels",
+          "parentShowFeedback"
+        ]
       },
       "UpdateHubtelMerchantDto": {
         "type": "object",

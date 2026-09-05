@@ -13,12 +13,12 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
 import { InvitationService } from './invitation.service';
 import { InviteUserDto } from './dto/invite-user.dto';
+import { ResendAdminInvitationDto } from './dto/resend-admin-invitation.dto';
 import { InviteStudentDto } from './dto/invite-student.dto';
 import { InviteTeacherDto } from './dto/invite-teacher.dto';
 import { CompleteRegistrationDto } from './dto/complete-registration.dto';
 import { SanitizeResponseInterceptor } from '../common/interceptors/sanitize-response.interceptor';
 import { ActiveUserGuard } from '../auth/guards/active-user.guard';
-import { ForgotPinDto } from './dto/forgot-pin.dto';
 import { SuperAdminJwtAuthGuard } from 'src/super-admin/guards/super-admin-jwt-auth.guard';
 import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
@@ -27,10 +27,10 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { SchoolAdminAuthService } from 'src/school-admin/school-admin-auth.service';
 import { TeacherService } from 'src/teacher/teacher.service';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { Teacher } from 'src/teacher/teacher.entity';
 import { ParentLinkService } from 'src/parent/parent-link.service';
 import { ParentAuthService } from 'src/parent/parent-auth.service';
 import { EmailService } from 'src/common/services/email.service';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
 
 @Controller('invitations')
 @ApiTags('Invitation')
@@ -44,6 +44,7 @@ export class InvitationController {
     private readonly parentLinkService: ParentLinkService,
     private readonly parentAuthService: ParentAuthService,
     private readonly emailService: EmailService,
+    private readonly tenantOnboarding: TenantOnboardingService,
   ) {}
 
   // Superadmin endpoints
@@ -54,17 +55,25 @@ export class InvitationController {
     @Body() inviteUserDto: InviteUserDto,
     @CurrentUser() user: SuperAdmin,
   ) {
-    return this.invitationService.inviteAdmin(inviteUserDto, user);
+    return this.tenantOnboarding.inviteSchoolAdmin({
+      schoolId: inviteUserDto.schoolId,
+      email: inviteUserDto.email,
+      firstName: inviteUserDto.firstName,
+      lastName: inviteUserDto.lastName,
+    });
   }
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SuperAdmin)
-  @Post('admin/resend/:userId')
+  @Post('admin/resend/:invitationId')
   async resendAdminInvitation(
-    @Param('userId') userId: string,
-    @CurrentUser() user: SuperAdmin,
+    @Param('invitationId') invitationId: string,
+    @Body() resendDto: ResendAdminInvitationDto,
   ) {
-    return this.invitationService.resendAdminInvitation(userId, user);
+    return this.tenantOnboarding.resendSchoolAdminInvitation(
+      invitationId,
+      resendDto,
+    );
   }
 
   // School admin endpoints
@@ -83,15 +92,18 @@ export class InvitationController {
   @Post('teacher')
   inviteTeacher(
     @Body() inviteTeacherDto: InviteTeacherDto,
-    @CurrentUser() currentUser: Teacher,
+    @CurrentUser() currentUser: SchoolAdmin,
   ) {
     return this.invitationService.inviteTeacher(inviteTeacherDto, currentUser);
   }
 
-  //tod remove
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SchoolAdmin)
   @Post('student/resend/:userId')
+  @ApiOperation({
+    summary:
+      'Resend PIN email for a pending tenant student. userId is the tenant student id, not a platform_invitation id.',
+  })
   resendStudentInvitation(
     @Param('userId') userId: string,
     @CurrentUser() currentUser: SchoolAdmin,
@@ -102,6 +114,10 @@ export class InvitationController {
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SchoolAdmin)
   @Post('teacher/resend/:userId')
+  @ApiOperation({
+    summary:
+      'Resend PIN email for a pending tenant teacher. userId is the tenant teacher id, not a platform_invitation id.',
+  })
   resendTeacherInvitation(
     @Param('userId') userId: string,
     @CurrentUser() currentUser: SchoolAdmin,
@@ -120,12 +136,16 @@ export class InvitationController {
       throw new BadRequestException('Token and password are required');
     }
 
-    const schoolAdmin = await this.invitationService.completeRegistration(
-      completeRegDto.token,
-      completeRegDto.password,
-    );
-
-    if (schoolAdmin) {
+    if (
+      await this.tenantOnboarding.hasPendingSchoolAdminInvitation(
+        completeRegDto.token,
+      )
+    ) {
+      const schoolAdmin =
+        await this.tenantOnboarding.acceptSchoolAdminInvitation(
+          completeRegDto.token,
+          completeRegDto.password,
+        );
       return this.schoolAdminAuthService.login(schoolAdmin);
     }
 
@@ -140,16 +160,5 @@ export class InvitationController {
     }
     await this.emailService.sendRegistrationConfirmationEmail(parent);
     return this.parentAuthService.login(parent);
-  }
-
-  // PIN reset for students and teachers
-  @Post('forgot-pin')
-  async forgotPin(@Body() forgotPinDto: ForgotPinDto) {
-    // Try to find student with this email first
-    const result = await this.invitationService.forgotPin(forgotPinDto.email);
-
-    // If the student service didn't throw an error, it either found the student
-    // or is returning a generic success response for security
-    return result;
   }
 }

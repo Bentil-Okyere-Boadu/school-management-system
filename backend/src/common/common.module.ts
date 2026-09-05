@@ -10,15 +10,22 @@ import { CleanupController } from './controllers/cleanup.controller';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
+import { PlatformInvitation } from 'src/tenant/entities/platform-invitation.entity';
+import { PlatformPreloginToken } from 'src/tenant/entities/platform-prelogin-token.entity';
 import { TenantContextService } from './tenant/tenant-context.service';
-import { TenantScopedRepositoryService } from './tenant/tenant-scoped-repository.service';
 import { EncryptionService } from './utils/encryption.util';
 
 @Global()
 @Module({
   imports: [
     SmsModule,
-    TypeOrmModule.forFeature([SchoolAdmin, Teacher, Student]),
+    TypeOrmModule.forFeature([
+      SchoolAdmin,
+      Teacher,
+      Student,
+      PlatformInvitation,
+      PlatformPreloginToken,
+    ]),
   ],
   controllers: [CleanupController],
   providers: [
@@ -28,7 +35,6 @@ import { EncryptionService } from './utils/encryption.util';
     CleanupService,
     ScheduledCleanupService,
     TenantContextService,
-    TenantScopedRepositoryService,
     EncryptionService,
   ],
   exports: [
@@ -39,7 +45,6 @@ import { EncryptionService } from './utils/encryption.util';
     CleanupService,
     ScheduledCleanupService,
     TenantContextService,
-    TenantScopedRepositoryService,
     EncryptionService,
   ],
 })

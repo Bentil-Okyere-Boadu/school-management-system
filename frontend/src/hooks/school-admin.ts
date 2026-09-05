@@ -251,6 +251,7 @@ export const useSuspendTeacher = ({
   });
 };
 
+/** Resends a PIN email for a pending tenant student or teacher. `id` is the tenant user id, not a platform_invitation id. */
 export const useResendAdminInvitation = ({
   id,
   role,
@@ -261,20 +262,6 @@ export const useResendAdminInvitation = ({
   return useMutation({
     mutationFn: () => {
       return customAPI.post(`/invitations/${role}/resend/${id}`);
-    },
-  });
-};
-
-export const useCreateSchool = () => {
-  return useMutation({
-    mutationFn: (schoolDetails: {
-      name: string;
-      address: string;
-      phone: string;
-      email: string;
-      calendlyUrl: string;
-    }) => {
-      return customAPI.post(`/schools/create`, schoolDetails);
     },
   });
 };

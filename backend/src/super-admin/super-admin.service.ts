@@ -9,14 +9,33 @@ import { Repository } from 'typeorm';
 import { SuperAdmin } from './super-admin.entity';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { Role } from '../role/role.entity';
+import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { SchoolProvisioningStatus } from 'src/tenant/school-provisioning-status';
 import { APIFeatures, QueryString } from '../common/api-features/api-features';
 import { School } from 'src/school/school.entity';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { ProfileService } from 'src/profile/profile.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { StudentGrade } from 'src/subject/student-grade.entity';
-import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
+import { SuperAdminProfile } from './super-admin-profile.entity';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
+
+export type PendingInvitationView = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  expiresAt: Date;
+};
+
+export type SchoolWithAdminSummary = School & {
+  adminSummary: {
+    activeAdmins: number;
+    pendingInvitation: PendingInvitationView | null;
+  };
+};
 
 @Injectable()
 export class SuperAdminService {
@@ -30,10 +49,13 @@ export class SuperAdminService {
     private schoolRepository: Repository<School>,
     @InjectRepository(StudentGrade)
     private studentGradeRepository: Repository<StudentGrade>,
-    @InjectRepository(AcademicTerm)
-    private academicTermRepository: Repository<AcademicTerm>,
     private readonly profileService: ProfileService,
     private readonly objectStorageService: ObjectStorageServiceService,
+    private readonly tenantDirectory: TenantDirectoryService,
+    private readonly tenantConnection: TenantConnectionService,
+    private readonly tenantOnboarding: TenantOnboardingService,
+    @InjectRepository(SuperAdminProfile)
+    private superAdminProfileRepository: Repository<SuperAdminProfile>,
   ) {}
 
   async findAllUsers(queryString: QueryString) {
@@ -42,56 +64,47 @@ export class SuperAdminService {
       isArchived = true;
     }
 
-    const baseQuery = this.adminRepository
-      .createQueryBuilder('admin')
-      .leftJoinAndSelect('admin.role', 'role')
-      .leftJoinAndSelect('admin.school', 'school')
-      .leftJoinAndSelect('admin.profile', 'profile')
-      .where('admin.isArchived = :isArchived', { isArchived });
+    const listings = await this.tenantDirectory.findAllByUserType(
+      'school_admin',
+    );
 
-    const featuresWithoutPagination = new APIFeatures(
-      baseQuery.clone(),
-      queryString,
-    )
-      .filter()
-      .sort()
-      .search(['firstName', 'lastName', 'email'])
-      .limitFields();
-
-    const total = await featuresWithoutPagination.getQuery().getCount();
-
-    const featuresWithPagination = featuresWithoutPagination.paginate();
-    const data = await featuresWithPagination.getQuery().getMany();
-
-    const profileIds = data
-      .map((admin) => admin.profile?.id)
-      .filter((id): id is string => !!id);
-
-    const profilesWithUrls =
-      await this.profileService.getProfilesWithImageUrls(profileIds);
-
-    const profileUrlMap = new Map(profilesWithUrls.map((p) => [p.id, p]));
-
-    for (const admin of data) {
-      if (admin.profile?.id) {
-        const enrichedProfile = profileUrlMap.get(admin.profile.id);
-        if (enrichedProfile) {
-          admin.profile = enrichedProfile;
-        }
+    const data: SchoolAdmin[] = [];
+    for (const dir of listings) {
+      const admin = await this.tenantConnection.runForSchoolId(
+        dir.schoolId,
+        () =>
+          this.adminRepository.findOne({
+            where: { id: dir.tenantUserId },
+            relations: ['role', 'school', 'profile'],
+          }),
+      );
+      if (admin && admin.isArchived === isArchived) {
+        data.push(admin);
       }
     }
 
+    const search = (queryString.search ?? '').toLowerCase();
+    const filtered = search
+      ? data.filter(
+          (admin) =>
+            admin.firstName?.toLowerCase().includes(search) ||
+            admin.lastName?.toLowerCase().includes(search) ||
+            admin.email?.toLowerCase().includes(search),
+        )
+      : data;
+
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
-    const totalPages = Math.ceil(total / limit);
+    const start = (page - 1) * limit;
+    const pageData = filtered.slice(start, start + limit);
 
     return {
-      data,
+      data: pageData,
       meta: {
-        total,
+        total: filtered.length,
         page,
         limit,
-        totalPages,
+        totalPages: Math.ceil(filtered.length / limit) || 1,
       },
     };
   }
@@ -131,12 +144,14 @@ export class SuperAdminService {
       }),
     );
 
+    const withAdminSummary = await this.attachAdminSummary(schools);
+
     const page = parseInt(queryString.page ?? '1', 10);
     const limit = parseInt(queryString.limit ?? '20', 10);
     const totalPages = Math.ceil(total / limit || 1);
 
     return {
-      data: schools,
+      data: withAdminSummary,
       meta: {
         total,
         page,
@@ -145,6 +160,44 @@ export class SuperAdminService {
       },
     };
   }
+
+  /**
+   * Both the directory and the invitation table are platform data, so this
+   * reads admin state without opening a tenant connection - schools that are
+   * not provisioned yet have no schema to connect to.
+   */
+  private async attachAdminSummary(
+    schools: School[],
+  ): Promise<SchoolWithAdminSummary[]> {
+    const schoolIds = schools.map((school) => school.id);
+    const [adminCounts, pendingInvitations] = await Promise.all([
+      this.tenantDirectory.countByUserTypeForSchools('school_admin', schoolIds, {
+        loginEligibleOnly: true,
+      }),
+      this.tenantOnboarding.findPendingSchoolAdminInvitations(schoolIds),
+    ]);
+
+    const pendingBySchool = new Map<string, PendingInvitationView>();
+    for (const invitation of pendingInvitations) {
+      pendingBySchool.set(invitation.schoolId, {
+        id: invitation.id,
+        email: invitation.email,
+        firstName: invitation.firstName,
+        lastName: invitation.lastName,
+        expiresAt: invitation.expiresAt,
+      });
+    }
+
+    return schools.map((school) =>
+      Object.assign(school, {
+        adminSummary: {
+          activeAdmins: adminCounts.get(school.id) ?? 0,
+          pendingInvitation: pendingBySchool.get(school.id) ?? null,
+        },
+      }),
+    );
+  }
+
   async getSchoolsPerformance(options?: {
     topThreshold?: number;
     lowThreshold?: number;
@@ -168,31 +221,42 @@ export class SuperAdminService {
 
     for (const school of schools) {
       let grades: StudentGrade[] = [];
-
-      if (scope === 'overall') {
-        grades = await this.studentGradeRepository.find({
-          where: {},
-          relations: ['student', 'student.school'],
+      if (
+        school.provisioningStatus !== SchoolProvisioningStatus.Active ||
+        school.isDisabled
+      ) {
+        results.push({
+          schoolId: school.id,
+          schoolName: school.name,
+          topPerforming: 0,
+          lowPerforming: 0,
         });
-      } else if (scope === 'range') {
-        const fromDate = options?.from ? new Date(options.from) : undefined;
-        const toDate = options?.to ? new Date(options.to) : undefined;
-
-        const qb = this.studentGradeRepository
-          .createQueryBuilder('grade')
-          .leftJoinAndSelect('grade.student', 'student')
-          .leftJoinAndSelect('student.school', 'school');
-        if (fromDate) qb.andWhere('grade.createdAt >= :fromDate', { fromDate });
-        if (toDate) qb.andWhere('grade.createdAt <= :toDate', { toDate });
-        grades = await qb.getMany();
+        continue;
       }
+
+      await this.tenantConnection.runForSchoolId(school.id, async () => {
+        if (scope === 'overall') {
+          grades = await this.studentGradeRepository.find({
+            relations: ['student'],
+          });
+        } else {
+          const fromDate = options?.from ? new Date(options.from) : undefined;
+          const toDate = options?.to ? new Date(options.to) : undefined;
+          const qb = this.studentGradeRepository
+            .createQueryBuilder('grade')
+            .leftJoinAndSelect('grade.student', 'student');
+          if (fromDate) qb.andWhere('grade.createdAt >= :fromDate', { fromDate });
+          if (toDate) qb.andWhere('grade.createdAt <= :toDate', { toDate });
+          grades = await qb.getMany();
+        }
+      });
 
       const perStudentTotals = new Map<
         string,
         { sum: number; count: number }
       >();
       for (const g of grades) {
-        if (g.student?.school?.id !== school.id || g.totalScore == null) continue;
+        if (!g.student || g.totalScore == null) continue;
         const key = g.student.id;
         const current = perStudentTotals.get(key) || { sum: 0, count: 0 };
         current.sum += g.totalScore;
@@ -231,20 +295,25 @@ export class SuperAdminService {
       );
     }
     if (superAdmin?.profile?.id) {
-      const profileWithUrl = await this.profileService.getProfileWithImageUrl(
-        superAdmin.profile.id,
-      );
-      superAdmin.profile = profileWithUrl;
+      // SuperAdminProfile is not tenant Profile; skip signed URL enrichment here.
     }
 
     return superAdmin;
   }
 
   async findOne(id: string) {
-    const admin = await this.adminRepository.findOne({
-      where: { id },
-      relations: ['role', 'school'],
-    });
+    const dir = await this.tenantDirectory.findByTenantUser(id, 'school_admin');
+    if (!dir) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
+    }
+    const admin = await this.tenantConnection.runForSchoolId(
+      dir.schoolId,
+      () =>
+        this.adminRepository.findOne({
+          where: { id },
+          relations: ['role', 'school'],
+        }),
+    );
 
     if (!admin) {
       throw new NotFoundException(`Admin with ID ${id} not found`);
@@ -275,48 +344,82 @@ export class SuperAdminService {
   }
 
   async archive(id: string, archive: boolean) {
-    const admin = await this.findOne(id);
-    admin.isArchived = archive;
-    admin.status = archive ? 'archived' : 'active';
-    return this.adminRepository.save(admin);
+    const dir = await this.tenantDirectory.findByTenantUser(id, 'school_admin');
+    if (!dir) {
+      throw new NotFoundException('School admin not found');
+    }
+    return this.tenantConnection.runForSchoolId(dir.schoolId, async () => {
+      const admin = await this.adminRepository.findOne({ where: { id } });
+      if (!admin) {
+        throw new NotFoundException('School admin not found');
+      }
+      admin.isArchived = archive;
+      admin.status = archive ? 'archived' : 'active';
+      const saved = await this.adminRepository.save(admin);
+      await this.tenantDirectory.setLoginEligible(
+        id,
+        'school_admin',
+        !archive && !admin.isSuspended,
+      );
+      return saved;
+    });
   }
 
   async suspendSchoolAdmin(id: string, suspend: boolean) {
-    const admin = await this.findOne(id);
-    if (!admin) {
+    const dir = await this.tenantDirectory.findByTenantUser(id, 'school_admin');
+    if (!dir) {
       throw new NotFoundException('School admin not found');
     }
-    admin.isSuspended = suspend;
-    admin.status = suspend ? 'suspended' : 'active';
-    return this.adminRepository.save(admin);
+    return this.tenantConnection.runForSchoolId(dir.schoolId, async () => {
+      const admin = await this.adminRepository.findOne({ where: { id } });
+      if (!admin) {
+        throw new NotFoundException('School admin not found');
+      }
+      admin.isSuspended = suspend;
+      admin.status = suspend ? 'suspended' : 'active';
+      const saved = await this.adminRepository.save(admin);
+      await this.tenantDirectory.setLoginEligible(
+        id,
+        'school_admin',
+        !suspend && !admin.isArchived,
+      );
+      return saved;
+    });
   }
   async findAllArchivedUsers(queryString: QueryString) {
-    const query = this.adminRepository
-      .createQueryBuilder('admin')
-      .leftJoinAndSelect('admin.role', 'role')
-      .leftJoinAndSelect('admin.school', 'school')
-      .where('admin.isArchived = :isArchived', { isArchived: true });
-
-    const features = new APIFeatures(query, queryString)
-      .filter()
-      .sort()
-      .search(['firstName', 'lastName', 'email'])
-      .limitFields()
-      .paginate();
-
-    return await features.getQuery().getMany();
+    return this.findAllUsers({ ...queryString, status: 'archived' });
   }
 
   async updateProfile(
     adminId: string,
     updateDto: UpdateProfileDto,
   ): Promise<SuperAdmin> {
-    return this.profileService.handleUpdateProfile(
-      adminId,
-      updateDto,
-      this.superAdminRepository,
-      ['role', 'profile'],
-    );
+    const superAdmin = await this.superAdminRepository.findOne({
+      where: { id: adminId },
+      relations: ['role', 'profile'],
+    });
+    if (!superAdmin) {
+      throw new NotFoundException('Super admin not found');
+    }
+    if (!superAdmin.profile) {
+      superAdmin.profile = this.superAdminProfileRepository.create({
+        firstName: updateDto.firstName,
+        lastName: updateDto.lastName,
+        email: updateDto.email,
+        superAdmin,
+      });
+    } else {
+      Object.assign(superAdmin.profile, {
+        firstName: updateDto.firstName ?? superAdmin.profile.firstName,
+        lastName: updateDto.lastName ?? superAdmin.profile.lastName,
+        email: updateDto.email ?? superAdmin.profile.email,
+      });
+    }
+    Object.assign(superAdmin, {
+      firstName: updateDto.firstName ?? superAdmin.firstName,
+      lastName: updateDto.lastName ?? superAdmin.lastName,
+    });
+    return this.superAdminRepository.save(superAdmin);
   }
 
   getRepository(): Repository<SuperAdmin> {

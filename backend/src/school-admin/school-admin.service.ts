@@ -18,11 +18,12 @@ import { Teacher } from 'src/teacher/teacher.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { AttendanceService } from 'src/attendance/attendance.service';
 import { ClassLevel } from 'src/class-level/class-level.entity';
+import { Admission } from 'src/admission/admission.entity';
 import { Assignment } from 'src/teacher/entities/assignment.entity';
 import { AssignmentSubmission } from 'src/student/entities/assignment-submission.entity';
 import { Subject } from 'src/subject/subject.entity';
 import { TenantContextService } from 'src/common/tenant/tenant-context.service';
-import { TenantScopedRepositoryService } from 'src/common/tenant/tenant-scoped-repository.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
 @Injectable()
 export class SchoolAdminService {
@@ -49,7 +50,7 @@ export class SchoolAdminService {
     @InjectRepository(Subject)
     private subjectRepository: Repository<Subject>,
     private readonly tenantContext: TenantContextService,
-    private readonly tenantScopedRepository: TenantScopedRepositoryService,
+    private readonly tenantConnection: TenantConnectionService,
   ) {}
 
   private resolveSchoolId(schoolId?: string): string {
@@ -321,57 +322,14 @@ export class SchoolAdminService {
 
     const school = await this.schoolRepository.findOne({
       where: { id: user.school.id },
-      relations: [
-        'admissionPolicies',
-        'gradingSystems',
-        'feeStructures',
-        'profile',
-        'academicCalendars',
-        'academicCalendars.terms.holidays',
-        'classLevels',
-        'classLevels.teachers',
-        'classLevels.students',
-        'students',
-        'teachers',
-      ],
     });
 
     if (!school) {
       throw new NotFoundException(`School with ID ${user.school.id} not found`);
     }
 
-    const signedAdmissionPolicies = await Promise.all(
-      school.admissionPolicies.map(async (policy) => {
-        const result = { ...policy } as typeof policy & {
-          documentUrl?: string;
-        };
-        if (policy.documentPath) {
-          try {
-            result.documentUrl = await this.objectStorageService.getSignedUrl(
-              policy.documentPath,
-              86400, // 24 hours
-            );
-          } catch {
-            // If there's an error getting the signed URL, we just continue without it
-            this.logger.warn(
-              `Failed to get signed URL for admission policy document: ${policy.id}`,
-            );
-          }
-        }
-        return result;
-      }),
-    );
-
-    const signedProfile = school.profile
-      ? {
-          ...school.profile,
-          avatarUrl: school.profile.avatarPath
-            ? await this.objectStorageService.getSignedUrl(
-                school.profile.avatarPath,
-              )
-            : undefined,
-        }
-      : undefined;
+    const signedAdmissionPolicies: unknown[] = [];
+    const signedProfile = undefined;
 
     return {
       ...school,
@@ -413,7 +371,6 @@ export class SchoolAdminService {
     const student = await this.studentRepository.findOne({
       where: {
         id: userId,
-        school: { id: resolvedSchoolId },
       },
       relations: [
         'profile',
@@ -453,7 +410,6 @@ export class SchoolAdminService {
     const teacher = await this.teacherRepository.findOne({
       where: {
         id: userId,
-        school: { id: resolvedSchoolId },
       },
       relations: ['role', 'profile', 'school'],
     });
@@ -508,7 +464,7 @@ export class SchoolAdminService {
   ): Promise<Student | null> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     return this.studentRepository.findOne({
-      where: { id, school: { id: resolvedSchoolId } },
+      where: { id },
     });
   }
 
@@ -582,7 +538,7 @@ export class SchoolAdminService {
   async suspendTeacher(teacherId: string, suspend: boolean, schoolId?: string) {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const teacher = await this.teacherRepository.findOne({
-      where: { id: teacherId, school: { id: resolvedSchoolId } },
+      where: { id: teacherId },
     });
 
     if (!teacher) {
@@ -607,7 +563,7 @@ export class SchoolAdminService {
   ): Promise<{ message: string }> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const student = await this.studentRepository.findOne({
-      where: { id: userId, school: { id: resolvedSchoolId } },
+      where: { id: userId },
     });
 
     if (student) {
@@ -615,7 +571,7 @@ export class SchoolAdminService {
     }
 
     const teacher = await this.teacherRepository.findOne({
-      where: { id: userId, school: { id: resolvedSchoolId } },
+      where: { id: userId },
     });
 
     if (teacher) {
@@ -633,7 +589,7 @@ export class SchoolAdminService {
   ): Promise<{ message: string }> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const teacher = await this.teacherRepository.findOne({
-      where: { id: teacherId, school: { id: resolvedSchoolId } },
+      where: { id: teacherId },
       relations: ['profile'],
     });
 
@@ -672,7 +628,7 @@ export class SchoolAdminService {
   ): Promise<{ message: string }> {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
     const student = await this.studentRepository.findOne({
-      where: { id: studentId, school: { id: resolvedSchoolId } },
+      where: { id: studentId },
       relations: ['profile', 'parentStudents', 'parentStudents.parent'],
     });
 
@@ -716,24 +672,19 @@ export class SchoolAdminService {
 
   async getDashboardStats(schoolId?: string) {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);
-    const totalTeachers = await this.tenantScopedRepository.count(
-      this.teacherRepository,
-      { isArchived: false } as Teacher,
-    );
-
-    const totalStudents = await this.tenantScopedRepository.count(
-      this.studentRepository,
-      { isArchived: false } as Student,
-    );
-
-    const admissionRepo =
-      this.schoolRepository.manager.getRepository('Admission');
-    const totalApplications = await admissionRepo.count({
-      where: { school: { id: resolvedSchoolId }, isArchived: false },
+    const totalTeachers = await this.teacherRepository.count({
+      where: { isArchived: false },
     });
 
+    const totalStudents = await this.studentRepository.count({
+      where: { isArchived: false },
+    });
+
+    const totalApplications = await this.tenantConnection.manager
+      .getRepository(Admission)
+      .count({ where: { isArchived: false } });
+
     const classLevels = await this.classLevelRepository.find({
-      where: { school: { id: resolvedSchoolId } },
       relations: ['students'],
     });
 
@@ -1076,7 +1027,7 @@ export class SchoolAdminService {
     }
 
     const classLevel = await classLevelRepository.findOne({
-      where: { id: assignment.classLevel.id, school: { id: admin.school.id } },
+      where: { id: assignment.classLevel.id },
       relations: ['students', 'students.profile'],
     });
 

@@ -32,4 +32,4 @@ User management covers inviting new people to the school or platform, sending lo
 
 - User tables show “No users found” when empty.
 - Invite dialog shows a validation message if required fields are left empty.
-- First-time School Admin login may show a **Create School** dialog that cannot be dismissed until the school profile is submitted.
+- First-time School Admin access is via the **invitation email link** (`/auth/complete-registration?token=...`). After accepting the invitation and setting a password, the admin logs in with JWT `schoolId` set to their school. Super Admin creates schools; School Admin does not use a “Create School” onboarding dialog.

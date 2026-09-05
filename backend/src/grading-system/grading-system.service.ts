@@ -18,7 +18,6 @@ export class GradingSystemService {
    */
   async findAllBySchool(schoolId: string): Promise<GradingSystem[]> {
     return this.gradingSystemRepository.find({
-      where: { school: { id: schoolId } },
       order: { minRange: 'DESC' }, // Sort by minRange in descending order
     });
   }
@@ -60,7 +59,7 @@ export class GradingSystemService {
   ): Promise<GradingSystem> {
     // First check if the grading system item belongs to the school
     const existingGrade = await this.gradingSystemRepository.findOne({
-      where: { id, school: { id: schoolId } },
+      where: { id },
     });
 
     if (!existingGrade) {
@@ -100,7 +99,7 @@ export class GradingSystemService {
   async remove(id: string, schoolId: string): Promise<void> {
     // First check if the grading system item belongs to the school
     const existingGrade = await this.gradingSystemRepository.findOne({
-      where: { id, school: { id: schoolId } },
+      where: { id },
     });
 
     if (!existingGrade) {
@@ -122,9 +121,7 @@ export class GradingSystemService {
     excludeId?: string,
   ): Promise<void> {
     // Create the where clause conditionally
-    const whereClause: any = {
-      school: { id: schoolId },
-    };
+    const whereClause: any = {};
 
     // If excludeId is provided, exclude that grade from the check
     if (excludeId) {

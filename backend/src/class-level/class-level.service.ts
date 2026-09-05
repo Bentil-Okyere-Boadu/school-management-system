@@ -103,7 +103,7 @@ export class ClassLevelService {
     admin: SchoolAdmin,
   ): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
-      where: { id, school: { id: admin.school.id } },
+      where: { id },
       relations: ['teachers', 'students', 'classTeacher'],
     });
 
@@ -124,7 +124,6 @@ export class ClassLevelService {
       const classTeacher = await this.teacherRepository.findOne({
         where: {
           id: updateClassLevelDto.classTeacherId,
-          school: { id: admin.school.id },
         },
       });
       if (!classTeacher) {
@@ -202,7 +201,7 @@ export class ClassLevelService {
   }
   async findOne(id: string, admin: SchoolAdmin): Promise<ClassLevel> {
     const classLevel = await this.classLevelRepository.findOne({
-      where: { id, school: { id: admin.school.id } },
+      where: { id },
       relations: ['teachers', 'students', 'classTeacher'],
     });
 
@@ -214,7 +213,7 @@ export class ClassLevelService {
   }
   async remove(id: string, admin: SchoolAdmin): Promise<{ message: string }> {
     const classLevel = await this.classLevelRepository.findOne({
-      where: { id, school: { id: admin.school.id } },
+      where: { id },
     });
 
     if (!classLevel) {
@@ -234,14 +233,13 @@ export class ClassLevelService {
       return this.academicTermRepository.findOne({
         where: {
           id: academicTermId,
-          academicCalendar: { school: { id: schoolId } },
         },
       });
     }
-    return this.academicTermRepository.findOne({
-      where: { academicCalendar: { school: { id: schoolId } } },
-      order: { startDate: 'DESC' },
-    });
+    return this.academicTermRepository
+      .createQueryBuilder('term')
+      .orderBy('term.startDate', 'DESC')
+      .getOne();
   }
 
   async findAll(
@@ -252,8 +250,7 @@ export class ClassLevelService {
       .createQueryBuilder('classLevel')
       .leftJoinAndSelect('classLevel.teachers', 'teacher')
       .leftJoinAndSelect('classLevel.students', 'student')
-      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher')
-      .where('classLevel.school.id = :schoolId', { schoolId: admin.school.id });
+      .leftJoinAndSelect('classLevel.classTeacher', 'classTeacher');
 
     if (query) {
       const features = new APIFeatures(queryBuilder, query).search(['name']);

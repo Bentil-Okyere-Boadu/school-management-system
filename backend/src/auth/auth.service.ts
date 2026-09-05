@@ -55,6 +55,7 @@ export class AuthService {
   async generateRefreshToken(
     userId: string,
     userType: 'school_admin' | 'teacher' | 'student' | 'super_admin' | 'parent',
+    schoolId?: string | null,
   ): Promise<string> {
     const token = uuidv4();
     const expiresAt = new Date();
@@ -68,6 +69,7 @@ export class AuthService {
       token,
       userId,
       userType,
+      schoolId: schoolId ?? null,
       expiresAt,
     });
 
@@ -128,6 +130,10 @@ export class AuthService {
       lastName: entity.lastName,
       sub: entity.id,
       role: entity.role?.name,
+      schoolId:
+        'school' in entity && entity.school
+          ? (entity.school as { id?: string }).id
+          : undefined,
     };
 
     let userType:
@@ -149,7 +155,11 @@ export class AuthService {
     }
 
     const accessToken = this.generateAccessToken(payload);
-    const refreshToken = await this.generateRefreshToken(entity.id, userType);
+    const refreshToken = await this.generateRefreshToken(
+      entity.id,
+      userType,
+      payload.schoolId ?? null,
+    );
 
     return {
       access_token: accessToken,
@@ -197,6 +207,8 @@ export class AuthService {
     return {
       success: true,
       message: 'Password reset link sent to your email',
+      resetToken,
+      resetTokenExpires,
     };
   }
 

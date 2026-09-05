@@ -23,11 +23,13 @@ import { Role } from 'src/role/role.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Parent } from 'src/parent/parent.entity';
 import { TenantContextService } from 'src/common/tenant/tenant-context.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
+import { SchoolProvisioningStatus } from 'src/tenant/school-provisioning-status';
 import { ParentLinkService } from 'src/parent/parent-link.service';
 import { ParentStudentSource } from 'src/parent/parent.enums';
 
 import * as bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
 import { InvitationService } from 'src/invitation/invitation.service';
 
 @Injectable()
@@ -58,6 +60,8 @@ export class AdmissionService {
     private smsService: SmsService,
     private invitationService: InvitationService,
     private readonly tenantContext: TenantContextService,
+    private readonly tenantConnection: TenantConnectionService,
+    private readonly tenantDirectory: TenantDirectoryService,
     private readonly parentLinkService: ParentLinkService,
   ) {}
 
@@ -66,8 +70,9 @@ export class AdmissionService {
     files: Array<Express.Multer.File>,
   ) {
     // Helper to find a file by fieldname
+    const uploadedFiles = files ?? [];
     const findFile = (field: string) =>
-      files.find((f) => f.fieldname === field);
+      uploadedFiles.find((f) => f.fieldname === field);
 
     // 1. Handle student headshot
     const studentHeadshotFile = findFile('studentHeadshot');
@@ -113,7 +118,7 @@ export class AdmissionService {
     }
 
     // Find all previous school result files (e.g., fieldname: previousSchoolResult0, previousSchoolResult1, ...)
-    const previousSchoolResultFiles = files.filter((f) =>
+    const previousSchoolResultFiles = uploadedFiles.filter((f) =>
       f.fieldname.startsWith('previousSchoolResult'),
     );
 
@@ -135,52 +140,55 @@ export class AdmissionService {
     });
     if (!school) throw new NotFoundException('School not found');
 
-    const admission = this.admissionRepository.create({
-      ...admissionData,
-      school,
-      hasPreviousSchool: previousSchoolResultFiles.length > 0,
-      forClass: forClassId ? { id: forClassId } : undefined,
-    });
-    await this.admissionRepository.save(admission);
-
-    // Save previous school results if any exist
-    if (previousSchoolResultFiles.length > 0) {
-      try {
-        for (const file of previousSchoolResultFiles) {
-          const { path } =
-            await this.objectStorageService.uploadAdmissionDocument(
-              file,
-              createAdmissionDto.schoolId,
-              createAdmissionDto.studentEmail ??
-                createAdmissionDto.studentFirstName,
-              'prev-result',
-            );
-          const result = this.previousSchoolResultRepository.create({
-            filePath: path,
-            mediaType: file.mimetype,
-            admission,
-          });
-          await this.previousSchoolResultRepository.save(result);
-        }
-      } catch (error) {
-        // If file upload fails, we should clean up the admission record
-        await this.admissionRepository.remove(admission);
-        throw new BadRequestException(
-          `Failed to upload previous school result files: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
-      }
-    }
-
-    // 6. Create Guardian entities
-    if (Array.isArray(guardians)) {
-      for (const guardianDto of guardians) {
-        const guardian = this.guardianRepository.create({
-          ...guardianDto,
-          admission,
+    const admission = await this.tenantConnection.runForSchoolId(
+      school.id,
+      async () => {
+        const created = this.admissionRepository.create({
+          ...admissionData,
+          school,
+          hasPreviousSchool: previousSchoolResultFiles.length > 0,
+          forClass: forClassId ? { id: forClassId } : undefined,
         });
-        await this.guardianRepository.save(guardian);
-      }
-    }
+        await this.admissionRepository.save(created);
+
+        if (previousSchoolResultFiles.length > 0) {
+          try {
+            for (const file of previousSchoolResultFiles) {
+              const { path } =
+                await this.objectStorageService.uploadAdmissionDocument(
+                  file,
+                  createAdmissionDto.schoolId,
+                  createAdmissionDto.studentEmail ??
+                    createAdmissionDto.studentFirstName,
+                  'prev-result',
+                );
+              const result = this.previousSchoolResultRepository.create({
+                filePath: path,
+                mediaType: file.mimetype,
+                admission: created,
+              });
+              await this.previousSchoolResultRepository.save(result);
+            }
+          } catch (error) {
+            await this.admissionRepository.remove(created);
+            throw new BadRequestException(
+              `Failed to upload previous school result files: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
+          }
+        }
+
+        if (Array.isArray(guardians)) {
+          for (const guardianDto of guardians) {
+            const guardian = this.guardianRepository.create({
+              ...guardianDto,
+              admission: created,
+            });
+            await this.guardianRepository.save(guardian);
+          }
+        }
+        return created;
+      },
+    );
     if (admission.studentEmail) {
       await this.emailService.sendAdmissionApplicationConfirmation(
         admission.studentEmail,
@@ -207,20 +215,37 @@ export class AdmissionService {
         );
       }
     }
-    return this.admissionRepository.findOne({
-      where: { applicationId: admission.applicationId },
-      relations: ['guardians', 'forClass'],
-    });
+    return this.tenantConnection.runForSchoolId(school.id, () =>
+      this.admissionRepository.findOne({
+        where: { applicationId: admission.applicationId },
+        relations: ['guardians', 'forClass'],
+      }),
+    );
   }
 
   async findAllNamesBySchool(
     schoolId: string,
   ): Promise<{ id: string; name: string }[]> {
-    const classLevels = await this.classLevelRepository.find({
-      where: { school: { id: schoolId } },
-      select: ['id', 'name'],
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
     });
-    return classLevels;
+    if (
+      !school?.schemaName ||
+      school.provisioningStatus !== SchoolProvisioningStatus.Active ||
+      school.isDisabled
+    ) {
+      return [];
+    }
+    try {
+      return await this.tenantConnection.runForSchoolId(schoolId, () =>
+        this.classLevelRepository.find({
+          where: { school: { id: schoolId } },
+          select: ['id', 'name'],
+        }),
+      );
+    } catch {
+      return [];
+    }
   }
 
   async findAllBySchool(queryString: QueryString): Promise<any> {
@@ -382,6 +407,10 @@ export class AdmissionService {
     admission.status = status;
     await this.admissionRepository.save(admission);
 
+    if (status === AdmissionStatus.ACCEPTED) {
+      await this.createStudentFromAdmission(admission);
+    }
+
     if (admission.studentEmail) {
       const studentName = `${admission.studentFirstName} ${admission.studentLastName}`;
       const schoolName = admission.school?.name || 'School';
@@ -399,7 +428,6 @@ export class AdmissionService {
                   applicationId,
                   schoolEmail,
                 );
-                await this.createStudentFromAdmission(admission);
                 break;
 
               case AdmissionStatus.REJECTED:
@@ -508,145 +536,149 @@ export class AdmissionService {
   private async createStudentFromAdmission(
     admission: Admission,
   ): Promise<Student> {
+    const schoolId = admission.school?.id;
+    if (!schoolId) {
+      throw new BadRequestException('Admission is not linked to a school');
+    }
+
     try {
-      // Get student role
-      const studentRole = await this.roleRepository.findOne({
-        where: { name: 'student' },
-      });
+      const savedStudent = await this.tenantConnection.runForSchoolId(
+        schoolId,
+        async () => {
+          const studentRole = await this.roleRepository.findOne({
+            where: { name: 'student' },
+          });
 
-      if (!studentRole) {
-        throw new NotFoundException('Student role not found');
-      }
-
-      // Check if student with this email already exists
-      const existingStudent = await this.studentRepository.findOne({
-        where: { email: admission.studentEmail },
-      });
-
-      if (existingStudent) {
-        this.logger.warn(
-          `Student with email ${admission.studentEmail} already exists. Skipping student creation.`,
-        );
-        return existingStudent;
-      }
-
-      // Generate PIN and student ID
-      const pin = this.invitationService.generatePin();
-      const studentId = await this.invitationService.generateStudentId(
-        admission.school,
-      );
-
-      // Set invitation expiration
-      const invitationExpires = new Date();
-      invitationExpires.setHours(invitationExpires.getHours() + 24);
-
-      // Create student record
-      const student = this.studentRepository.create({
-        firstName: admission.studentFirstName,
-        lastName: admission.studentLastName,
-        email: admission.studentEmail,
-        password: await bcrypt.hash(pin, 10),
-        role: studentRole,
-        school: admission.school,
-        invitationToken: uuidv4(),
-        invitationExpires,
-        isInvitationAccepted: false,
-        studentId,
-      });
-
-      // Save student first
-      const savedStudent = await this.studentRepository.save(student);
-
-      // Create profile with student information
-      const profile = this.profileRepository.create({
-        // Set headshot if available
-        avatarPath: admission.studentHeadshotPath,
-        mediaType: admission.studentHeadshotMediaType,
-        DateOfBirth: admission.studentDOB,
-        PlaceOfBirth: admission.studentPlaceOfBirth,
-        address: admission.studentStreetAddress,
-        BoxAddress: admission.studentBoxAddress,
-        phoneContact: admission.studentPhone,
-        optionalPhoneContact: admission.studentOtherPhone,
-        optionalPhoneContactTwo: admission.studentOtherPhoneOptional,
-        student: savedStudent,
-      });
-
-      await this.profileRepository.save(profile);
-
-      // If a class level is specified, add the student to that class
-      if (admission.forClass) {
-        const classLevel = await this.classLevelRepository.findOne({
-          where: { id: admission.forClass.id },
-          relations: ['students'],
-        });
-
-        if (classLevel) {
-          // Initialize students array if it doesn't exist
-          if (!classLevel.students) {
-            classLevel.students = [];
+          if (!studentRole) {
+            throw new NotFoundException('Student role not found');
           }
 
-          // Add student to class
-          classLevel.students.push(savedStudent);
-          await this.classLevelRepository.save(classLevel);
-        }
-      }
+          const existingStudent = await this.studentRepository.findOne({
+            where: { email: admission.studentEmail },
+          });
 
-      if (admission.guardians && Array.isArray(admission.guardians)) {
-        for (const guardian of admission.guardians) {
-          const { parent } = await this.parentLinkService.linkGuardianToStudent(
-            savedStudent.id,
-            {
-              firstName: guardian.firstName,
-              lastName: guardian.lastName,
-              email: guardian.email,
-              phone: guardian.guardianPhone,
-              relationship: guardian.relationship,
-              occupation: guardian.occupation,
-              address: guardian.streetAddress,
-              source: ParentStudentSource.Admission,
-            },
+          if (existingStudent) {
+            this.logger.warn(
+              `Student with email ${admission.studentEmail} already exists. Skipping student creation.`,
+            );
+            return existingStudent;
+          }
+
+          const pin = this.invitationService.generatePin();
+          const studentId = await this.invitationService.generateStudentId(
+            admission.school,
           );
-          if (guardian.headshotPath) {
-            const parentProfile = this.profileRepository.create({
-              avatarPath: guardian.headshotPath,
-              mediaType: guardian.headshotMediaType,
-              parent,
+
+          const billingCode =
+            await this.invitationService.generateUniqueStudentBillingCode(
+              this.studentRepository.manager,
+            );
+          const student = this.studentRepository.create({
+            firstName: admission.studentFirstName,
+            lastName: admission.studentLastName,
+            email: admission.studentEmail,
+            password: await bcrypt.hash(pin, 10),
+            role: studentRole,
+            school: admission.school,
+            isInvitationAccepted: false,
+            studentId,
+            studentBillingCode: billingCode,
+          });
+
+          const created = await this.studentRepository.save(student);
+
+          const profile = this.profileRepository.create({
+            avatarPath: admission.studentHeadshotPath,
+            mediaType: admission.studentHeadshotMediaType,
+            DateOfBirth: admission.studentDOB,
+            PlaceOfBirth: admission.studentPlaceOfBirth,
+            address: admission.studentStreetAddress,
+            BoxAddress: admission.studentBoxAddress,
+            phoneContact: admission.studentPhone,
+            optionalPhoneContact: admission.studentOtherPhone,
+            optionalPhoneContactTwo: admission.studentOtherPhoneOptional,
+            student: created,
+          });
+
+          await this.profileRepository.save(profile);
+
+          if (admission.forClass) {
+            const classLevel = await this.classLevelRepository.findOne({
+              where: { id: admission.forClass.id },
+              relations: ['students'],
             });
-            await this.profileRepository.save(parentProfile);
+
+            if (classLevel) {
+              if (!classLevel.students) {
+                classLevel.students = [];
+              }
+              classLevel.students.push(created);
+              await this.classLevelRepository.save(classLevel);
+            }
           }
-        }
-      }
 
-      // Send invitation email
-      await this.emailService.sendStudentInvitation(
-        savedStudent,
-        studentId,
-        pin,
-      );
+          if (admission.guardians && Array.isArray(admission.guardians)) {
+            for (const guardian of admission.guardians) {
+              const { parent } =
+                await this.parentLinkService.linkGuardianToStudent(created.id, {
+                  firstName: guardian.firstName,
+                  lastName: guardian.lastName,
+                  email: guardian.email,
+                  phone: guardian.guardianPhone,
+                  relationship: guardian.relationship,
+                  occupation: guardian.occupation,
+                  address: guardian.streetAddress,
+                  source: ParentStudentSource.Admission,
+                });
+              if (guardian.headshotPath) {
+                const parentProfile = this.profileRepository.create({
+                  avatarPath: guardian.headshotPath,
+                  mediaType: guardian.headshotMediaType,
+                  parent,
+                });
+                await this.profileRepository.save(parentProfile);
+              }
+            }
+          }
 
-      // Send SMS invitation if phone number is available
-      if (admission.studentPhone) {
-        try {
-          await this.smsService.sendStudentInvitationSms(
-            admission.studentPhone,
-            `${admission.studentFirstName} ${admission.studentLastName}`,
+          await this.emailService.sendStudentInvitation(
+            created,
             studentId,
             pin,
-            admission.school?.name || 'School',
           );
-        } catch (error) {
-          this.logger.error(
-            `Failed to send student invitation SMS to ${admission.studentPhone}`,
-            error,
-          );
-        }
-      }
 
-      this.logger.log(
-        `Student account created from admission application ${admission.applicationId}`,
+          if (admission.studentPhone) {
+            try {
+              await this.smsService.sendStudentInvitationSms(
+                admission.studentPhone,
+                `${admission.studentFirstName} ${admission.studentLastName}`,
+                studentId,
+                pin,
+                admission.school?.name || 'School',
+              );
+            } catch (error) {
+              this.logger.error(
+                `Failed to send student invitation SMS to ${admission.studentPhone}`,
+                error,
+              );
+            }
+          }
+
+          this.logger.log(
+            `Student account created from admission application ${admission.applicationId}`,
+          );
+
+          return created;
+        },
       );
+
+      await this.tenantDirectory.upsertStudentLookupKeys({
+        schoolId,
+        tenantUserId: savedStudent.id,
+        email: savedStudent.email,
+        studentId: savedStudent.studentId,
+        billingCode: savedStudent.studentBillingCode,
+      });
 
       return savedStudent;
     } catch (error) {

@@ -4,7 +4,6 @@ import {
   NotFoundException,
   UnauthorizedException,
   ConflictException,
-  BadRequestException,
   HttpStatus,
   ForbiddenException,
 } from '@nestjs/common';
@@ -13,21 +12,18 @@ import { Repository, EntityManager } from 'typeorm';
 import { Role } from '../role/role.entity';
 import { School } from '../school/school.entity';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
-import { EmailService } from '../common/services/email.service';
 import { EmailRetryService } from '../common/services/email-retry.service';
-import { InviteUserDto } from './dto/invite-user.dto';
 import { InviteStudentDto } from './dto/invite-student.dto';
 import { InviteTeacherDto } from './dto/invite-teacher.dto';
 import { Not } from 'typeorm';
 import { InvitationException } from '../common/exceptions/invitation.exception';
 import { BaseException } from '../common/exceptions/base.exception';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
-import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
+import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
 import { TransactionUtil } from '../common/utils/transaction.util';
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class InvitationService {
@@ -40,36 +36,18 @@ export class InvitationService {
     private teacherRepository: Repository<Teacher>,
     @InjectRepository(SchoolAdmin)
     private adminRepository: Repository<SchoolAdmin>,
-    @InjectRepository(Role)
-    private roleRepository: Repository<Role>,
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
-    private emailService: EmailService,
     private emailRetryService: EmailRetryService,
     private transactionUtil: TransactionUtil,
+    private readonly tenantDirectory: TenantDirectoryService,
   ) {}
-
-  /**
-   * Generate a random invitation token
-   */
-  generateInvitationToken(): string {
-    return crypto.randomBytes(32).toString('hex');
-  }
-
-  /**
-   * Calculate token expiration date (24 hours from now)
-   */
-  calculateTokenExpiration(): Date {
-    const expirationDate = new Date();
-    expirationDate.setHours(expirationDate.getHours() + 24);
-    return expirationDate;
-  }
 
   /**
    * Generate a random PIN
    */
   generatePin(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return String(randomInt(100000, 1_000_000));
   }
 
   /**
@@ -116,15 +94,20 @@ export class InvitationService {
       return school.schoolCode;
     }
 
-    // Generate a new 5-digit code
-    const schoolCount = await this.schoolRepository.count();
-    const newCode = (schoolCount + 1).toString().padStart(5, '0');
-
-    // Update the school with the new code
-    school.schoolCode = newCode;
-    await this.schoolRepository.save(school);
-
-    return newCode;
+    let next = (await this.schoolRepository.count()) + 1;
+    for (let attempt = 0; attempt < 10000; attempt += 1) {
+      const newCode = next.toString().padStart(5, '0');
+      const taken = await this.schoolRepository.findOne({
+        where: { schoolCode: newCode },
+      });
+      if (!taken) {
+        school.schoolCode = newCode;
+        await this.schoolRepository.save(school);
+        return newCode;
+      }
+      next += 1;
+    }
+    throw new ConflictException('Unable to allocate a unique school code');
   }
 
   async generateStudentId(school: School): Promise<string> {
@@ -221,80 +204,27 @@ export class InvitationService {
     return `${schoolInitials}-${schoolCode}-${roleCode}-${personId}`;
   }
 
-  /**
-   * Invite a user (school admin) - Used by super admin
-   */
-  async inviteAdmin(
-    inviteUserDto: InviteUserDto,
-    currentUser: SuperAdmin,
-  ): Promise<SchoolAdmin> {
-    if (currentUser.role.name !== 'super_admin') {
-      throw new UnauthorizedException('Only super admins can invite users');
+  async generateUniqueStudentBillingCode(
+    manager: EntityManager,
+  ): Promise<string> {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const code = `SBC${String(randomInt(0, 1_000_000)).padStart(6, '0')}`;
+      const inTenant = await manager.findOne(Student, {
+        where: { studentBillingCode: code },
+        select: ['id'],
+      });
+      if (inTenant) {
+        continue;
+      }
+      const dirs = await this.tenantDirectory.findByLogin(code, 'student');
+      if (dirs.length > 0) {
+        continue;
+      }
+      return code;
     }
-
-    return this.transactionUtil.executeInTransaction(
-      async (manager: EntityManager) => {
-        const existingAdmin = await manager.findOne(SchoolAdmin, {
-          where: { email: inviteUserDto.email },
-        });
-
-        if (existingAdmin) {
-          throw new ConflictException('User with this email already exists');
-        }
-
-        const role = await manager.findOne(Role, {
-          where: { id: inviteUserDto.roleId },
-        });
-        if (!role) {
-          throw new NotFoundException('Role not found');
-        }
-
-        if (role.name !== 'school_admin') {
-          throw new BadRequestException(
-            'Super admins can only invite admin users',
-          );
-        }
-
-        // Create the invitation token and set expiration
-        const invitationToken = this.generateInvitationToken();
-        const invitationExpires = this.calculateTokenExpiration();
-
-        // Create the user in pending state
-        const newAdmin = manager.create(SchoolAdmin, {
-          firstName: inviteUserDto.firstName,
-          lastName: inviteUserDto.lastName,
-          email: inviteUserDto.email,
-          role,
-          status: 'pending',
-          invitationToken,
-          invitationExpires,
-        });
-
-        const savedAdmin = await manager.save(SchoolAdmin, newAdmin);
-
-        try {
-          // Use EmailRetryService to retry transient email failures
-          // Note: Retries happen inside transaction to maintain atomicity.
-          // If all retries fail, transaction rolls back (no orphaned user).
-          // Tradeoff: Retries hold DB connection longer, but ensure data consistency.
-          await this.emailRetryService.retrySendInvitationEmail(savedAdmin);
-          this.logger.log(
-            `Invitation email sent successfully to ${inviteUserDto.email}`,
-          );
-        } catch (error) {
-          this.logger.error(
-            `Failed to send invitation email to ${inviteUserDto.email} after retries`,
-            error,
-          );
-          // The transaction will be rolled back automatically due to the error
-          throw new InvitationException(
-            `Failed to send invitation email: ${BaseException.getErrorMessage(error)}`,
-            HttpStatus.INTERNAL_SERVER_ERROR,
-          );
-        }
-
-        return savedAdmin;
-      },
+    throw new InvitationException(
+      'Failed to allocate a unique student billing code',
+      HttpStatus.INTERNAL_SERVER_ERROR,
     );
   }
 
@@ -312,8 +242,14 @@ export class InvitationService {
     if (!adminUser.school) {
       throw new ForbiddenException('Admin not associated with any school');
     }
+    const school = await this.schoolRepository.findOne({
+      where: { id: adminUser.school.id },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
 
-    return this.transactionUtil.executeInTransaction(
+    const savedStudent = await this.transactionUtil.executeInTransaction(
       async (manager: EntityManager) => {
         const existingUser = await manager.findOne(Student, {
           where: { email: inviteStudentDto.email },
@@ -333,22 +269,19 @@ export class InvitationService {
         }
 
         const pin = this.generatePin();
-        const studentId = await this.generateStudentId(adminUser.school);
+        const studentId = await this.generateStudentId(school);
 
-        const invitationExpires = new Date();
-        invitationExpires.setHours(invitationExpires.getHours() + 24);
-
+        const billingCode = await this.generateUniqueStudentBillingCode(manager);
         const studentUser = manager.create(Student, {
           firstName: inviteStudentDto.firstName,
           lastName: inviteStudentDto.lastName,
           email: inviteStudentDto.email,
           password: await bcrypt.hash(pin, 10), // PIN is used as initial password
           role: studentRole,
-          school: adminUser.school,
-          invitationToken: uuidv4(),
-          invitationExpires,
+          school,
           isInvitationAccepted: false,
           studentId: studentId,
+          studentBillingCode: billingCode,
         });
 
         const savedUser = await manager.save(Student, studentUser);
@@ -379,14 +312,18 @@ export class InvitationService {
         return savedUser;
       },
     );
+    await this.tenantDirectory.upsertStudentLookupKeys({
+      schoolId: adminUser.school.id,
+      tenantUserId: savedStudent.id,
+      email: savedStudent.email,
+      studentId: savedStudent.studentId,
+      billingCode: savedStudent.studentBillingCode,
+    });
+    return savedStudent;
   }
-
-  /**
-   * Invite a teacher - Used by school admin
-   */
   async inviteTeacher(
     inviteTeacherDto: InviteTeacherDto,
-    adminUser: Teacher,
+    adminUser: SchoolAdmin,
   ): Promise<Teacher> {
     if (adminUser.role.name !== 'school_admin') {
       throw new UnauthorizedException('Only school admins can invite teachers');
@@ -395,8 +332,14 @@ export class InvitationService {
     if (!adminUser.school) {
       throw new UnauthorizedException('Admin not associated with any school');
     }
+    const school = await this.schoolRepository.findOne({
+      where: { id: adminUser.school.id },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
 
-    return this.transactionUtil.executeInTransaction(
+    const savedTeacher = await this.transactionUtil.executeInTransaction(
       async (manager: EntityManager) => {
         const existingUser = await manager.findOne(Teacher, {
           where: { email: inviteTeacherDto.email },
@@ -415,10 +358,7 @@ export class InvitationService {
         }
 
         const pin = this.generatePin();
-        const teacherId = await this.generateTeacherId(adminUser.school);
-
-        const invitationExpires = new Date();
-        invitationExpires.setHours(invitationExpires.getHours() + 24);
+        const teacherId = await this.generateTeacherId(school);
 
         const teacherUser = manager.create(Teacher, {
           firstName: inviteTeacherDto.firstName,
@@ -426,10 +366,8 @@ export class InvitationService {
           email: inviteTeacherDto.email,
           password: await bcrypt.hash(pin, 10),
           role: teacherRole,
-          school: adminUser.school,
+          school,
           status: 'pending',
-          invitationToken: uuidv4(),
-          invitationExpires,
           isInvitationAccepted: false,
           teacherId: teacherId,
         });
@@ -462,149 +400,20 @@ export class InvitationService {
         return savedUser;
       },
     );
-  }
-
-  async verifyInvitationToken(token: string) {
-    const user = await this.adminRepository.findOne({
-      where: { invitationToken: token, status: 'pending' },
-      relations: ['role', 'school'],
+    await this.tenantDirectory.upsert({
+      loginKey: savedTeacher.email,
+      userType: 'teacher',
+      schoolId: adminUser.school.id,
+      tenantUserId: savedTeacher.id,
     });
-
-    if (!user) {
-      return null;
+    if (savedTeacher.teacherId) {
+      await this.tenantDirectory.upsert({
+        loginKey: savedTeacher.teacherId,
+        userType: 'teacher',
+        schoolId: adminUser.school.id,
+        tenantUserId: savedTeacher.id,
+      });
     }
-
-    const expiryTimestamp = user.invitationExpires.getTime();
-    const currentTimestamp = Date.now();
-
-    if (expiryTimestamp <= currentTimestamp) {
-      throw new BadRequestException(
-        'Invitation token has expired - please request a new invitation',
-      );
-    }
-
-    return user;
-  }
-
-  async completeRegistration(token: string, password: string) {
-    const adminuser = await this.verifyInvitationToken(token);
-    if (!adminuser) {
-      return null;
-    }
-    const hashPassword = await bcrypt.hash(password, 10);
-
-    adminuser.password = hashPassword;
-    adminuser.status = 'active';
-    adminuser.isInvitationAccepted = true;
-    adminuser.invitationToken = '';
-    adminuser.invitationExpires = new Date(0);
-
-    const savedAdmin = await this.adminRepository.save(adminuser);
-
-    await this.emailService.sendRegistrationConfirmationEmail(adminuser);
-
-    return savedAdmin;
-  }
-
-  async resendAdminInvitation(
-    userId: string,
-    currentUser: SuperAdmin,
-  ): Promise<SchoolAdmin> {
-    if (currentUser.role.name !== 'super_admin') {
-      throw new UnauthorizedException(
-        'Only super admins can resend invitations',
-      );
-    }
-
-    return this.transactionUtil.executeInTransaction(
-      async (manager: EntityManager) => {
-        const admin = await manager.findOne(SchoolAdmin, {
-          where: { id: userId, status: 'pending' },
-          relations: ['role', 'school'],
-        });
-
-        if (!admin) {
-          throw new NotFoundException('Pending user not found');
-        }
-
-        admin.invitationToken = this.generateInvitationToken();
-        admin.invitationExpires = this.calculateTokenExpiration();
-
-        const updatedAdmin = await manager.save(SchoolAdmin, admin);
-
-        try {
-          // Use EmailRetryService to retry transient email failures
-          await this.emailRetryService.retrySendInvitationEmail(updatedAdmin);
-          this.logger.log(
-            `Resend invitation email sent successfully to ${admin.email}`,
-          );
-        } catch (error) {
-          this.logger.error(
-            `Failed to resend invitation email to ${admin.email} after retries`,
-            error,
-          );
-          // The transaction will be rolled back automatically due to the error
-          throw new InvitationException(
-            `Failed to resend invitation email: ${BaseException.getErrorMessage(error)}`,
-            HttpStatus.INTERNAL_SERVER_ERROR,
-          );
-        }
-
-        return updatedAdmin;
-      },
-    );
-  }
-
-  /**
-   * Handle forgot PIN for students/teachers
-   */
-  async forgotPin(
-    email: string,
-  ): Promise<{ success: boolean; message: string }> {
-    const user = await this.studentRepository.findOne({
-      where: { email },
-      relations: ['role'],
-    });
-
-    if (!user) {
-      // For security reasons, don't reveal that the user doesn't exist
-      return {
-        success: true,
-        message: 'If your email is registered, you will receive a PIN reset',
-      };
-    }
-
-    // Only for students and teachers
-    if (user.role.name !== 'student' && user.role.name !== 'teacher') {
-      throw new BadRequestException(
-        'PIN reset is only available for students and teachers',
-      );
-    }
-
-    // Generate new PIN
-    const pin = this.generatePin();
-    user.password = await bcrypt.hash(pin, 10);
-
-    await this.studentRepository.save(user);
-
-    try {
-      // Different email based on role
-      if (user.role.name === 'student') {
-        await this.emailService.sendStudentPinReset(user, pin);
-      } else {
-        //  await this.emailService.sendTeacherPinReset(user, pin);
-      }
-
-      return {
-        success: true,
-        message: 'PIN reset instructions sent to your email',
-      };
-    } catch (error) {
-      this.logger.error(`Failed to send PIN reset email to ${email}`, error);
-      throw new InvitationException(
-        `Failed to send PIN reset email: ${BaseException.getErrorMessage(error)}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return savedTeacher;
   }
 }

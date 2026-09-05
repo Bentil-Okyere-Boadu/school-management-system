@@ -10,7 +10,7 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Role } from '../role/role.entity';
-import { Profile } from 'src/profile/profile.entity';
+import { SuperAdminProfile } from './super-admin-profile.entity';
 
 @Entity()
 export class SuperAdmin {
@@ -32,11 +32,11 @@ export class SuperAdmin {
   @Column({ default: 'active' })
   status: string;
 
-  @OneToOne(() => Profile, (profile) => profile.superAdmin, {
+  @OneToOne(() => SuperAdminProfile, (profile) => profile.superAdmin, {
     cascade: true,
     onDelete: 'CASCADE',
   })
-  profile: Profile;
+  profile: SuperAdminProfile;
 
   @ManyToOne(() => Role, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn()

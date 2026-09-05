@@ -53,22 +53,7 @@ export class SchoolController {
   ) {}
 
   /**
-   * Create a new school
-   * School admins can create one school and will be associated with it
-   */
-  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
-  @Post('/create')
-  @Roles(Role.SchoolAdmin)
-  @SkipTenantScope()
-  create(
-    @Body() createSchoolDto: CreateSchoolDto,
-    @CurrentUser() user: SchoolAdmin,
-  ): Promise<School> {
-    return this.schoolService.create(createSchoolDto, user);
-  }
-
-  /**
-   * Get all schools (super admin only)
+   * School creation is Super Admin + provisioner (POST /super-admin/schools).
    */
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Get()

@@ -49,7 +49,6 @@ import {
 import { Assignment } from '../teacher/entities/assignment.entity';
 import { AssignmentSubmission } from '../student/entities/assignment-submission.entity';
 import { TenantContextService } from 'src/common/tenant/tenant-context.service';
-import { TenantScopedRepositoryService } from 'src/common/tenant/tenant-scoped-repository.service';
 
 @Injectable()
 export class SubjectService {
@@ -86,7 +85,6 @@ export class SubjectService {
     private gradeSubmissionHistoryRepository: Repository<GradeSubmissionHistory>,
     private readonly notificationService: NotificationService,
     private readonly tenantContext: TenantContextService,
-    private readonly tenantScopedRepository: TenantScopedRepositoryService,
   ) {}
 
   async create(createSubjectDto: CreateSubjectDto, _admin: SchoolAdmin) {
@@ -178,13 +176,10 @@ export class SubjectService {
     _admin: SchoolAdmin,
   ) {
     const schoolId = this.tenantContext.getTenantIdOrThrow();
-    const subject = await this.tenantScopedRepository.findOne(
-      this.subjectRepository,
-      {
-        where: { id } as Subject,
-        relations: ['classLevels', 'subjectCatalog', 'teacher'],
-      },
-    );
+    const subject = await this.subjectRepository.findOne({
+      where: { id },
+      relations: ['classLevels', 'subjectCatalog', 'teacher'],
+    });
 
     if (subject?.school?.id && subject.school.id !== schoolId) {
       throw new NotFoundException('Subject not found');

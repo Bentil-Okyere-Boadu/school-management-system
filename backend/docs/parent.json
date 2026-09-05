@@ -229,7 +229,7 @@
             "bearer": []
           }
         ],
-        "summary": "Attendance KPIs and 1–31 day grid for active children (unmarked stays none)",
+        "summary": "Attendance KPIs and 1–31 day grid for active children (unmarked school days count as present)",
         "tags": ["Parent"]
       }
     },
@@ -478,7 +478,7 @@
             "bearer": []
           }
         ],
-        "summary": "Start a multi-child MoMo payment; each studentId must be an active linked child",
+        "summary": "Start a multi-child MoMo payment for the selected term; amounts cannot exceed that term's outstanding",
         "tags": ["Parent"]
       }
     },
@@ -590,6 +590,10 @@
       "ParentInitiatePaymentDto": {
         "type": "object",
         "properties": {
+          "academicTermId": {
+            "type": "string",
+            "description": "Academic term the payment should apply to first"
+          },
           "children": {
             "type": "array",
             "items": {
@@ -611,7 +615,7 @@
             "type": "string"
           }
         },
-        "required": ["children", "mobileNumber", "channel"]
+        "required": ["academicTermId", "children", "mobileNumber", "channel"]
       },
       "ParentPaymentChildDto": {
         "type": "object",

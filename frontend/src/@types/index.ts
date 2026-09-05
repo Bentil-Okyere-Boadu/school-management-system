@@ -193,6 +193,19 @@ export interface GradingSystem {
   maxRange: number;
 }
 
+export interface PendingSchoolAdminInvitation {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  expiresAt: string;
+}
+
+export interface SchoolAdminSummary {
+  activeAdmins: number;
+  pendingInvitation: PendingSchoolAdminInvitation | null;
+}
+
 export interface School {
   classScorePercentage?: number;
   examScorePercentage?: number;
@@ -213,6 +226,13 @@ export interface School {
   updatedAt: string;
   logoUrl: string;
   calendlyUrl: string;
+  schemaName?: string;
+  provisioningStatus?: "not_provisioned" | "provisioning" | "active" | "failed";
+  lastProvisionError?: string | null;
+  tenantMigrationStatus?: "ok" | "pending" | "failed" | string;
+  lastTenantMigrationError?: string | null;
+  isDisabled?: boolean;
+  adminSummary?: SchoolAdminSummary;
   parentShowScores?: boolean;
   parentShowGrades?: boolean;
   parentShowLabels?: boolean;

@@ -21,7 +21,10 @@ import { Student } from 'src/student/student.entity';
 import { Role } from 'src/role/role.entity';
 import { EmailService } from 'src/common/services/email.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
 import { NotificationType } from 'src/notification/notification.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { PlatformPreloginTokenService } from 'src/tenant/platform-prelogin-token.service';
 
 @Injectable()
 export class ParentLinkService {
@@ -38,6 +41,9 @@ export class ParentLinkService {
     private readonly roleRepository: Repository<Role>,
     private readonly emailService: EmailService,
     private readonly notificationService: NotificationService,
+    private readonly tenantDirectory: TenantDirectoryService,
+    private readonly tenantConnection: TenantConnectionService,
+    private readonly preloginTokens: PlatformPreloginTokenService,
   ) {}
 
   generateToken(): string {
@@ -78,6 +84,15 @@ export class ParentLinkService {
       parent = await this.createPendingParent(student, input, email);
     }
 
+    if (parent.email && student.school?.id) {
+      await this.tenantDirectory.upsert({
+        loginKey: parent.email,
+        userType: 'parent',
+        schoolId: student.school.id,
+        tenantUserId: parent.id,
+      });
+    }
+
     let relationship = await this.parentStudentRepository.findOne({
       where: { parent: { id: parent.id }, student: { id: student.id } },
       relations: ['parent', 'student', 'school'],
@@ -87,7 +102,8 @@ export class ParentLinkService {
 
     if (relationship?.status === ParentStudentStatus.Revoked) {
       relationship.status = ParentStudentStatus.PendingConfirmation;
-      relationship.relationship = input.relationship ?? relationship.relationship;
+      relationship.relationship =
+        input.relationship ?? relationship.relationship;
       relationship.source = source;
       relationship.revokedAt = null;
       relationship = await this.parentStudentRepository.save(relationship);
@@ -158,7 +174,10 @@ export class ParentLinkService {
     };
 
     if (email) {
-      const existing = await this.findParentForLinking(student.school.id, email);
+      const existing = await this.findParentForLinking(
+        student.school.id,
+        email,
+      );
       if (existing && existing.id !== current.id) {
         currentLink.status = ParentStudentStatus.Revoked;
         currentLink.revokedAt = new Date();
@@ -213,6 +232,24 @@ export class ParentLinkService {
   }
 
   async completeParentInvitation(token: string, password: string) {
+    const resolved = await this.preloginTokens.claimForUse(
+      token,
+      'parent_invitation',
+    );
+    const parent = await this.tenantConnection.runForSchoolId(
+      resolved.schoolId,
+      () => this.completeParentInvitationInTenant(token, password),
+    );
+    if (!parent) {
+      throw new BadRequestException('Invalid or expired invitation');
+    }
+    return parent;
+  }
+
+  private async completeParentInvitationInTenant(
+    token: string,
+    password: string,
+  ): Promise<Parent | null> {
     const parent = await this.parentRepository.findOne({
       where: {
         invitationToken: token,
@@ -225,7 +262,10 @@ export class ParentLinkService {
       return null;
     }
 
-    if (!parent.invitationExpires || parent.invitationExpires.getTime() <= Date.now()) {
+    if (
+      !parent.invitationExpires ||
+      parent.invitationExpires.getTime() <= Date.now()
+    ) {
       throw new BadRequestException(
         'Invitation token has expired - please request a new invitation',
       );
@@ -274,10 +314,19 @@ export class ParentLinkService {
   }
 
   async confirmChildByToken(token: string) {
-    const link = await this.parentStudentRepository.findOne({
-      where: { confirmationToken: token },
-      relations: ['parent', 'parent.school', 'student', 'school'],
-    });
+    const resolved = await this.preloginTokens.claimForUse(
+      token,
+      'child_confirmation',
+    );
+
+    const link = await this.tenantConnection.runForSchoolId(
+      resolved.schoolId,
+      () =>
+        this.parentStudentRepository.findOne({
+          where: { id: resolved.subjectId, confirmationToken: token },
+          relations: ['parent', 'parent.school', 'student', 'school'],
+        }),
+    );
 
     if (!link) {
       throw new BadRequestException('Invalid confirmation token');
@@ -304,7 +353,10 @@ export class ParentLinkService {
       );
     }
 
-    return this.activateRelationship(link);
+    return this.tenantConnection.runForSchoolId(
+      resolved.schoolId,
+      () => this.activateRelationship(link),
+    );
   }
 
   async confirmChildAsParent(parentId: string, linkId: string) {
@@ -364,6 +416,9 @@ export class ParentLinkService {
     parent.invitationToken = this.generateToken();
     parent.invitationExpires = this.tokenExpiry();
     await this.parentRepository.save(parent);
+    if (parent.school?.id) {
+      await this.registerParentInvitationToken(parent);
+    }
     const originating = await this.parentStudentRepository.findOne({
       where: { parent: { id: parent.id }, status: ParentStudentStatus.Pending },
       relations: ['student'],
@@ -490,6 +545,7 @@ export class ParentLinkService {
       parent.invitationExpires = this.tokenExpiry();
       relationship.invitedAt = new Date();
       await this.parentRepository.save(parent);
+      await this.registerParentInvitationToken(parent);
       await this.parentStudentRepository.save(relationship);
       await this.emailService.sendParentInvitationEmail(parent, student);
       await this.notifyAdmin(
@@ -534,6 +590,17 @@ export class ParentLinkService {
     link.confirmationToken = this.generateToken();
     link.confirmationExpires = this.tokenExpiry();
     await this.parentStudentRepository.save(link);
+    const schoolId = link.school?.id ?? link.parent?.school?.id;
+    if (schoolId) {
+      await this.preloginTokens.register({
+        token: link.confirmationToken,
+        schoolId,
+        userType: 'parent',
+        purpose: 'child_confirmation',
+        subjectId: link.id,
+        expiresAt: link.confirmationExpires,
+      });
+    }
     await this.emailService.sendParentChildConfirmationEmail(
       parent,
       link.student,
@@ -554,6 +621,24 @@ export class ParentLinkService {
       `${link.parent?.firstName} ${link.parent?.lastName} can now view ${link.student?.firstName} ${link.student?.lastName}.`,
     );
     return saved;
+  }
+
+  private async registerParentInvitationToken(parent: Parent): Promise<void> {
+    if (
+      !parent.invitationToken ||
+      !parent.invitationExpires ||
+      !parent.school?.id
+    ) {
+      return;
+    }
+    await this.preloginTokens.register({
+      token: parent.invitationToken,
+      schoolId: parent.school.id,
+      userType: 'parent',
+      purpose: 'parent_invitation',
+      subjectId: parent.id,
+      expiresAt: parent.invitationExpires,
+    });
   }
 
   private async notifyAdmin(

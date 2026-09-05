@@ -3,18 +3,10 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger, INestApplication } from '@nestjs/common';
 import { SanitizeResponseInterceptor } from './common/interceptors/sanitize-response.interceptor';
 import { Role } from './role/role.entity';
-import { EventCategory } from './planner/entities/event-category.entity';
-import { School } from './school/school.entity';
-import { GradingSystem } from './grading-system/grading-system.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
-// import { seedSubtopicCompletionClassLevels } from './curriculum/subtopic-completion-class-level.backfill';
-// import { seedTopicAcademicTerms } from './curriculum/topic-academic-term.backfill';
-// import { seedStudentBillingCodes } from './payments/student-billing-code.backfill';
-// import { seedFeeObligationLegacyBackfill } from './payments/fee-obligation-legacy.backfill';
-// import { seedStudentCreditBalanceBackfill } from './payments/student-credit-balance.backfill';
 
 async function seedRoles(app: INestApplication) {
   const logger = new Logger('Seeder');
@@ -33,116 +25,6 @@ async function seedRoles(app: INestApplication) {
     if (!exists) {
       await roleRepository.save(role);
       logger.log(`Seeded role: ${role.name}`);
-    }
-  }
-}
-
-async function seedDefaultEventCategories(app: INestApplication) {
-  const logger = new Logger('EventCategorySeeder');
-  const categoryRepository = app.get(
-    getRepositoryToken(EventCategory),
-  ) as Repository<EventCategory>;
-  const schoolRepository = app.get(
-    getRepositoryToken(School),
-  ) as Repository<School>;
-
-  const defaultCategories = [
-    { name: 'General', color: '#6366f1', description: 'General events' },
-    {
-      name: 'Uncategorized',
-      color: '#94a3b8',
-      description: 'Uncategorized events',
-    },
-    {
-      name: 'School Event',
-      color: '#10b981',
-      description: 'School-wide events and activities',
-    },
-    {
-      name: 'Class Assignment',
-      color: '#f59e0b',
-      description: 'Assignment due dates for class levels',
-    },
-  ];
-
-  // Get all schools
-  const schools = await schoolRepository.find();
-
-  for (const school of schools) {
-    for (const categoryData of defaultCategories) {
-      const exists = await categoryRepository.findOne({
-        where: {
-          name: categoryData.name,
-          school: { id: school.id },
-        },
-      });
-
-      if (!exists) {
-        const category = categoryRepository.create({
-          ...categoryData,
-          school,
-        });
-        await categoryRepository.save(category);
-        logger.log(
-          `Seeded event category "${categoryData.name}" for school: ${school.name}`,
-        );
-      }
-    }
-  }
-}
-
-async function seedDefaultGradingSystems(app: INestApplication) {
-  const logger = new Logger('GradingSystemSeeder');
-  const gradingSystemRepository = app.get(
-    getRepositoryToken(GradingSystem),
-  ) as Repository<GradingSystem>;
-  const schoolRepository = app.get(
-    getRepositoryToken(School),
-  ) as Repository<School>;
-
-  const defaultGrades = [
-    { grade: 'A', minRange: 80, maxRange: 100 },
-    { grade: 'B', minRange: 70, maxRange: 79 },
-    { grade: 'C', minRange: 60, maxRange: 69 },
-    { grade: 'D', minRange: 50, maxRange: 59 },
-    { grade: 'E', minRange: 45, maxRange: 49 },
-    { grade: 'F', minRange: 0, maxRange: 44 },
-  ];
-
-  // Get all schools
-  const schools = await schoolRepository.find();
-
-  for (const school of schools) {
-    // Set default grading percentages if not set
-    if (
-      school.classScorePercentage === null ||
-      school.classScorePercentage === undefined
-    ) {
-      school.classScorePercentage = 30;
-    }
-    if (
-      school.examScorePercentage === null ||
-      school.examScorePercentage === undefined
-    ) {
-      school.examScorePercentage = 70;
-    }
-    await schoolRepository.save(school);
-
-    // Check if school already has grading systems
-    const existingGrades = await gradingSystemRepository.find({
-      where: { school: { id: school.id } },
-    });
-
-    // Only seed if school has no grading systems
-    if (existingGrades.length === 0) {
-      for (const gradeData of defaultGrades) {
-        const gradingSystem = gradingSystemRepository.create({
-          ...gradeData,
-          school,
-        });
-        await gradingSystemRepository.save(gradingSystem);
-      }
-      logger.log(`Seeded default grading system for school: ${school.name}`);
     }
   }
 }
@@ -231,8 +113,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new SanitizeResponseInterceptor());
 
   await seedRoles(app);
-  await seedDefaultEventCategories(app);
-  await seedDefaultGradingSystems(app);
+  // Tenant event categories and grading seeds run during schema provision.
   // Sprint: skip one-time seeders/backfills so local restarts stay fast.
   // await seedSubtopicCompletionClassLevels(app);
   // await seedTopicAcademicTerms(app);

@@ -20,7 +20,9 @@ export class ScheduledCleanupService {
 
     try {
       const result = await this.cleanupService.cleanupOrphanedUsers();
-      this.logger.log(`Scheduled cleanup completed: ${JSON.stringify(result)}`);
+      this.logger.log(
+        `Scheduled cleanup completed: ${JSON.stringify(result)}`,
+      );
     } catch (error) {
       this.logger.error(
         'Error during scheduled cleanup of orphaned users:',
