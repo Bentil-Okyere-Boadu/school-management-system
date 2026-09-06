@@ -6,6 +6,7 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useDebouncer } from "@/hooks/generalHooks";
+import { useAcademicPeriodFilters } from "@/hooks/useAcademicPeriodFilters";
 import {
   useGetSchoolPaymentConfig,
   useGetSchoolPayments,
@@ -15,6 +16,7 @@ import { IconAlertTriangle, IconEye, IconFileText } from "@tabler/icons-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { HashLoader } from "react-spinners";
+import { AcademicPeriodFilterBar } from "./AcademicPeriodFilterBar";
 import { FinanceTabSection } from "./FinanceTabSection";
 import { PaymentDetailDrawer } from "./PaymentDetailDrawer";
 import { SchoolPaymentsNotOnboarded } from "./SchoolPaymentsNotOnboarded";
@@ -50,6 +52,8 @@ export const SchoolPaymentsPageContent: React.FC = () => {
   const [activeTabKey, setActiveTabKey] = useState(
     tabFromUrl === "finance" ? "finance" : "all-payments"
   );
+
+  const periodFilters = useAcademicPeriodFilters();
 
   const { config: paymentConfig, isLoading: paymentConfigLoading } =
     useGetSchoolPaymentConfig();
@@ -111,19 +115,48 @@ export const SchoolPaymentsPageContent: React.FC = () => {
         onItemClick={handleItemClick}
       />
 
+      <AcademicPeriodFilterBar
+        calendars={periodFilters.calendars}
+        scopedTerms={periodFilters.scopedTerms}
+        calendarId={periodFilters.calendarId}
+        termId={periodFilters.termId}
+        latestTermId={periodFilters.latestTermId}
+        calendarsLoading={periodFilters.calendarsLoading}
+        onCalendarChange={periodFilters.setCalendar}
+        onTermChange={periodFilters.setTerm}
+      />
+
       {activeTabKey === "all-payments" && (
-        <AllPaymentsTabSection paymentConfigStatus={paymentConfig?.status} />
+        <AllPaymentsTabSection
+          paymentConfigStatus={paymentConfig?.status}
+          calendarId={periodFilters.calendarId}
+          termId={periodFilters.termId}
+          periodReady={periodFilters.ready}
+        />
       )}
 
-      {activeTabKey === "finance" && <FinanceTabSection />}
+      {activeTabKey === "finance" && (
+        <FinanceTabSection
+          calendarId={periodFilters.calendarId}
+          termId={periodFilters.termId}
+          periodLabel={periodFilters.periodLabel}
+          periodReady={periodFilters.ready}
+        />
+      )}
     </div>
   );
 };
 
 function AllPaymentsTabSection({
   paymentConfigStatus,
+  calendarId,
+  termId,
+  periodReady,
 }: {
   paymentConfigStatus?: string;
+  calendarId: string;
+  termId: string;
+  periodReady: boolean;
 }) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
@@ -138,20 +171,25 @@ function AllPaymentsTabSection({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStatus, dateFrom, dateTo]);
+  }, [selectedStatus, dateFrom, dateTo, calendarId, termId]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch]);
 
-  const { transactions, meta, summary, isLoading } = useGetSchoolPayments({
-    page: currentPage,
-    limit: PAGE_SIZE,
-    search: debouncedSearch,
-    status: selectedStatus,
-    dateFrom: dateFrom || undefined,
-    dateTo: dateTo || undefined,
-  });
+  const { transactions, meta, summary, isLoading } = useGetSchoolPayments(
+    {
+      page: currentPage,
+      limit: PAGE_SIZE,
+      search: debouncedSearch,
+      status: selectedStatus,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      academicTermId: termId || undefined,
+      academicCalendarId: calendarId || undefined,
+    },
+    periodReady
+  );
 
   const totalPages = meta?.totalPages ?? 1;
   const resultCount = meta?.total ?? 0;
@@ -305,7 +343,7 @@ function AllPaymentsTabSection({
           </div>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[860px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-200 bg-zinc-50">
                 <th className="px-4 py-3 font-medium text-zinc-600">Student</th>

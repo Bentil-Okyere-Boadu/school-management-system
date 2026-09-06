@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FinanceService } from './finance.service';
 import { FinanceQueryDto } from './dto/finance-query.dto';
+import { FinanceStudentDetailQueryDto } from './dto/finance-student-detail-query.dto';
 import { SchoolAdminJwtAuthGuard } from 'src/school-admin/guards/school-admin-jwt-auth.guard';
 import { ActiveUserGuard } from 'src/auth/guards/active-user.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -31,10 +32,24 @@ export class FinanceController {
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Roles(Role.SchoolAdmin)
+  @Get('my-school/summary')
+  @ApiOperation({ summary: 'School finance summary cards (filtered cohort)' })
+  getSummary(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: FinanceQueryDto,
+  ) {
+    return this.financeService.getSchoolSummary(admin.school.id, query);
+  }
+
+  @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Roles(Role.SchoolAdmin)
   @Get('my-school/classes')
   @ApiOperation({ summary: 'Class-level finance rollups' })
-  listClasses(@CurrentUser() admin: SchoolAdmin) {
-    return this.financeService.listClasses(admin.school.id);
+  listClasses(
+    @CurrentUser() admin: SchoolAdmin,
+    @Query() query: FinanceQueryDto,
+  ) {
+    return this.financeService.listClasses(admin.school.id, query);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
@@ -47,7 +62,12 @@ export class FinanceController {
   getStudentDetail(
     @CurrentUser() admin: SchoolAdmin,
     @Param('studentId') studentId: string,
+    @Query() query: FinanceStudentDetailQueryDto,
   ) {
-    return this.financeService.getStudentDetail(admin.school.id, studentId);
+    return this.financeService.getStudentDetail(
+      admin.school.id,
+      studentId,
+      query,
+    );
   }
 }

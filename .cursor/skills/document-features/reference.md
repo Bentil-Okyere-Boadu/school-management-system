@@ -48,7 +48,8 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | `/admin/attendance` | School Admin — sheet & summary tabs |
 | `/teacher/classes/[classId]/attendance` | Teacher — record for class |
 | `/student/attendance` | Student — view |
-| `/parent/attendance` | Parent — Family Dashboard, Attendance tab |
+| `/parent` | Parent — Family Dashboard (Attendance, Finance, Analytics tab when enabled) |
+| `/parent/attendance` | Parent — redirects to Family Dashboard, Attendance tab |
 
 ### Assignments and grading
 
@@ -92,7 +93,7 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | `/admin/payments/receipt/[transactionId]` | School Admin — receipt |
 | `/student/payments` | Student — My Payments |
 | `/student/payments/receipt/[transactionId]` | Student — receipt |
-| `/parent/payments` | Parent — Family Dashboard, Finance tab |
+| `/parent/payments` | Parent — redirects to Family Dashboard, Finance tab |
 | `/parent/payments/receipt/[transactionId]` | Parent — receipt |
 
 ### Planner and calendar
@@ -111,6 +112,8 @@ Group pages by product feature when documenting. A feature may span multiple rol
 | `/admin/performance-analytics/[studentId]` | School Admin — student detail |
 | `/teacher/performance-analytics` | Teacher |
 | `/teacher/performance-analytics/[studentId]` | Teacher — student detail |
+| `/parent/performance-analytics` | Parent — redirects to Family Dashboard, Analytics tab |
+| `/student/profile?tab=analytics` | Student — Profile, Analytics tab |
 
 ### Results
 
@@ -120,7 +123,7 @@ Lock/unlock for School Admin is on **Classes** (`/admin/classes`), not a separat
 |------|------|
 | `/admin/classes` | School Admin — lock/unlock term results |
 | `/student/results` | Student |
-| `/parent/results` | Parent — Family Dashboard, Academics tab |
+| `/parent/results` | Parent — redirects to Family Dashboard (Academics tab temporarily hidden; lands on Attendance) |
 
 ### Notifications
 

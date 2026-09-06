@@ -63,6 +63,18 @@ export class ParentFinanceQueryDto {
   @IsOptional()
   @IsUUID()
   studentId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter payments by academic term UUID' })
+  @IsOptional()
+  @IsUUID()
+  academicTermId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter payments by academic calendar (school year) UUID',
+  })
+  @IsOptional()
+  @IsUUID()
+  academicCalendarId?: string;
 }
 
 export class ParentAcademicsQueryDto {
