@@ -190,7 +190,7 @@ export class ParentController {
     @CurrentUser() parent: Parent,
     @Query() query: ParentFinanceQueryDto,
   ) {
-    return this.dashboardService.getFinance(parent.id, query.studentId);
+    return this.dashboardService.getFinance(parent.id, query);
   }
 
   @UseGuards(ParentJwtAuthGuard, ActiveUserGuard, RolesGuard)

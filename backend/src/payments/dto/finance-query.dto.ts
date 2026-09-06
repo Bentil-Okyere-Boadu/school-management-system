@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -41,4 +42,23 @@ export class FinanceQueryDto {
   @IsOptional()
   @IsIn(['all', 'owing', 'clear', 'prepaid'])
   balanceStatus?: 'all' | 'owing' | 'clear' | 'prepaid' = 'all';
+
+  @ApiPropertyOptional({ description: 'Filter by academic term UUID' })
+  @IsOptional()
+  @IsString()
+  academicTermId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by academic calendar (school year) UUID' })
+  @IsOptional()
+  @IsString()
+  academicCalendarId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, include school summary in listStudents response (slower). Default false.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  includeSummary?: boolean = false;
 }
