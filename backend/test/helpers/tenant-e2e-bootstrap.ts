@@ -20,7 +20,11 @@ export async function ensurePlatformSchoolCatalog(
       ADD COLUMN IF NOT EXISTS "tenantMigrationStatus" varchar NOT NULL DEFAULT 'ok',
       ADD COLUMN IF NOT EXISTS "lastTenantMigrationError" text,
       ADD COLUMN IF NOT EXISTS "lastTenantMigrationAt" timestamptz,
-      ADD COLUMN IF NOT EXISTS "performanceAnalyticsEnabled" boolean NOT NULL DEFAULT true
+      ADD COLUMN IF NOT EXISTS "performanceAnalyticsEnabled" boolean NOT NULL DEFAULT true,
+      ADD COLUMN IF NOT EXISTS "parentShowScores" boolean NOT NULL DEFAULT true,
+      ADD COLUMN IF NOT EXISTS "parentShowGrades" boolean NOT NULL DEFAULT true,
+      ADD COLUMN IF NOT EXISTS "parentShowLabels" boolean NOT NULL DEFAULT true,
+      ADD COLUMN IF NOT EXISTS "parentShowFeedback" boolean NOT NULL DEFAULT true
   `);
 }
 
