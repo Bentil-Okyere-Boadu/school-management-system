@@ -587,6 +587,12 @@ export interface SchoolPaymentAllocation {
   feeStructure: SchoolPaymentFeeStructure | null;
 }
 
+export interface PaymentAppliedFee {
+  feeTitle: string;
+  periodLabel: string;
+  amount: number;
+}
+
 export interface SchoolPaymentReceiptRow {
   id: string;
   receiptNumber: string;
@@ -617,6 +623,11 @@ export interface SchoolPaymentTransaction {
   student: Student;
   receipt: SchoolPaymentReceiptRow | null;
   allocations: SchoolPaymentAllocation[];
+  periodLabel?: string | null;
+  periodLabels?: string[];
+  academicTermId?: string | null;
+  academicCalendarId?: string | null;
+  appliedFees?: PaymentAppliedFee[];
 }
 
 export interface SchoolPaymentsSummary {
@@ -667,6 +678,8 @@ export interface SchoolPaymentsListParams {
   feeStructureId?: string;
   dateFrom?: string;
   dateTo?: string;
+  academicTermId?: string;
+  academicCalendarId?: string;
 }
 
 export type PaymentConfigStatus = "ready" | "paused" | "not_onboarded";
@@ -752,11 +765,13 @@ export interface FinanceStudentsListParams {
   search?: string;
   classLevelId?: string;
   balanceStatus?: FinanceBalanceStatus;
+  academicTermId?: string;
+  academicCalendarId?: string;
 }
 
 export interface PaginatedFinanceStudentsResponse {
   data: FinanceStudentRow[];
-  summary: FinanceSchoolSummary;
+  summary?: FinanceSchoolSummary;
   meta: {
     total: number;
     page: number;
@@ -791,6 +806,7 @@ export interface FinanceFeeLine {
   isArrear: boolean;
   dueDate: string | null;
   academicTermId?: string | null;
+  academicCalendarId?: string | null;
 }
 
 export interface FinanceRecentPayment {
@@ -802,6 +818,11 @@ export interface FinanceRecentPayment {
   studentName: string;
   studentCode: string;
   sessionId: string;
+  periodLabel?: string | null;
+  periodLabels?: string[];
+  academicTermId?: string | null;
+  academicCalendarId?: string | null;
+  appliedFees?: PaymentAppliedFee[];
 }
 
 export interface FinanceStudentDetailTotals extends FinanceMoneyTotals {
@@ -814,7 +835,20 @@ export interface FinanceStudentDetailResponse {
   totals: FinanceStudentDetailTotals;
   feeLines: FinanceFeeLine[];
   recentPayments: FinanceRecentPayment[];
+  paymentMeta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
+
+export type FinanceStudentDetailFilters = {
+  academicTermId?: string;
+  academicCalendarId?: string;
+  paymentPage?: number;
+  paymentLimit?: number;
+};
 
 export interface Subject {
   id?: string;

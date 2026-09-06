@@ -67,7 +67,7 @@ import { TenantModule } from './tenant/tenant.module';
       migrationsRun: true,
       synchronize: false,
       // ssl: {
-      //   rejectUnauthorized : false,
+      //   rejectUnauthorized: false,
       // },
       logging: false,
     }),

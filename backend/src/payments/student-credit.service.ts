@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Student } from 'src/student/student.entity';
 import { School } from 'src/school/school.entity';
@@ -33,6 +33,28 @@ export class StudentCreditService {
       where: { student: { id: studentId } },
     });
     return Math.round((row?.availableCredit ?? 0) * 100) / 100;
+  }
+
+  async getAvailableCreditsByStudentIds(
+    studentIds: string[],
+  ): Promise<Map<string, number>> {
+    const creditsByStudentId = new Map<string, number>();
+    if (studentIds.length === 0) {
+      return creditsByStudentId;
+    }
+
+    const rows = await this.creditRepository.find({
+      where: { student: { id: In(studentIds) } },
+      relations: ['student'],
+    });
+
+    for (const row of rows) {
+      creditsByStudentId.set(
+        row.student.id,
+        Math.round((row.availableCredit ?? 0) * 100) / 100,
+      );
+    }
+    return creditsByStudentId;
   }
 
   async getOrCreateBalance(
