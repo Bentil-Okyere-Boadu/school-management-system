@@ -104,7 +104,7 @@ const HomePage = () => {
     },
     {
       title: "Secure and Compliant",
-      description: "Enterprise-grade security with FERPA compliance and role-based access controls.",
+      description: "Enterprise-grade security with role-based access controls, designed to support compliance with Ghana’s Data Protection Act, 2012 (Act 843).",
       icon: SecComIcon
     },
     {
