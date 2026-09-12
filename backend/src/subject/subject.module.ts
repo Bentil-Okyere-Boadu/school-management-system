@@ -28,6 +28,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 import { ClassLevelResultApproval } from 'src/class-level/class-level-result-approval.entity';
 import { GradeSubmissionHistory } from 'src/class-level/grade-submission-history.entity';
 import { NotificationModule } from 'src/notification/notification.module';
+import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { NotificationModule } from 'src/notification/notification.module';
     InvitationService,
     ProfileService,
     ObjectStorageServiceService,
+    IsClassTeacherGuard,
   ],
   controllers: [SubjectController, SubjectCatalogController],
   exports: [TypeOrmModule, SubjectService],

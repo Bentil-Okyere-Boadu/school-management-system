@@ -218,6 +218,7 @@ export interface School {
   classLevels: ClassLevel[];
   admissionPolicies: AdmissionPolicy[];
   gradingSystems: GradingSystem[];
+  gradingSchemes?: GradingScheme[];
   feeStructures: FeeStructure[];
   profile: object | null;
   academicCalendars: object[];

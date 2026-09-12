@@ -353,13 +353,14 @@ export const useDeleteSchoolLogo = () => {
  * @returns
  */
 
-export const useGetFeeStructure = () => {
+export const useGetFeeStructure = (options?: { enabled?: boolean }) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["myFeeStructure"],
     queryFn: () => {
       return customAPI.get("/fee-structure/my-school");
     },
     refetchOnWindowFocus: true,
+    enabled: options?.enabled ?? true,
   });
 
   const feesStructure = (data?.data as FeeStructure[]) || [];
@@ -434,7 +435,10 @@ export const useEditGrade = (id: string) => {
 /**
  * GRADING SCHEMES (named schemes with draft/activate lifecycle)
  */
-export const useGetGradingSchemes = (status?: GradingSchemeStatus | "") => {
+export const useGetGradingSchemes = (
+  status?: GradingSchemeStatus | "",
+  options?: { enabled?: boolean },
+) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["gradingSchemes", { status: status || "" }],
     queryFn: () => {
@@ -442,6 +446,7 @@ export const useGetGradingSchemes = (status?: GradingSchemeStatus | "") => {
       return customAPI.get(`/grading-schemes${qs}`);
     },
     refetchOnWindowFocus: true,
+    enabled: options?.enabled ?? true,
   });
 
   const schemes = (data?.data as GradingScheme[]) || [];
@@ -550,13 +555,14 @@ export const useNewGradingSchemeVersion = () => {
  * ACADEMIC CALENDAR CRUD
  * @returns
  */
-export const useGetCalendars = () => {
+export const useGetCalendars = (options?: { enabled?: boolean }) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["academicCalendars"],
     queryFn: () => {
       return customAPI.get("/academic-calendar");
     },
     refetchOnWindowFocus: true,
+    enabled: options?.enabled ?? true,
   });
 
   const calendars = (data?.data as Calendar[]) || [];
@@ -1082,13 +1088,14 @@ export const useGetSubjectTopics = (
 /**
  * ADMISSION POLICY CRUD
  */
-export const useGetAdmissionPolicies = () => {
+export const useGetAdmissionPolicies = (options?: { enabled?: boolean }) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["myAdmissionPolicies"],
     queryFn: () => {
       return customAPI.get("/admission-policies");
     },
     refetchOnWindowFocus: true,
+    enabled: options?.enabled ?? true,
   });
 
   const admissionPolicies = (data?.data as AdmissionPolicy[]) || [];
@@ -2366,11 +2373,12 @@ export const useDeleteEventCategory = () => {
   });
 };
 
-export const useGetSchoolPaymentConfig = () => {
+export const useGetSchoolPaymentConfig = (options?: { enabled?: boolean }) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["schoolPaymentConfig"],
     queryFn: () => customAPI.get("/payments/my-school/config"),
     refetchOnWindowFocus: true,
+    enabled: options?.enabled ?? true,
   });
 
   const config = data?.data as SchoolPaymentConfig | undefined;

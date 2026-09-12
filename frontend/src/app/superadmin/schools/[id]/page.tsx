@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import TabBar from "@/components/common/TabBar";
-import { SchoolSettingsTabSection } from "@/components/superadmin/schools/SchoolSettingsTabSection";
-import { ConfigurationTabSection } from "@/components/superadmin/schools/ConfigurationTabSection";
+import { SchoolSettingsTabSection } from "@/components/admin/settings/SchoolSettingsTabSection";
+import { ConfigurationTabSection } from "@/components/admin/settings/ConfigurationTabSection";
 import { ProfileTabSection } from "@/components/superadmin/schools/ProfileTabSection";
 import { HubtelMerchantTabSection } from "@/components/superadmin/schools/HubtelMerchantTabSection";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
@@ -55,15 +55,25 @@ const SingleSchoolPage: React.FC = () => {
           onItemClick={handleItemClick} // triggered from the child, it will in return trigger handleItemClick function
         />
   
-        {activeTabKey === "school-settings" && (
+        {activeTabKey === "school-settings" && school && (
           <div>
-            <SchoolSettingsTabSection schoolData={school} />
+            <SchoolSettingsTabSection
+              readOnly
+              schoolData={school}
+              classes={school.classLevels}
+              feeStructures={school.feeStructures}
+              gradingSchemes={school.gradingSchemes}
+              admissionPolicies={school.admissionPolicies}
+            />
           </div>
         )}
 
         {activeTabKey === "configuration" && (
           <div>
-            <ConfigurationTabSection calendars={school?.academicCalendars as Calendar[] || []} />
+            <ConfigurationTabSection
+              readOnly
+              calendars={(school?.academicCalendars as Calendar[]) || []}
+            />
           </div>
         )}
 

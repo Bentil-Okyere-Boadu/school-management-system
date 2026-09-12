@@ -36,6 +36,7 @@ import { Subject } from 'src/subject/subject.entity';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 import { CurriculumModule } from 'src/curriculum/curriculum.module';
 import { NotificationModule } from 'src/notification/notification.module';
+import { IsClassTeacherGuard } from 'src/auth/guards/class-teacher.guard';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { NotificationModule } from 'src/notification/notification.module';
     AttendanceService,
     SchoolAdminService,
     AcademicCalendarService,
+    IsClassTeacherGuard,
   ],
   controllers: [TeacherController],
   exports: [TeacherService, TeacherAuthService, TeacherJwtAuthGuard],

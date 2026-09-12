@@ -8,9 +8,13 @@ import { toast } from "react-toastify";
 
 type Props = {
   schoolData?: School | null;
+  readOnly?: boolean;
 };
 
-export const PerformanceAnalyticsSection: React.FC<Props> = ({ schoolData }) => {
+export const PerformanceAnalyticsSection: React.FC<Props> = ({
+  schoolData,
+  readOnly = false,
+}) => {
   const { mutate, isPending } = useUpdatePerformanceAnalyticsEnabled();
   const [enabled, setEnabled] = useState(true);
 
@@ -44,18 +48,21 @@ export const PerformanceAnalyticsSection: React.FC<Props> = ({ schoolData }) => 
         <input
           type="checkbox"
           checked={enabled}
+          disabled={readOnly}
           onChange={(e) => setEnabled(e.target.checked)}
           className="h-4 w-4 rounded border-gray-300 text-purple-600"
         />
         Enable Performance Analytics
       </label>
-      <div className="mt-4">
-        <CustomButton
-          text="Save analytics setting"
-          onClick={handleSave}
-          disabled={isPending}
-        />
-      </div>
+      {!readOnly && (
+        <div className="mt-4">
+          <CustomButton
+            text="Save analytics setting"
+            onClick={handleSave}
+            disabled={isPending}
+          />
+        </div>
+      )}
     </section>
   );
 };

@@ -72,41 +72,55 @@ export class NotificationService {
         message: dto.message,
         title: dto.title,
         type: dto.type,
-        school,
+        school: { id: school.id } as School,
       });
       return this.notificationRepository.save(notification);
     });
   }
 
-  async createForRecipients(input: CreateForRecipientsInput): Promise<void> {
+  async createSchoolBroadcast(dto: CreateNotificationDto): Promise<void> {
     try {
-      const uniqueRecipients = this.dedupeRecipients(input.recipients);
-      if (uniqueRecipients.length === 0) {
-        return;
-      }
-
-      const school = await this.schoolRepository.findOne({
-        where: { id: input.schoolId },
-      });
-      if (!school) {
-        this.logger.error(
-          `Failed to create recipient notifications: school ${input.schoolId} not found`,
-        );
-        return;
-      }
-
-      const notifications = uniqueRecipients.map((recipient) =>
-        this.notificationRepository.create({
-          title: input.title,
-          message: input.message,
-          type: input.type,
-          school,
-          recipientRole: recipient.role,
-          recipientId: recipient.id,
-        }),
+      await this.create(dto);
+    } catch (error) {
+      this.logger.error(
+        `Failed to create school broadcast notification: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
+    }
+  }
 
-      await this.notificationRepository.save(notifications);
+  async createForRecipients(input: CreateForRecipientsInput): Promise<void> {
+    const uniqueRecipients = this.dedupeRecipients(input.recipients);
+    if (uniqueRecipients.length === 0) {
+      return;
+    }
+
+    const school = await this.schoolRepository.findOne({
+      where: { id: input.schoolId },
+    });
+    if (!school) {
+      this.logger.error(
+        `Failed to create recipient notifications: school ${input.schoolId} not found`,
+      );
+      return;
+    }
+
+    try {
+      await this.withSchoolTenant(input.schoolId, async () => {
+        const notifications = uniqueRecipients.map((recipient) =>
+          this.notificationRepository.create({
+            title: input.title,
+            message: input.message,
+            type: input.type,
+            school: { id: school.id } as School,
+            recipientRole: recipient.role,
+            recipientId: recipient.id,
+          }),
+        );
+
+        await this.notificationRepository.save(notifications);
+      }, undefined);
     } catch (error) {
       this.logger.error(
         `Failed to create recipient notifications: ${
@@ -114,6 +128,34 @@ export class NotificationService {
         }`,
       );
     }
+  }
+
+  async notifyStudentAbsent(input: {
+    schoolId: string;
+    studentId: string;
+    studentName: string;
+    className: string;
+    date: string;
+  }): Promise<void> {
+    await this.createForRecipients({
+      schoolId: input.schoolId,
+      type: NotificationType.Attendance,
+      title: 'Marked absent',
+      message: `You were marked absent on ${input.date}`,
+      recipients: [
+        {
+          id: input.studentId,
+          role: NotificationRecipientRole.Student,
+        },
+      ],
+    });
+
+    await this.createSchoolBroadcast({
+      schoolId: input.schoolId,
+      type: NotificationType.Attendance,
+      title: 'Student marked absent',
+      message: `${input.studentName} was marked absent in ${input.className} on ${input.date}`,
+    });
   }
 
   async findAllForSchool(

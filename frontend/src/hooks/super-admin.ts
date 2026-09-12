@@ -76,6 +76,19 @@ export const useProvisionSchool = () => {
     });
 }
 
+export const useDeleteSchool = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (schoolId: string) =>
+            customAPI.delete(`/super-admin/schools/${schoolId}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+            queryClient.invalidateQueries({ queryKey: ['allAdminUsers'] });
+        },
+    });
+}
+
 /**
  * Takes the platform invitation id, not a user id, and accepts it per call so a
  * list of schools can share one hook instance. Any fields sent alongside it
@@ -210,7 +223,7 @@ export const useGetAllSchools = (page=1,search: string = "", status: string = ""
 
 export const useGetSchoolById = (id: string, options?: UseQueryOptions) => {
     const { data, isPending} = useQuery({
-        queryKey: [id],
+        queryKey: ['school', id],
         queryFn: () => {
             return customAPI.get(`/schools/${id}`)
         },

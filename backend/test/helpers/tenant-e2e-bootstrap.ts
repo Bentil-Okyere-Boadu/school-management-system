@@ -10,6 +10,10 @@ export async function ensurePlatformSchoolCatalog(
       ADD COLUMN IF NOT EXISTS "loginEligible" boolean NOT NULL DEFAULT true
   `);
   await queryRunner.query(`
+    ALTER TABLE IF EXISTS public.refresh_token
+      ADD COLUMN IF NOT EXISTS "schoolId" uuid
+  `);
+  await queryRunner.query(`
     ALTER TABLE IF EXISTS public.school
       ADD COLUMN IF NOT EXISTS "schemaName" varchar,
       ADD COLUMN IF NOT EXISTS "provisioningStatus" varchar DEFAULT 'not_provisioned',

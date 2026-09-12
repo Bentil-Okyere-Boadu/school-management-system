@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { SuperAdmin } from './super-admin.entity';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { Role } from '../role/role.entity';
@@ -68,18 +68,37 @@ export class SuperAdminService {
       'school_admin',
     );
 
-    const data: SchoolAdmin[] = [];
+    const schoolIds = [...new Set(listings.map((dir) => dir.schoolId))];
+    const schools =
+      schoolIds.length > 0
+        ? await this.schoolRepository.find({
+            where: { id: In(schoolIds) },
+            select: ['id', 'name'],
+          })
+        : [];
+    const schoolNameById = new Map(schools.map((school) => [school.id, school.name]));
+
+    const data: Array<SchoolAdmin & { schoolName: string | null }> = [];
     for (const dir of listings) {
-      const admin = await this.tenantConnection.runForSchoolId(
-        dir.schoolId,
-        () =>
-          this.adminRepository.findOne({
-            where: { id: dir.tenantUserId },
-            relations: ['role', 'school', 'profile'],
-          }),
-      );
+      let admin: SchoolAdmin | null = null;
+      try {
+        admin = await this.tenantConnection.runForSchoolId(
+          dir.schoolId,
+          () =>
+            this.adminRepository.findOne({
+              where: { id: dir.tenantUserId },
+              relations: ['role', 'school', 'profile'],
+            }),
+        );
+      } catch {
+        continue;
+      }
       if (admin && admin.isArchived === isArchived) {
-        data.push(admin);
+        data.push(
+          Object.assign(admin, {
+            schoolName: schoolNameById.get(dir.schoolId) ?? admin.school?.name ?? null,
+          }),
+        );
       }
     }
 
@@ -89,7 +108,8 @@ export class SuperAdminService {
           (admin) =>
             admin.firstName?.toLowerCase().includes(search) ||
             admin.lastName?.toLowerCase().includes(search) ||
-            admin.email?.toLowerCase().includes(search),
+            admin.email?.toLowerCase().includes(search) ||
+            admin.schoolName?.toLowerCase().includes(search),
         )
       : data;
 

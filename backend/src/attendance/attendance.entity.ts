@@ -16,10 +16,10 @@ export class Attendance {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Student, { eager: true })
+  @ManyToOne(() => Student)
   student: Student;
 
-  @ManyToOne(() => ClassLevel, { eager: true })
+  @ManyToOne(() => ClassLevel)
   classLevel: ClassLevel;
 
   @Column({ type: 'date' })

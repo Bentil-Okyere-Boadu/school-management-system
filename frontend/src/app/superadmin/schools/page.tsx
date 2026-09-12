@@ -10,6 +10,7 @@ import { Dialog } from "@/components/common/Dialog";
 import InputField from "@/components/InputField";
 import InviteSchoolAdminFields from "@/components/superadmin/schools/InviteSchoolAdminFields";
 import SchoolCardStatus from "@/components/superadmin/schools/SchoolCardStatus";
+import SchoolCardMenu from "@/components/superadmin/schools/SchoolCardMenu";
 import {
   emptyInviteSchoolAdminValues,
   InviteSchoolAdminFormValues,
@@ -105,7 +106,8 @@ const SchoolsPage: React.FC = () => {
 
       <section className="flex flex-wrap gap-5 items-start text-sm leading-4 text-center text-zinc-700 py-6">
         {schools?.map((school, index: number) => (
-          <div key={school.id}>
+          <div key={school.id} className="relative">
+            <SchoolCardMenu school={school} />
             <SchoolCard
               onNavigateToSchoolDetail={() => handleSchoolCardClick(school.id)}
               schoolName={school.name}

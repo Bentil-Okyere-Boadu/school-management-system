@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Put,
+  Delete,
   UseGuards,
   Query,
 } from '@nestjs/common';
@@ -42,6 +43,13 @@ export class SuperAdminController {
   @Roles(Role.SuperAdmin)
   retryProvision(@Param('id') id: string) {
     return this.tenantOnboarding.retryProvision(id);
+  }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Delete('/schools/:id')
+  @Roles(Role.SuperAdmin)
+  deleteSchool(@Param('id') id: string) {
+    return this.tenantOnboarding.deleteRemovableSchool(id);
   }
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

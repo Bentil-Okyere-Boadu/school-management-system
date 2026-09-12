@@ -25,6 +25,11 @@ interface User {
     name: string;
     label: string;
   }
+  schoolName?: string | null;
+  school?: {
+    id?: string;
+    name?: string;
+  };
   isArchived?: boolean;
   isSuspended?: boolean;
     profile: {
@@ -83,6 +88,9 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 min-w-60 max-w-[340px]">
                   <div>Name</div>
                 </th>
+                <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[220px]">
+                  <div>School</div>
+                </th>
                 <th className="px-6 py-3.5 text-xs font-medium text-gray-500 whitespace-nowrap border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-11 text-left max-md:px-5 max-w-[200px]">
                   <div>Role</div>
                 </th>
@@ -97,7 +105,7 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                 if (busy) {
                   return (
                     <tr>
-                      <td colSpan={8}>
+                      <td colSpan={5}>
                         <div className="relative py-16">
                           <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10">
                             <HashLoader color="#AB58E7" size={40} />
@@ -111,7 +119,7 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                 if (users?.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={8}>
+                      <td colSpan={5}>
                         <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
                           <p className="text-lg font-medium">No users found</p>
                           <p className="text-sm text-gray-400 mt-1">
@@ -147,6 +155,10 @@ export const UserTable = ({users, refetch, onClearFilterClick, busy}: UserTableP
                           <span className="text-sm text-neutral-500">{user.email}</span>
                         </div>
                       </div>
+                    </td>
+
+                    <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">
+                      {user.schoolName ?? user.school?.name ?? "—"}
                     </td>
 
                     <td className="text-sm px-6 py-7 leading-none border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)] min-h-[72px] text-zinc-800 max-md:px-5">

@@ -102,6 +102,58 @@ export class TenantOnboardingService {
     return this.schoolRepository.save(school);
   }
 
+  /**
+   * Removes schools that never got a live administrator: failed/stale
+   * provision, or active with no eligible admin directory row.
+   */
+  async deleteRemovableSchool(schoolId: string): Promise<void> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    if (school.provisioningStatus === SchoolProvisioningStatus.Provisioning) {
+      const staleAt = Date.now() - STALE_PROVISIONING_MS;
+      if (school.updatedAt.getTime() > staleAt) {
+        throw new ConflictException(
+          'School provisioning is still in progress',
+        );
+      }
+    }
+
+    const activeAdminCount = await this.directoryRepository.count({
+      where: {
+        schoolId,
+        userType: 'school_admin',
+        loginEligible: true,
+      },
+    });
+    if (activeAdminCount > 0) {
+      throw new BadRequestException(
+        'Cannot remove a school that has an active administrator',
+      );
+    }
+
+    const schemaName = school.schemaName ?? tenantSchemaName(school.id);
+    await this.dataSource.query(
+      `DROP SCHEMA IF EXISTS ${quotePgIdent(schemaName)} CASCADE`,
+    );
+
+    await this.invitationRepository.delete({ schoolId });
+    await this.directoryRepository.delete({ schoolId });
+    await this.dataSource.query(
+      `DELETE FROM public.refresh_token WHERE "schoolId" = $1`,
+      [schoolId],
+    );
+    await this.dataSource.query(
+      `DELETE FROM public.platform_prelogin_token WHERE "schoolId" = $1`,
+      [schoolId],
+    );
+    await this.schoolRepository.delete(schoolId);
+  }
+
   async inviteSchoolAdmin(params: {
     schoolId: string;
     email: string;

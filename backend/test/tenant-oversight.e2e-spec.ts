@@ -561,4 +561,77 @@ describe('Tenancy oversight (A1–A4)', () => {
       .delete(`/api/v1/notifications/${createdA.body.id}`)
       .expect(401);
   });
+
+  it('returns tenant school settings on super admin GET /schools/:id', async () => {
+    const flow = await createSchool(
+      'a',
+      `phase-oversight-detail-admin-${runId}@example.com`,
+      `AdminDetail-${runId}!`,
+    );
+
+    const classLevels = await request(app.getHttpServer())
+      .get('/api/v1/class-level')
+      .set(bearer(flow.admin.access_token))
+      .expect(200);
+    const classLevelId = classLevels.body[0].id as string;
+
+    await request(app.getHttpServer())
+      .post('/api/v1/fee-structure')
+      .set(bearer(flow.admin.access_token))
+      .send({
+        feeTitle: `Oversight Fee ${runId}`,
+        feeType: 'term',
+        amount: 150,
+        dueDate: '2026-12-31',
+        classLevelIds: [classLevelId],
+      })
+      .expect(201);
+
+    const calendarName = `Oversight Calendar ${runId}`;
+    await request(app.getHttpServer())
+      .post('/api/v1/academic-calendar')
+      .set(bearer(flow.admin.access_token))
+      .send({ name: calendarName })
+      .expect(201);
+
+    const detail = await request(app.getHttpServer())
+      .get(`/api/v1/schools/${flow.school.id}`)
+      .set(bearer(superAdminToken))
+      .expect(200);
+
+    expect(detail.body.id).toBe(flow.school.id);
+    expect(detail.body.classLevels).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: classLevelId,
+          name: flow.className,
+        }),
+      ]),
+    );
+    expect(detail.body.feeStructures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          feeTitle: `Oversight Fee ${runId}`,
+          classLevels: expect.arrayContaining([
+            expect.objectContaining({ id: classLevelId, name: flow.className }),
+          ]),
+        }),
+      ]),
+    );
+    expect(detail.body.academicCalendars).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: calendarName }),
+      ]),
+    );
+    expect(detail.body.users.length).toBeGreaterThanOrEqual(1);
+    expect(detail.body.users).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: `phase-oversight-detail-admin-${runId}@example.com`,
+          role: expect.objectContaining({ name: 'school_admin' }),
+        }),
+      ]),
+    );
+    expect(Array.isArray(detail.body.gradingSchemes)).toBe(true);
+  });
 });

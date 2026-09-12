@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { Attendance } from 'src/attendance/attendance.entity';
 import { Holiday } from 'src/academic-calendar/entitites/holiday.entity';
+import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 import { Student } from 'src/student/student.entity';
 
 export type ParentAttendanceDayStatus =
@@ -10,7 +11,8 @@ export type ParentAttendanceDayStatus =
   | 'absent'
   | 'none'
   | 'weekend'
-  | 'holiday';
+  | 'holiday'
+  | 'out_of_term';
 
 @Injectable()
 export class ParentAttendanceService {
@@ -19,6 +21,8 @@ export class ParentAttendanceService {
     private readonly attendanceRepository: Repository<Attendance>,
     @InjectRepository(Holiday)
     private readonly holidayRepository: Repository<Holiday>,
+    @InjectRepository(AcademicTerm)
+    private readonly academicTermRepository: Repository<AcademicTerm>,
   ) {}
 
   async getMonthSheet(student: Student, year: number, month: number) {
@@ -26,7 +30,7 @@ export class ParentAttendanceService {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    const [records, holidayDates] = await Promise.all([
+    const [records, holidayDates, overlappingTerms] = await Promise.all([
       this.attendanceRepository.find({
         where: {
           student: { id: student.id },
@@ -34,6 +38,11 @@ export class ParentAttendanceService {
         },
       }),
       this.getHolidayDates(student.school?.id, startDate, endDate),
+      this.getTermsOverlappingRange(
+        student.school?.id,
+        startDate,
+        endDate,
+      ),
     ]);
 
     const byDate = new Map(
@@ -57,6 +66,7 @@ export class ParentAttendanceService {
         byDate.get(date),
         holidayDates,
         todayStr,
+        overlappingTerms,
       );
       days.push({ day, date, status });
 
@@ -94,6 +104,7 @@ export class ParentAttendanceService {
     recorded: string | undefined,
     holidayDates: Set<string>,
     todayStr: string,
+    terms: Pick<AcademicTerm, 'startDate' | 'endDate'>[],
   ): ParentAttendanceDayStatus {
     const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
@@ -104,11 +115,41 @@ export class ParentAttendanceService {
       return 'holiday';
     }
 
+    if (!this.isDateWithinAnyTerm(date, terms)) {
+      return 'out_of_term';
+    }
+
     if (date > todayStr) {
       return 'none';
     }
 
     return recorded === 'absent' ? 'absent' : 'present';
+  }
+
+  private async getTermsOverlappingRange(
+    schoolId: string | undefined,
+    startDate: string,
+    endDate: string,
+  ): Promise<AcademicTerm[]> {
+    if (!schoolId) return [];
+
+    return this.academicTermRepository
+      .createQueryBuilder('term')
+      .innerJoin('term.academicCalendar', 'calendar')
+      .innerJoin('calendar.school', 'school')
+      .where('school.id = :schoolId', { schoolId })
+      .andWhere('term.startDate <= :endDate', { endDate })
+      .andWhere('term.endDate >= :startDate', { startDate })
+      .getMany();
+  }
+
+  private isDateWithinAnyTerm(
+    date: string,
+    terms: Pick<AcademicTerm, 'startDate' | 'endDate'>[],
+  ): boolean {
+    return terms.some(
+      (term) => date >= term.startDate && date <= term.endDate,
+    );
   }
 
   private toDateKey(value: string | Date): string {

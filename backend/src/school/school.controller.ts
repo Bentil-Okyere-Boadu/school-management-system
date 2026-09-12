@@ -33,6 +33,7 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Role } from 'src/auth/enums/role.enum';
 import { SkipTenantScope } from 'src/common/tenant/skip-tenant-scope.decorator';
 import { DeepSanitizeResponseInterceptor } from 'src/common/interceptors/deep-sanitize-response.interceptor';
+import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Teacher } from 'src/teacher/teacher.entity';
 import { Student } from 'src/student/student.entity';
@@ -43,6 +44,7 @@ import { ObjectStorageServiceService } from 'src/object-storage-service/object-s
 export class SchoolController {
   constructor(
     private readonly schoolService: SchoolService,
+    private readonly tenantOnboarding: TenantOnboardingService,
     @InjectRepository(Teacher)
     private readonly teacherRepository: Repository<Teacher>,
     @InjectRepository(Student)
@@ -89,12 +91,13 @@ export class SchoolController {
   }
 
   /**
-   * Delete a school (super admin only)
+   * Delete a school (super admin only). Use guarded super-admin route instead.
    */
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete(':id')
   @Roles(Role.SuperAdmin)
   remove(@Param('id') id: string): Promise<void> {
-    return this.schoolService.remove(id);
+    return this.tenantOnboarding.deleteRemovableSchool(id);
   }
 
   @UseGuards(SchoolAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)

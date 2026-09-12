@@ -6,12 +6,11 @@ import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import Image from "next/image";
 import Mark from "@/images/Mark.svg";
 import Cancel from "@/images/Cancel.svg";
-import { usePostClassAttendance, useGetClassAttendance, useTeacherGetMe } from "@/hooks/teacher";
-import { ErrorResponse, NotificationType } from "@/@types";
+import { usePostClassAttendance, useGetClassAttendance } from "@/hooks/teacher";
+import { ErrorResponse } from "@/@types";
 import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pagination } from "@/components/common/Pagination";
-import { useCreateNotification } from "@/hooks/school-admin";
 import { HashLoader } from "react-spinners";
 
 interface Student {
@@ -21,7 +20,7 @@ interface Student {
   fullName: string;
   isArchived?: boolean;
   archivedAt?: string | null;
-  attendanceByDate: Record<string, "present" | "absent" | "weekend" | "holiday" | null>;
+  attendanceByDate: Record<string, "present" | "absent" | "weekend" | "holiday" | "out_of_term" | null>;
 }
 
 interface AttendanceData {
@@ -61,8 +60,6 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
 
   const { attendanceData, refetch, isLoading } = useGetClassAttendance(classId, "month", currentMonth, currentYear, currentWeek) as GetClassAttendance;
   const { mutate: markClassAttendanceMutation } = usePostClassAttendance(attendanceData?.classLevel?.id);
-  const {mutate: createNotification} = useCreateNotification();
-  const {me} = useTeacherGetMe();
 
   // const {isClassTeacher} = useIsClassTeacher(classId as string);
 
@@ -122,6 +119,11 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
       return;
     }
 
+    if (student?.attendanceByDate[selectedDate] === "out_of_term") {
+      toast.info("You can't mark attendance before the academic term begins.");
+      return;
+    }
+
     const currentStatus = student?.attendanceByDate[selectedDate];
     const newStatus = (currentStatus === 'absent' || currentStatus == null) ? 'present' : 'absent';
 
@@ -140,20 +142,16 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
     markClassAttendanceMutation(payload, {
       onSuccess: () => {
         toast.success('Attendance marked successfully.');
-        
-        if(newStatus === 'absent') {
-          createNotification({
-            title: "Student Absent",
-            message: `${student.fullName} marked as ${newStatus} for ${new Date(selectedDate).toLocaleDateString()}`,
-            type: NotificationType.Attendance,
-            schoolId: me.school.id
-          });
-        }
         refetch();
         queryClient.invalidateQueries({ queryKey: ['summary']})
       },
       onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
+        const message = (error as ErrorResponse).response?.data?.message;
+        toast.error(
+          Array.isArray(message)
+            ? message.join(", ")
+            : message ?? "Failed to mark attendance.",
+        );
       },
       onSettled: () => {
         setLoadingCell(null); // stop loading
@@ -235,8 +233,13 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                     const present = status === "present";
                     const isWeekend = status === "weekend";
                     const isHoliday = status === "holiday";
+                    const isOutOfTerm = status === "out_of_term";
                     const icon =
-                      status == null || isWeekend ? null : present ? Mark : Cancel;
+                      status == null || isWeekend || isOutOfTerm
+                        ? null
+                        : present
+                          ? Mark
+                          : Cancel;
 
                     const isCellLoading =
                       loadingCell?.studentId === student.id &&
@@ -250,7 +253,11 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                     const isAfterArchiveDate = isArchived && archivedAt && cellDate >= archivedAt;
 
                     const isDisabled =
-                      isWeekend || isHoliday || isCellLoading || isAfterArchiveDate;
+                      isWeekend ||
+                      isHoliday ||
+                      isOutOfTerm ||
+                      isCellLoading ||
+                      isAfterArchiveDate;
 
                     return (
                       <div
@@ -258,7 +265,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                         className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center transition-all ${
                           new Date(date).getDay() === 0 || new Date(date).getDay() === 6
                             ? "bg-white pointer-events-none"
-                            : isAfterArchiveDate
+                            : isAfterArchiveDate || isOutOfTerm
                             ? "bg-gray-100 pointer-events-none"
                             : "bg-[#F9F5FF] cursor-pointer hover:bg-[#F3E8FF]"
                         } ${isHoliday && "bg-[#FCEBCF] pointer-events-none"} ${
@@ -274,7 +281,7 @@ export const AttendanceSheetTabSection: React.FC<AttendanceSheetTabSectionProps>
                           <span className="text-[11px] font-bold text-black-500 rotate-[-45deg] whitespace-nowrap">
                             Holiday
                           </span>
-                        ) : isAfterArchiveDate ? (
+                        ) : isAfterArchiveDate || isOutOfTerm ? (
                           <span className="text-xs text-gray-400">–</span>
                         ) : icon ? (
                           <Image
