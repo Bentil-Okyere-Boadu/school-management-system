@@ -20,6 +20,7 @@ import { ProfileService } from 'src/profile/profile.service';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
 import { StudentGrade } from 'src/subject/student-grade.entity';
 import { SuperAdminProfile } from './super-admin-profile.entity';
+import { omitSchoolMerchantSecret } from 'src/common/utils/sanitizer.util';
 import { TenantOnboardingService } from 'src/tenant/tenant-onboarding.service';
 
 export type PendingInvitationView = {
@@ -30,7 +31,7 @@ export type PendingInvitationView = {
   expiresAt: Date;
 };
 
-export type SchoolWithAdminSummary = School & {
+export type SchoolWithAdminSummary = Omit<School, 'hubtelClientSecretEnc'> & {
   adminSummary: {
     activeAdmins: number;
     pendingInvitation: PendingInvitationView | null;
@@ -214,7 +215,7 @@ export class SuperAdminService {
     );
 
     return schools.map((school, index) =>
-      Object.assign(school, {
+      Object.assign(omitSchoolMerchantSecret(school), {
         adminSummary: {
           activeAdmins: adminCounts.get(school.id) ?? 0,
           pendingInvitation: pendingBySchool.get(school.id) ?? null,

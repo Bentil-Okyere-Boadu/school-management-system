@@ -25,6 +25,7 @@ import { Profile } from 'src/profile/profile.entity';
 import { EmailRetryService } from 'src/common/services/email-retry.service';
 import { TenantDirectoryService } from './tenant-directory.service';
 import { tenantSchemaName, quotePgIdent } from './tenant-schema.util';
+import { omitSchoolMerchantSecret } from 'src/common/utils/sanitizer.util';
 
 const STALE_PROVISIONING_MS = 15 * 60 * 1000;
 
@@ -59,7 +60,9 @@ export class TenantOnboardingService {
       saved.schoolCode = saved.id.replace(/-/g, '').substring(0, 5);
     }
     await this.schoolRepository.save(saved);
-    return this.provisioner.provision(saved);
+    return this.sanitizeSchoolResponse(
+      await this.provisioner.provision(saved),
+    );
   }
 
   async retryProvision(schoolId: string): Promise<School> {
@@ -71,7 +74,7 @@ export class TenantOnboardingService {
     }
 
     if (school.provisioningStatus === SchoolProvisioningStatus.Active) {
-      return school;
+      return this.sanitizeSchoolResponse(school);
     }
 
     if (school.provisioningStatus === SchoolProvisioningStatus.Provisioning) {
@@ -93,7 +96,7 @@ export class TenantOnboardingService {
       );
     }
 
-    return this.provisioner.provision(school);
+    return this.sanitizeSchoolResponse(await this.provisioner.provision(school));
   }
 
   async retryTenantMigration(schoolId: string): Promise<School> {
@@ -111,7 +114,7 @@ export class TenantOnboardingService {
     const migrationStatus =
       school.tenantMigrationStatus ?? TenantMigrationStatus.Ok;
     if (migrationStatus === TenantMigrationStatus.Ok) {
-      return school;
+      return this.sanitizeSchoolResponse(school);
     }
 
     if (
@@ -123,7 +126,9 @@ export class TenantOnboardingService {
       );
     }
 
-    return this.schemaMigrator.migrateSchool(schoolId);
+    return this.sanitizeSchoolResponse(
+      await this.schemaMigrator.migrateSchool(schoolId),
+    );
   }
 
   async setDisabled(schoolId: string, isDisabled: boolean): Promise<School> {
@@ -134,7 +139,11 @@ export class TenantOnboardingService {
       throw new NotFoundException('School not found');
     }
     school.isDisabled = isDisabled;
-    return this.schoolRepository.save(school);
+    return this.sanitizeSchoolResponse(await this.schoolRepository.save(school));
+  }
+
+  private sanitizeSchoolResponse(school: School): School {
+    return omitSchoolMerchantSecret(school) as School;
   }
 
   async canRemoveSchool(school: School): Promise<boolean> {

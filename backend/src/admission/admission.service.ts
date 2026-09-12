@@ -31,6 +31,8 @@ import { ParentStudentSource } from 'src/parent/parent.enums';
 
 import * as bcrypt from 'bcryptjs';
 import { InvitationService } from 'src/invitation/invitation.service';
+import { TransactionUtil } from 'src/common/utils/transaction.util';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class AdmissionService {
@@ -63,6 +65,7 @@ export class AdmissionService {
     private readonly tenantConnection: TenantConnectionService,
     private readonly tenantDirectory: TenantDirectoryService,
     private readonly parentLinkService: ParentLinkService,
+    private readonly transactionUtil: TransactionUtil,
   ) {}
 
   async createAdmission(
@@ -533,6 +536,20 @@ export class AdmissionService {
    * @param admission The admission application data
    * @returns The created student
    */
+  private async upsertAdmissionStudentDirectory(
+    manager: EntityManager,
+    schoolId: string,
+    student: Student,
+  ): Promise<void> {
+    await this.tenantDirectory.upsertStudentLookupKeysWithManager(manager, {
+      schoolId,
+      tenantUserId: student.id,
+      email: student.email,
+      studentId: student.studentId,
+      billingCode: student.studentBillingCode,
+    });
+  }
+
   private async createStudentFromAdmission(
     admission: Admission,
   ): Promise<Student> {
@@ -542,109 +559,142 @@ export class AdmissionService {
     }
 
     try {
-      const savedStudent = await this.tenantConnection.runForSchoolId(
-        schoolId,
-        async () => {
-          const studentRole = await this.roleRepository.findOne({
-            where: { name: 'student' },
-          });
-
-          if (!studentRole) {
-            throw new NotFoundException('Student role not found');
-          }
-
-          const existingStudent = await this.studentRepository.findOne({
-            where: { email: admission.studentEmail },
-          });
-
-          if (existingStudent) {
-            this.logger.warn(
-              `Student with email ${admission.studentEmail} already exists. Skipping student creation.`,
-            );
-            return existingStudent;
-          }
-
-          const pin = this.invitationService.generatePin();
-          const studentId = await this.invitationService.generateStudentId(
-            admission.school,
-          );
-
-          const billingCode =
-            await this.invitationService.generateUniqueStudentBillingCode(
-              this.studentRepository.manager,
-            );
-          const student = this.studentRepository.create({
-            firstName: admission.studentFirstName,
-            lastName: admission.studentLastName,
-            email: admission.studentEmail,
-            password: await bcrypt.hash(pin, 10),
-            role: studentRole,
-            school: admission.school,
-            isInvitationAccepted: false,
-            studentId,
-            studentBillingCode: billingCode,
-          });
-
-          const created = await this.studentRepository.save(student);
-
-          const profile = this.profileRepository.create({
-            avatarPath: admission.studentHeadshotPath,
-            mediaType: admission.studentHeadshotMediaType,
-            DateOfBirth: admission.studentDOB,
-            PlaceOfBirth: admission.studentPlaceOfBirth,
-            address: admission.studentStreetAddress,
-            BoxAddress: admission.studentBoxAddress,
-            phoneContact: admission.studentPhone,
-            optionalPhoneContact: admission.studentOtherPhone,
-            optionalPhoneContactTwo: admission.studentOtherPhoneOptional,
-            student: created,
-          });
-
-          await this.profileRepository.save(profile);
-
-          if (admission.forClass) {
-            const classLevel = await this.classLevelRepository.findOne({
-              where: { id: admission.forClass.id },
-              relations: ['students'],
+      return await this.tenantConnection.runForSchoolId(schoolId, async () => {
+        const outcome = await this.transactionUtil.executeInTransaction(
+          async (manager) => {
+            const studentRole = await manager.findOne(Role, {
+              where: { name: 'student' },
             });
 
-            if (classLevel) {
-              if (!classLevel.students) {
-                classLevel.students = [];
-              }
-              classLevel.students.push(created);
-              await this.classLevelRepository.save(classLevel);
+            if (!studentRole) {
+              throw new NotFoundException('Student role not found');
             }
-          }
 
-          if (admission.guardians && Array.isArray(admission.guardians)) {
-            for (const guardian of admission.guardians) {
-              const { parent } =
-                await this.parentLinkService.linkGuardianToStudent(created.id, {
-                  firstName: guardian.firstName,
-                  lastName: guardian.lastName,
-                  email: guardian.email,
-                  phone: guardian.guardianPhone,
-                  relationship: guardian.relationship,
-                  occupation: guardian.occupation,
-                  address: guardian.streetAddress,
-                  source: ParentStudentSource.Admission,
-                });
-              if (guardian.headshotPath) {
-                const parentProfile = this.profileRepository.create({
-                  avatarPath: guardian.headshotPath,
-                  mediaType: guardian.headshotMediaType,
-                  parent,
-                });
-                await this.profileRepository.save(parentProfile);
+            const existingStudent = await manager.findOne(Student, {
+              where: { email: admission.studentEmail },
+            });
+
+            if (existingStudent) {
+              this.logger.warn(
+                `Student with email ${admission.studentEmail} already exists. Ensuring tenant directory lookup keys.`,
+              );
+              await this.upsertAdmissionStudentDirectory(
+                manager,
+                schoolId,
+                existingStudent,
+              );
+              return {
+                student: existingStudent,
+                created: false as const,
+                pin: null,
+                studentId: null,
+              };
+            }
+
+            const pin = this.invitationService.generatePin();
+            const studentId = await this.invitationService.generateStudentId(
+              admission.school,
+            );
+            const billingCode =
+              await this.invitationService.generateUniqueStudentBillingCode(
+                manager,
+              );
+
+            const created = await manager.save(
+              Student,
+              manager.create(Student, {
+                firstName: admission.studentFirstName,
+                lastName: admission.studentLastName,
+                email: admission.studentEmail,
+                password: await bcrypt.hash(pin, 10),
+                role: studentRole,
+                school: admission.school,
+                isInvitationAccepted: false,
+                studentId,
+                studentBillingCode: billingCode,
+              }),
+            );
+
+            await manager.save(
+              Profile,
+              manager.create(Profile, {
+                avatarPath: admission.studentHeadshotPath,
+                mediaType: admission.studentHeadshotMediaType,
+                DateOfBirth: admission.studentDOB,
+                PlaceOfBirth: admission.studentPlaceOfBirth,
+                address: admission.studentStreetAddress,
+                BoxAddress: admission.studentBoxAddress,
+                phoneContact: admission.studentPhone,
+                optionalPhoneContact: admission.studentOtherPhone,
+                optionalPhoneContactTwo: admission.studentOtherPhoneOptional,
+                student: created,
+              }),
+            );
+
+            if (admission.forClass) {
+              const classLevel = await manager.findOne(ClassLevel, {
+                where: { id: admission.forClass.id },
+                relations: ['students'],
+              });
+
+              if (classLevel) {
+                if (!classLevel.students) {
+                  classLevel.students = [];
+                }
+                classLevel.students.push(created);
+                await manager.save(ClassLevel, classLevel);
               }
             }
-          }
 
+            if (admission.guardians && Array.isArray(admission.guardians)) {
+              for (const guardian of admission.guardians) {
+                const { parent } =
+                  await this.parentLinkService.linkGuardianToStudent(
+                    created.id,
+                    {
+                      firstName: guardian.firstName,
+                      lastName: guardian.lastName,
+                      email: guardian.email,
+                      phone: guardian.guardianPhone,
+                      relationship: guardian.relationship,
+                      occupation: guardian.occupation,
+                      address: guardian.streetAddress,
+                      source: ParentStudentSource.Admission,
+                    },
+                  );
+                if (guardian.headshotPath) {
+                  await manager.save(
+                    Profile,
+                    manager.create(Profile, {
+                      avatarPath: guardian.headshotPath,
+                      mediaType: guardian.headshotMediaType,
+                      parent,
+                    }),
+                  );
+                }
+              }
+            }
+
+            await this.upsertAdmissionStudentDirectory(
+              manager,
+              schoolId,
+              created,
+            );
+
+            return {
+              student: created,
+              created: true as const,
+              pin,
+              studentId,
+            };
+          },
+        );
+
+        if (outcome.created) {
           await this.emailService.sendStudentInvitation(
-            created,
-            studentId,
-            pin,
+            outcome.student,
+            outcome.studentId!,
+            outcome.pin!,
           );
 
           if (admission.studentPhone) {
@@ -652,8 +702,8 @@ export class AdmissionService {
               await this.smsService.sendStudentInvitationSms(
                 admission.studentPhone,
                 `${admission.studentFirstName} ${admission.studentLastName}`,
-                studentId,
-                pin,
+                outcome.studentId!,
+                outcome.pin!,
                 admission.school?.name || 'School',
               );
             } catch (error) {
@@ -667,23 +717,10 @@ export class AdmissionService {
           this.logger.log(
             `Student account created from admission application ${admission.applicationId}`,
           );
+        }
 
-          await this.tenantDirectory.upsertStudentLookupKeysWithManager(
-            this.studentRepository.manager,
-            {
-              schoolId,
-              tenantUserId: created.id,
-              email: created.email,
-              studentId: created.studentId,
-              billingCode: created.studentBillingCode,
-            },
-          );
-
-          return created;
-        },
-      );
-
-      return savedStudent;
+        return outcome.student;
+      });
     } catch (error) {
       this.logger.error(
         `Failed to create student from admission: ${error instanceof Error ? error.message : 'Unknown error'}`,

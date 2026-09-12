@@ -26,6 +26,7 @@ import { mapGradingSchemeToResponse } from 'src/grading-scheme/grading-scheme.ma
 import { GradingSystem } from 'src/grading-system/grading-system.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Role } from 'src/role/role.entity';
+import { omitSchoolMerchantSecret } from 'src/common/utils/sanitizer.util';
 
 const SUPER_ADMIN_PEOPLE_LIMIT = 100;
 
@@ -201,10 +202,9 @@ export class SchoolService {
     }
 
     const tenantDetails = await this.loadTenantDetailsForSuperAdmin(school);
-    const { hubtelClientSecretEnc: _secret, ...safeSchool } = school;
 
     return {
-      ...safeSchool,
+      ...omitSchoolMerchantSecret(school),
       ...tenantDetails,
       profile: undefined,
     };
@@ -582,7 +582,7 @@ export class SchoolService {
       throw new NotFoundException(`School with ID ${user.school.id} not found`);
     }
 
-    return school;
+    return omitSchoolMerchantSecret(school);
   }
 
   async remove(id: string): Promise<void> {

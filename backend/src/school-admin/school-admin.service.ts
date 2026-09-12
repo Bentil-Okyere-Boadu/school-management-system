@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { SchoolAdmin } from './school-admin.entity';
+import { omitSchoolMerchantSecret } from 'src/common/utils/sanitizer.util';
 import { Student } from 'src/student/student.entity';
 import { APIFeatures, QueryString } from 'src/common/api-features/api-features';
 import { School } from 'src/school/school.entity';
@@ -332,7 +333,7 @@ export class SchoolAdminService {
     const signedProfile = undefined;
 
     return {
-      ...school,
+      ...omitSchoolMerchantSecret(school),
       admissionPolicies: signedAdmissionPolicies,
       profile: signedProfile,
     };
@@ -363,7 +364,7 @@ export class SchoolAdminService {
       }
     }
 
-    return school;
+    return omitSchoolMerchantSecret(school);
   }
   async getUserById(userId: string, schoolId?: string) {
     const resolvedSchoolId = this.resolveSchoolId(schoolId);

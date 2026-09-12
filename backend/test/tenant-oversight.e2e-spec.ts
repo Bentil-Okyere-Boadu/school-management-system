@@ -646,6 +646,18 @@ describe('Tenancy oversight (A1–A4)', () => {
     expect(detail.body.users.length).toBeLessThanOrEqual(
       detail.body.peopleCounts.total,
     );
+
+    const schoolsList = await request(app.getHttpServer())
+      .get('/api/v1/super-admin/admins/schools')
+      .set(bearer(superAdminToken))
+      .expect(200);
+    const listed = (schoolsList.body.data as Array<{ id: string }>).find(
+      (row) => row.id === flow.school.id,
+    );
+    expect(listed).toBeDefined();
+    expect(
+      (listed as { hubtelClientSecretEnc?: string }).hubtelClientSecretEnc,
+    ).toBeUndefined();
   });
 
   it('rejects DELETE for active schools with students', async () => {
