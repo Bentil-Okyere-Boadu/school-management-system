@@ -550,6 +550,40 @@ export class AdmissionService {
     });
   }
 
+  private async linkAdmissionGuardians(
+    admission: Admission,
+    studentId: string,
+  ): Promise<void> {
+    if (!admission.guardians?.length) {
+      return;
+    }
+
+    for (const guardian of admission.guardians) {
+      const { parent } = await this.parentLinkService.linkGuardianToStudent(
+        studentId,
+        {
+          firstName: guardian.firstName,
+          lastName: guardian.lastName,
+          email: guardian.email,
+          phone: guardian.guardianPhone,
+          relationship: guardian.relationship,
+          occupation: guardian.occupation,
+          address: guardian.streetAddress,
+          source: ParentStudentSource.Admission,
+        },
+      );
+      if (guardian.headshotPath) {
+        await this.profileRepository.save(
+          this.profileRepository.create({
+            avatarPath: guardian.headshotPath,
+            mediaType: guardian.headshotMediaType,
+            parent,
+          }),
+        );
+      }
+    }
+  }
+
   private async createStudentFromAdmission(
     admission: Admission,
   ): Promise<Student> {
@@ -646,35 +680,6 @@ export class AdmissionService {
               }
             }
 
-            if (admission.guardians && Array.isArray(admission.guardians)) {
-              for (const guardian of admission.guardians) {
-                const { parent } =
-                  await this.parentLinkService.linkGuardianToStudent(
-                    created.id,
-                    {
-                      firstName: guardian.firstName,
-                      lastName: guardian.lastName,
-                      email: guardian.email,
-                      phone: guardian.guardianPhone,
-                      relationship: guardian.relationship,
-                      occupation: guardian.occupation,
-                      address: guardian.streetAddress,
-                      source: ParentStudentSource.Admission,
-                    },
-                  );
-                if (guardian.headshotPath) {
-                  await manager.save(
-                    Profile,
-                    manager.create(Profile, {
-                      avatarPath: guardian.headshotPath,
-                      mediaType: guardian.headshotMediaType,
-                      parent,
-                    }),
-                  );
-                }
-              }
-            }
-
             await this.upsertAdmissionStudentDirectory(
               manager,
               schoolId,
@@ -689,6 +694,8 @@ export class AdmissionService {
             };
           },
         );
+
+        await this.linkAdmissionGuardians(admission, outcome.student.id);
 
         if (outcome.created) {
           await this.emailService.sendStudentInvitation(
