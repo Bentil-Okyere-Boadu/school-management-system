@@ -207,6 +207,14 @@ export interface SchoolAdminSummary {
   canRemove?: boolean;
 }
 
+export interface SchoolPeopleCounts {
+  students: number;
+  teachers: number;
+  admins: number;
+  total: number;
+  truncated: boolean;
+}
+
 export interface School {
   classScorePercentage?: number;
   examScorePercentage?: number;
@@ -235,6 +243,7 @@ export interface School {
   lastTenantMigrationError?: string | null;
   isDisabled?: boolean;
   adminSummary?: SchoolAdminSummary;
+  peopleCounts?: SchoolPeopleCounts;
   parentShowScores?: boolean;
   parentShowGrades?: boolean;
   parentShowLabels?: boolean;

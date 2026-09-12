@@ -634,6 +634,18 @@ describe('Tenancy oversight (A1–A4)', () => {
     );
     expect(Array.isArray(detail.body.gradingSchemes)).toBe(true);
     expect(detail.body.hubtelClientSecretEnc).toBeUndefined();
+    expect(detail.body.peopleCounts).toEqual(
+      expect.objectContaining({
+        students: expect.any(Number),
+        teachers: expect.any(Number),
+        admins: expect.any(Number),
+        total: expect.any(Number),
+        truncated: expect.any(Boolean),
+      }),
+    );
+    expect(detail.body.users.length).toBeLessThanOrEqual(
+      detail.body.peopleCounts.total,
+    );
   });
 
   it('rejects DELETE for active schools with students', async () => {

@@ -94,7 +94,11 @@ const SingleSchoolPage: React.FC = () => {
         
         {activeTabKey === "people" && (
           <div>
-            <SchoolPeople users={school?.users} busy={isPending} />
+            <SchoolPeople
+              users={school?.users}
+              peopleCounts={school?.peopleCounts}
+              busy={isPending}
+            />
           </div>
         )}
 

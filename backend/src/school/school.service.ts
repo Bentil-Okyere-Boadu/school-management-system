@@ -27,6 +27,16 @@ import { GradingSystem } from 'src/grading-system/grading-system.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { Role } from 'src/role/role.entity';
 
+const SUPER_ADMIN_PEOPLE_LIMIT = 100;
+
+type SuperAdminPeopleCounts = {
+  students: number;
+  teachers: number;
+  admins: number;
+  total: number;
+  truncated: boolean;
+};
+
 type SuperAdminTenantDetails = {
   feeStructures: Array<{
     id: string;
@@ -56,6 +66,7 @@ type SuperAdminTenantDetails = {
     role: Role;
     profile?: Profile & { avatarUrl?: string };
   }>;
+  peopleCounts: SuperAdminPeopleCounts;
 };
 
 type TenantPersonEntity = {
@@ -208,6 +219,13 @@ export class SchoolService {
       gradingSystems: [],
       gradingSchemes: [],
       users: [],
+      peopleCounts: {
+        students: 0,
+        teachers: 0,
+        admins: 0,
+        total: 0,
+        truncated: false,
+      },
     };
   }
 
@@ -232,10 +250,9 @@ export class SchoolService {
         async (manager) => this.fetchTenantDetailsInScope(manager, school.id),
       );
 
-      const [admissionPolicies, users] = await Promise.all([
-        this.signAdmissionPolicies(raw.admissionPolicies),
-        this.mapTenantPeopleToUsers(raw.people),
-      ]);
+      const admissionPolicies = await this.signAdmissionPolicies(
+        raw.admissionPolicies,
+      );
 
       return {
         feeStructures: raw.feeStructures,
@@ -244,7 +261,8 @@ export class SchoolService {
         admissionPolicies,
         gradingSystems: raw.gradingSystems,
         gradingSchemes: raw.gradingSchemes,
-        users,
+        users: this.mapTenantPeopleToUsersOverview(raw.people),
+        peopleCounts: raw.peopleCounts,
       };
     } catch (error) {
       this.logger.warn(
@@ -265,7 +283,15 @@ export class SchoolService {
     gradingSystems: SuperAdminTenantDetails['gradingSystems'];
     gradingSchemes: SuperAdminTenantDetails['gradingSchemes'];
     people: TenantPersonEntity[];
+    peopleCounts: SuperAdminPeopleCounts;
   }> {
+    const studentRepo = manager.getRepository(Student);
+    const teacherRepo = manager.getRepository(Teacher);
+    const adminRepo = manager.getRepository(SchoolAdmin);
+    const activeWhere = { isArchived: false };
+    const peopleOrder = { lastName: 'ASC' as const, firstName: 'ASC' as const };
+    const peopleRelations = ['role', 'profile'] as const;
+
     const [
       feeRows,
       classLevelRows,
@@ -273,6 +299,9 @@ export class SchoolService {
       admissionPolicies,
       gradingSystems,
       gradingSchemeRows,
+      studentCount,
+      teacherCount,
+      adminCount,
       students,
       teachers,
       admins,
@@ -301,17 +330,26 @@ export class SchoolService {
         relations: ['bands', 'classLevels'],
         order: { updatedAt: 'DESC' },
       }),
-      manager.getRepository(Student).find({
-        where: { isArchived: false },
-        relations: ['role', 'profile'],
+      studentRepo.count({ where: activeWhere }),
+      teacherRepo.count({ where: activeWhere }),
+      adminRepo.count({ where: activeWhere }),
+      studentRepo.find({
+        where: activeWhere,
+        relations: [...peopleRelations],
+        order: peopleOrder,
+        take: SUPER_ADMIN_PEOPLE_LIMIT,
       }),
-      manager.getRepository(Teacher).find({
-        where: { isArchived: false },
-        relations: ['role', 'profile'],
+      teacherRepo.find({
+        where: activeWhere,
+        relations: [...peopleRelations],
+        order: peopleOrder,
+        take: SUPER_ADMIN_PEOPLE_LIMIT,
       }),
-      manager.getRepository(SchoolAdmin).find({
-        where: { isArchived: false },
-        relations: ['role', 'profile'],
+      adminRepo.find({
+        where: activeWhere,
+        relations: [...peopleRelations],
+        order: peopleOrder,
+        take: SUPER_ADMIN_PEOPLE_LIMIT,
       }),
     ]);
 
@@ -339,6 +377,16 @@ export class SchoolService {
       ...teachers,
       ...admins,
     ];
+    const peopleCounts: SuperAdminPeopleCounts = {
+      students: studentCount,
+      teachers: teacherCount,
+      admins: adminCount,
+      total: studentCount + teacherCount + adminCount,
+      truncated:
+        studentCount > SUPER_ADMIN_PEOPLE_LIMIT ||
+        teacherCount > SUPER_ADMIN_PEOPLE_LIMIT ||
+        adminCount > SUPER_ADMIN_PEOPLE_LIMIT,
+    };
 
     const gradingSchemes = gradingSchemeRows.map((scheme) => {
       scheme.bands = (scheme.bands ?? []).sort(
@@ -355,6 +403,7 @@ export class SchoolService {
       gradingSystems,
       gradingSchemes,
       people,
+      peopleCounts,
     };
   }
 
@@ -417,6 +466,26 @@ export class SchoolService {
         return result;
       }),
     );
+  }
+
+  private mapTenantPeopleToUsersOverview(
+    people: TenantPersonEntity[],
+  ): SuperAdminTenantDetails['users'] {
+    return [...people]
+      .map((person) => ({
+        id: person.id,
+        firstName: person.firstName,
+        lastName: person.lastName,
+        email: person.email,
+        status: person.isArchived ? 'archived' : person.status,
+        role: person.role,
+        profile: person.profile ?? undefined,
+      }))
+      .sort((a, b) => {
+        const aName = `${a.lastName ?? ''} ${a.firstName ?? ''}`.trim();
+        const bName = `${b.lastName ?? ''} ${b.firstName ?? ''}`.trim();
+        return aName.localeCompare(bName);
+      });
   }
 
   private async mapTenantPeopleToUsers(

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { School } from 'src/school/school.entity';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
@@ -88,7 +93,11 @@ export class TenantSchemaMigrator {
         }
 
         try {
-          await this.migrateSchool(school.id, { head, steps });
+          await this.migrateSchool(school.id, {
+            head,
+            steps,
+            skipAdvisoryLock: true,
+          });
           summary.ok++;
         } catch (error) {
           const message =
@@ -113,10 +122,52 @@ export class TenantSchemaMigrator {
     schoolId: string,
     options: Pick<TenantMigrationOptions, 'head' | 'steps' | 'skipAdvisoryLock'> = {},
   ): Promise<School> {
+    return this.withMigrationAdvisoryLock(options.skipAdvisoryLock, () =>
+      this.executeMigrateSchool(schoolId, options),
+    );
+  }
+
+  private async withMigrationAdvisoryLock<T>(
+    skip: boolean | undefined,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    if (skip === true) {
+      return fn();
+    }
+
+    const lockRunner = this.dataSource.createQueryRunner();
+    await lockRunner.connect();
+    let lockHeld = false;
+
+    try {
+      const lockRows: Array<{ locked: boolean }> = await lockRunner.query(
+        `SELECT pg_try_advisory_lock($1) AS locked`,
+        [TENANT_MIGRATION_ADVISORY_LOCK_ID],
+      );
+      lockHeld = lockRows[0]?.locked === true;
+      if (!lockHeld) {
+        throw new ConflictException('Tenant migration already running');
+      }
+      return await fn();
+    } finally {
+      if (lockHeld) {
+        await lockRunner.query(`SELECT pg_advisory_unlock($1)`, [
+          TENANT_MIGRATION_ADVISORY_LOCK_ID,
+        ]);
+      }
+      await lockRunner.release();
+    }
+  }
+
+  private async executeMigrateSchool(
+    schoolId: string,
+    options: Pick<TenantMigrationOptions, 'head' | 'steps' | 'skipAdvisoryLock'>,
+  ): Promise<School> {
     const steps = loadRegistry(options.steps);
     const head = options.head ?? TENANT_SCHEMA_HEAD;
+    const schoolRepo = this.dataSource.getRepository(School);
 
-    const school = await this.dataSource.getRepository(School).findOne({
+    const school = await schoolRepo.findOne({
       where: { id: schoolId },
     });
     if (!school) {
@@ -132,6 +183,21 @@ export class TenantSchemaMigrator {
 
     const currentVersion = school.tenantSchemaVersion ?? 0;
     if (currentVersion >= head) {
+      if (
+        school.tenantMigrationStatus === TenantMigrationStatus.Failed ||
+        school.tenantMigrationStatus === TenantMigrationStatus.Pending
+      ) {
+        await schoolRepo.update(school.id, {
+          tenantMigrationStatus: TenantMigrationStatus.Ok,
+          lastTenantMigrationError: null,
+          lastTenantMigrationAt: new Date(),
+        });
+        const healed = await schoolRepo.findOne({ where: { id: schoolId } });
+        if (!healed) {
+          throw new NotFoundException('School not found after migration heal');
+        }
+        return healed;
+      }
       return school;
     }
 
@@ -178,7 +244,7 @@ export class TenantSchemaMigrator {
       await qr.release();
     }
 
-    const updated = await this.dataSource.getRepository(School).findOne({
+    const updated = await schoolRepo.findOne({
       where: { id: schoolId },
     });
     if (!updated) {

@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { School } from 'src/school/school.entity';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
@@ -137,5 +138,67 @@ describe('TenantSchemaMigrator', () => {
     await expect(
       migrator.migrateAll({ head: 0, skipAdvisoryLock: false }),
     ).rejects.toThrow(/advisory lock/);
+  });
+
+  it('migrateSchool acquires advisory lock when skipAdvisoryLock is false', async () => {
+    const school = mockSchool({ tenantSchemaVersion: 0 });
+    schoolRepo.findOne.mockResolvedValue(school);
+
+    dataSource.createQueryRunner = jest
+      .fn()
+      .mockReturnValueOnce(lockRunner)
+      .mockReturnValueOnce({ ...tenantRunner });
+
+    await migrator.migrateSchool(school.id, {
+      head: 0,
+      skipAdvisoryLock: false,
+    });
+
+    expect(lockRunner.query).toHaveBeenCalledWith(
+      `SELECT pg_try_advisory_lock($1) AS locked`,
+      expect.any(Array),
+    );
+  });
+
+  it('migrateSchool throws ConflictException when advisory lock is held', async () => {
+    lockRunner.query.mockResolvedValue([{ locked: false }]);
+    dataSource.createQueryRunner = jest.fn().mockReturnValueOnce(lockRunner);
+
+    await expect(
+      migrator.migrateSchool('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', {
+        head: 0,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('migrateSchool heals failed status when schema version is already at HEAD', async () => {
+    const failedAtHead = mockSchool({
+      tenantSchemaVersion: 0,
+      tenantMigrationStatus: TenantMigrationStatus.Failed,
+      lastTenantMigrationError: 'previous failure',
+    });
+    const healed = {
+      ...failedAtHead,
+      tenantMigrationStatus: TenantMigrationStatus.Ok,
+      lastTenantMigrationError: null,
+    };
+
+    schoolRepo.findOne
+      .mockResolvedValueOnce(failedAtHead)
+      .mockResolvedValueOnce(healed);
+
+    dataSource.createQueryRunner = jest.fn().mockReturnValueOnce(lockRunner);
+
+    const result = await migrator.migrateSchool(failedAtHead.id, {
+      head: 0,
+      skipAdvisoryLock: false,
+    });
+
+    expect(schoolRepo.update).toHaveBeenCalledWith(failedAtHead.id, {
+      tenantMigrationStatus: TenantMigrationStatus.Ok,
+      lastTenantMigrationError: null,
+      lastTenantMigrationAt: expect.any(Date),
+    });
+    expect(result.tenantMigrationStatus).toBe(TenantMigrationStatus.Ok);
   });
 });
