@@ -59,6 +59,20 @@ export class PlatformPreloginTokenService {
     );
   }
 
+  async releaseClaim(
+    token: string,
+    purpose: PreloginTokenPurpose,
+  ): Promise<void> {
+    await this.tokenRepository.query(
+      `UPDATE platform_prelogin_token
+       SET "consumedAt" = NULL
+       WHERE token = $1
+         AND purpose = $2
+         AND "consumedAt" IS NOT NULL`,
+      [token, purpose],
+    );
+  }
+
   async claimForUse(
     token: string,
     purpose: PreloginTokenPurpose,

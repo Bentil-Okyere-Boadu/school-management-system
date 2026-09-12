@@ -76,6 +76,18 @@ export const useProvisionSchool = () => {
     });
 }
 
+export const useMigrateTenant = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (schoolId: string) =>
+            customAPI.post(`/super-admin/schools/${schoolId}/migrate-tenant`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['allSchools'] });
+        },
+    });
+}
+
 export const useDeleteSchool = () => {
     const queryClient = useQueryClient();
 

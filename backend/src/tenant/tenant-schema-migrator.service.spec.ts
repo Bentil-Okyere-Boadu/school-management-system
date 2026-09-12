@@ -21,6 +21,7 @@ describe('TenantSchemaMigrator', () => {
   let migrator: TenantSchemaMigrator;
   let schoolRepo: {
     find: jest.Mock;
+    findOne: jest.Mock;
     update: jest.Mock;
   };
   let lockRunner: {
@@ -34,6 +35,7 @@ describe('TenantSchemaMigrator', () => {
   beforeEach(() => {
     schoolRepo = {
       find: jest.fn(),
+      findOne: jest.fn(),
       update: jest.fn().mockResolvedValue(undefined),
     };
     lockRunner = {
@@ -89,6 +91,15 @@ describe('TenantSchemaMigrator', () => {
       tenantSchemaVersion: 0,
     });
     schoolRepo.find.mockResolvedValue([okSchool, failSchool]);
+    schoolRepo.findOne.mockImplementation(({ where: { id } }) => {
+      if (id === okSchool.id) {
+        return Promise.resolve(okSchool);
+      }
+      if (id === failSchool.id) {
+        return Promise.resolve(failSchool);
+      }
+      return Promise.resolve(null);
+    });
 
     const steps: TenantMigrationStep[] = [
       {

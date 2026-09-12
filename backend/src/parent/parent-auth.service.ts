@@ -97,29 +97,42 @@ export class ParentAuthService {
       'password_reset',
     );
     if (resolved.userType !== 'parent') {
+      await this.preloginTokens
+        .releaseClaim(token, 'password_reset')
+        .catch(() => undefined);
       throw new NotFoundException('Invalid or expired token');
     }
 
-    await this.tenantConnection.runForSchoolId(resolved.schoolId, async (manager) => {
-      const parent = await manager.findOne(Parent, {
-        where: { id: resolved.subjectId },
-      });
-      await this.authService.handleResetPassword(
-        token,
-        newPassword,
-        manager.getRepository(Parent),
+    try {
+      await this.tenantConnection.runForSchoolId(
+        resolved.schoolId,
+        async (manager) => {
+          const parent = await manager.findOne(Parent, {
+            where: { id: resolved.subjectId },
+          });
+          await this.authService.handleResetPassword(
+            token,
+            newPassword,
+            manager.getRepository(Parent),
+          );
+          if (
+            parent &&
+            parent.status !== ParentAccountStatus.Suspended &&
+            parent.status !== ParentAccountStatus.Archived
+          ) {
+            await manager.update(Parent, parent.id, {
+              status: ParentAccountStatus.Active,
+              isInvitationAccepted: true,
+            });
+          }
+        },
       );
-      if (
-        parent &&
-        parent.status !== ParentAccountStatus.Suspended &&
-        parent.status !== ParentAccountStatus.Archived
-      ) {
-        await manager.update(Parent, parent.id, {
-          status: ParentAccountStatus.Active,
-          isInvitationAccepted: true,
-        });
-      }
-    });
+    } catch (error) {
+      await this.preloginTokens
+        .releaseClaim(token, 'password_reset')
+        .catch(() => undefined);
+      throw error;
+    }
 
     return { success: true };
   }

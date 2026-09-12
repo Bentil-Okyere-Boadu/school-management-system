@@ -34,6 +34,7 @@ export type SchoolWithAdminSummary = School & {
   adminSummary: {
     activeAdmins: number;
     pendingInvitation: PendingInvitationView | null;
+    canRemove: boolean;
   };
 };
 
@@ -208,11 +209,16 @@ export class SuperAdminService {
       });
     }
 
-    return schools.map((school) =>
+    const removableFlags = await Promise.all(
+      schools.map((school) => this.tenantOnboarding.canRemoveSchool(school)),
+    );
+
+    return schools.map((school, index) =>
       Object.assign(school, {
         adminSummary: {
           activeAdmins: adminCounts.get(school.id) ?? 0,
           pendingInvitation: pendingBySchool.get(school.id) ?? null,
+          canRemove: removableFlags[index] ?? false,
         },
       }),
     );

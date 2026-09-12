@@ -190,9 +190,10 @@ export class SchoolService {
     }
 
     const tenantDetails = await this.loadTenantDetailsForSuperAdmin(school);
+    const { hubtelClientSecretEnc: _secret, ...safeSchool } = school;
 
     return {
-      ...school,
+      ...safeSchool,
       ...tenantDetails,
       profile: undefined,
     };

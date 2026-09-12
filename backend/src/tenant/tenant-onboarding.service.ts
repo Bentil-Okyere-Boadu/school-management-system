@@ -7,11 +7,15 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { DataSource, In, Repository } from 'typeorm';
+import { Student } from 'src/student/student.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
 import * as bcrypt from 'bcryptjs';
 import { School } from 'src/school/school.entity';
 import { CreateSchoolDto } from 'src/school/dto/create-school.dto';
 import { TenantProvisionerService } from './tenant-provisioner.service';
+import { TenantSchemaMigrator } from './tenant-schema-migrator.service';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
+import { TenantMigrationStatus } from './tenant-migration-status';
 import { PlatformInvitation } from './entities/platform-invitation.entity';
 import { TenantDirectory } from './entities/tenant-directory.entity';
 import { TenantConnectionService } from './tenant-connection.service';
@@ -36,6 +40,7 @@ export class TenantOnboardingService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly provisioner: TenantProvisionerService,
+    private readonly schemaMigrator: TenantSchemaMigrator,
     private readonly dataSource: DataSource,
     private readonly tenantConnection: TenantConnectionService,
     private readonly tenantDirectory: TenantDirectoryService,
@@ -91,6 +96,36 @@ export class TenantOnboardingService {
     return this.provisioner.provision(school);
   }
 
+  async retryTenantMigration(schoolId: string): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    if (school.provisioningStatus !== SchoolProvisioningStatus.Active) {
+      return this.retryProvision(schoolId);
+    }
+
+    const migrationStatus =
+      school.tenantMigrationStatus ?? TenantMigrationStatus.Ok;
+    if (migrationStatus === TenantMigrationStatus.Ok) {
+      return school;
+    }
+
+    if (
+      migrationStatus !== TenantMigrationStatus.Failed &&
+      migrationStatus !== TenantMigrationStatus.Pending
+    ) {
+      throw new BadRequestException(
+        `Cannot migrate tenant in status: ${migrationStatus}`,
+      );
+    }
+
+    return this.schemaMigrator.migrateSchool(schoolId);
+  }
+
   async setDisabled(schoolId: string, isDisabled: boolean): Promise<School> {
     const school = await this.schoolRepository.findOne({
       where: { id: schoolId },
@@ -102,9 +137,55 @@ export class TenantOnboardingService {
     return this.schoolRepository.save(school);
   }
 
+  async canRemoveSchool(school: School): Promise<boolean> {
+    if (school.provisioningStatus === SchoolProvisioningStatus.Provisioning) {
+      const staleAt = Date.now() - STALE_PROVISIONING_MS;
+      if (school.updatedAt.getTime() > staleAt) {
+        return false;
+      }
+    }
+
+    const activeAdminCount = await this.directoryRepository.count({
+      where: {
+        schoolId: school.id,
+        userType: 'school_admin',
+        loginEligible: true,
+      },
+    });
+    if (activeAdminCount > 0) {
+      return false;
+    }
+
+    const directoryPeopleCount = await this.directoryRepository.count({
+      where: {
+        schoolId: school.id,
+        userType: In(['student', 'teacher']),
+      },
+    });
+    if (directoryPeopleCount > 0) {
+      return false;
+    }
+
+    if (school.provisioningStatus === SchoolProvisioningStatus.Active) {
+      const hasTenantPeople = await this.tenantConnection.runForSchoolId(
+        school.id,
+        async (manager) => {
+          const students = await manager.count(Student);
+          const teachers = await manager.count(Teacher);
+          return students + teachers > 0;
+        },
+      );
+      if (hasTenantPeople) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   /**
    * Removes schools that never got a live administrator: failed/stale
-   * provision, or active with no eligible admin directory row.
+   * provision, or active with no students, teachers, or eligible admin.
    */
   async deleteRemovableSchool(schoolId: string): Promise<void> {
     const school = await this.schoolRepository.findOne({
@@ -114,25 +195,9 @@ export class TenantOnboardingService {
       throw new NotFoundException('School not found');
     }
 
-    if (school.provisioningStatus === SchoolProvisioningStatus.Provisioning) {
-      const staleAt = Date.now() - STALE_PROVISIONING_MS;
-      if (school.updatedAt.getTime() > staleAt) {
-        throw new ConflictException(
-          'School provisioning is still in progress',
-        );
-      }
-    }
-
-    const activeAdminCount = await this.directoryRepository.count({
-      where: {
-        schoolId,
-        userType: 'school_admin',
-        loginEligible: true,
-      },
-    });
-    if (activeAdminCount > 0) {
+    if (!(await this.canRemoveSchool(school))) {
       throw new BadRequestException(
-        'Cannot remove a school that has an active administrator',
+        'Cannot remove a school that has students, teachers, or an active administrator',
       );
     }
 

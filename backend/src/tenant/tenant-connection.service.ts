@@ -73,8 +73,11 @@ export class TenantConnectionService {
       };
       return await this.als.run(store, () => fn(queryRunner.manager));
     } finally {
-      await queryRunner.query(`SET search_path TO public`);
-      await queryRunner.release();
+      try {
+        await queryRunner.query(`SET search_path TO public`);
+      } finally {
+        await queryRunner.release();
+      }
     }
   }
 }

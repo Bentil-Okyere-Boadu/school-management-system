@@ -236,14 +236,21 @@ export class ParentLinkService {
       token,
       'parent_invitation',
     );
-    const parent = await this.tenantConnection.runForSchoolId(
-      resolved.schoolId,
-      () => this.completeParentInvitationInTenant(token, password),
-    );
-    if (!parent) {
-      throw new BadRequestException('Invalid or expired invitation');
+    try {
+      const parent = await this.tenantConnection.runForSchoolId(
+        resolved.schoolId,
+        () => this.completeParentInvitationInTenant(token, password),
+      );
+      if (!parent) {
+        throw new BadRequestException('Invalid or expired invitation');
+      }
+      return parent;
+    } catch (error) {
+      await this.preloginTokens
+        .releaseClaim(token, 'parent_invitation')
+        .catch(() => undefined);
+      throw error;
     }
-    return parent;
   }
 
   private async completeParentInvitationInTenant(
@@ -319,44 +326,50 @@ export class ParentLinkService {
       'child_confirmation',
     );
 
-    const link = await this.tenantConnection.runForSchoolId(
-      resolved.schoolId,
-      () =>
-        this.parentStudentRepository.findOne({
-          where: { id: resolved.subjectId, confirmationToken: token },
-          relations: ['parent', 'parent.school', 'student', 'school'],
-        }),
-    );
-
-    if (!link) {
-      throw new BadRequestException('Invalid confirmation token');
-    }
-
-    if (
-      !link.confirmationExpires ||
-      link.confirmationExpires.getTime() <= Date.now()
-    ) {
-      throw new BadRequestException(
-        'Confirmation token has expired - please request a new confirmation',
+    try {
+      const link = await this.tenantConnection.runForSchoolId(
+        resolved.schoolId,
+        () =>
+          this.parentStudentRepository.findOne({
+            where: { id: resolved.subjectId, confirmationToken: token },
+            relations: ['parent', 'parent.school', 'student', 'school'],
+          }),
       );
-    }
 
-    if (link.parent?.status !== ParentAccountStatus.Active) {
-      throw new BadRequestException(
-        'Parent account must be activated before confirming a child',
+      if (!link) {
+        throw new BadRequestException('Invalid confirmation token');
+      }
+
+      if (
+        !link.confirmationExpires ||
+        link.confirmationExpires.getTime() <= Date.now()
+      ) {
+        throw new BadRequestException(
+          'Confirmation token has expired - please request a new confirmation',
+        );
+      }
+
+      if (link.parent?.status !== ParentAccountStatus.Active) {
+        throw new BadRequestException(
+          'Parent account must be activated before confirming a child',
+        );
+      }
+
+      if (link.status === ParentStudentStatus.PendingReview) {
+        throw new BadRequestException(
+          'This relationship is waiting for school admin review',
+        );
+      }
+
+      return this.tenantConnection.runForSchoolId(resolved.schoolId, () =>
+        this.activateRelationship(link),
       );
+    } catch (error) {
+      await this.preloginTokens
+        .releaseClaim(token, 'child_confirmation')
+        .catch(() => undefined);
+      throw error;
     }
-
-    if (link.status === ParentStudentStatus.PendingReview) {
-      throw new BadRequestException(
-        'This relationship is waiting for school admin review',
-      );
-    }
-
-    return this.tenantConnection.runForSchoolId(
-      resolved.schoolId,
-      () => this.activateRelationship(link),
-    );
   }
 
   async confirmChildAsParent(parentId: string, linkId: string) {

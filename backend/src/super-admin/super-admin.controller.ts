@@ -46,6 +46,13 @@ export class SuperAdminController {
   }
 
   @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
+  @Post('/schools/:id/migrate-tenant')
+  @Roles(Role.SuperAdmin)
+  migrateTenant(@Param('id') id: string) {
+    return this.tenantOnboarding.retryTenantMigration(id);
+  }
+
+  @UseGuards(SuperAdminJwtAuthGuard, ActiveUserGuard, RolesGuard)
   @Delete('/schools/:id')
   @Roles(Role.SuperAdmin)
   deleteSchool(@Param('id') id: string) {

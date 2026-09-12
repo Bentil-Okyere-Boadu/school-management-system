@@ -633,5 +633,36 @@ describe('Tenancy oversight (A1–A4)', () => {
       ]),
     );
     expect(Array.isArray(detail.body.gradingSchemes)).toBe(true);
+    expect(detail.body.hubtelClientSecretEnc).toBeUndefined();
+  });
+
+  it('rejects DELETE for active schools with students', async () => {
+    const flow = await createSchool(
+      'a',
+      `phase-oversight-delete-guard-${runId}@example.com`,
+      `DeleteGuard-${runId}!`,
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/v1/invitations/student')
+      .set(bearer(flow.admin.access_token))
+      .send({
+        firstName: 'Delete',
+        lastName: 'GuardStudent',
+        email: `phase-oversight-delete-student-${runId}@example.com`,
+      })
+      .expect(201);
+
+    const deleteAttempt = await request(app.getHttpServer())
+      .delete(`/api/v1/super-admin/schools/${flow.school.id}`)
+      .set(bearer(superAdminToken))
+      .expect(400);
+
+    expect(String(deleteAttempt.body.message)).toMatch(
+      /students|teachers|administrator/i,
+    );
+
+    const stillExists = await schoolRepository.findOneBy({ id: flow.school.id });
+    expect(stillExists).not.toBeNull();
   });
 });

@@ -309,16 +309,17 @@ export class InvitationService {
           );
         }
 
+        await this.tenantDirectory.upsertStudentLookupKeysWithManager(manager, {
+          schoolId: adminUser.school.id,
+          tenantUserId: savedUser.id,
+          email: savedUser.email,
+          studentId: savedUser.studentId,
+          billingCode: savedUser.studentBillingCode,
+        });
+
         return savedUser;
       },
     );
-    await this.tenantDirectory.upsertStudentLookupKeys({
-      schoolId: adminUser.school.id,
-      tenantUserId: savedStudent.id,
-      email: savedStudent.email,
-      studentId: savedStudent.studentId,
-      billingCode: savedStudent.studentBillingCode,
-    });
     return savedStudent;
   }
   async inviteTeacher(
@@ -397,23 +398,24 @@ export class InvitationService {
           );
         }
 
+        await this.tenantDirectory.upsertWithManager(manager, {
+          loginKey: savedUser.email,
+          userType: 'teacher',
+          schoolId: adminUser.school.id,
+          tenantUserId: savedUser.id,
+        });
+        if (savedUser.teacherId) {
+          await this.tenantDirectory.upsertWithManager(manager, {
+            loginKey: savedUser.teacherId,
+            userType: 'teacher',
+            schoolId: adminUser.school.id,
+            tenantUserId: savedUser.id,
+          });
+        }
+
         return savedUser;
       },
     );
-    await this.tenantDirectory.upsert({
-      loginKey: savedTeacher.email,
-      userType: 'teacher',
-      schoolId: adminUser.school.id,
-      tenantUserId: savedTeacher.id,
-    });
-    if (savedTeacher.teacherId) {
-      await this.tenantDirectory.upsert({
-        loginKey: savedTeacher.teacherId,
-        userType: 'teacher',
-        schoolId: adminUser.school.id,
-        tenantUserId: savedTeacher.id,
-      });
-    }
     return savedTeacher;
   }
 }

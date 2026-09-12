@@ -668,17 +668,20 @@ export class AdmissionService {
             `Student account created from admission application ${admission.applicationId}`,
           );
 
+          await this.tenantDirectory.upsertStudentLookupKeysWithManager(
+            this.studentRepository.manager,
+            {
+              schoolId,
+              tenantUserId: created.id,
+              email: created.email,
+              studentId: created.studentId,
+              billingCode: created.studentBillingCode,
+            },
+          );
+
           return created;
         },
       );
-
-      await this.tenantDirectory.upsertStudentLookupKeys({
-        schoolId,
-        tenantUserId: savedStudent.id,
-        email: savedStudent.email,
-        studentId: savedStudent.studentId,
-        billingCode: savedStudent.studentBillingCode,
-      });
 
       return savedStudent;
     } catch (error) {

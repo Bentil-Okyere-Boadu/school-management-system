@@ -91,17 +91,27 @@ export class SchoolAdminAuthService {
       'password_reset',
     );
     if (resolved.userType !== 'school_admin') {
+      await this.preloginTokens
+        .releaseClaim(token, 'password_reset')
+        .catch(() => undefined);
       throw new NotFoundException('Invalid or expired token');
     }
 
-    return this.tenantConnection.runForSchoolId(
-      resolved.schoolId,
-      async (manager) =>
-        this.authService.handleResetPassword(
-          token,
-          newPassword,
-          manager.getRepository(SchoolAdmin),
-        ),
-    );
+    try {
+      return await this.tenantConnection.runForSchoolId(
+        resolved.schoolId,
+        async (manager) =>
+          this.authService.handleResetPassword(
+            token,
+            newPassword,
+            manager.getRepository(SchoolAdmin),
+          ),
+      );
+    } catch (error) {
+      await this.preloginTokens
+        .releaseClaim(token, 'password_reset')
+        .catch(() => undefined);
+      throw error;
+    }
   }
 }

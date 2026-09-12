@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { TenantDirectory } from './entities/tenant-directory.entity';
 
 @Injectable()
@@ -17,8 +17,22 @@ export class TenantDirectoryService {
     tenantUserId: string;
     loginEligible?: boolean;
   }): Promise<void> {
+    await this.upsertWithManager(this.directoryRepository.manager, params);
+  }
+
+  async upsertWithManager(
+    manager: EntityManager,
+    params: {
+      loginKey: string;
+      userType: TenantDirectory['userType'];
+      schoolId: string;
+      tenantUserId: string;
+      loginEligible?: boolean;
+    },
+  ): Promise<void> {
+    const directoryRepository = manager.getRepository(TenantDirectory);
     const loginKey = params.loginKey.trim().toLowerCase();
-    const existing = await this.directoryRepository.findOne({
+    const existing = await directoryRepository.findOne({
       where: {
         loginKey,
         userType: params.userType,
@@ -30,11 +44,11 @@ export class TenantDirectoryService {
       if (params.loginEligible !== undefined) {
         existing.loginEligible = params.loginEligible;
       }
-      await this.directoryRepository.save(existing);
+      await directoryRepository.save(existing);
       return;
     }
-    await this.directoryRepository.save(
-      this.directoryRepository.create({
+    await directoryRepository.save(
+      directoryRepository.create({
         loginKey,
         userType: params.userType,
         schoolId: params.schoolId,
@@ -122,11 +136,27 @@ export class TenantDirectoryService {
     studentId?: string | null;
     billingCode?: string | null;
   }): Promise<void> {
+    await this.upsertStudentLookupKeysWithManager(
+      this.directoryRepository.manager,
+      params,
+    );
+  }
+
+  async upsertStudentLookupKeysWithManager(
+    manager: EntityManager,
+    params: {
+      schoolId: string;
+      tenantUserId: string;
+      email?: string | null;
+      studentId?: string | null;
+      billingCode?: string | null;
+    },
+  ): Promise<void> {
     const keys = [params.email, params.studentId, params.billingCode].filter(
       (key): key is string => Boolean(key && key.trim()),
     );
     for (const loginKey of keys) {
-      await this.upsert({
+      await this.upsertWithManager(manager, {
         loginKey,
         userType: 'student',
         schoolId: params.schoolId,

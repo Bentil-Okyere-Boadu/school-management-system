@@ -1,6 +1,9 @@
 import { School } from "@/@types";
 
 export function canRemoveSchool(school: School): boolean {
+  if (typeof school.adminSummary?.canRemove === "boolean") {
+    return school.adminSummary.canRemove;
+  }
   if ((school.adminSummary?.activeAdmins ?? 0) > 0) {
     return false;
   }

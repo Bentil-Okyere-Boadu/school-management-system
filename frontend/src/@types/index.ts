@@ -204,6 +204,7 @@ export interface PendingSchoolAdminInvitation {
 export interface SchoolAdminSummary {
   activeAdmins: number;
   pendingInvitation: PendingSchoolAdminInvitation | null;
+  canRemove?: boolean;
 }
 
 export interface School {

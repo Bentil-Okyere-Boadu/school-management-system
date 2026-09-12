@@ -1,5 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaymentsService } from 'src/payments/payments.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 import {
   HubtelInteractionRequestDto,
   HubtelPushType,
@@ -46,6 +52,7 @@ export class HubtelService {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly hubtelDirectReceive: HubtelDirectReceiveService,
+    private readonly tenantConnection: TenantConnectionService,
   ) {}
 
   // Direct Receive Money is gated on a per-school active flag.
@@ -637,6 +644,31 @@ export class HubtelService {
     targetFeeStructureId: string | null,
     targetStudentFeeObligationId: string | null,
   ): Promise<HubtelInteractionResponseDto> {
+    const schoolId = student.school?.id;
+    if (!schoolId) {
+      throw new BadRequestException('Student is not linked to a school');
+    }
+
+    return this.tenantConnection.runForSchoolId(schoolId, () =>
+      this.executeDirectReceiveAndReleaseSession(
+        payload,
+        student,
+        paymentAmount,
+        targetFeeStructureId,
+        targetStudentFeeObligationId,
+        schoolId,
+      ),
+    );
+  }
+
+  private async executeDirectReceiveAndReleaseSession(
+    payload: HubtelInteractionRequestDto,
+    student: Student,
+    paymentAmount: number,
+    targetFeeStructureId: string | null,
+    targetStudentFeeObligationId: string | null,
+    schoolId: string,
+  ): Promise<HubtelInteractionResponseDto> {
     const channel = resolveHubtelChannelFromUssd(
       payload.Operator,
       payload.Mobile,
@@ -683,6 +715,7 @@ export class HubtelService {
       if (outcome.kind === 'pending') {
         await this.paymentsService.updateTransactionStatusFromHubtel({
           sessionId: clientReference,
+          schoolId,
           status: PaymentTransactionStatus.PENDING,
           providerStatus: rawResponse.Message ?? 'Pending',
           hubtelTransactionId,
@@ -696,6 +729,7 @@ export class HubtelService {
         const updated =
           await this.paymentsService.updateTransactionStatusFromHubtel({
             sessionId: clientReference,
+            schoolId,
             status: PaymentTransactionStatus.PAID,
             providerStatus: rawResponse.Message ?? 'Paid',
             hubtelTransactionId,
@@ -705,7 +739,7 @@ export class HubtelService {
               rawResponse.Data?.AmountAfterCharges ?? paymentAmount,
             rawFulfilmentPayload: rawResponse as Record<string, unknown>,
           });
-        await this.paymentsService.allocatePaidTransaction(updated.id);
+        await this.paymentsService.allocatePaidTransaction(updated.id, schoolId);
         return this.release(payload, MSG_PAID);
       }
 
@@ -713,6 +747,7 @@ export class HubtelService {
         transaction.id,
         outcome.reason,
         rawResponse as Record<string, unknown>,
+        schoolId,
       );
       const userMsg = userFacingMessageForHubtelResponseCode(
         outcome.responseCode,
@@ -725,7 +760,7 @@ export class HubtelService {
         `USSD Direct Receive failure for session=${payload.SessionId} school=${student.school?.id}: ${reason}`,
       );
       await this.paymentsService
-        .markTransactionFailed(transaction.id, reason)
+        .markTransactionFailed(transaction.id, reason, undefined, schoolId)
         .catch(() => undefined);
       return this.release(payload, MSG_PAYMENT_ERROR);
     }

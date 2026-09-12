@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { School } from 'src/school/school.entity';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
@@ -87,54 +87,14 @@ export class TenantSchemaMigrator {
           continue;
         }
 
-        const pending = stepsForRange(steps, currentVersion, head);
-        if (pending.length === 0 && currentVersion < head) {
-          const message = `No tenant migration steps between version ${currentVersion} and HEAD ${head}`;
-          await this.markFailed(school.id, currentVersion, message);
-          summary.failed++;
-          summary.failures.push({ schoolId: school.id, error: message });
-          continue;
-        }
-
-        const qr = this.dataSource.createQueryRunner();
-        await qr.connect();
-        await qr.startTransaction();
         try {
-          await qr.query(
-            `SET LOCAL search_path TO ${quotePgIdent(schemaName)}, public`,
-          );
-          await this.markPending(school.id);
-
-          let appliedVersion = currentVersion;
-          for (const step of pending) {
-            this.logger.log(
-              `Migrating school ${school.id} schema ${schemaName}: step ${step.version} ${step.name}`,
-            );
-            await step.up(qr, schemaName);
-            appliedVersion = step.version;
-          }
-
-          await qr.manager.update(School, school.id, {
-            tenantSchemaVersion: head,
-            tenantMigrationStatus: TenantMigrationStatus.Ok,
-            lastTenantMigrationError: null,
-            lastTenantMigrationAt: new Date(),
-          });
-
-          await qr.commitTransaction();
+          await this.migrateSchool(school.id, { head, steps });
           summary.ok++;
         } catch (error) {
-          await qr.rollbackTransaction();
           const message =
             error instanceof Error ? error.message : String(error);
-          await this.markFailed(school.id, currentVersion, message);
           summary.failed++;
           summary.failures.push({ schoolId: school.id, error: message });
-          this.logger.error(
-            `Tenant migration failed for school ${school.id}: ${message}`,
-          );
-        } finally {
-          await qr.release();
         }
       }
 
@@ -147,6 +107,84 @@ export class TenantSchemaMigrator {
       }
       await lockRunner.release();
     }
+  }
+
+  async migrateSchool(
+    schoolId: string,
+    options: Pick<TenantMigrationOptions, 'head' | 'steps' | 'skipAdvisoryLock'> = {},
+  ): Promise<School> {
+    const steps = loadRegistry(options.steps);
+    const head = options.head ?? TENANT_SCHEMA_HEAD;
+
+    const school = await this.dataSource.getRepository(School).findOne({
+      where: { id: schoolId },
+    });
+    if (!school) {
+      throw new NotFoundException('School not found');
+    }
+
+    const schemaName = school.schemaName
+      ? assertTenantSchemaName(school.schemaName)
+      : null;
+    if (!schemaName) {
+      throw new Error(`School ${school.id}: missing schemaName`);
+    }
+
+    const currentVersion = school.tenantSchemaVersion ?? 0;
+    if (currentVersion >= head) {
+      return school;
+    }
+
+    const pending = stepsForRange(steps, currentVersion, head);
+    if (pending.length === 0 && currentVersion < head) {
+      const message = `No tenant migration steps between version ${currentVersion} and HEAD ${head}`;
+      await this.markFailed(school.id, currentVersion, message);
+      throw new Error(message);
+    }
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      await qr.query(
+        `SET LOCAL search_path TO ${quotePgIdent(schemaName)}, public`,
+      );
+      await this.markPending(school.id);
+
+      for (const step of pending) {
+        this.logger.log(
+          `Migrating school ${school.id} schema ${schemaName}: step ${step.version} ${step.name}`,
+        );
+        await step.up(qr, schemaName);
+      }
+
+      await qr.manager.update(School, school.id, {
+        tenantSchemaVersion: head,
+        tenantMigrationStatus: TenantMigrationStatus.Ok,
+        lastTenantMigrationError: null,
+        lastTenantMigrationAt: new Date(),
+      });
+
+      await qr.commitTransaction();
+    } catch (error) {
+      await qr.rollbackTransaction();
+      const message = error instanceof Error ? error.message : String(error);
+      await this.markFailed(school.id, currentVersion, message);
+      this.logger.error(
+        `Tenant migration failed for school ${school.id}: ${message}`,
+      );
+      throw error;
+    } finally {
+      await qr.release();
+    }
+
+    const updated = await this.dataSource.getRepository(School).findOne({
+      where: { id: schoolId },
+    });
+    if (!updated) {
+      throw new NotFoundException('School not found after migration');
+    }
+    return updated;
   }
 
   private async markPending(schoolId: string): Promise<void> {

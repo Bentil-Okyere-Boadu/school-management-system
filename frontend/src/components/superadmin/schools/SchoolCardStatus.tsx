@@ -11,6 +11,7 @@ import {
   useInviteSchoolAdmin,
 } from "@/hooks/invite-school-admin";
 import {
+  useMigrateTenant,
   useProvisionSchool,
   useResendSchoolAdminInvitation,
 } from "@/hooks/super-admin";
@@ -38,6 +39,7 @@ const SchoolCardStatus: React.FC<SchoolCardStatusProps> = ({ school }) => {
 
   const { mutate: provisionSchool, isPending: isProvisioning } =
     useProvisionSchool();
+  const { mutate: migrateTenant, isPending: isMigrating } = useMigrateTenant();
   const { mutate: resendInvitation, isPending: isResending } =
     useResendSchoolAdminInvitation();
   const { inviteSchoolAdmin, isInviting } = useInviteSchoolAdmin();
@@ -106,6 +108,27 @@ const SchoolCardStatus: React.FC<SchoolCardStatusProps> = ({ school }) => {
     });
   };
 
+  const handleMigrateTenant = () => {
+    migrateTenant(school.id, {
+      onSuccess: (response) => {
+        const updated = response?.data as School | undefined;
+        const status = updated?.tenantMigrationStatus ?? migrationStatus;
+        if (status === "ok") {
+          toast.success(`${school.name} tenant migration completed.`);
+        } else if (status === "failed") {
+          toast.error(
+            updated?.lastTenantMigrationError ??
+              `${school.name} tenant migration failed.`,
+          );
+        } else {
+          toast.info(`${school.name} tenant migration is pending.`);
+        }
+      },
+      onError: (error: unknown) =>
+        toast.error(errorMessage(error, "Tenant migration failed.")),
+    });
+  };
+
   const renderState = () => {
     if (school.isDisabled) {
       return (
@@ -160,11 +183,11 @@ const SchoolCardStatus: React.FC<SchoolCardStatusProps> = ({ school }) => {
           </span>
           {migrationFailed && (
             <CustomButton
-              text={isProvisioning ? "Retrying..." : "Retry provision"}
+              text={isMigrating ? "Retrying..." : "Retry migration"}
               variant="outline"
               className={actionClasses}
-              onClick={handleProvision}
-              loading={isProvisioning}
+              onClick={handleMigrateTenant}
+              loading={isMigrating}
             />
           )}
         </>

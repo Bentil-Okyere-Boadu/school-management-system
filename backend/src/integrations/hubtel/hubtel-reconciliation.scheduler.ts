@@ -81,6 +81,7 @@ export class HubtelReconciliationScheduler {
           const updated =
             await this.paymentsService.updateTransactionStatusFromHubtel({
               sessionId: transaction.sessionId,
+              schoolId: school.id,
               status: mappedStatus,
               providerStatus: statusResponse.data.status,
               hubtelTransactionId: statusResponse.data.transactionId,
@@ -95,7 +96,10 @@ export class HubtelReconciliationScheduler {
             });
 
           if (mappedStatus === PaymentTransactionStatus.PAID) {
-            await this.paymentsService.allocatePaidTransaction(updated.id);
+            await this.paymentsService.allocatePaidTransaction(
+              updated.id,
+              school.id,
+            );
           }
 
           this.logger.log(
