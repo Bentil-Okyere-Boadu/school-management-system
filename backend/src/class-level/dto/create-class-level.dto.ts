@@ -7,9 +7,11 @@ import {
   IsUUID,
   ValidateIf,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateClassLevelDto {
   @ApiProperty()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsNotEmpty({ message: 'Class name is required.' })
   @IsString({ message: 'Class name must be text.' })
   name: string;

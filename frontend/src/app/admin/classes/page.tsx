@@ -472,9 +472,10 @@ const ClassesPage = () => {
             label="Class Teacher"
             placeholder="Pick teacher"
             data={allTeacherOptions || []}
-            value={selectedTeacher}
-            onChange={(e) => handleTeacherChange(e as string)}
+            value={selectedTeacher || null}
+            onChange={(e) => handleTeacherChange(e ?? "")}
             searchable
+            clearable
           />
         </div>
       </Dialog>

@@ -136,7 +136,7 @@ export class ClassLevelService {
         classLevel.classTeacher = classTeacher;
       } else {
         // Explicitly set to null — removes the assigned teacher
-        classLevel.classTeacher = null as unknown as Teacher;
+        classLevel.classTeacher = null;
       }
     }
 

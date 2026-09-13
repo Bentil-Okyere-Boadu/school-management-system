@@ -295,7 +295,7 @@ export interface ClassLevel {
   students: User[];
   teachers: User[];
   studentCount?: number;
-  classTeacher: User;
+  classTeacher: User | null;
   classTeacherId: string | null;
 }
 

@@ -1,9 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateClassLevelDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsNotEmpty({ message: 'Class name cannot be empty.' })
   @IsString({ message: 'Class name must be text.' })
   name?: string;

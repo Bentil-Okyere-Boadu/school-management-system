@@ -9,7 +9,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
 import { AttachmentIcon } from "@/utils/icons";
-import { IconUpload } from "@tabler/icons-react";
 
 export const PendingAssignmentsTab: React.FC = () => {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
@@ -237,7 +236,7 @@ export const PendingAssignmentsTab: React.FC = () => {
       <Dialog
         isOpen={isSubmitDialogOpen}
         busy={submitting}
-        dialogTitle="Submit Assignment"
+        dialogTitle="View Assignment"
         onClose={() => {
           setIsSubmitDialogOpen(false);
           setSelectedFile([]);
