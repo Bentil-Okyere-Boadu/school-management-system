@@ -20,6 +20,7 @@ function mockSchool(overrides: Partial<School> = {}): School {
 
 describe('TenantSchemaMigrator', () => {
   let migrator: TenantSchemaMigrator;
+  let schemaNeedsProductionHeal: jest.SpyInstance;
   let schoolRepo: {
     find: jest.Mock;
     findOne: jest.Mock;
@@ -63,6 +64,18 @@ describe('TenantSchemaMigrator', () => {
         .mockReturnValue(tenantRunner),
     };
     migrator = new TenantSchemaMigrator(dataSource as DataSource);
+    schemaNeedsProductionHeal = jest
+      .spyOn(
+        migrator as unknown as {
+          schemaNeedsProductionHeal: (schemaName: string) => Promise<boolean>;
+        },
+        'schemaNeedsProductionHeal',
+      )
+      .mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    schemaNeedsProductionHeal.mockRestore();
   });
 
   it('skips schools already at HEAD', async () => {

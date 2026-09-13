@@ -24,12 +24,16 @@ import {
   assertTenantSchemaName,
   quotePgIdent,
 } from './tenant-schema.util';
+import { TenantSchemaInspector } from './tenant-schema-inspector.service';
 
 @Injectable()
 export class TenantSchemaMigrator {
   private readonly logger = new Logger(TenantSchemaMigrator.name);
+  private readonly schemaInspector: TenantSchemaInspector;
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) {
+    this.schemaInspector = new TenantSchemaInspector(dataSource);
+  }
 
   async migrateAll(
     options: TenantMigrationOptions = {},
@@ -88,8 +92,11 @@ export class TenantSchemaMigrator {
 
         const currentVersion = school.tenantSchemaVersion ?? 0;
         if (currentVersion >= head) {
-          summary.skipped++;
-          continue;
+          const needsHeal = await this.schemaNeedsProductionHeal(schemaName);
+          if (!needsHeal) {
+            summary.skipped++;
+            continue;
+          }
         }
 
         try {
@@ -182,30 +189,43 @@ export class TenantSchemaMigrator {
     }
 
     const currentVersion = school.tenantSchemaVersion ?? 0;
-    if (currentVersion >= head) {
-      if (
-        school.tenantMigrationStatus === TenantMigrationStatus.Failed ||
-        school.tenantMigrationStatus === TenantMigrationStatus.Pending
-      ) {
-        await schoolRepo.update(school.id, {
-          tenantMigrationStatus: TenantMigrationStatus.Ok,
-          lastTenantMigrationError: null,
-          lastTenantMigrationAt: new Date(),
-        });
-        const healed = await schoolRepo.findOne({ where: { id: schoolId } });
-        if (!healed) {
-          throw new NotFoundException('School not found after migration heal');
+    let pending = stepsForRange(steps, currentVersion, head);
+
+    if (currentVersion >= head && pending.length === 0) {
+      const needsHeal = await this.schemaNeedsProductionHeal(schemaName);
+      if (!needsHeal) {
+        if (
+          school.tenantMigrationStatus === TenantMigrationStatus.Failed ||
+          school.tenantMigrationStatus === TenantMigrationStatus.Pending
+        ) {
+          await schoolRepo.update(school.id, {
+            tenantMigrationStatus: TenantMigrationStatus.Ok,
+            lastTenantMigrationError: null,
+            lastTenantMigrationAt: new Date(),
+          });
+          const healed = await schoolRepo.findOne({ where: { id: schoolId } });
+          if (!healed) {
+            throw new NotFoundException('School not found after migration heal');
+          }
+          return healed;
         }
-        return healed;
+        return school;
       }
-      return school;
+
+      pending = steps.filter((step) => step.version <= head);
+      this.logger.warn(
+        `Schema drift detected for school ${school.id} (catalog version ${currentVersion}, HEAD ${head}); replaying ${pending.length} production step(s)`,
+      );
     }
 
-    const pending = stepsForRange(steps, currentVersion, head);
     if (pending.length === 0 && currentVersion < head) {
       const message = `No tenant migration steps between version ${currentVersion} and HEAD ${head}`;
       await this.markFailed(school.id, currentVersion, message);
       throw new Error(message);
+    }
+
+    if (pending.length === 0) {
+      return school;
     }
 
     const qr = this.dataSource.createQueryRunner();
@@ -225,7 +245,7 @@ export class TenantSchemaMigrator {
       }
 
       await qr.manager.update(School, school.id, {
-        tenantSchemaVersion: head,
+        tenantSchemaVersion: Math.max(currentVersion, head),
         tenantMigrationStatus: TenantMigrationStatus.Ok,
         lastTenantMigrationError: null,
         lastTenantMigrationAt: new Date(),
@@ -270,5 +290,31 @@ export class TenantSchemaMigrator {
       lastTenantMigrationError: error,
       lastTenantMigrationAt: new Date(),
     });
+  }
+
+  /** True when live schema is missing expected production columns/tables. */
+  private async schemaNeedsProductionHeal(schemaName: string): Promise<boolean> {
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    try {
+      await qr.query(
+        `SET LOCAL search_path TO ${quotePgIdent(schemaName)}, public`,
+      );
+      const expected = this.schemaInspector.buildExpectedFingerprint();
+      const actual = await this.schemaInspector.buildActualFingerprint(
+        qr,
+        schemaName,
+      );
+      return this.schemaInspector
+        .compareFingerprints(expected, actual)
+        .some(
+          (diff) =>
+            diff.includes('missing column') ||
+            diff.includes('missing table') ||
+            diff.includes('type mismatch'),
+        );
+    } finally {
+      await qr.release();
+    }
   }
 }
