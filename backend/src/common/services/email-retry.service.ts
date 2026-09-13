@@ -3,7 +3,6 @@ import { EmailService } from './email.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
-
 /**
  * Service for retrying failed email operations
  */
@@ -126,4 +125,3 @@ export class EmailRetryService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
-

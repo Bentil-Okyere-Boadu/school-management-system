@@ -17,7 +17,7 @@ interface Student {
   fullName: string;
   isArchived?: boolean;
   archivedAt?: string | null;
-  attendanceByDate: Record<string, "present" | "absent" | "weekend" | "holiday" | null>;
+  attendanceByDate: Record<string, "present" | "absent" | "weekend" | "holiday" | "out_of_term" | null>;
 }
 
 interface AttendanceData {
@@ -187,7 +187,13 @@ export const AttendanceSheetTabSection = () => {
                     const present = status === "present";
                     const isWeekend = status === "weekend";
                     const isHoliday = status === "holiday";
-                    const icon = status == null || isWeekend ? null : present ? Mark : Cancel;
+                    const isOutOfTerm = status === "out_of_term";
+                    const icon =
+                      status == null || isWeekend || isOutOfTerm
+                        ? null
+                        : present
+                          ? Mark
+                          : Cancel;
 
                     // Check if student is archived and if this date is on/after archive date
                     const isArchived = student.isArchived || false;
@@ -202,7 +208,7 @@ export const AttendanceSheetTabSection = () => {
                         className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center ${
                           new Date(date).getDay() === 0 || new Date(date).getDay() === 6
                             ? "bg-white pointer-events-none"
-                            : isAfterArchiveDate
+                            : isAfterArchiveDate || isOutOfTerm
                             ? "bg-gray-100 pointer-events-none"
                             : "bg-[#F9F5FF]"
                         } ${isHoliday && "bg-[#FCEBCF]"}`}
@@ -211,7 +217,7 @@ export const AttendanceSheetTabSection = () => {
                           <span className="text-[11px] font-bold text-black-500 rotate-[-45deg] whitespace-nowrap">
                             Holiday
                           </span>
-                        ) : isAfterArchiveDate ? (
+                        ) : isAfterArchiveDate || isOutOfTerm ? (
                           <span className="text-xs text-gray-400">–</span>
                         ) : icon ? (
                           <Image

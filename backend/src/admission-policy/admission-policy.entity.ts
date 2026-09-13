@@ -29,8 +29,6 @@ export class AdmissionPolicy {
   })
   documentUrl?: string;
 
-  @ManyToOne(() => School, (school) => school.admissionPolicies, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => School, { onDelete: 'CASCADE' })
   school: School;
 }

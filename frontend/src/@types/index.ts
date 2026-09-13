@@ -65,6 +65,13 @@ export interface Teacher extends User {
   optionalPhoneContact: string;
 }
 
+export type ParentRelationshipStatus =
+  | "pending"
+  | "pending_confirmation"
+  | "pending_review"
+  | "active"
+  | "revoked";
+
 export interface Parent {
   id?: string;
   firstName: string;
@@ -74,6 +81,11 @@ export interface Parent {
   address: string;
   phone: string;
   relationship: string;
+  status?: "pending" | "active" | "suspended" | "archived";
+  relationshipStatus?: ParentRelationshipStatus;
+  relationshipId?: string;
+  isInvitationAccepted?: boolean;
+  invitationExpired?: boolean;
 }
 
 export type AuthCredentials = Pick<User, "email" | "password">;
@@ -193,6 +205,28 @@ export interface GradingSystem {
   maxRange: number;
 }
 
+export interface PendingSchoolAdminInvitation {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  expiresAt: string;
+}
+
+export interface SchoolAdminSummary {
+  activeAdmins: number;
+  pendingInvitation: PendingSchoolAdminInvitation | null;
+  canRemove?: boolean;
+}
+
+export interface SchoolPeopleCounts {
+  students: number;
+  teachers: number;
+  admins: number;
+  total: number;
+  truncated: boolean;
+}
+
 export interface School {
   classScorePercentage?: number;
   examScorePercentage?: number;
@@ -205,6 +239,7 @@ export interface School {
   classLevels: ClassLevel[];
   admissionPolicies: AdmissionPolicy[];
   gradingSystems: GradingSystem[];
+  gradingSchemes?: GradingScheme[];
   feeStructures: FeeStructure[];
   profile: object | null;
   academicCalendars: object[];
@@ -213,6 +248,14 @@ export interface School {
   updatedAt: string;
   logoUrl: string;
   calendlyUrl: string;
+  schemaName?: string;
+  provisioningStatus?: "not_provisioned" | "provisioning" | "active" | "failed";
+  lastProvisionError?: string | null;
+  tenantMigrationStatus?: "ok" | "pending" | "failed" | string;
+  lastTenantMigrationError?: string | null;
+  isDisabled?: boolean;
+  adminSummary?: SchoolAdminSummary;
+  peopleCounts?: SchoolPeopleCounts;
   parentShowScores?: boolean;
   parentShowGrades?: boolean;
   parentShowLabels?: boolean;
@@ -295,8 +338,8 @@ export interface ClassLevel {
   students: User[];
   teachers: User[];
   studentCount?: number;
-  classTeacher: User;
-  classTeacherId: string;
+  classTeacher: User | null;
+  classTeacherId: string | null;
 }
 
 export interface AdmissionPolicy {
@@ -1189,6 +1232,8 @@ export enum NotificationType {
   General = "general",
   ClassTeacherResultSubmission = "classTeacherResultSubmission",
   ParentInvitation = "parentInvitation",
+  ParentInvitationFailed = "parentInvitationFailed",
+  ParentInvitationExpired = "parentInvitationExpired",
   ParentAccepted = "parentAccepted",
   ParentChildConfirmation = "parentChildConfirmation",
   ParentChildConfirmed = "parentChildConfirmed",

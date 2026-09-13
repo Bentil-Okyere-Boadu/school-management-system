@@ -4,7 +4,15 @@ const SENSITIVE_FIELDS = [
   'invitationExpires',
   'resetPasswordToken',
   'resetPasswordExpires',
+  'hubtelClientSecretEnc',
 ];
+
+export function omitSchoolMerchantSecret<T extends { hubtelClientSecretEnc?: string | null }>(
+  school: T,
+): Omit<T, 'hubtelClientSecretEnc'> {
+  const { hubtelClientSecretEnc: _secret, ...safe } = school;
+  return safe;
+}
 
 export function sanitize<T>(data: T): any {
   if (Array.isArray(data)) {

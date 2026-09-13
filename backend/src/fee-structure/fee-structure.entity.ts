@@ -31,9 +31,7 @@ export class FeeStructure {
   @Column({ nullable: true, type: 'date' })
   dueDate?: string;
 
-  @ManyToOne(() => School, (school) => school.feeStructures, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => School, { onDelete: 'CASCADE' })
   school: School;
 
   @ManyToMany(() => ClassLevel)

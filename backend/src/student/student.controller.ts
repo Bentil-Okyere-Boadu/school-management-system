@@ -14,7 +14,8 @@ import {
   UploadedFile,
   Query,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipTenantScope } from 'src/common/tenant/skip-tenant-scope.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 
@@ -53,13 +54,23 @@ export class StudentController {
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(StudentLocalAuthGuard)
+  @SkipTenantScope()
   @Post('login')
+  @ApiOperation({
+    summary:
+      'Log in with identifier + PIN. Prefer studentId ABC-00000-120-00001 (school = 5-digit schoolCode). Email is allowed only when tenant_directory has exactly one student row.',
+  })
   login(@Request() req: { user: Student }) {
     return this.studentAuthService.login(req.user);
   }
 
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
+  @SkipTenantScope()
   @Post('forgot-password')
+  @ApiOperation({
+    summary:
+      'Reset PIN before login. Same identifier contract as login. Ambiguous email does not mutate any tenant.',
+  })
   forgotPassword(@Body() forgotPasswordDto: ForgotStudentPasswordDto) {
     return this.studentService.forgotPin(forgotPasswordDto.identifier);
   }

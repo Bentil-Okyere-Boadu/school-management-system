@@ -22,6 +22,7 @@
             "description": ""
           }
         },
+        "summary": "Log in with identifier + PIN. Prefer teacherId ABC-00000-123-00001 (school = 5-digit schoolCode). Email is allowed only when tenant_directory has exactly one teacher row.",
         "tags": ["Teacher"]
       }
     },
@@ -73,6 +74,27 @@
     "/api/v1/teacher/classes/{id}/name": {
       "get": {
         "operationId": "TeacherController_getClassLevelName",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{id}": {
+      "get": {
+        "operationId": "TeacherController_getClassLevel",
         "parameters": [
           {
             "name": "id",
@@ -278,6 +300,7 @@
             "description": ""
           }
         },
+        "summary": "Reset PIN before login. Same identifier contract as login. Ambiguous email does not mutate any tenant.",
         "tags": ["Teacher"]
       }
     },
@@ -307,6 +330,81 @@
       "get": {
         "operationId": "TeacherController_getProfile",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications": {
+      "get": {
+        "operationId": "TeacherController_getMyNotifications",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications/mark-all-read": {
+      "patch": {
+        "operationId": "TeacherController_markAllMyNotificationsAsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications/{id}/markAsRead": {
+      "patch": {
+        "operationId": "TeacherController_markMyNotificationAsRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications/{id}": {
+      "delete": {
+        "operationId": "TeacherController_deleteMyNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -1086,7 +1184,8 @@
         "properties": {
           "identifier": {
             "type": "string",
-            "example": "teacher@school.com or TCH-001"
+            "example": "ABC-00000-123-00001",
+            "description": "Generated teacherId, or email only if it belongs to exactly one school"
           }
         },
         "required": ["identifier"]

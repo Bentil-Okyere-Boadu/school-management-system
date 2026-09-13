@@ -19,7 +19,15 @@ import {
 } from "@mantine/core";
 import { useDeleteFeeStructure, useDeleteSchoolLogo, useEditFeeStructure, useGetFeeStructure, useGetSchoolPaymentConfig, useSaveFeeStructure, useUpdateCalendlyUrl, useUploadSchoolLogoFile } from "@/hooks/school-admin";
 import { toast } from "react-toastify";
-import { ClassLevel, ErrorResponse, FeeStructure, School } from "@/@types";
+import {
+  AdmissionPolicy,
+  Calendar,
+  ClassLevel,
+  ErrorResponse,
+  FeeStructure,
+  GradingScheme,
+  School,
+} from "@/@types";
 import { EmailItem } from "./EmailItem";
 import FileUploadArea from "@/components/common/FileUploadArea";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,12 +39,25 @@ const ALL_CLASSES_VALUE = "__all_classes__";
 
 interface SchoolSettingsTabSectionProps {
   schoolData: School;
-  classes: ClassLevel[]
+  classes?: ClassLevel[];
+  readOnly?: boolean;
+  feeStructures?: FeeStructure[];
+  gradingSchemes?: GradingScheme[];
+  admissionPolicies?: AdmissionPolicy[];
 }
 
 
-export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> = ({schoolData, classes}) => {
-  const { config: paymentConfig } = useGetSchoolPaymentConfig();
+export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> = ({
+  schoolData,
+  classes = [],
+  readOnly = false,
+  feeStructures: feeStructuresProp,
+  gradingSchemes,
+  admissionPolicies,
+}) => {
+  const { config: paymentConfig } = useGetSchoolPaymentConfig({
+    enabled: !readOnly,
+  });
   const showUssdFeeSwitch =
     paymentConfig != null && paymentConfig.status !== "not_onboarded";
 
@@ -110,7 +131,10 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
   );
 
   const { mutate: createFeeStructure, isPending: pendingCreate } = useSaveFeeStructure();
-  const { feesStructure, isLoading, refetch } = useGetFeeStructure();
+  const { feesStructure: fetchedFees, isLoading, refetch } = useGetFeeStructure({
+    enabled: feeStructuresProp === undefined,
+  });
+  const feesStructure = feeStructuresProp ?? fetchedFees ?? [];
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteFeeStructure();
   const { mutate: editMutation, isPending: pendingEdit } = useEditFeeStructure(feeId);
 
@@ -330,37 +354,41 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
           <h1 className="text-md font-semibold text-neutral-800">
             Fee Structure
           </h1>
-          <CustomUnderlinedButton
-            text="Add New"
-            textColor="text-purple-500"
-            onClick={() => {
-              clearDialog();
-              setIsFeeStructureDialogOpen(true);
-            }}
-            showIcon={false}
-          />
+          {!readOnly && (
+            <CustomUnderlinedButton
+              text="Add New"
+              textColor="text-purple-500"
+              onClick={() => {
+                clearDialog();
+                setIsFeeStructureDialogOpen(true);
+              }}
+              showIcon={false}
+            />
+          )}
         </div>
         <div className="flex flex-col gap-4 mb-12">
           {
             feesStructure.length > 0? feesStructure?.map((feeStructure, index) => {
               return (
                 <div key={index} className="bg-[#EAEAEAB3] px-6 py-2 rounded-sm">
-                  <div className="flex justify-end gap-3">
-                    <CustomUnderlinedButton
-                      text="Edit"
-                      textColor="text-gray-500"
-                      onClick={() => onEditFeeStructureClick(feeStructure) }
-                      showIcon={false}
-                    />
-                    <CustomUnderlinedButton
-                      text="Delete"
-                      textColor="text-gray-500"
-                      onClick={() =>
-                        onDeleteFeeStructureClick(feeStructure.id || "")
-                      }
-                      showIcon={false}
-                    />
-                  </div>
+                  {!readOnly && (
+                    <div className="flex justify-end gap-3">
+                      <CustomUnderlinedButton
+                        text="Edit"
+                        textColor="text-gray-500"
+                        onClick={() => onEditFeeStructureClick(feeStructure) }
+                        showIcon={false}
+                      />
+                      <CustomUnderlinedButton
+                        text="Delete"
+                        textColor="text-gray-500"
+                        onClick={() =>
+                          onDeleteFeeStructureClick(feeStructure.id || "")
+                        }
+                        showIcon={false}
+                      />
+                    </div>
+                  )}
                   <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
                     <InputField
                       label="Fee Title"
@@ -385,29 +413,36 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       </div>
 
       <div className="mt-8">
-        <GradingSchemesSection />
+        <GradingSchemesSection
+          readOnly={readOnly}
+          schemes={gradingSchemes}
+          calendars={schoolData?.academicCalendars as Calendar[]}
+        />
       </div>
 
       <div className="mt-8">
-        <GradingPercentagesSection schoolData={schoolData} />
+        <GradingPercentagesSection schoolData={schoolData} readOnly={readOnly} />
       </div>
 
       <div className="mt-8">
-        <ParentVisibilitySection schoolData={schoolData} />
+        <ParentVisibilitySection schoolData={schoolData} readOnly={readOnly} />
       </div>
 
       <div className="mt-8">
-        <PerformanceAnalyticsSection schoolData={schoolData} />
+        <PerformanceAnalyticsSection schoolData={schoolData} readOnly={readOnly} />
       </div>
 
       <div className="mt-8">
-        <AdmissionPoliciesSection />
+        <AdmissionPoliciesSection
+          readOnly={readOnly}
+          admissionPolicies={admissionPolicies}
+        />
       </div>
 
       <div className="mt-8">
         <h1 className="text-md font-semibold text-neutral-800">School Logo</h1>
 
-        {!schoolData?.logoUrl &&
+        {!readOnly && !schoolData?.logoUrl &&
           <CustomUnderlinedButton
             text="Upload Logo"
             textColor="text-purple-500"
@@ -425,20 +460,22 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
                 logoUrl={schoolData?.logoUrl}
                 backgroundColor="bg-[#FFF]"
               />
-              <div className="flex justify-between mt-3">
-                <CustomUnderlinedButton
-                  text="Delete Logo"
-                  textColor="text-gray-500"
-                  onClick={() => {setIsConfirmDeleteSchoolLogoDialogOpen(true)}}
-                  showIcon={true}
-                />
-                <CustomUnderlinedButton
-                  text="Change Logo"
-                  textColor="text-gray-500"
-                  onClick={() => {setIsSchoolLogoUploadOpen(true)}}
-                  showIcon={true}
-                />
-              </div>
+              {!readOnly && (
+                <div className="flex justify-between mt-3">
+                  <CustomUnderlinedButton
+                    text="Delete Logo"
+                    textColor="text-gray-500"
+                    onClick={() => {setIsConfirmDeleteSchoolLogoDialogOpen(true)}}
+                    showIcon={true}
+                  />
+                  <CustomUnderlinedButton
+                    text="Change Logo"
+                    textColor="text-gray-500"
+                    onClick={() => {setIsSchoolLogoUploadOpen(true)}}
+                    showIcon={true}
+                  />
+                </div>
+              )}
             </div>
           </section>
           )
@@ -448,15 +485,17 @@ export const SchoolSettingsTabSection: React.FC<SchoolSettingsTabSectionProps> =
       <div className="mt-8 w-1/4">
         <div className="flex justify-between items-center">
           <label className="text-sm font-semibold text-neutral-800">Calendly URL</label>
-          <CustomUnderlinedButton
-            text="Edit URL"
-            textColor="text-gray-500"
-            onClick={() => {
-              setCalendlyDialogOpen(true);
-              setCalendlyUrl(schoolData?.calendlyUrl);
-            }}
-            showIcon={true}
-          />
+          {!readOnly && (
+            <CustomUnderlinedButton
+              text="Edit URL"
+              textColor="text-gray-500"
+              onClick={() => {
+                setCalendlyDialogOpen(true);
+                setCalendlyUrl(schoolData?.calendlyUrl);
+              }}
+              showIcon={true}
+            />
+          )}
         </div>
 
         <Link href={schoolData?.calendlyUrl || ''} target="_blank" className="text-sm text-purple-600 underline mb-2 inline-block">

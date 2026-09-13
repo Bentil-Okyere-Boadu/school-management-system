@@ -10,9 +10,13 @@ import { ErrorResponse } from "@/@types";
 
 interface GradingPercentagesSectionProps {
   schoolData: School;
+  readOnly?: boolean;
 }
 
-export const GradingPercentagesSection: React.FC<GradingPercentagesSectionProps> = ({ schoolData }) => {
+export const GradingPercentagesSection: React.FC<GradingPercentagesSectionProps> = ({
+  schoolData,
+  readOnly = false,
+}) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [classScorePercentage, setClassScorePercentage] = useState<number>(
     schoolData?.classScorePercentage || 30
@@ -89,12 +93,14 @@ export const GradingPercentagesSection: React.FC<GradingPercentagesSectionProps>
         <h1 className="text-md font-semibold text-neutral-800">
           Grading Percentages
         </h1>
-        <CustomUnderlinedButton
-          text="Edit"
-          textColor="text-purple-500"
-          onClick={() => setIsDialogOpen(true)}
-          showIcon={false}
-        />
+        {!readOnly && (
+          <CustomUnderlinedButton
+            text="Edit"
+            textColor="text-purple-500"
+            onClick={() => setIsDialogOpen(true)}
+            showIcon={false}
+          />
+        )}
       </div>
       <div className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-2">
         <div>

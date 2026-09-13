@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { StudentAuthService } from '../student.auth.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { Student } from '../student.entity';
 
 @Injectable()
 export class StudentJwtStrategy extends PassportStrategy(
@@ -14,9 +13,7 @@ export class StudentJwtStrategy extends PassportStrategy(
 ) {
   constructor(
     private configService: ConfigService,
-    private studentAuthService: StudentAuthService,
-    @InjectRepository(SchoolAdmin)
-    private schoolAdminRepository: Repository<SchoolAdmin>,
+    private readonly tenantConnection: TenantConnectionService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -25,38 +22,45 @@ export class StudentJwtStrategy extends PassportStrategy(
     });
   }
 
-  async validate(payload: any) {
-    if (payload.role !== 'student') {
+  async validate(payload: {
+    role?: string;
+    sub?: string;
+    email?: string;
+    schoolId?: string;
+    firstName?: string;
+    lastName?: string;
+  }) {
+    if (payload.role !== 'student' || !payload.schoolId || !payload.sub) {
       return null;
     }
-    const student = await this.studentAuthService.findByEmailOrStudentId(
-      payload.email,
+    return this.tenantConnection.runForSchoolId(
+      payload.schoolId,
+      async (manager) => {
+        const student = await manager.findOne(Student, {
+          where: { id: payload.sub },
+          relations: ['role', 'school'],
+        });
+        if (!student) {
+          return null;
+        }
+        const hasSuspendedAdmin = await manager.findOne(SchoolAdmin, {
+          where: { isSuspended: true },
+        });
+        if (hasSuspendedAdmin) {
+          return null;
+        }
+        return {
+          id: student.id,
+          email: student.email,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          status: student.status,
+          role: student.role,
+          studentId: student.studentId,
+          school: student.school,
+          schoolId: payload.schoolId,
+        };
+      },
     );
-    if (!student) {
-      return null;
-    }
-
-    // Check if any school admin for this school is suspended
-    // If yes, logout all students and teachers of that school
-    if (student.school?.id) {
-      const hasSuspendedAdmin = await this.schoolAdminRepository.findOne({
-        where: { school: { id: student.school.id }, isSuspended: true },
-      });
-      if (hasSuspendedAdmin) {
-        return null; // Logout student
-      }
-    }
-
-    return {
-      id: student.id,
-      email: student.email,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      status: student.status,
-      role: student.role,
-      studentId: student.studentId,
-      school: student.school,
-      schoolId: student.school?.id,
-    };
   }
 }

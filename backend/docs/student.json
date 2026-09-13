@@ -22,6 +22,7 @@
             "description": ""
           }
         },
+        "summary": "Log in with identifier + PIN. Prefer studentId ABC-00000-120-00001 (school = 5-digit schoolCode). Email is allowed only when tenant_directory has exactly one student row.",
         "tags": ["Student"]
       }
     },
@@ -44,6 +45,7 @@
             "description": ""
           }
         },
+        "summary": "Reset PIN before login. Same identifier contract as login. Ambiguous email does not mutate any tenant.",
         "tags": ["Student"]
       }
     },
@@ -184,6 +186,81 @@
         "tags": ["Student"]
       }
     },
+    "/api/v1/student/notifications": {
+      "get": {
+        "operationId": "StudentController_getMyNotifications",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/notifications/mark-all-read": {
+      "patch": {
+        "operationId": "StudentController_markAllMyNotificationsAsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/notifications/{id}/markAsRead": {
+      "patch": {
+        "operationId": "StudentController_markMyNotificationAsRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/notifications/{id}": {
+      "delete": {
+        "operationId": "StudentController_deleteMyNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
     "/api/v1/student/classes/{classLevelId}/calendars/{calendarId}/attendance/grouped": {
       "get": {
         "operationId": "StudentController_getMyAttendanceGroupedByTermAndMonth",
@@ -301,7 +378,8 @@
         "properties": {
           "identifier": {
             "type": "string",
-            "example": "student@school.com or STU-2024-001"
+            "example": "ABC-00000-120-00001",
+            "description": "Generated studentId, or email only if it belongs to exactly one school"
           }
         },
         "required": ["identifier"]
@@ -402,10 +480,11 @@
             "type": "string"
           },
           "relationship": {
-            "type": "string"
+            "type": "string",
+            "example": "Mother"
           }
         },
-        "required": ["firstName", "lastName"]
+        "required": ["firstName", "lastName", "email", "relationship"]
       },
       "SubmitAssignmentDto": {
         "type": "object",

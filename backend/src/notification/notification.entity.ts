@@ -15,6 +15,8 @@ export enum NotificationType {
   General = 'general',
   ClassTeacherResultSubmission = 'classTeacherResultSubmission',
   ParentInvitation = 'parentInvitation',
+  ParentInvitationFailed = 'parentInvitationFailed',
+  ParentInvitationExpired = 'parentInvitationExpired',
   ParentAccepted = 'parentAccepted',
   ParentChildConfirmation = 'parentChildConfirmation',
   ParentChildConfirmed = 'parentChildConfirmed',
@@ -63,6 +65,6 @@ export class Notification {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => School, (school) => school.admins, { eager: true })
+  @ManyToOne(() => School, { onDelete: 'CASCADE' })
   school: School;
 }

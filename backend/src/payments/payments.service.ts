@@ -8,7 +8,6 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Brackets,
-  In,
   LessThanOrEqual,
   Repository,
   SelectQueryBuilder,
@@ -35,6 +34,9 @@ import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { RequestPaymentSetupDto } from './dto/request-payment-setup.dto';
 import { FeeObligationService } from './fee-obligation.service';
 import { StudentCreditService } from './student-credit.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
+import { TenantUserLookupService } from 'src/tenant/tenant-user-lookup.service';
 import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
 
 const OTP_TTL_MINUTES = 10;
@@ -121,7 +123,47 @@ export class PaymentsService {
     private readonly configService: ConfigService,
     private readonly feeObligationService: FeeObligationService,
     private readonly studentCreditService: StudentCreditService,
+    private readonly tenantConnection: TenantConnectionService,
+    private readonly tenantDirectory: TenantDirectoryService,
+    private readonly tenantUserLookup: TenantUserLookupService,
   ) {}
+
+  private async ensureStudentTenant<T>(
+    student: Student,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const schoolId = student.school?.id;
+    if (!schoolId) {
+      throw new NotFoundException('Student not found');
+    }
+    return this.ensureSchoolTenant(schoolId, fn);
+  }
+
+  private async ensureSchoolTenant<T>(
+    schoolId: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const store = this.tenantConnection.tryGetStore();
+    if (store?.schoolId === schoolId) {
+      return fn();
+    }
+    return this.tenantConnection.runForSchoolId(schoolId, fn);
+  }
+
+  private async runInSchoolTenantOrStore<T>(
+    schoolId: string | undefined,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    if (schoolId) {
+      return this.ensureSchoolTenant(schoolId, fn);
+    }
+    if (this.tenantConnection.tryGetStore()) {
+      return fn();
+    }
+    throw new BadRequestException(
+      'School tenant context is required for this payment operation',
+    );
+  }
 
   private buildPaymentConfigFromSchool(school: School): SchoolPaymentConfig {
     const configured = Boolean(
@@ -313,33 +355,46 @@ export class PaymentsService {
   }
 
   async getStudentByBillingCode(studentBillingCode: string): Promise<Student> {
-    const student = await this.studentRepository.findOne({
-      where: { studentBillingCode },
-      relations: ['school', 'classLevels'],
-    });
-
-    if (!student) {
-      throw new NotFoundException('Invalid student billing code');
-    }
-
-    return student;
+    return this.resolveStudentByBillingCodeOrStudentId(studentBillingCode);
   }
 
   async getStudentById(studentId: string): Promise<Student> {
-    const student = await this.studentRepository.findOne({
-      where: { id: studentId },
-      relations: ['school', 'classLevels'],
-    });
+    const store = this.tenantConnection.tryGetStore();
+    if (store) {
+      const student = await this.studentRepository.findOne({
+        where: { id: studentId },
+        relations: ['school', 'classLevels'],
+      });
+      if (!student) {
+        throw new NotFoundException('Student not found');
+      }
+      return student;
+    }
 
+    const directory = await this.tenantDirectory.findByTenantUser(
+      studentId,
+      'student',
+    );
+    if (!directory) {
+      throw new NotFoundException('Student not found');
+    }
+    const student = await this.tenantConnection.runForSchoolId(
+      directory.schoolId,
+      (manager) =>
+        manager.findOne(Student, {
+          where: { id: studentId },
+          relations: ['school', 'classLevels'],
+        }),
+    );
     if (!student) {
       throw new NotFoundException('Student not found');
     }
-
     return student;
   }
 
   /**
    * USSD / payments: resolve by billing code or login student ID (human-readable).
+   * Fail closed: directory must have exactly one match. Never scan all tenants.
    */
   async resolveStudentByBillingCodeOrStudentId(raw: string): Promise<Student> {
     const q = raw.trim();
@@ -347,35 +402,34 @@ export class PaymentsService {
       throw new NotFoundException('Student not found');
     }
 
+    const fromLookup = await this.tenantUserLookup.findStudent(q);
+    if (fromLookup) {
+      return this.getStudentById(fromLookup.id);
+    }
+
     const normalizedInput = q.toUpperCase().replace(/\s+/g, '');
     const billingCandidates = this.toBillingCodeCandidates(normalizedInput);
-
-    let student = await this.studentRepository.findOne({
-      where: { studentBillingCode: In(billingCandidates) },
-      relations: ['school', 'classLevels'],
-    });
-
-    if (!student) {
-      student = await this.studentRepository.findOne({
-        where: { studentId: q },
-        relations: ['school', 'classLevels'],
-      });
+    let matchedTenantUserId: string | null = null;
+    for (const candidate of billingCandidates) {
+      const dirs = await this.tenantDirectory.findByLogin(candidate, 'student');
+      if (dirs.length > 1) {
+        throw new NotFoundException('Student not found');
+      }
+      if (dirs.length === 1) {
+        if (
+          matchedTenantUserId &&
+          matchedTenantUserId !== dirs[0].tenantUserId
+        ) {
+          throw new NotFoundException('Student not found');
+        }
+        matchedTenantUserId = dirs[0].tenantUserId;
+      }
     }
 
-    if (!student) {
-      student = await this.studentRepository
-        .createQueryBuilder('student')
-        .leftJoinAndSelect('student.school', 'school')
-        .leftJoinAndSelect('student.classLevels', 'classLevels')
-        .where('LOWER(student.studentId) = LOWER(:q)', { q })
-        .getOne();
-    }
-
-    if (!student) {
+    if (!matchedTenantUserId) {
       throw new NotFoundException('Student not found');
     }
-
-    return student;
+    return this.getStudentById(matchedTenantUserId);
   }
 
   private toBillingCodeCandidates(normalizedInput: string): string[] {
@@ -415,12 +469,14 @@ export class PaymentsService {
     student: Student,
     options?: { ussdEligibleOnly?: boolean },
   ): Promise<number> {
-    const ussdOnly = options?.ussdEligibleOnly ?? true;
-    const fees = await this.findApplicableFeeStructuresForStudent(student, {
-      ussdEligibleOnly: ussdOnly,
-    });
-    return this.feeObligationService.getTotalOutstanding(student, fees, {
-      ussdEligibleOnly: ussdOnly,
+    return this.ensureStudentTenant(student, async () => {
+      const ussdOnly = options?.ussdEligibleOnly ?? true;
+      const fees = await this.findApplicableFeeStructuresForStudent(student, {
+        ussdEligibleOnly: ussdOnly,
+      });
+      return this.feeObligationService.getTotalOutstanding(student, fees, {
+        ussdEligibleOnly: ussdOnly,
+      });
     });
   }
 
@@ -432,19 +488,21 @@ export class PaymentsService {
       academicCalendarId?: string;
     },
   ): Promise<number> {
-    const ussdOnly = options?.ussdEligibleOnly ?? true;
-    const fees = await this.findApplicableFeeStructuresForStudent(student, {
-      ussdEligibleOnly: ussdOnly,
-    });
-    return this.feeObligationService.getTermOutstanding(
-      student,
-      fees,
-      academicTermId,
-      {
+    return this.ensureStudentTenant(student, async () => {
+      const ussdOnly = options?.ussdEligibleOnly ?? true;
+      const fees = await this.findApplicableFeeStructuresForStudent(student, {
         ussdEligibleOnly: ussdOnly,
-        academicCalendarId: options?.academicCalendarId,
-      },
-    );
+      });
+      return this.feeObligationService.getTermOutstanding(
+        student,
+        fees,
+        academicTermId,
+        {
+          ussdEligibleOnly: ussdOnly,
+          academicCalendarId: options?.academicCalendarId,
+        },
+      );
+    });
   }
 
   /**
@@ -462,22 +520,24 @@ export class PaymentsService {
       feeStructureId: string;
     }[]
   > {
-    const ussdOnly = options?.ussdEligibleOnly ?? true;
-    const fees = await this.findApplicableFeeStructuresForStudent(student, {
-      ussdEligibleOnly: ussdOnly,
+    return this.ensureStudentTenant(student, async () => {
+      const ussdOnly = options?.ussdEligibleOnly ?? true;
+      const fees = await this.findApplicableFeeStructuresForStudent(student, {
+        ussdEligibleOnly: ussdOnly,
+      });
+      const lines = await this.feeObligationService.getOutstandingLines(
+        student,
+        fees,
+        { ussdEligibleOnly: ussdOnly },
+      );
+      return lines.map((l) => ({
+        id: l.id,
+        feeTitle: l.feeTitle,
+        outstanding: l.outstanding,
+        periodLabel: l.periodLabel,
+        feeStructureId: l.feeStructureId,
+      }));
     });
-    const lines = await this.feeObligationService.getOutstandingLines(
-      student,
-      fees,
-      { ussdEligibleOnly: ussdOnly },
-    );
-    return lines.map((l) => ({
-      id: l.id,
-      feeTitle: l.feeTitle,
-      outstanding: l.outstanding,
-      periodLabel: l.periodLabel,
-      feeStructureId: l.feeStructureId,
-    }));
   }
 
   /**
@@ -488,9 +548,11 @@ export class PaymentsService {
     amount: number,
   ): Promise<{ feeName: string; amount: number }[]> {
     const student = await this.getStudentById(studentId);
-    return this.simulateAllocationLines(student, amount, {
-      ussdOnly: true,
-    });
+    return this.ensureStudentTenant(student, () =>
+      this.simulateAllocationLines(student, amount, {
+        ussdOnly: true,
+      }),
+    );
   }
 
   /**
@@ -502,6 +564,7 @@ export class PaymentsService {
     target: { obligationId: string } | { feeStructureId: string },
   ): Promise<{ feeName: string; amount: number }[]> {
     const student = await this.getStudentById(studentId);
+    return this.ensureStudentTenant(student, async () => {
     const fees = await this.findApplicableFeeStructuresForStudent(student, {
       ussdEligibleOnly: true,
     });
@@ -532,6 +595,7 @@ export class PaymentsService {
       ussdOnly: true,
       prioritizeObligationId,
       prioritizeFeeStructureId,
+    });
     });
   }
 
@@ -602,11 +666,14 @@ export class PaymentsService {
    */
   async findTransactionByClientReference(
     clientReference: string,
+    schoolId?: string,
   ): Promise<PaymentTransaction | null> {
-    return this.paymentTransactionRepository.findOne({
-      where: { sessionId: clientReference },
-      relations: ['student', 'school', 'receipt'],
-    });
+    return this.runInSchoolTenantOrStore(schoolId, () =>
+      this.paymentTransactionRepository.findOne({
+        where: { sessionId: clientReference },
+        relations: ['student', 'school', 'receipt'],
+      }),
+    );
   }
 
   /**
@@ -617,24 +684,27 @@ export class PaymentsService {
     transactionId: string,
     reason: string,
     rawPayload?: Record<string, unknown> | null,
+    schoolId?: string,
   ): Promise<PaymentTransaction> {
-    const transaction = await this.paymentTransactionRepository.findOne({
-      where: { id: transactionId },
+    return this.runInSchoolTenantOrStore(schoolId, async () => {
+      const transaction = await this.paymentTransactionRepository.findOne({
+        where: { id: transactionId },
+      });
+      if (!transaction) {
+        throw new NotFoundException(
+          `Payment transaction ${transactionId} not found`,
+        );
+      }
+      if (transaction.status !== PaymentTransactionStatus.PENDING) {
+        return transaction;
+      }
+      transaction.status = PaymentTransactionStatus.FAILED;
+      transaction.providerStatus = reason;
+      if (rawPayload) {
+        transaction.rawFulfilmentPayload = rawPayload;
+      }
+      return this.paymentTransactionRepository.save(transaction);
     });
-    if (!transaction) {
-      throw new NotFoundException(
-        `Payment transaction ${transactionId} not found`,
-      );
-    }
-    if (transaction.status !== PaymentTransactionStatus.PENDING) {
-      return transaction;
-    }
-    transaction.status = PaymentTransactionStatus.FAILED;
-    transaction.providerStatus = reason;
-    if (rawPayload) {
-      transaction.rawFulfilmentPayload = rawPayload;
-    }
-    return this.paymentTransactionRepository.save(transaction);
   }
 
   async createPendingTransaction(input: {
@@ -651,31 +721,34 @@ export class PaymentsService {
       throw new BadRequestException('Payment amount must be greater than zero');
     }
 
-    const existing = await this.paymentTransactionRepository.findOne({
-      where: { sessionId: input.sessionId },
-    });
-    if (existing) {
-      return existing;
-    }
+    return this.ensureStudentTenant(input.student, async () => {
+      const existing = await this.paymentTransactionRepository.findOne({
+        where: { sessionId: input.sessionId },
+      });
+      if (existing) {
+        return existing;
+      }
 
-    const transaction = this.paymentTransactionRepository.create({
-      sessionId: input.sessionId,
-      student: input.student,
-      school: input.student.school,
-      amount: input.amount,
-      mobile: input.mobile,
-      rawInteractionPayload: input.interactionPayload,
-      status: PaymentTransactionStatus.PENDING,
-      targetFeeStructureId: input.targetFeeStructureId ?? null,
-      targetStudentFeeObligationId: input.targetStudentFeeObligationId ?? null,
-      targetAcademicTermId: input.targetAcademicTermId ?? null,
-    });
+      const transaction = this.paymentTransactionRepository.create({
+        sessionId: input.sessionId,
+        student: input.student,
+        school: input.student.school,
+        amount: input.amount,
+        mobile: input.mobile,
+        rawInteractionPayload: input.interactionPayload,
+        status: PaymentTransactionStatus.PENDING,
+        targetFeeStructureId: input.targetFeeStructureId ?? null,
+        targetStudentFeeObligationId: input.targetStudentFeeObligationId ?? null,
+        targetAcademicTermId: input.targetAcademicTermId ?? null,
+      });
 
-    return this.paymentTransactionRepository.save(transaction);
+      return this.paymentTransactionRepository.save(transaction);
+    });
   }
 
   async updateTransactionStatusFromHubtel(input: {
     sessionId: string;
+    schoolId?: string;
     orderId?: string | null;
     status: PaymentTransactionStatus;
     providerStatus?: string | null;
@@ -688,40 +761,42 @@ export class PaymentsService {
     amountAfterCharges?: number;
     rawFulfilmentPayload?: Record<string, unknown> | null;
   }): Promise<PaymentTransaction> {
-    const transaction = await this.paymentTransactionRepository.findOne({
-      where: { sessionId: input.sessionId },
-      relations: ['student', 'school', 'receipt'],
+    return this.runInSchoolTenantOrStore(input.schoolId, async () => {
+      const transaction = await this.paymentTransactionRepository.findOne({
+        where: { sessionId: input.sessionId },
+        relations: ['student', 'school', 'receipt'],
+      });
+
+      if (!transaction) {
+        throw new NotFoundException(
+          `Payment transaction not found for session ${input.sessionId}`,
+        );
+      }
+
+      transaction.orderId = input.orderId ?? transaction.orderId;
+      transaction.status = input.status;
+      transaction.providerStatus =
+        input.providerStatus ?? transaction.providerStatus;
+      transaction.hubtelTransactionId =
+        input.hubtelTransactionId ?? transaction.hubtelTransactionId;
+      transaction.networkTransactionId =
+        input.networkTransactionId ?? transaction.networkTransactionId;
+      transaction.paymentMethod =
+        input.paymentMethod ?? transaction.paymentMethod;
+      transaction.paymentDate = input.paymentDate ?? transaction.paymentDate;
+      transaction.amount =
+        typeof input.amount === 'number' ? input.amount : transaction.amount;
+      transaction.charges =
+        typeof input.charges === 'number' ? input.charges : transaction.charges;
+      transaction.amountAfterCharges =
+        typeof input.amountAfterCharges === 'number'
+          ? input.amountAfterCharges
+          : transaction.amountAfterCharges;
+      transaction.rawFulfilmentPayload =
+        input.rawFulfilmentPayload ?? transaction.rawFulfilmentPayload;
+
+      return this.paymentTransactionRepository.save(transaction);
     });
-
-    if (!transaction) {
-      throw new NotFoundException(
-        `Payment transaction not found for session ${input.sessionId}`,
-      );
-    }
-
-    transaction.orderId = input.orderId ?? transaction.orderId;
-    transaction.status = input.status;
-    transaction.providerStatus =
-      input.providerStatus ?? transaction.providerStatus;
-    transaction.hubtelTransactionId =
-      input.hubtelTransactionId ?? transaction.hubtelTransactionId;
-    transaction.networkTransactionId =
-      input.networkTransactionId ?? transaction.networkTransactionId;
-    transaction.paymentMethod =
-      input.paymentMethod ?? transaction.paymentMethod;
-    transaction.paymentDate = input.paymentDate ?? transaction.paymentDate;
-    transaction.amount =
-      typeof input.amount === 'number' ? input.amount : transaction.amount;
-    transaction.charges =
-      typeof input.charges === 'number' ? input.charges : transaction.charges;
-    transaction.amountAfterCharges =
-      typeof input.amountAfterCharges === 'number'
-        ? input.amountAfterCharges
-        : transaction.amountAfterCharges;
-    transaction.rawFulfilmentPayload =
-      input.rawFulfilmentPayload ?? transaction.rawFulfilmentPayload;
-
-    return this.paymentTransactionRepository.save(transaction);
   }
 
   async markStatusCheck(transactionId: string): Promise<void> {
@@ -894,56 +969,60 @@ export class PaymentsService {
     await this.allocatePaidTransaction(transactionId);
   }
 
-  async allocatePaidTransaction(transactionId: string): Promise<void> {
-    const txPreview = await this.paymentTransactionRepository.findOne({
-      where: { id: transactionId },
-      relations: ['student', 'student.classLevels', 'school'],
-    });
+  async allocatePaidTransaction(
+    transactionId: string,
+    schoolId?: string,
+  ): Promise<void> {
+    return this.runInSchoolTenantOrStore(schoolId, async () => {
+      const txPreview = await this.paymentTransactionRepository.findOne({
+        where: { id: transactionId },
+        relations: ['student', 'student.classLevels', 'school'],
+      });
 
-    if (!txPreview) {
-      throw new NotFoundException('Transaction not found for allocation');
-    }
+      if (!txPreview) {
+        throw new NotFoundException('Transaction not found for allocation');
+      }
 
-    if (txPreview.status !== PaymentTransactionStatus.PAID) {
-      return;
-    }
+      if (txPreview.status !== PaymentTransactionStatus.PAID) {
+        return;
+      }
 
-    // Internal credit applications already carry their own allocations.
-    if (txPreview.provider === PaymentProvider.INTERNAL_CREDIT) {
-      return;
-    }
+      // Internal credit applications already carry their own allocations.
+      if (txPreview.provider === PaymentProvider.INTERNAL_CREDIT) {
+        return;
+      }
 
-    const existingCount = await this.paymentAllocationRepository.count({
-      where: { transaction: { id: transactionId } },
-    });
-    if (existingCount > 0) {
-      return;
-    }
+      const existingCount = await this.paymentAllocationRepository.count({
+        where: { transaction: { id: transactionId } },
+      });
+      if (existingCount > 0) {
+        return;
+      }
 
-    const ussdOnly = txPreview.provider === PaymentProvider.HUBTEL;
-    const filteredFees = await this.findApplicableFeeStructuresForStudent(
-      txPreview.student,
-      {
-        ussdEligibleOnly: ussdOnly,
-      },
-    );
-    await this.feeObligationService.ensureObligationsForStudent(
-      txPreview.student,
-      filteredFees,
-    );
+      const ussdOnly = txPreview.provider === PaymentProvider.HUBTEL;
+      const filteredFees = await this.findApplicableFeeStructuresForStudent(
+        txPreview.student,
+        {
+          ussdEligibleOnly: ussdOnly,
+        },
+      );
+      await this.feeObligationService.ensureObligationsForStudent(
+        txPreview.student,
+        filteredFees,
+      );
 
-    // Apply existing wallet credit before new cash (all fees).
-    const allFees = await this.findApplicableFeeStructuresForStudent(
-      txPreview.student,
-      { ussdEligibleOnly: false },
-    );
-    await this.studentCreditService.applyAvailableCredit(
-      txPreview.student,
-      allFees,
-      { ussdEligibleOnly: false },
-    );
+      // Apply existing wallet credit before new cash (all fees).
+      const allFees = await this.findApplicableFeeStructuresForStudent(
+        txPreview.student,
+        { ussdEligibleOnly: false },
+      );
+      await this.studentCreditService.applyAvailableCredit(
+        txPreview.student,
+        allFees,
+        { ussdEligibleOnly: false },
+      );
 
-    await this.transactionUtil.executeInTransaction(async (manager) => {
+      await this.transactionUtil.executeInTransaction(async (manager) => {
       const transactionRepo = manager.getRepository(PaymentTransaction);
       const allocationRepo = manager.getRepository(PaymentAllocation);
       const receiptRepo = manager.getRepository(PaymentReceipt);
@@ -1068,6 +1147,7 @@ export class PaymentsService {
         { id: transaction.id },
         { isFulfilled: true },
       );
+    });
     });
   }
 

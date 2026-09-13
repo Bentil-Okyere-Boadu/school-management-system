@@ -21,4 +21,9 @@ export class InviteUserDto {
   @IsNotEmpty()
   @IsUUID()
   roleId?: string;
+
+  @ApiProperty({ description: 'Catalog school id to invite into' })
+  @IsNotEmpty()
+  @IsUUID()
+  schoolId: string;
 }

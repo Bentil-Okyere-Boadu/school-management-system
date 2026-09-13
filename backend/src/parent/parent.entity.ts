@@ -64,6 +64,10 @@ export class Parent {
   @Column({ type: 'timestamptz', nullable: true })
   invitationExpires: Date | null;
 
+  /** Set when admins are notified that invitationExpires has passed. */
+  @Column({ type: 'timestamptz', nullable: true })
+  invitationExpiredNotifiedAt: Date | null;
+
   @Column({ default: false })
   isInvitationAccepted: boolean;
 

@@ -5,6 +5,7 @@ import CustomUnderlinedButton from "../../../common/CustomUnderlinedButton";
 import NoAvailableEmptyState from "../../../common/NoAvailableEmptyState";
 import { Dialog } from "@/components/common/Dialog";
 import {
+  Calendar,
   ErrorResponse,
   GradingScheme,
   GradingSchemeStatus,
@@ -47,7 +48,17 @@ function formatDate(value?: string | null) {
   });
 }
 
-export const GradingSchemesSection: React.FC = () => {
+type GradingSchemesSectionProps = {
+  readOnly?: boolean;
+  schemes?: GradingScheme[];
+  calendars?: Calendar[];
+};
+
+export const GradingSchemesSection: React.FC<GradingSchemesSectionProps> = ({
+  readOnly = false,
+  schemes: schemesProp,
+  calendars: calendarsProp,
+}) => {
   const [tab, setTab] = useState<GradingSchemeStatus | "all">("all");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingScheme, setEditingScheme] = useState<GradingScheme | null>(null);
@@ -57,10 +68,19 @@ export const GradingSchemesSection: React.FC = () => {
     scheme: GradingScheme;
   } | null>(null);
 
-  const { schemes, isLoading, refetch } = useGetGradingSchemes(
+  const { schemes: fetchedSchemes, isLoading, refetch } = useGetGradingSchemes(
     tab === "all" ? "" : tab,
+    { enabled: schemesProp === undefined },
   );
-  const { calendars } = useGetCalendars();
+  const { calendars: fetchedCalendars } = useGetCalendars({
+    enabled: calendarsProp === undefined,
+  });
+  const calendars = calendarsProp ?? fetchedCalendars ?? [];
+  const allSchemes = schemesProp ?? fetchedSchemes ?? [];
+  const rows = useMemo(() => {
+    if (tab === "all") return allSchemes;
+    return allSchemes.filter((scheme) => scheme.status === tab);
+  }, [allSchemes, tab]);
   const { mutate: activateScheme, isPending: activating } =
     useActivateGradingScheme();
   const { mutate: deactivateScheme, isPending: deactivating } =
@@ -71,8 +91,6 @@ export const GradingSchemesSection: React.FC = () => {
     useDuplicateGradingScheme();
   const { mutate: createVersion, isPending: versioning } =
     useNewGradingSchemeVersion();
-
-  const rows = useMemo(() => schemes ?? [], [schemes]);
 
   const onError = (error: unknown) => {
     toast.error(
@@ -138,12 +156,14 @@ export const GradingSchemesSection: React.FC = () => {
         <h1 className="text-md font-semibold text-neutral-800">
           Grading schemes
         </h1>
-        <CustomUnderlinedButton
-          text="Create scheme"
-          textColor="text-purple-500"
-          onClick={openCreate}
-          showIcon={false}
-        />
+        {!readOnly && (
+          <CustomUnderlinedButton
+            text="Create scheme"
+            textColor="text-purple-500"
+            onClick={openCreate}
+            showIcon={false}
+          />
+        )}
       </div>
       <p className="mt-1 text-sm text-neutral-500">
         Configure scoring scale, grade bands, pass mark, and rounding. Save as
@@ -227,7 +247,7 @@ export const GradingSchemesSection: React.FC = () => {
                     >
                       View
                     </button>
-                    {scheme.status === "draft" && (
+                    {!readOnly && scheme.status === "draft" && (
                       <button
                         type="button"
                         className="cursor-pointer text-purple-600 underline"
@@ -236,7 +256,7 @@ export const GradingSchemesSection: React.FC = () => {
                         Edit
                       </button>
                     )}
-                    {scheme.status !== "active" && (
+                    {!readOnly && scheme.status !== "active" && (
                       <button
                         type="button"
                         className="cursor-pointer text-emerald-700 underline"
@@ -247,7 +267,7 @@ export const GradingSchemesSection: React.FC = () => {
                         Activate
                       </button>
                     )}
-                    {scheme.status === "active" && (
+                    {!readOnly && scheme.status === "active" && (
                       <>
                         <button
                           type="button"
@@ -276,23 +296,25 @@ export const GradingSchemesSection: React.FC = () => {
                         </button>
                       </>
                     )}
-                    <button
-                      type="button"
-                      className="cursor-pointer text-neutral-600 underline disabled:opacity-50"
-                      disabled={duplicating}
-                      onClick={() =>
-                        duplicateScheme(scheme.id, {
-                          onSuccess: () => {
-                            toast.success("Scheme duplicated as draft");
-                            refetch();
-                          },
-                          onError,
-                        })
-                      }
-                    >
-                      Duplicate
-                    </button>
-                    {scheme.status !== "active" && (
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        className="cursor-pointer text-neutral-600 underline disabled:opacity-50"
+                        disabled={duplicating}
+                        onClick={() =>
+                          duplicateScheme(scheme.id, {
+                            onSuccess: () => {
+                              toast.success("Scheme duplicated as draft");
+                              refetch();
+                            },
+                            onError,
+                          })
+                        }
+                      >
+                        Duplicate
+                      </button>
+                    )}
+                    {!readOnly && scheme.status !== "active" && (
                       <button
                         type="button"
                         className="cursor-pointer text-red-600 underline"
@@ -307,14 +329,14 @@ export const GradingSchemesSection: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {!isLoading && rows.length === 0 && (
+            {!(schemesProp === undefined && isLoading) && rows.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-3 py-8">
                   <NoAvailableEmptyState message="No grading schemes yet. Create one to configure scoring and grade bands." />
                 </td>
               </tr>
             )}
-            {isLoading && (
+            {schemesProp === undefined && isLoading && (
               <tr>
                 <td
                   colSpan={9}
@@ -328,18 +350,22 @@ export const GradingSchemesSection: React.FC = () => {
         </table>
       </div>
 
-      <GradingSchemeWizardDialog
-        open={wizardOpen}
-        onClose={() => {
-          setWizardOpen(false);
-          setEditingScheme(null);
-        }}
-        editingScheme={editingScheme}
-        onSaved={() => refetch()}
-      />
+      {!readOnly && (
+        <GradingSchemeWizardDialog
+          open={wizardOpen}
+          onClose={() => {
+            setWizardOpen(false);
+            setEditingScheme(null);
+          }}
+          editingScheme={editingScheme}
+          onSaved={() => refetch()}
+        />
+      )}
 
       <GradingSchemeDetailDrawer
         scheme={detailScheme}
+        readOnly={readOnly}
+        calendars={calendars}
         onClose={() => setDetailScheme(null)}
         onActivate={(scheme) => setConfirmAction({ type: "activate", scheme })}
         onDeactivate={(scheme) =>
@@ -362,6 +388,7 @@ export const GradingSchemesSection: React.FC = () => {
         }}
       />
 
+      {!readOnly && (
       <Dialog
         isOpen={Boolean(confirmAction)}
         onClose={() => setConfirmAction(null)}
@@ -420,6 +447,7 @@ export const GradingSchemesSection: React.FC = () => {
           </div>
         ) : null}
       </Dialog>
+      )}
     </div>
   );
 };

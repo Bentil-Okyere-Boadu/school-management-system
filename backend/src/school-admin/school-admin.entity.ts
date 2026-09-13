@@ -47,10 +47,7 @@ export class SchoolAdmin {
   @Column({ nullable: true })
   resetPasswordToken: string;
 
-  @ManyToOne(() => School, (school) => school.admins, {
-    onDelete: 'CASCADE',
-    eager: true,
-  })
+  @ManyToOne(() => School, { onDelete: 'CASCADE', eager: true })
   school: School;
   @OneToOne(() => Profile, (profile) => profile.schoolAdmin, {
     cascade: true,

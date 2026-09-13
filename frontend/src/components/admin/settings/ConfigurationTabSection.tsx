@@ -13,7 +13,15 @@ import { useCreateCalendar, useDeleteCalendar, useEditCalendar, useGetCalendars,
 import { Calendar, Term, Holiday, ErrorResponse } from "@/@types";
 
 
-export const ConfigurationTabSection: React.FC = () => {
+type ConfigurationTabSectionProps = {
+  readOnly?: boolean;
+  calendars?: Calendar[];
+};
+
+export const ConfigurationTabSection: React.FC<ConfigurationTabSectionProps> = ({
+  readOnly = false,
+  calendars: calendarsProp,
+}) => {
     const [selectedAcademicCalendar, setSelectedAcademicCalendar] = useState('');
     const [isAcademicCalendarOpen, setIsAcademicCalendarOpen] = useState(false);
     const [selectedHolidaysInTerms, setSelectedHolidaysInTerms] = useState<string | null>('No');
@@ -38,7 +46,10 @@ export const ConfigurationTabSection: React.FC = () => {
     const [holidays, setHolidays] = useState<Holiday[]>([]);
     const [isUseFirstCalendar, setIsUseFirstCalendar] = useState(true);
 
-    const { calendars, refetch: refetchCalendars } = useGetCalendars();
+    const { calendars: fetchedCalendars, refetch: refetchCalendars } = useGetCalendars({
+        enabled: calendarsProp === undefined,
+    });
+    const calendars = calendarsProp ?? fetchedCalendars ?? [];
     const { mutate: editCalendarMutation, isPending: pendingCalendarEdit } = useEditCalendar(calendarId);
     const { mutate: deleteCalendarMutation, isPending: pendingCalendarDelete } = useDeleteCalendar();
     const { mutate: createCalendarMutation, isPending: pendingCalendarCreate } = useCreateCalendar();
@@ -254,55 +265,65 @@ export const ConfigurationTabSection: React.FC = () => {
             <h1 className="text-md font-semibold text-neutral-800 mb-2">Academic Calendar</h1>
             <div className="flex items-center justify-between">
                 {calendars?.length > 0 ? <CustomSelectTag options={calendarOptions} value={selectedAcademicCalendar} onOptionItemClick={handleAcademicCalendarChange} /> : <div></div>}
-                <CustomButton variant="outline" className="!py-1" text="Create Calendar" onClick={() => onAddNewCalendar()} />
+                {!readOnly && (
+                  <CustomButton variant="outline" className="!py-1" text="Create Calendar" onClick={() => onAddNewCalendar()} />
+                )}
             </div>
 
             { calendars?.length > 0  && (
             <div>
                 <div className="flex gap-2">
                     <p className="text-md text-[#878787] my-5">{selectedCalendarData?.name}</p>
-                    <CustomUnderlinedButton
-                        text="Edit"
-                        textColor="text-purple-500"
-                        onClick={() => {onEditCalendarClick(selectedCalendarData as Calendar)}}
-                        showIcon={false}
-                    />
-                    <CustomUnderlinedButton
-                        text="Delete"
-                        textColor="text-purple-500"
-                        onClick={() => { onDeleteCalendarClick(selectedCalendarData?.id as string)}}
-                        showIcon={false}
-                    />
+                    {!readOnly && (
+                      <>
+                        <CustomUnderlinedButton
+                            text="Edit"
+                            textColor="text-purple-500"
+                            onClick={() => {onEditCalendarClick(selectedCalendarData as Calendar)}}
+                            showIcon={false}
+                        />
+                        <CustomUnderlinedButton
+                            text="Delete"
+                            textColor="text-purple-500"
+                            onClick={() => { onDeleteCalendarClick(selectedCalendarData?.id as string)}}
+                            showIcon={false}
+                        />
+                      </>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
                     <h1 className="text-md font-semibold text-neutral-800">
                         Terms
                     </h1>
-                    <CustomUnderlinedButton
-                        text="Add New"
-                        textColor="text-purple-500"
-                        onClick={() => { onAddNewTerm() }}
-                        showIcon={false}
-                    />
+                    {!readOnly && (
+                      <CustomUnderlinedButton
+                          text="Add New"
+                          textColor="text-purple-500"
+                          onClick={() => { onAddNewTerm() }}
+                          showIcon={false}
+                      />
+                    )}
                 </div>
                 {
                     selectedCalendarData?.terms?.map((term, index, arrayList) => (
                         <div key={index}>
-                            <div className="flex justify-end gap-3">
-                                <CustomUnderlinedButton
-                                    text="Edit"
-                                    textColor="text-gray-500"
-                                    onClick={() => {onEditTermClick(term)}}
-                                    showIcon={false}
-                                />
-                                <CustomUnderlinedButton
-                                    text="Delete"
-                                    textColor="text-gray-500"
-                                    onClick={()=>{onDeleteTermButtonClick(term.id)}}
-                                    showIcon={false}
-                                />
-                            </div>
+                            {!readOnly && (
+                              <div className="flex justify-end gap-3">
+                                  <CustomUnderlinedButton
+                                      text="Edit"
+                                      textColor="text-gray-500"
+                                      onClick={() => {onEditTermClick(term)}}
+                                      showIcon={false}
+                                  />
+                                  <CustomUnderlinedButton
+                                      text="Delete"
+                                      textColor="text-gray-500"
+                                      onClick={()=>{onDeleteTermButtonClick(term.id)}}
+                                      showIcon={false}
+                                  />
+                              </div>
+                            )}
 
                             <div className="grid gap-1 md:gap-3 grid-cols-1 md:grid-cols-2">
                                 <InputField

@@ -35,6 +35,7 @@ import { Subject } from 'rxjs';
 import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
 import { ParentModule } from 'src/parent/parent.module';
 import { NotificationModule } from 'src/notification/notification.module';
+import { TenantDirectory } from 'src/tenant/entities/tenant-directory.entity';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { NotificationModule } from 'src/notification/notification.module';
       AssignmentSubmission,
       Subject,
       RefreshToken,
+      TenantDirectory,
     ]),
     ParentModule,
     NotificationModule,

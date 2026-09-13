@@ -51,7 +51,6 @@ export class AcademicCalendarService {
 
   async findAllCalendars(schoolId: string): Promise<AcademicCalendar[]> {
     return this.calendarRepository.find({
-      where: { school: { id: schoolId } },
       relations: ['terms', 'terms.holidays'],
     });
   }
@@ -61,7 +60,7 @@ export class AcademicCalendarService {
     schoolId: string,
   ): Promise<AcademicCalendar> {
     const calendar = await this.calendarRepository.findOne({
-      where: { id, school: { id: schoolId } },
+      where: { id },
       relations: ['terms', 'terms.holidays'],
     });
 
@@ -374,7 +373,6 @@ export class AcademicCalendarService {
     schoolId: string,
   ): Promise<AcademicCalendar | null> {
     const calendars = await this.calendarRepository.find({
-      where: { school: { id: schoolId } },
       relations: ['terms'],
     });
     const today = new Date();

@@ -57,7 +57,7 @@ export type ParentOverview = {
 export type ParentAttendanceDay = {
   day: number;
   date: string;
-  status: "present" | "absent" | "none" | "weekend" | "holiday";
+  status: "present" | "absent" | "none" | "weekend" | "holiday" | "out_of_term";
 };
 
 export type ParentAttendanceChild = {

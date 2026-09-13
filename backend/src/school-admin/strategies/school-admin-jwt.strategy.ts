@@ -2,9 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { SchoolAdmin } from '../school-admin.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
 @Injectable()
 export class SchoolAdminJwtStrategy extends PassportStrategy(
@@ -13,8 +12,7 @@ export class SchoolAdminJwtStrategy extends PassportStrategy(
 ) {
   constructor(
     private configService: ConfigService,
-    @InjectRepository(SchoolAdmin)
-    private schoolAdminRepository: Repository<SchoolAdmin>,
+    private readonly tenantConnection: TenantConnectionService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -23,30 +21,47 @@ export class SchoolAdminJwtStrategy extends PassportStrategy(
     });
   }
 
-  async validate(payload: any) {
-    // Check if the token is for a school admin (based on role name)
-    if (payload.role !== 'school_admin') {
+  async validate(payload: {
+    role?: string;
+    sub?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    schoolId?: string;
+  }) {
+    if (
+      payload.role !== 'school_admin' ||
+      !payload.schoolId ||
+      !payload.sub
+    ) {
       return null;
     }
 
-    const schoolAdmin = await this.schoolAdminRepository.findOne({
-      where: { id: payload.sub },
-    });
-
-    if (!schoolAdmin || schoolAdmin.isSuspended) {
-      return null;
-    }
-
-    // Return only necessary fields
-    return {
-      id: schoolAdmin.id,
-      email: schoolAdmin.email,
-      firstName: schoolAdmin.firstName,
-      lastName: schoolAdmin.lastName,
-      status: schoolAdmin.status,
-      role: schoolAdmin.role,
-      school: schoolAdmin.school,
-      schoolId: schoolAdmin.school?.id,
-    };
+    return this.tenantConnection.runForSchoolId(
+      payload.schoolId,
+      async (manager) => {
+        const schoolAdmin = await manager.findOne(SchoolAdmin, {
+          where: { id: payload.sub },
+          relations: ['role', 'school'],
+        });
+        if (
+          !schoolAdmin ||
+          schoolAdmin.isSuspended ||
+          schoolAdmin.isArchived
+        ) {
+          return null;
+        }
+        return {
+          id: schoolAdmin.id,
+          email: schoolAdmin.email,
+          firstName: schoolAdmin.firstName,
+          lastName: schoolAdmin.lastName,
+          status: schoolAdmin.status,
+          role: schoolAdmin.role,
+          school: schoolAdmin.school,
+          schoolId: payload.schoolId,
+        };
+      },
+    );
   }
 }

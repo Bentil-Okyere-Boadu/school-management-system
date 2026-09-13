@@ -163,6 +163,175 @@
         "tags": ["Subject"]
       }
     },
+    "/api/v1/subject/school-admin/check-results": {
+      "post": {
+        "operationId": "SubjectController_adminCheckResults",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminResultActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/return-results": {
+      "post": {
+        "operationId": "SubjectController_adminReturnResults",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminReturnResultsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/publish-results": {
+      "post": {
+        "operationId": "SubjectController_adminPublishResults",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminResultActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/results-review": {
+      "get": {
+        "operationId": "SubjectController_getAdminResultsReview",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teacherId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/submission-history/{classLevelId}": {
+      "get": {
+        "operationId": "SubjectController_getGradeSubmissionHistory",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/grading-legend": {
+      "get": {
+        "operationId": "SubjectController_getGradingLegend",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
     "/api/v1/subject/my-classes": {
       "get": {
         "operationId": "SubjectController_getMyClasses",
@@ -262,6 +431,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitTermRemarksDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -340,6 +519,16 @@
       "post": {
         "operationId": "SubjectController_submitGrades",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitGradesDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -392,6 +581,105 @@
             "description": "Teacher UUID"
           }
         }
+      },
+      "AdminResultActionDto": {
+        "type": "object",
+        "properties": {
+          "classLevelId": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string"
+          }
+        },
+        "required": ["classLevelId", "academicTermId"]
+      },
+      "AdminReturnResultsDto": {
+        "type": "object",
+        "properties": {
+          "classLevelId": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string"
+          },
+          "returnNote": {
+            "type": "string"
+          }
+        },
+        "required": ["classLevelId", "academicTermId", "returnNote"]
+      },
+      "SubmitTermRemarksDto": {
+        "type": "object",
+        "properties": {
+          "remarks": {
+            "type": "string"
+          }
+        },
+        "required": ["remarks"]
+      },
+      "SubmitGradesDto": {
+        "type": "object",
+        "properties": {
+          "classLevelId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string"
+          },
+          "saveMode": {
+            "type": "string",
+            "enum": ["draft", "submit"]
+          },
+          "forceSubmit": {
+            "type": "boolean",
+            "description": "When true, submit even if some students have missing scores"
+          },
+          "grades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmitGradeEntryDto"
+            }
+          }
+        },
+        "required": [
+          "classLevelId",
+          "subjectId",
+          "academicTermId",
+          "saveMode",
+          "grades"
+        ]
+      },
+      "SubmitGradeEntryDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string"
+          },
+          "classScore": {
+            "type": "object",
+            "description": "Omit or null when score not entered yet"
+          },
+          "examScore": {
+            "type": "object",
+            "description": "Omit or null when score not entered yet"
+          },
+          "feedback": {
+            "type": "object"
+          },
+          "overrideGrade": {
+            "type": "object",
+            "description": "Manual grade override when enabled by school"
+          },
+          "overrideReason": {
+            "type": "object",
+            "description": "Required when overrideGrade is set"
+          }
+        },
+        "required": ["studentId"]
       }
     }
   },

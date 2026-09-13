@@ -140,8 +140,9 @@ const ViewAttendance = ({ classLevelId }: StudentAttendanceProps) => {
                             const present = status === "present";
                             const isWeekend = status === "weekend";
                             const isHoliday = status === "holiday";
+                            const isOutOfTerm = status === "out_of_term";
                             const icon =
-                              status == null || isWeekend
+                              status == null || isWeekend || isOutOfTerm
                                 ? null
                                 : present
                                 ? Mark
@@ -152,7 +153,8 @@ const ViewAttendance = ({ classLevelId }: StudentAttendanceProps) => {
                                 key={index}
                                 className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center ${
                                   new Date(date).getDay() === 0 ||
-                                  new Date(date).getDay() === 6
+                                  new Date(date).getDay() === 6 ||
+                                  isOutOfTerm
                                     ? "bg-white none pointer-events-none"
                                     : "bg-[#F9F5FF]"
                                 } ${
