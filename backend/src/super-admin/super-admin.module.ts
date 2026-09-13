@@ -15,6 +15,7 @@ import { RoleService } from '../role/role.service';
 import { AuthService } from 'src/auth/auth.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { School } from 'src/school/school.entity';
+import { SuperAdminProfile } from './super-admin-profile.entity';
 import { Profile } from 'src/profile/profile.entity';
 import { ProfileService } from 'src/profile/profile.service';
 import { StudentGrade } from 'src/subject/student-grade.entity';
@@ -28,6 +29,7 @@ import { RefreshToken } from 'src/auth/entities/refresh-token.entity';
   imports: [
     TypeOrmModule.forFeature([
       SuperAdmin,
+      SuperAdminProfile,
       Role,
       SchoolAdmin,
       School,

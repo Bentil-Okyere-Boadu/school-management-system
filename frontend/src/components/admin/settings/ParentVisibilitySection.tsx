@@ -8,9 +8,13 @@ import { toast } from "react-toastify";
 
 type Props = {
   schoolData?: School | null;
+  readOnly?: boolean;
 };
 
-export const ParentVisibilitySection: React.FC<Props> = ({ schoolData }) => {
+export const ParentVisibilitySection: React.FC<Props> = ({
+  schoolData,
+  readOnly = false,
+}) => {
   const { mutate, isPending } = useUpdateParentResultVisibility();
   const [settings, setSettings] = useState({
     parentShowScores: true,
@@ -57,6 +61,7 @@ export const ParentVisibilitySection: React.FC<Props> = ({ schoolData }) => {
             <input
               type="checkbox"
               checked={settings[key]}
+              disabled={readOnly}
               onChange={(e) =>
                 setSettings((prev) => ({ ...prev, [key]: e.target.checked }))
               }
@@ -66,13 +71,15 @@ export const ParentVisibilitySection: React.FC<Props> = ({ schoolData }) => {
           </label>
         ))}
       </div>
-      <div className="mt-4">
-        <CustomButton
-          text="Save visibility settings"
-          onClick={handleSave}
-          disabled={isPending}
-        />
-      </div>
+      {!readOnly && (
+        <div className="mt-4">
+          <CustomButton
+            text="Save visibility settings"
+            onClick={handleSave}
+            disabled={isPending}
+          />
+        </div>
+      )}
     </section>
   );
 };

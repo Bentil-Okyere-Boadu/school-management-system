@@ -5,13 +5,12 @@ import { Menu, MultiSelect , Select} from '@mantine/core';
 import {
   IconArrowRight,
   IconDots,
-  IconSend2,
   IconSquareArrowDownFilled,
 } from '@tabler/icons-react';
 import { Dialog } from "@/components/common/Dialog";
 import { capitalizeFirstLetter, getInitials } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
-import { useArchiveUser, useResendAdminInvitation } from "@/hooks/super-admin";
+import { useArchiveUser } from "@/hooks/super-admin";
 import { toast } from "react-toastify";
 import { ErrorResponse } from "@/@types";
 import Image from "next/image";
@@ -95,21 +94,6 @@ export const DashboardTable = ({adminUsers, refetch, busy}: UserTableProps) => {
         toast.success('Archived successfully.');
         setIsConfirmArchiveDialogOpen(false);
         refetch();
-      },
-      onError: (error: unknown) => {
-        toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-      }
-    });
-  }
-
-  const { mutate: resendInvitationMutate } = useResendAdminInvitation({id: selectedUser.id});
-
-  const onResendInvitationMenuItemClick = (user: User) => {
-    setSelectedUser(user);
-
-    resendInvitationMutate(null as unknown as void, {
-      onSuccess: () => {
-        toast.success('Resend invitation successful.');
       },
       onError: (error: unknown) => {
         toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
@@ -223,12 +207,6 @@ export const DashboardTable = ({adminUsers, refetch, busy}: UserTableProps) => {
                             <IconDots className="cursor-pointer" />
                           </Menu.Target>
                           <Menu.Dropdown className="!-ml-12 !-mt-2">
-                            <Menu.Item 
-                              onClick={() => onResendInvitationMenuItemClick(user)} 
-                              disabled={user.status !== 'pending'}
-                              leftSection={<IconSend2 size={18} color="#AB58E7" />}>
-                              Resend Invitation
-                            </Menu.Item>
                             <Menu.Item 
                               onClick={() => onArchiveUserMenuItemClick(user)} 
                               leftSection={<IconSquareArrowDownFilled size={18} color="#AB58E7" />}>

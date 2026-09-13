@@ -12,10 +12,6 @@ import { Holiday } from '../academic-calendar/entitites/holiday.entity';
 import { AcademicTerm } from '../academic-calendar/entitites/academic-term.entity';
 import { AcademicCalendar } from '../academic-calendar/entitites/academic-calendar.entity';
 import { NotificationService } from '../notification/notification.service';
-import {
-  NotificationRecipientRole,
-  NotificationType,
-} from '../notification/notification.entity';
 
 export interface AttendanceFilter {
   classLevelId: string;
@@ -45,6 +41,8 @@ export class AttendanceService {
     private academicTermRepository: Repository<AcademicTerm>,
     @InjectRepository(AcademicCalendar)
     private academicCalendarRepository: Repository<AcademicCalendar>,
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
     private readonly notificationService: NotificationService,
   ) {}
 
@@ -93,17 +91,24 @@ export class AttendanceService {
 
     const holidayDates = new Set(holidays.map((h) => h.date));
 
+    const overlappingTerms = await this.getTermsOverlappingRange(
+      classLevel.school.id,
+      dateRange.startDate,
+      dateRange.endDate,
+    );
+
     const uniqueDates = this.generateDateRange(
       dateRange.startDate,
       dateRange.endDate,
     );
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Only count valid school days (not weekends or holidays)
+    // Only count valid school days (weekdays within an academic term, excluding holidays)
     const validSchoolDays = uniqueDates.filter((date) => {
       const dayOfWeek = new Date(date).getDay();
       if (dayOfWeek === 0 || dayOfWeek === 6) return false;
       if (holidayDates.has(date)) return false;
+      if (!this.isDateWithinAnyTerm(date, overlappingTerms)) return false;
       return true;
     });
 
@@ -136,6 +141,11 @@ export class AttendanceService {
             return acc;
           }
 
+          if (!this.isDateWithinAnyTerm(date, overlappingTerms)) {
+            acc[date] = 'out_of_term';
+            return acc;
+          }
+
           const rawStatus = studentAttendance.get(date);
           const status =
             rawStatus === 'present' || rawStatus === 'absent'
@@ -146,7 +156,7 @@ export class AttendanceService {
         },
         {} as Record<
           string,
-          'present' | 'absent' | 'holiday' | 'weekend' | null
+          'present' | 'absent' | 'holiday' | 'weekend' | 'out_of_term' | null
         >,
       );
 
@@ -399,6 +409,73 @@ export class AttendanceService {
     };
   }
 
+  private async getTermsOverlappingRange(
+    schoolId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<AcademicTerm[]> {
+    return this.academicTermRepository
+      .createQueryBuilder('term')
+      .innerJoin('term.academicCalendar', 'calendar')
+      .innerJoin('calendar.school', 'school')
+      .where('school.id = :schoolId', { schoolId })
+      .andWhere('term.startDate <= :endDate', { endDate })
+      .andWhere('term.endDate >= :startDate', { startDate })
+      .getMany();
+  }
+
+  private isDateWithinAnyTerm(
+    date: string,
+    terms: Pick<AcademicTerm, 'startDate' | 'endDate'>[],
+  ): boolean {
+    return terms.some(
+      (term) => date >= term.startDate && date <= term.endDate,
+    );
+  }
+
+  private async requireAcademicTermForDate(
+    schoolId: string,
+    date: string,
+  ): Promise<{ term: AcademicTerm; calendar: AcademicCalendar }> {
+    const academicInfo = await this.findAcademicTermForDate(schoolId, date);
+    if (academicInfo) {
+      return academicInfo;
+    }
+
+    const terms = await this.academicTermRepository
+      .createQueryBuilder('term')
+      .innerJoin('term.academicCalendar', 'calendar')
+      .innerJoin('calendar.school', 'school')
+      .where('school.id = :schoolId', { schoolId })
+      .orderBy('term.startDate', 'ASC')
+      .getMany();
+
+    if (terms.length === 0) {
+      throw new BadRequestException(
+        'Cannot mark attendance because no academic term has been configured',
+      );
+    }
+
+    const earliestTerm = terms[0];
+    const latestTerm = terms[terms.length - 1];
+
+    if (date < earliestTerm.startDate) {
+      throw new BadRequestException(
+        `Cannot mark attendance before the term begins on ${earliestTerm.startDate}`,
+      );
+    }
+
+    if (date > latestTerm.endDate) {
+      throw new BadRequestException(
+        `Cannot mark attendance after the term ends on ${latestTerm.endDate}`,
+      );
+    }
+
+    throw new BadRequestException(
+      'Cannot mark attendance outside an active academic term',
+    );
+  }
+
   async getClassAttendanceForDay(classLevelId: string, date: string) {
     return this.getClassAttendance({
       classLevelId,
@@ -507,8 +584,7 @@ export class AttendanceService {
       throw new BadRequestException('Cannot mark attendance on a holiday');
     }
 
-    // Find the academic term for this date
-    const academicInfo = await this.findAcademicTermForDate(
+    const academicInfo = await this.requireAcademicTermForDate(
       classLevel.school.id,
       date,
     );
@@ -528,13 +604,12 @@ export class AttendanceService {
           student: { id: record.studentId } as Student,
           date,
           status: record.status,
-          academicTerm: academicInfo?.term || undefined,
-          academicCalendar: academicInfo?.calendar || undefined,
+          academicTerm: academicInfo.term,
+          academicCalendar: academicInfo.calendar,
         });
       } else {
         attendance.status = record.status;
-        // Update academic term/calendar if not set
-        if (!attendance.academicTerm && academicInfo?.term) {
+        if (!attendance.academicTerm) {
           attendance.academicTerm = academicInfo.term;
           attendance.academicCalendar = academicInfo.calendar;
         }
@@ -542,17 +617,20 @@ export class AttendanceService {
       await this.attendanceRepository.save(attendance);
 
       if (record.status === 'absent' && previousStatus !== 'absent') {
-        await this.notificationService.createForRecipients({
+        const student = await this.studentRepository.findOne({
+          where: { id: record.studentId },
+          select: { id: true, firstName: true, lastName: true },
+        });
+        const studentName = student
+          ? `${student.firstName} ${student.lastName}`.trim()
+          : 'A student';
+
+        await this.notificationService.notifyStudentAbsent({
           schoolId: classLevel.school.id,
-          type: NotificationType.Attendance,
-          title: 'Marked absent',
-          message: `Marked absent on ${date}`,
-          recipients: [
-            {
-              id: record.studentId,
-              role: NotificationRecipientRole.Student,
-            },
-          ],
+          studentId: record.studentId,
+          studentName,
+          className: classLevel.name,
+          date,
         });
       }
     }
@@ -700,11 +778,13 @@ export class AttendanceService {
           endDate: monthEnd.toISOString().split('T')[0],
         });
         months.push({ month, year, attendance });
-        if (attendance.summary) {
-          totalMarkedDays += attendance.summary.totalAttendanceCount || 0;
-          presentCount += attendance.summary.totalPresentCount || 0;
-          absentCount += attendance.summary.totalAbsentCount || 0;
-          totalDaysInRange += attendance.summary.totalAttendanceCount || 0;
+        if (attendance.students) {
+          for (const student of attendance.students) {
+            totalMarkedDays += student.statistics.totalMarkedDays || 0;
+            presentCount += student.statistics.presentCount || 0;
+            absentCount += student.statistics.absentCount || 0;
+            totalDaysInRange += student.statistics.totalDaysInRange || 0;
+          }
         }
         // Move to next month
         current.setMonth(current.getMonth() + 1);

@@ -1,22 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
-/**
- * Utility class for handling database transactions
- */
 @Injectable()
 export class TransactionUtil {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+    @Optional() private readonly tenantConnection?: TenantConnectionService,
+  ) {}
 
-  /**
-   * Execute a function within a database transaction
-   * If the function throws an error, the transaction will be rolled back
-   * @param fn Function to execute within the transaction
-   * @returns Promise resolving to the function result
-   */
   async executeInTransaction<T>(
     fn: (manager: EntityManager) => Promise<T>,
   ): Promise<T> {
+    const store = this.tenantConnection?.tryGetStore();
+    if (store) {
+      await store.queryRunner.startTransaction();
+      try {
+        const result = await fn(store.manager);
+        await store.queryRunner.commitTransaction();
+        return result;
+      } catch (error) {
+        await store.queryRunner.rollbackTransaction();
+        throw error;
+      }
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -33,4 +41,3 @@ export class TransactionUtil {
     }
   }
 }
-

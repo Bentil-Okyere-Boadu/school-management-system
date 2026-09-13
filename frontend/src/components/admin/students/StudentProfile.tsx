@@ -97,7 +97,11 @@ const StudentProfile = ({studentData, viewMode, refetch, canManageGuardians = fa
       },
       {
       onSuccess: () => {
-        toast.success('Guardian added successfully.')
+        toast.success(
+          newGuardian.email?.trim()
+            ? `Guardian added. An invitation was sent to ${newGuardian.email.trim()}.`
+            : 'Guardian added successfully.',
+        );
         refetch();
         setNewGuardian(guardianObj)
         setDialogOpen(false);

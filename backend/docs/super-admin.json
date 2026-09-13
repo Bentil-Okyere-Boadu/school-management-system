@@ -13,6 +13,70 @@
     }
   ],
   "paths": {
+    "/api/v1/super-admin/schools": {
+      "post": {
+        "operationId": "SuperAdminController_createSchool",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSchoolDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/schools/{id}/provision": {
+      "post": {
+        "operationId": "SuperAdminController_retryProvision",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/schools/{id}/disabled": {
+      "put": {
+        "operationId": "SuperAdminController_setDisabled",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
     "/api/v1/super-admin/admins": {
       "get": {
         "operationId": "SuperAdminController_findAllAdminUsers",
@@ -260,6 +324,29 @@
   },
   "components": {
     "schemas": {
+      "CreateSchoolDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "school@example.com"
+          },
+          "calendlyUrl": {
+            "type": "string",
+            "example": "https://calendly.com/school"
+          }
+        },
+        "required": ["name", "calendlyUrl"]
+      },
       "UpdateProfileDto": {
         "type": "object",
         "properties": {

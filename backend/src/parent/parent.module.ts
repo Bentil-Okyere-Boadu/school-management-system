@@ -10,6 +10,7 @@ import { ParentService } from './parent.service';
 import { ParentController } from './parent.controller';
 import { ParentAdminController } from './parent-admin.controller';
 import { ParentLinkService } from './parent-link.service';
+import { ParentInvitationScheduler } from './parent-invitation.scheduler';
 import { ParentAuthService } from './parent-auth.service';
 import { ParentBackfillService } from './parent-backfill.service';
 import { ParentAuthorizationService } from './parent.authorization';
@@ -69,6 +70,7 @@ import { StudentAnalyticsModule } from 'src/student-analytics/student-analytics.
   providers: [
     ParentService,
     ParentLinkService,
+    ParentInvitationScheduler,
     ParentAuthService,
     ParentBackfillService,
     ParentAuthorizationService,

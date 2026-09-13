@@ -8,6 +8,7 @@ import {
   ReminderStatus,
   ReminderType,
 } from './entities/message-reminder.entity';
+import { TenantIterationService } from 'src/tenant/tenant-iteration.service';
 import { MessageReminderService } from './message-reminder.service';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class ReminderScheduler {
     @InjectRepository(MessageReminder)
     private readonly repo: Repository<MessageReminder>,
     private readonly service: MessageReminderService,
+    private readonly tenantIteration: TenantIterationService,
   ) {}
 
   @Cron(process.env.REMINDER_CRON ?? '0 */2 * * * *')
@@ -26,37 +28,37 @@ export class ReminderScheduler {
     if (this.running) return;
     this.running = true;
     try {
-      const now = new Date();
+      await this.tenantIteration.forEachActiveSchool(async () => {
+        const now = new Date();
+        const due = await this.repo.find({
+          where: {
+            type: ReminderType.SCHEDULED,
+            status: ReminderStatus.SCHEDULED,
+            scheduledAt: LessThanOrEqual(now),
+          },
+          relations: [
+            'targetStudents',
+            'targetStudents.parentStudents',
+            'targetStudents.parentStudents.parent',
+            'targetStudents.profile',
+          ],
+          take: 50,
+        });
 
-      // Find due reminders
-      const due = await this.repo.find({
-        where: {
-          type: ReminderType.SCHEDULED,
-          status: ReminderStatus.SCHEDULED,
-          scheduledAt: LessThanOrEqual(now),
-        },
-        relations: [
-          'targetStudents',
-          'targetStudents.parentStudents',
-          'targetStudents.parentStudents.parent',
-          'targetStudents.profile', // needed for phoneContact
-        ],
-        take: 50, // safety cap
-      });
-
-      for (const r of due) {
-        try {
-          await this.service.sendReminderNotifications(r);
-          r.status = ReminderStatus.ACTIVE;
-          r.lastSentAt = new Date();
-          await this.repo.save(r);
-          this.logger.log(`Sent scheduled reminder ${r.id}`);
-        } catch (e) {
-          this.logger.error(
-            `Failed sending scheduled reminder ${r.id}: ${(e as Error).message}`,
-          );
+        for (const r of due) {
+          try {
+            await this.service.sendReminderNotifications(r);
+            r.status = ReminderStatus.ACTIVE;
+            r.lastSentAt = new Date();
+            await this.repo.save(r);
+            this.logger.log(`Sent scheduled reminder ${r.id}`);
+          } catch (e) {
+            this.logger.error(
+              `Failed sending scheduled reminder ${r.id}: ${(e as Error).message}`,
+            );
+          }
         }
-      }
+      });
     } finally {
       this.running = false;
     }

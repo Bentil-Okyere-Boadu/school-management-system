@@ -349,6 +349,103 @@
         "tags": ["School Admin"]
       }
     },
+    "/api/v1/school-admin/students/{studentId}/parents": {
+      "post": {
+        "operationId": "SchoolAdminController_addStudentGuardian",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateParentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
+    "/api/v1/school-admin/students/{studentId}/parents/{parentId}": {
+      "patch": {
+        "operationId": "SchoolAdminController_updateStudentGuardian",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      },
+      "delete": {
+        "operationId": "SchoolAdminController_removeStudentGuardian",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School Admin"]
+      }
+    },
     "/api/v1/school-admin/admissions/{applicationId}": {
       "get": {
         "operationId": "SchoolAdminController_getAdmissionById",
@@ -940,7 +1037,7 @@
             "bearer": []
           }
         ],
-        "summary": "Attendance KPIs and 1–31 day grid for active children (unmarked stays none)",
+        "summary": "Attendance KPIs and 1–31 day grid for active children (unmarked school days count as present)",
         "tags": ["Parent"]
       }
     },
@@ -1189,7 +1286,7 @@
             "bearer": []
           }
         ],
-        "summary": "Start a multi-child MoMo payment; each studentId must be an active linked child",
+        "summary": "Start a multi-child MoMo payment for the selected term; amounts cannot exceed that term's outstanding",
         "tags": ["Parent"]
       }
     },
@@ -2191,6 +2288,175 @@
         "tags": ["Subject"]
       }
     },
+    "/api/v1/subject/school-admin/check-results": {
+      "post": {
+        "operationId": "SubjectController_adminCheckResults",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminResultActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/return-results": {
+      "post": {
+        "operationId": "SubjectController_adminReturnResults",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminReturnResultsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/publish-results": {
+      "post": {
+        "operationId": "SubjectController_adminPublishResults",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminResultActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/results-review": {
+      "get": {
+        "operationId": "SubjectController_getAdminResultsReview",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teacherId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/school-admin/submission-history/{classLevelId}": {
+      "get": {
+        "operationId": "SubjectController_getGradeSubmissionHistory",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
+    "/api/v1/subject/grading-legend": {
+      "get": {
+        "operationId": "SubjectController_getGradingLegend",
+        "parameters": [
+          {
+            "name": "classLevelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "academicTermId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Subject"]
+      }
+    },
     "/api/v1/subject/my-classes": {
       "get": {
         "operationId": "SubjectController_getMyClasses",
@@ -2290,6 +2556,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitTermRemarksDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2368,6 +2644,16 @@
       "post": {
         "operationId": "SubjectController_submitGrades",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitGradesDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2604,6 +2890,70 @@
         ],
         "summary": "Payment status for your transaction only",
         "tags": ["Student payments (OTP checkout)"]
+      }
+    },
+    "/api/v1/super-admin/schools": {
+      "post": {
+        "operationId": "SuperAdminController_createSchool",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSchoolDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/schools/{id}/provision": {
+      "post": {
+        "operationId": "SuperAdminController_retryProvision",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
+      }
+    },
+    "/api/v1/super-admin/schools/{id}/disabled": {
+      "put": {
+        "operationId": "SuperAdminController_setDisabled",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Super Admin"]
       }
     },
     "/api/v1/super-admin/admins": {
@@ -2859,6 +3209,7 @@
             "description": ""
           }
         },
+        "summary": "Log in with identifier + PIN. Prefer studentId ABC-00000-120-00001 (school = 5-digit schoolCode). Email is allowed only when tenant_directory has exactly one student row.",
         "tags": ["Student"]
       }
     },
@@ -2881,6 +3232,7 @@
             "description": ""
           }
         },
+        "summary": "Reset PIN before login. Same identifier contract as login. Ambiguous email does not mutate any tenant.",
         "tags": ["Student"]
       }
     },
@@ -3021,6 +3373,81 @@
         "tags": ["Student"]
       }
     },
+    "/api/v1/student/notifications": {
+      "get": {
+        "operationId": "StudentController_getMyNotifications",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/notifications/mark-all-read": {
+      "patch": {
+        "operationId": "StudentController_markAllMyNotificationsAsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/notifications/{id}/markAsRead": {
+      "patch": {
+        "operationId": "StudentController_markMyNotificationAsRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
+    "/api/v1/student/notifications/{id}": {
+      "delete": {
+        "operationId": "StudentController_deleteMyNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Student"]
+      }
+    },
     "/api/v1/student/classes/{classLevelId}/calendars/{calendarId}/attendance/grouped": {
       "get": {
         "operationId": "StudentController_getMyAttendanceGroupedByTermAndMonth",
@@ -3139,6 +3566,7 @@
             "description": ""
           }
         },
+        "summary": "Log in with identifier + PIN. Prefer teacherId ABC-00000-123-00001 (school = 5-digit schoolCode). Email is allowed only when tenant_directory has exactly one teacher row.",
         "tags": ["Teacher"]
       }
     },
@@ -3190,6 +3618,27 @@
     "/api/v1/teacher/classes/{id}/name": {
       "get": {
         "operationId": "TeacherController_getClassLevelName",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/classes/{id}": {
+      "get": {
+        "operationId": "TeacherController_getClassLevel",
         "parameters": [
           {
             "name": "id",
@@ -3395,6 +3844,7 @@
             "description": ""
           }
         },
+        "summary": "Reset PIN before login. Same identifier contract as login. Ambiguous email does not mutate any tenant.",
         "tags": ["Teacher"]
       }
     },
@@ -3424,6 +3874,81 @@
       "get": {
         "operationId": "TeacherController_getProfile",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications": {
+      "get": {
+        "operationId": "TeacherController_getMyNotifications",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications/mark-all-read": {
+      "patch": {
+        "operationId": "TeacherController_markAllMyNotificationsAsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications/{id}/markAsRead": {
+      "patch": {
+        "operationId": "TeacherController_markMyNotificationAsRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Teacher"]
+      }
+    },
+    "/api/v1/teacher/notifications/{id}": {
+      "delete": {
+        "operationId": "TeacherController_deleteMyNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -4566,12 +5091,12 @@
         "tags": ["Invitation"]
       }
     },
-    "/api/v1/invitations/admin/resend/{userId}": {
+    "/api/v1/invitations/admin/resend/{invitationId}": {
       "post": {
         "operationId": "InvitationController_resendAdminInvitation",
         "parameters": [
           {
-            "name": "userId",
+            "name": "invitationId",
             "required": true,
             "in": "path",
             "schema": {
@@ -4579,6 +5104,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendAdminInvitationDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -4649,6 +5184,7 @@
             "description": ""
           }
         },
+        "summary": "Resend PIN email for a pending tenant student. userId is the tenant student id, not a platform_invitation id.",
         "tags": ["Invitation"]
       }
     },
@@ -4670,6 +5206,7 @@
             "description": ""
           }
         },
+        "summary": "Resend PIN email for a pending tenant teacher. userId is the tenant teacher id, not a platform_invitation id.",
         "tags": ["Invitation"]
       }
     },
@@ -4694,50 +5231,6 @@
         },
         "summary": "Complete invitation by setting a password (school admin or parent)",
         "tags": ["Invitation"]
-      }
-    },
-    "/api/v1/invitations/forgot-pin": {
-      "post": {
-        "operationId": "InvitationController_forgotPin",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPinDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": ["Invitation"]
-      }
-    },
-    "/api/v1/schools/create": {
-      "post": {
-        "operationId": "SchoolController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateSchoolDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": ["School"]
       }
     },
     "/api/v1/schools": {
@@ -4836,6 +5329,28 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateCalendlyUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["School"]
+      }
+    },
+    "/api/v1/schools/parent-result-visibility": {
+      "patch": {
+        "operationId": "SchoolController_updateParentResultVisibility",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParentResultVisibilityDto"
               }
             }
           }
@@ -5105,6 +5620,200 @@
           }
         },
         "tags": ["GradingSystem"]
+      }
+    },
+    "/api/v1/grading-schemes": {
+      "get": {
+        "operationId": "GradingSchemeController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      },
+      "post": {
+        "operationId": "GradingSchemeController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGradingSchemeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}": {
+      "get": {
+        "operationId": "GradingSchemeController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      },
+      "patch": {
+        "operationId": "GradingSchemeController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGradingSchemeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      },
+      "delete": {
+        "operationId": "GradingSchemeController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/duplicate": {
+      "post": {
+        "operationId": "GradingSchemeController_duplicate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/activate": {
+      "post": {
+        "operationId": "GradingSchemeController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/deactivate": {
+      "post": {
+        "operationId": "GradingSchemeController_deactivate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
+      }
+    },
+    "/api/v1/grading-schemes/{id}/new-version": {
+      "post": {
+        "operationId": "GradingSchemeController_newVersion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": ["GradingScheme"]
       }
     },
     "/api/v1/admission-policies": {
@@ -5878,6 +6587,14 @@
           },
           {
             "name": "endDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "visibilityScope",
             "required": true,
             "in": "query",
             "schema": {
@@ -6686,6 +7403,62 @@
           }
         }
       },
+      "CreateParentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "parent@example.com"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string",
+            "example": "Mother"
+          }
+        },
+        "required": ["firstName", "lastName", "email", "relationship"]
+      },
+      "UpdateParentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "occupation": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "parent@example.com"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        }
+      },
       "UpdateAdmissionStatusDto": {
         "type": "object",
         "properties": {
@@ -6742,6 +7515,10 @@
       "ParentInitiatePaymentDto": {
         "type": "object",
         "properties": {
+          "academicTermId": {
+            "type": "string",
+            "description": "Academic term the payment should apply to first"
+          },
           "children": {
             "type": "array",
             "items": {
@@ -6763,7 +7540,7 @@
             "type": "string"
           }
         },
-        "required": ["children", "mobileNumber", "channel"]
+        "required": ["academicTermId", "children", "mobileNumber", "channel"]
       },
       "VerifyAndPayPublicPaymentDto": {
         "type": "object",
@@ -6799,7 +7576,17 @@
               "parentChildConfirmation",
               "parentChildConfirmed",
               "parentReviewRequired",
-              "parentAccessRevoked"
+              "parentAccessRevoked",
+              "assignmentPublished",
+              "assignmentUpdated",
+              "assignmentSubmitted",
+              "assignmentGraded",
+              "curriculumNote",
+              "curriculumNoteReply",
+              "gradesSubmitted",
+              "classResultsSubmitted",
+              "resultsReleased",
+              "resultsUnlocked"
             ]
           },
           "message": {
@@ -6929,6 +7716,105 @@
             "description": "Teacher UUID"
           }
         }
+      },
+      "AdminResultActionDto": {
+        "type": "object",
+        "properties": {
+          "classLevelId": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string"
+          }
+        },
+        "required": ["classLevelId", "academicTermId"]
+      },
+      "AdminReturnResultsDto": {
+        "type": "object",
+        "properties": {
+          "classLevelId": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string"
+          },
+          "returnNote": {
+            "type": "string"
+          }
+        },
+        "required": ["classLevelId", "academicTermId", "returnNote"]
+      },
+      "SubmitTermRemarksDto": {
+        "type": "object",
+        "properties": {
+          "remarks": {
+            "type": "string"
+          }
+        },
+        "required": ["remarks"]
+      },
+      "SubmitGradeEntryDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string"
+          },
+          "classScore": {
+            "type": "object",
+            "description": "Omit or null when score not entered yet"
+          },
+          "examScore": {
+            "type": "object",
+            "description": "Omit or null when score not entered yet"
+          },
+          "feedback": {
+            "type": "object"
+          },
+          "overrideGrade": {
+            "type": "object",
+            "description": "Manual grade override when enabled by school"
+          },
+          "overrideReason": {
+            "type": "object",
+            "description": "Required when overrideGrade is set"
+          }
+        },
+        "required": ["studentId"]
+      },
+      "SubmitGradesDto": {
+        "type": "object",
+        "properties": {
+          "classLevelId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "academicTermId": {
+            "type": "string"
+          },
+          "saveMode": {
+            "type": "string",
+            "enum": ["draft", "submit"]
+          },
+          "forceSubmit": {
+            "type": "boolean",
+            "description": "When true, submit even if some students have missing scores"
+          },
+          "grades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmitGradeEntryDto"
+            }
+          }
+        },
+        "required": [
+          "classLevelId",
+          "subjectId",
+          "academicTermId",
+          "saveMode",
+          "grades"
+        ]
       },
       "HubtelInteractionRequestDto": {
         "type": "object",
@@ -7073,6 +7959,29 @@
         },
         "required": ["amount", "mobileNumber", "channel"]
       },
+      "CreateSchoolDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "example": "school@example.com"
+          },
+          "calendlyUrl": {
+            "type": "string",
+            "example": "https://calendly.com/school"
+          }
+        },
+        "required": ["name", "calendlyUrl"]
+      },
       "CreateSuperAdminDto": {
         "type": "object",
         "properties": {
@@ -7098,65 +8007,11 @@
         "properties": {
           "identifier": {
             "type": "string",
-            "example": "student@school.com or STU-2024-001"
+            "example": "ABC-00000-120-00001",
+            "description": "Generated studentId, or email only if it belongs to exactly one school"
           }
         },
         "required": ["identifier"]
-      },
-      "CreateParentDto": {
-        "type": "object",
-        "properties": {
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
-          },
-          "occupation": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "example": "parent@example.com"
-          },
-          "address": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "relationship": {
-            "type": "string"
-          }
-        },
-        "required": ["firstName", "lastName"]
-      },
-      "UpdateParentDto": {
-        "type": "object",
-        "properties": {
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
-          },
-          "occupation": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "example": "parent@example.com"
-          },
-          "address": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "relationship": {
-            "type": "string"
-          }
-        }
       },
       "SubmitAssignmentDto": {
         "type": "object",
@@ -7171,7 +8026,8 @@
         "properties": {
           "identifier": {
             "type": "string",
-            "example": "teacher@school.com or TCH-001"
+            "example": "ABC-00000-123-00001",
+            "description": "Generated teacherId, or email only if it belongs to exactly one school"
           }
         },
         "required": ["identifier"]
@@ -7478,9 +8334,29 @@
           "roleId": {
             "type": "string",
             "description": "Role UUID"
+          },
+          "schoolId": {
+            "type": "string",
+            "description": "Catalog school id to invite into"
           }
         },
-        "required": ["firstName", "lastName", "email", "roleId"]
+        "required": ["firstName", "lastName", "email", "roleId", "schoolId"]
+      },
+      "ResendAdminInvitationDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Corrected recipient address; omit to resend as invited",
+            "example": "admin@school.com"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        }
       },
       "InviteStudentDto": {
         "type": "object",
@@ -7528,39 +8404,6 @@
         },
         "required": ["token", "password"]
       },
-      "ForgotPinDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "example": "user@school.com"
-          }
-        },
-        "required": ["email"]
-      },
-      "CreateSchoolDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "address": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "example": "school@example.com"
-          },
-          "calendlyUrl": {
-            "type": "string",
-            "example": "https://calendly.com/school"
-          }
-        },
-        "required": ["name", "calendlyUrl"]
-      },
       "UpdateCalendlyUrlDto": {
         "type": "object",
         "properties": {
@@ -7574,6 +8417,29 @@
           }
         },
         "required": ["calendlyUrl", "schoolId"]
+      },
+      "UpdateParentResultVisibilityDto": {
+        "type": "object",
+        "properties": {
+          "parentShowScores": {
+            "type": "boolean"
+          },
+          "parentShowGrades": {
+            "type": "boolean"
+          },
+          "parentShowLabels": {
+            "type": "boolean"
+          },
+          "parentShowFeedback": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parentShowScores",
+          "parentShowGrades",
+          "parentShowLabels",
+          "parentShowFeedback"
+        ]
       },
       "UpdateHubtelMerchantDto": {
         "type": "object",
@@ -7677,6 +8543,139 @@
       "UpdateGradingSystemDto": {
         "type": "object",
         "properties": {}
+      },
+      "GradingSchemeBandDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "A"
+          },
+          "label": {
+            "type": "string",
+            "example": "Excellent"
+          },
+          "description": {
+            "type": "object",
+            "example": "Outstanding performance"
+          },
+          "minScore": {
+            "type": "number",
+            "example": 80
+          },
+          "maxScore": {
+            "type": "number",
+            "example": 100
+          },
+          "sortOrder": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": ["code", "label", "minScore", "maxScore"]
+      },
+      "CreateGradingSchemeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "WASSCE-style 2025/26"
+          },
+          "scoreScaleMin": {
+            "type": "number",
+            "example": 0,
+            "default": 0
+          },
+          "scoreScaleMax": {
+            "type": "number",
+            "example": 100,
+            "default": 100
+          },
+          "passMark": {
+            "type": "number",
+            "example": 50,
+            "default": 50
+          },
+          "rounding": {
+            "type": "string",
+            "enum": ["none", "nearest", "up", "down"],
+            "default": "nearest"
+          },
+          "allowManualOverride": {
+            "type": "boolean",
+            "default": false
+          },
+          "effectiveFrom": {
+            "type": "object",
+            "example": "2025/26 Term 1"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": ["school", "classLevels"],
+            "default": "school"
+          },
+          "classLevelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingSchemeBandDto"
+            }
+          },
+          "activate": {
+            "type": "boolean",
+            "description": "When true, activate immediately after create",
+            "default": false
+          }
+        },
+        "required": ["name", "bands"]
+      },
+      "UpdateGradingSchemeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "scoreScaleMin": {
+            "type": "number"
+          },
+          "scoreScaleMax": {
+            "type": "number"
+          },
+          "passMark": {
+            "type": "number"
+          },
+          "rounding": {
+            "type": "string",
+            "enum": ["none", "nearest", "up", "down"]
+          },
+          "allowManualOverride": {
+            "type": "boolean"
+          },
+          "effectiveFrom": {
+            "type": "object"
+          },
+          "scopeType": {
+            "type": "string",
+            "enum": ["school", "classLevels"]
+          },
+          "classLevelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingSchemeBandDto"
+            }
+          }
+        }
       },
       "CreateAdmissionPolicyDto": {
         "type": "object",

@@ -12,8 +12,9 @@ import { Teacher } from './teacher.entity';
 import { SchoolAdmin } from '../school-admin/school-admin.entity';
 import { EmailService } from '../common/services/email.service';
 import * as bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
 import { InvitationService } from 'src/invitation/invitation.service';
+import { TenantUserLookupService } from 'src/tenant/tenant-user-lookup.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 import { UpdateProfileDto } from 'src/profile/dto/update-profile.dto';
 import { Student } from 'src/student/student.entity';
 import { ClassLevel } from 'src/class-level/class-level.entity';
@@ -61,6 +62,8 @@ export class TeacherService {
     private classLevelRepository: Repository<ClassLevel>,
     private emailService: EmailService,
     private invitationService: InvitationService,
+    private readonly tenantUserLookup: TenantUserLookupService,
+    private readonly tenantConnection: TenantConnectionService,
     private readonly profileService: ProfileService,
     private readonly objectStorageService: ObjectStorageServiceService,
     private readonly academicCalendarService: AcademicCalendarService,
@@ -83,7 +86,6 @@ export class TeacherService {
       where: {
         id: userId,
         status: 'pending',
-        school: { id: adminUser.school.id },
       },
       relations: ['role', 'school'],
     });
@@ -91,9 +93,6 @@ export class TeacherService {
       throw new NotFoundException('Pending teacher not found in your school');
     }
     const pin = this.invitationService.generatePin();
-    teacher.invitationToken = uuidv4();
-    teacher.invitationExpires =
-      this.invitationService.calculateTokenExpiration();
     teacher.password = await bcrypt.hash(pin, 10);
     const updatedTeacher = await this.teacherRepository.save(teacher);
     try {
@@ -109,19 +108,17 @@ export class TeacherService {
   async forgotPin(
     identifier: string,
   ): Promise<{ success: boolean; message: string }> {
-    const trimmed = identifier.trim();
-    const teacher = await this.teacherRepository.findOne({
-      where: [{ email: trimmed }, { teacherId: trimmed }],
-      relations: ['role', 'school'],
-    });
-    if (!teacher) {
+    const teacher = await this.tenantUserLookup.findTeacher(identifier);
+    if (!teacher?.school?.id) {
       throw new NotFoundException(
         'No user found with the provided credentials',
       );
     }
     const pin = this.invitationService.generatePin();
     teacher.password = await bcrypt.hash(pin, 10);
-    await this.teacherRepository.save(teacher);
+    await this.tenantConnection.runForSchoolId(teacher.school.id, (manager) =>
+      manager.save(Teacher, teacher),
+    );
     try {
       await this.emailService.sendTeacherPinReset(teacher, pin);
       return {

@@ -1,4 +1,4 @@
-import { BadgeVariant, User } from '@/@types'
+import { BadgeVariant, SchoolPeopleCounts, User } from '@/@types'
 import Badge from '@/components/common/Badge'
 import { capitalizeFirstLetter, getInitials } from '@/utils/helpers'
 import React from 'react'
@@ -7,12 +7,22 @@ import HashLoader from 'react-spinners/HashLoader';
 
 interface SchoolPeopleProps {
     users: User[]
+    peopleCounts?: SchoolPeopleCounts
     busy?: boolean
 }
 
-const SchoolPeople: React.FC<SchoolPeopleProps> = ({users, busy}) => {
+const SchoolPeople: React.FC<SchoolPeopleProps> = ({
+  users,
+  peopleCounts,
+  busy,
+}) => {
   return (
     <section className="bg-white">
+            {peopleCounts?.truncated && (
+              <p className="px-6 py-3 text-sm text-neutral-500 border-b border-solid border-b-[color:var(--Gray-200,#EAECF0)]">
+                Showing {users?.length ?? 0} of {peopleCounts.total} people.
+              </p>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[500px]">
                 <thead>

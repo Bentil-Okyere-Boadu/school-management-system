@@ -1,26 +1,19 @@
 import { AuthService } from 'src/auth/auth.service';
-import { Repository } from 'typeorm/repository/Repository';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { Student } from './student.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import * as bcrypt from 'bcryptjs';
+import { TenantUserLookupService } from 'src/tenant/tenant-user-lookup.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
 @Injectable()
 export class StudentAuthService {
-  //private readonly logger = new Logger(StudentAuthService.name);
-
   constructor(
-    @InjectRepository(Student)
-    private readonly studentRepository: Repository<Student>,
-    @InjectRepository(SchoolAdmin)
-    private readonly schoolAdminRepository: Repository<SchoolAdmin>,
+    private readonly tenantUserLookup: TenantUserLookupService,
+    private readonly tenantConnection: TenantConnectionService,
     private readonly authService: AuthService,
   ) {}
 
-  /**
-   * Validate student credentials (email/studentId and PIN)
-   */
   async validateStudent(
     identifier: string,
     pin: string,
@@ -36,34 +29,33 @@ export class StudentAuthService {
       return null;
     }
 
-    // Check if any school admin for this school is suspended
-    // If yes, prevent login
     if (student.school?.id) {
-      const hasSuspendedAdmin = await this.schoolAdminRepository.findOne({
-        where: { school: { id: student.school.id }, isSuspended: true },
-      });
+      const hasSuspendedAdmin = await this.tenantConnection.runForSchoolId(
+        student.school.id,
+        (manager) =>
+          manager.findOne(SchoolAdmin, { where: { isSuspended: true } }),
+      );
       if (hasSuspendedAdmin) {
-        return null; // Prevent login
+        return null;
       }
     }
 
     if (student.status === 'pending') {
       student.status = 'active';
       student.isInvitationAccepted = true;
-      await this.studentRepository.save(student);
+      await this.tenantConnection.runForSchoolId(
+        student.school.id,
+        (manager) => manager.save(Student, student),
+      );
     }
 
     return student;
   }
-  /**
-   * Find a student by email or student ID
-   */
+
   async findByEmailOrStudentId(identifier: string): Promise<Student | null> {
-    return this.studentRepository.findOne({
-      where: [{ email: identifier }, { studentId: identifier }],
-      relations: ['role', 'school'],
-    });
+    return this.tenantUserLookup.findStudent(identifier);
   }
+
   login(student: Student) {
     return this.authService.createAuthResponse(student);
   }

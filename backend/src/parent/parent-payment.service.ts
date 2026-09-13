@@ -204,6 +204,7 @@ export class ParentPaymentService {
       const updated =
         await this.paymentsService.updateTransactionStatusFromHubtel({
           sessionId,
+          schoolId: child.school.id,
           status: initiateResult.outcome.status,
           providerStatus:
             initiateResult.outcome.kind === 'failed'
@@ -220,7 +221,10 @@ export class ParentPaymentService {
         });
 
       if (initiateResult.outcome.kind === 'paid') {
-        await this.paymentsService.allocatePaidTransaction(updated.id);
+        await this.paymentsService.allocatePaidTransaction(
+          updated.id,
+          child.school.id,
+        );
       }
 
       results.push({

@@ -7,9 +7,13 @@ import FilterButton from "@/components/common/FilterButton";
 import { CustomSelectTag } from "@/components/common/CustomSelectTag";
 import CustomButton from "@/components/Button";
 import { Dialog } from "@/components/common/Dialog";
-import { Select } from '@mantine/core';
+import { Select } from "@mantine/core";
 import InputField from "@/components/InputField";
-import { useGetAdminUsers, useInviteUser } from "@/hooks/super-admin";
+import {
+  useGetAdminUsers,
+  useGetAllSchools,
+  useInviteUser,
+} from "@/hooks/super-admin";
 import { toast } from "react-toastify";
 import { getRoleId } from "@/utils/roles";
 import { useAppContext } from "@/context/AppContext";
@@ -22,27 +26,37 @@ const UsersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [isInviteUserDialogOpen, setIsInviteUserDialogOpen] = useState(false);
-  const [selectedDataRole, setSelectedDataRole] = useState<string>("school_admin");
+  const [selectedDataRole, setSelectedDataRole] =
+    useState<string>("school_admin");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   const statusOptions = [
     { value: "", label: "Status" },
     { value: "active", label: "Active" },
     { value: "pending", label: "Pending" },
-    { value: "archived", label: "Archived" }
-
+    { value: "archived", label: "Archived" },
   ];
-  const roles = [
-    { value: "school_admin", label: "School Admin" },
-  ];
+  const roles = [{ value: "school_admin", label: "School Admin" }];
 
   const queryClient = useQueryClient();
 
-  const { adminUsers, paginationValues, refetch, isLoading } = useGetAdminUsers(currentPage, useDebouncer(searchQuery), selectedStatus, "", 10);
-
+  const { adminUsers, paginationValues, refetch, isLoading } = useGetAdminUsers(
+    currentPage,
+    useDebouncer(searchQuery),
+    selectedStatus,
+    "",
+    10,
+  );
+  const { schools } = useGetAllSchools(1, "", "", "", 100);
+  const activeSchoolOptions = schools
+    .filter(
+      (school) => school.provisioningStatus === "active" && !school.isDisabled,
+    )
+    .map((school) => ({ value: school.id, label: school.name }));
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -60,10 +74,9 @@ const UsersPage: React.FC = () => {
 
   useEffect(() => {
     refetch();
-  }, [selectedStatus]);
+  }, [selectedStatus, refetch]);
 
   const { roles: Roles } = useAppContext();
-
 
   const handleRoleDataChange = (value: string) => {
     setSelectedDataRole(value);
@@ -72,41 +85,70 @@ const UsersPage: React.FC = () => {
   const { mutate: invitation, isPending } = useInviteUser();
 
   const inviteUser = () => {
-    if(firstName && lastName && email) {
-      invitation({ firstName: firstName, lastName: lastName, email: email, roleId: getRoleId(Roles, selectedDataRole)}, {
-        onSuccess: () => {
-          toast.success('Invitation sent successfully.');
-          setEmail("");
-          setFirstName("");
-          setLastName("");
-          setIsInviteUserDialogOpen(false);
-          queryClient.invalidateQueries({ queryKey: ['allAdminUsers']})
+    if (firstName && lastName && email && schoolId) {
+      invitation(
+        {
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          roleId: getRoleId(Roles, selectedDataRole),
+          schoolId,
         },
-        onError: (error: unknown) => {
-          toast.error(JSON.stringify((error as ErrorResponse).response.data.message));
-        }
-      })
+        {
+          onSuccess: () => {
+            toast.success("Invitation sent successfully.");
+            setEmail("");
+            setFirstName("");
+            setLastName("");
+            setSchoolId(null);
+            setIsInviteUserDialogOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["allAdminUsers"] });
+          },
+          onError: (error: unknown) => {
+            toast.error(
+              JSON.stringify((error as ErrorResponse).response.data.message),
+            );
+          },
+        },
+      );
     } else {
-      toast.error('Please enter details of user to invite.');
+      toast.error("Please enter user details and select an active school.");
     }
-  }
+  };
 
   return (
     <div>
       <div className="flex justify-between items-center flex-wrap gap-4 w-full mb-5 px-0.5">
-        <SearchBar onSearch={handleSearch} className="w-[366px] max-md:w-full" />
-        <CustomButton text="Invite New User" onClick={() => setIsInviteUserDialogOpen(true)} />
+        <SearchBar
+          onSearch={handleSearch}
+          className="w-[366px] max-md:w-full"
+        />
+        <CustomButton
+          text="Invite New User"
+          onClick={() => setIsInviteUserDialogOpen(true)}
+        />
       </div>
       <div className="flex flex-col items-end mb-4 px-1">
-        <FilterButton onClick={() => setShowFilterOptions(!showFilterOptions)} />
+        <FilterButton
+          onClick={() => setShowFilterOptions(!showFilterOptions)}
+        />
         {showFilterOptions && (
           <div className="flex gap-3 mt-3">
-            <CustomSelectTag value={selectedStatus} options={statusOptions} onOptionItemClick={handleStatusChange} />
+            <CustomSelectTag
+              value={selectedStatus}
+              options={statusOptions}
+              onOptionItemClick={handleStatusChange}
+            />
           </div>
         )}
       </div>
 
-      <UserTable users={adminUsers} refetch={refetch} onClearFilterClick={() => setSelectedStatus('')} busy={isLoading} />
+      <UserTable
+        users={adminUsers}
+        refetch={refetch}
+        onClearFilterClick={() => setSelectedStatus("")}
+        busy={isLoading}
+      />
 
       <Pagination
         currentPage={currentPage}
@@ -115,15 +157,20 @@ const UsersPage: React.FC = () => {
       />
 
       {/* Invite user dialog */}
-      <Dialog 
+      <Dialog
         isOpen={isInviteUserDialogOpen}
         dialogTitle="Invite New User"
         saveButtonText="Invite User"
-        onClose={() => setIsInviteUserDialogOpen(false)} 
+        onClose={() => setIsInviteUserDialogOpen(false)}
         onSave={() => inviteUser()}
         busy={isPending}
+        saveDisabled={
+          !firstName || !lastName || !email || !schoolId || isPending
+        }
       >
-        <p className="text-xs text-gray-500">User will receive email to accept invite and sign up</p>
+        <p className="text-xs text-gray-500">
+          User will receive email to accept invite and sign up
+        </p>
         <div className="my-3 flex flex-col gap-4">
           <InputField
             className="!py-0"
@@ -150,14 +197,28 @@ const UsersPage: React.FC = () => {
             onChange={(e) => setEmail(e.target.value)}
             isTransulent={isPending}
           />
-            
+
+          <Select
+            label="School"
+            required
+            placeholder={
+              activeSchoolOptions.length
+                ? "Pick an active school"
+                : "Create and provision a school first"
+            }
+            data={activeSchoolOptions}
+            value={schoolId}
+            onChange={setSchoolId}
+            disabled={isPending || activeSchoolOptions.length === 0}
+          />
+
           <Select
             label="Role"
             required
             placeholder="Pick role"
             data={roles}
             value={selectedDataRole}
-            onChange={() => handleRoleDataChange}
+            onChange={(value) => value && handleRoleDataChange(value)}
           />
         </div>
       </Dialog>

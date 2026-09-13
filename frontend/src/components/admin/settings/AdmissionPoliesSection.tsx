@@ -10,14 +10,24 @@ import { toast } from "react-toastify";
 import FileUploadArea from "@/components/common/FileUploadArea";
 import DocumentItem from "@/components/common/DocumentItem";
 
-export const AdmissionPoliciesSection: React.FC = () => {
+type AdmissionPoliciesSectionProps = {
+  readOnly?: boolean;
+  admissionPolicies?: AdmissionPolicy[];
+};
+
+export const AdmissionPoliciesSection: React.FC<
+  AdmissionPoliciesSectionProps
+> = ({ readOnly = false, admissionPolicies: admissionPoliciesProp }) => {
   const [isConfirmDeleteAdmissionPolicyDialogOpen, setIsConfirmDeleteAdmissionPolicyDialogOpen] = useState(false);
   const [isAdmissionPolicyDialogOpen, setIsAdmissionPolicyDialogOpen] = useState(false);
   const [admissionPolicyName, setAdmissionPolicyName] = useState('');
   const [admissionPolicyId, setAdmissionPolicyId] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const { admissionPolicies, refetch } = useGetAdmissionPolicies();
+  const { admissionPolicies: fetchedPolicies, refetch } = useGetAdmissionPolicies({
+    enabled: admissionPoliciesProp === undefined,
+  });
+  const admissionPolicies = admissionPoliciesProp ?? fetchedPolicies ?? [];
   const { mutate: deleteMutation, isPending: pendingDelete } = useDeleteAdmissionPolicy();
   const { mutate: createMutation, isPending: pendingCreate } = useCreateAdmissionPolicy();
 
@@ -80,20 +90,22 @@ export const AdmissionPoliciesSection: React.FC = () => {
     <h1 className="text-md font-semibold text-neutral-800">
         Admission Policies
     </h1>
-    <CustomUnderlinedButton
-      text="Upload Document"
-      textColor="text-purple-500"
-      onClick={() => {onAddNewAdmissionPolicy()}}
-      icon={<IconUpload size={10} />}
-      showIcon={true}
-    />
+    {!readOnly && (
+      <CustomUnderlinedButton
+        text="Upload Document"
+        textColor="text-purple-500"
+        onClick={() => {onAddNewAdmissionPolicy()}}
+        icon={<IconUpload size={10} />}
+        showIcon={true}
+      />
+    )}
     <section className="flex flex-wrap gap-5 items-center text-base tracking-normal text-gray-800 mt-4">
       {admissionPolicies?.map((doc) => (
         <DocumentItem
           key={doc.id}
           name={doc.name}
           onCardClick={() => {onHandleDocumentClick(doc)}}
-          onClose={() => {onDeleteButtonClick(doc.id)}}
+          onClose={readOnly ? undefined : () => {onDeleteButtonClick(doc.id)}}
         />
       ))}
     </section>

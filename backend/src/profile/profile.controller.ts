@@ -77,7 +77,7 @@ export class ProfileController {
     const result = await this.profileService.updateProfileImage(
       id,
       file,
-      this.superAdminService.getRepository(),
+      this.superAdminService.getRepository() as never,
     );
 
     return {
@@ -163,7 +163,7 @@ export class ProfileController {
   async removeSuperAdminAvatar(@Param('id', ParseUUIDPipe) id: string) {
     const result = await this.profileService.removeProfileImage(
       id,
-      this.superAdminService.getRepository(),
+      this.superAdminService.getRepository() as never,
     );
 
     return {

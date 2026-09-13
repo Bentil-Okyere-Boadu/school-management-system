@@ -1,8 +1,6 @@
 import { Parent } from 'src/parent/parent.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
-import { School } from 'src/school/school.entity';
 import { Student } from 'src/student/student.entity';
-import { SuperAdmin } from 'src/super-admin/super-admin.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
 import {
   Entity,
@@ -84,17 +82,4 @@ export class Profile {
   @OneToOne(() => Parent, (parent) => parent.profile, { onDelete: 'CASCADE' })
   @JoinColumn()
   parent: Parent;
-
-  @OneToOne(() => SuperAdmin, (admin) => admin.profile, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn()
-  superAdmin: SuperAdmin;
-
-  @OneToOne(() => School, {
-    eager: true,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn()
-  school: School;
 }

@@ -30,6 +30,9 @@ export class RefreshToken {
   @Column()
   userType: 'school_admin' | 'teacher' | 'student' | 'super_admin' | 'parent';
 
+  @Column({ type: 'uuid', nullable: true })
+  schoolId: string | null;
+
   @Column({ type: 'timestamp' })
   expiresAt: Date;
 

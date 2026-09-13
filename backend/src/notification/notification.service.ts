@@ -9,6 +9,8 @@ import {
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { School } from 'src/school/school.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { SchoolProvisioningStatus } from 'src/tenant/school-provisioning-status';
 
 export type NotificationRecipient = {
   id: string;
@@ -33,7 +35,30 @@ export class NotificationService {
 
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
+    private readonly tenantConnection: TenantConnectionService,
   ) {}
+
+  private async withSchoolTenant<T>(
+    schoolId: string,
+    fn: () => Promise<T>,
+    fallback: T,
+  ): Promise<T> {
+    const school = await this.schoolRepository.findOne({
+      where: { id: schoolId },
+    });
+    if (
+      !school?.schemaName ||
+      school.provisioningStatus !== SchoolProvisioningStatus.Active ||
+      school.isDisabled
+    ) {
+      return fallback;
+    }
+    const store = this.tenantConnection.tryGetStore();
+    if (store?.schoolId === schoolId) {
+      return fn();
+    }
+    return this.tenantConnection.runForSchoolId(schoolId, fn);
+  }
 
   async create(dto: CreateNotificationDto): Promise<Notification> {
     const school = await this.schoolRepository.findOne({
@@ -42,44 +67,60 @@ export class NotificationService {
 
     if (!school) throw new NotFoundException('School not found');
 
-    const notification = this.notificationRepository.create({
-      message: dto.message,
-      title: dto.title,
-      type: dto.type,
-      school,
+    return this.tenantConnection.runForSchoolId(dto.schoolId, async () => {
+      const notification = this.notificationRepository.create({
+        message: dto.message,
+        title: dto.title,
+        type: dto.type,
+        school: { id: school.id } as School,
+      });
+      return this.notificationRepository.save(notification);
     });
-    return this.notificationRepository.save(notification);
+  }
+
+  async createSchoolBroadcast(dto: CreateNotificationDto): Promise<void> {
+    try {
+      await this.create(dto);
+    } catch (error) {
+      this.logger.error(
+        `Failed to create school broadcast notification: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async createForRecipients(input: CreateForRecipientsInput): Promise<void> {
-    try {
-      const uniqueRecipients = this.dedupeRecipients(input.recipients);
-      if (uniqueRecipients.length === 0) {
-        return;
-      }
+    const uniqueRecipients = this.dedupeRecipients(input.recipients);
+    if (uniqueRecipients.length === 0) {
+      return;
+    }
 
-      const school = await this.schoolRepository.findOne({
-        where: { id: input.schoolId },
-      });
-      if (!school) {
-        this.logger.error(
-          `Failed to create recipient notifications: school ${input.schoolId} not found`,
-        );
-        return;
-      }
-
-      const notifications = uniqueRecipients.map((recipient) =>
-        this.notificationRepository.create({
-          title: input.title,
-          message: input.message,
-          type: input.type,
-          school,
-          recipientRole: recipient.role,
-          recipientId: recipient.id,
-        }),
+    const school = await this.schoolRepository.findOne({
+      where: { id: input.schoolId },
+    });
+    if (!school) {
+      this.logger.error(
+        `Failed to create recipient notifications: school ${input.schoolId} not found`,
       );
+      return;
+    }
 
-      await this.notificationRepository.save(notifications);
+    try {
+      await this.withSchoolTenant(input.schoolId, async () => {
+        const notifications = uniqueRecipients.map((recipient) =>
+          this.notificationRepository.create({
+            title: input.title,
+            message: input.message,
+            type: input.type,
+            school: { id: school.id } as School,
+            recipientRole: recipient.role,
+            recipientId: recipient.id,
+          }),
+        );
+
+        await this.notificationRepository.save(notifications);
+      }, undefined);
     } catch (error) {
       this.logger.error(
         `Failed to create recipient notifications: ${
@@ -89,24 +130,58 @@ export class NotificationService {
     }
   }
 
+  async notifyStudentAbsent(input: {
+    schoolId: string;
+    studentId: string;
+    studentName: string;
+    className: string;
+    date: string;
+  }): Promise<void> {
+    await this.createForRecipients({
+      schoolId: input.schoolId,
+      type: NotificationType.Attendance,
+      title: 'Marked absent',
+      message: `You were marked absent on ${input.date}`,
+      recipients: [
+        {
+          id: input.studentId,
+          role: NotificationRecipientRole.Student,
+        },
+      ],
+    });
+
+    await this.createSchoolBroadcast({
+      schoolId: input.schoolId,
+      type: NotificationType.Attendance,
+      title: 'Student marked absent',
+      message: `${input.studentName} was marked absent in ${input.className} on ${input.date}`,
+    });
+  }
+
   async findAllForSchool(
     schoolId: string,
     search?: string,
   ): Promise<Notification[]> {
-    const queryBuilder = this.notificationRepository
-      .createQueryBuilder('notification')
-      .where('notification.school.id = :schoolId', { schoolId })
-      .andWhere('notification.recipientId IS NULL');
+    return this.withSchoolTenant(
+      schoolId,
+      async () => {
+        const queryBuilder = this.notificationRepository
+          .createQueryBuilder('notification')
+          .where('notification.school.id = :schoolId', { schoolId })
+          .andWhere('notification.recipientId IS NULL');
 
-    if (search && search.trim()) {
-      const searchTerm = `%${search.trim()}%`;
-      queryBuilder.andWhere(
-        '(notification.title ILIKE :search OR notification.message ILIKE :search)',
-        { search: searchTerm },
-      );
-    }
+        if (search && search.trim()) {
+          const searchTerm = `%${search.trim()}%`;
+          queryBuilder.andWhere(
+            '(notification.title ILIKE :search OR notification.message ILIKE :search)',
+            { search: searchTerm },
+          );
+        }
 
-    return queryBuilder.orderBy('notification.createdAt', 'DESC').getMany();
+        return queryBuilder.orderBy('notification.createdAt', 'DESC').getMany();
+      },
+      [],
+    );
   }
 
   async findAllForRecipient(
@@ -155,21 +230,22 @@ export class NotificationService {
   }
 
   async markAllAsRead(schoolId: string): Promise<{ updated: number }> {
-    const school = await this.schoolRepository.findOne({
-      where: { id: schoolId },
-    });
-    if (!school) throw new NotFoundException('School not found');
+    return this.withSchoolTenant(
+      schoolId,
+      async () => {
+        const result = await this.notificationRepository
+          .createQueryBuilder()
+          .update(Notification)
+          .set({ read: true })
+          .where('schoolId = :schoolId', { schoolId })
+          .andWhere('recipientId IS NULL')
+          .andWhere('read = :read', { read: false })
+          .execute();
 
-    const result = await this.notificationRepository
-      .createQueryBuilder()
-      .update(Notification)
-      .set({ read: true })
-      .where('schoolId = :schoolId', { schoolId })
-      .andWhere('recipientId IS NULL')
-      .andWhere('read = :read', { read: false })
-      .execute();
-
-    return { updated: result.affected ?? 0 };
+        return { updated: result.affected ?? 0 };
+      },
+      { updated: 0 },
+    );
   }
 
   async markAllAsReadForRecipient(

@@ -1,13 +1,15 @@
 "use client";
 
 import React from "react";
-import { GradingScheme } from "@/@types";
+import { Calendar, GradingScheme } from "@/@types";
 import { IconX } from "@tabler/icons-react";
 import { useGetCalendars } from "@/hooks/school-admin";
 import { getTermLabel } from "@/utils/schoolTerms";
 
 type Props = {
   scheme: GradingScheme | null;
+  readOnly?: boolean;
+  calendars?: Calendar[];
   onClose: () => void;
   onActivate: (scheme: GradingScheme) => void;
   onDeactivate: (scheme: GradingScheme) => void;
@@ -31,6 +33,8 @@ function formatWhen(value?: string | null) {
 
 export const GradingSchemeDetailDrawer: React.FC<Props> = ({
   scheme,
+  readOnly = false,
+  calendars: calendarsProp,
   onClose,
   onActivate,
   onDeactivate,
@@ -38,7 +42,10 @@ export const GradingSchemeDetailDrawer: React.FC<Props> = ({
   onNewVersion,
   onEdit,
 }) => {
-  const { calendars } = useGetCalendars();
+  const { calendars: fetchedCalendars } = useGetCalendars({
+    enabled: calendarsProp === undefined,
+  });
+  const calendars = calendarsProp ?? fetchedCalendars ?? [];
 
   if (!scheme) return null;
 
@@ -166,6 +173,7 @@ export const GradingSchemeDetailDrawer: React.FC<Props> = ({
             </p>
           </section>
 
+          {!readOnly && (
           <section className="flex flex-wrap gap-2">
             {scheme.status === "draft" && (
               <button
@@ -213,6 +221,7 @@ export const GradingSchemeDetailDrawer: React.FC<Props> = ({
               </button>
             )}
           </section>
+          )}
         </div>
       </aside>
     </div>

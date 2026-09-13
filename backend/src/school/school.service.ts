@@ -3,23 +3,83 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { School } from './school.entity';
-import { CreateSchoolDto } from './dto/create-school.dto';
-import { InvitationService } from 'src/invitation/invitation.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { ObjectStorageServiceService } from 'src/object-storage-service/object-storage-service.service';
-import { StudentGrade } from 'src/subject/student-grade.entity';
-import { AcademicTerm } from 'src/academic-calendar/entitites/academic-term.entity';
-import { AttendanceService } from 'src/attendance/attendance.service';
-import { EventCategory } from 'src/planner/entities/event-category.entity';
 import { EncryptionService } from 'src/common/utils/encryption.util';
 import { UpdateHubtelMerchantDto } from './dto/update-hubtel-merchant.dto';
 import { buildReceiveMoneyPrimaryCallbackUrl } from 'src/integrations/hubtel/hubtel-callback-url.util';
+import { Student } from 'src/student/student.entity';
+import { Teacher } from 'src/teacher/teacher.entity';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
+import { SchoolProvisioningStatus } from 'src/tenant/school-provisioning-status';
+import { FeeStructure } from 'src/fee-structure/fee-structure.entity';
+import { ClassLevel } from 'src/class-level/class-level.entity';
+import { AcademicCalendar } from 'src/academic-calendar/entitites/academic-calendar.entity';
+import { AdmissionPolicy } from 'src/admission-policy/admission-policy.entity';
+import { GradingScheme } from 'src/grading-scheme/grading-scheme.entity';
+import { mapGradingSchemeToResponse } from 'src/grading-scheme/grading-scheme.mapper';
+import { GradingSystem } from 'src/grading-system/grading-system.entity';
+import { Profile } from 'src/profile/profile.entity';
+import { Role } from 'src/role/role.entity';
+import { omitSchoolMerchantSecret } from 'src/common/utils/sanitizer.util';
+
+const SUPER_ADMIN_PEOPLE_LIMIT = 100;
+
+type SuperAdminPeopleCounts = {
+  students: number;
+  teachers: number;
+  admins: number;
+  total: number;
+  truncated: boolean;
+};
+
+type SuperAdminTenantDetails = {
+  feeStructures: Array<{
+    id: string;
+    feeTitle: string;
+    feeType: string;
+    amount: number;
+    allowUssdPayment: boolean;
+    dueDate?: string;
+    classLevels: Array<{ id: string; name: string }>;
+  }>;
+  classLevels: Array<{ id: string; name: string; description: string | null }>;
+  academicCalendars: AcademicCalendar[];
+  admissionPolicies: Array<AdmissionPolicy & { documentUrl?: string }>;
+  gradingSystems: Array<{
+    id: string;
+    grade: string;
+    minRange: number;
+    maxRange: number;
+  }>;
+  gradingSchemes: ReturnType<typeof mapGradingSchemeToResponse>[];
+  users: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    status: string;
+    role: Role;
+    profile?: Profile & { avatarUrl?: string };
+  }>;
+  peopleCounts: SuperAdminPeopleCounts;
+};
+
+type TenantPersonEntity = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: string;
+  isArchived: boolean;
+  role: Role;
+  profile?: Profile | null;
+};
 
 export type HubtelMerchantPublicView = {
   clientId: string | null;
@@ -36,19 +96,10 @@ export class SchoolService {
   constructor(
     @InjectRepository(School)
     private schoolRepository: Repository<School>,
-    @InjectRepository(SchoolAdmin)
-    private adminRepository: Repository<SchoolAdmin>,
     private objectStorageService: ObjectStorageServiceService,
-    private invitationService: InvitationService,
-    @InjectRepository(StudentGrade)
-    private studentGradeRepository: Repository<StudentGrade>,
-    @InjectRepository(AcademicTerm)
-    private academicTermRepository: Repository<AcademicTerm>,
-    @InjectRepository(EventCategory)
-    private eventCategoryRepository: Repository<EventCategory>,
-    private attendanceService: AttendanceService,
     private readonly encryptionService: EncryptionService,
     private readonly configService: ConfigService,
+    private readonly tenantConnection: TenantConnectionService,
   ) {}
 
   /**
@@ -130,105 +181,9 @@ export class SchoolService {
     };
   }
 
-  async create(
-    createSchoolDto: CreateSchoolDto,
-    adminUser: SchoolAdmin,
-  ): Promise<School> {
-    if (adminUser.role.name !== 'school_admin') {
-      throw new UnauthorizedException('Only school admins can create schools');
-    }
-
-    if (adminUser.school) {
-      throw new UnauthorizedException('Admin already associated with a school');
-    }
-
-    const school = this.schoolRepository.create(createSchoolDto);
-
-    const savedSchool = await this.schoolRepository.save(school);
-    if (!savedSchool.schoolCode) {
-      savedSchool.schoolCode = savedSchool.id
-        .toString()
-        .padStart(5, '0')
-        .substring(0, 5);
-      await this.schoolRepository.save(savedSchool); // Update schoolCode
-    }
-
-    adminUser.school = savedSchool;
-
-    if (!adminUser.adminId) {
-      const adminId = await this.invitationService.generateAdminId(
-        savedSchool,
-        adminUser,
-      );
-      adminUser.adminId = adminId;
-    }
-
-    await this.adminRepository.save(adminUser);
-
-    // Create default event categories for the new school
-    await this.createDefaultEventCategories(savedSchool);
-
-    return savedSchool;
-  }
-
-  private async createDefaultEventCategories(school: School): Promise<void> {
-    const defaultCategories = [
-      { name: 'General', color: '#6366f1', description: 'General events' },
-      {
-        name: 'Uncategorized',
-        color: '#94a3b8',
-        description: 'Uncategorized events',
-      },
-      {
-        name: 'School Event',
-        color: '#10b981',
-        description: 'School-wide events and activities',
-      },
-      {
-        name: 'Class Assignment',
-        color: '#f59e0b',
-        description: 'Assignment due dates for class levels',
-      },
-    ];
-
-    for (const categoryData of defaultCategories) {
-      const exists = await this.eventCategoryRepository.findOne({
-        where: {
-          name: categoryData.name,
-          school: { id: school.id },
-        },
-      });
-
-      if (!exists) {
-        const category = this.eventCategoryRepository.create({
-          ...categoryData,
-          school,
-        });
-        await this.eventCategoryRepository.save(category);
-        this.logger.log(
-          `Created default event category "${categoryData.name}" for school: ${school.name}`,
-        );
-      }
-    }
-  }
-
   async findOneWithDetails(id: string): Promise<any> {
     const school = await this.schoolRepository.findOne({
       where: { id },
-      relations: [
-        'admissionPolicies',
-        'gradingSystems',
-        'feeStructures',
-        'feeStructures.classLevels',
-        'profile',
-        'academicCalendars',
-        'academicCalendars.terms.holidays',
-        'classLevels',
-        'classLevels.teachers',
-        'classLevels.students',
-        'students',
-        'teachers',
-      ],
     });
 
     if (!school) {
@@ -246,74 +201,336 @@ export class SchoolService {
       }
     }
 
-    // Sign admission policy document URLs
-    const signedAdmissionPolicies = await Promise.all(
-      school.admissionPolicies.map(async (policy) => {
-        const result = { ...policy } as typeof policy & {
+    const tenantDetails = await this.loadTenantDetailsForSuperAdmin(school);
+
+    return {
+      ...omitSchoolMerchantSecret(school),
+      ...tenantDetails,
+      profile: undefined,
+    };
+  }
+
+  private emptyTenantDetails(): SuperAdminTenantDetails {
+    return {
+      feeStructures: [],
+      classLevels: [],
+      academicCalendars: [],
+      admissionPolicies: [],
+      gradingSystems: [],
+      gradingSchemes: [],
+      users: [],
+      peopleCounts: {
+        students: 0,
+        teachers: 0,
+        admins: 0,
+        total: 0,
+        truncated: false,
+      },
+    };
+  }
+
+  private isTenantReadable(school: School): boolean {
+    return Boolean(
+      school.schemaName &&
+        !school.isDisabled &&
+        school.provisioningStatus === SchoolProvisioningStatus.Active,
+    );
+  }
+
+  private async loadTenantDetailsForSuperAdmin(
+    school: School,
+  ): Promise<SuperAdminTenantDetails> {
+    if (!this.isTenantReadable(school)) {
+      return this.emptyTenantDetails();
+    }
+
+    try {
+      const raw = await this.tenantConnection.runForSchoolId(
+        school.id,
+        async (manager) => this.fetchTenantDetailsInScope(manager, school.id),
+      );
+
+      const admissionPolicies = await this.signAdmissionPolicies(
+        raw.admissionPolicies,
+      );
+
+      return {
+        feeStructures: raw.feeStructures,
+        classLevels: raw.classLevels,
+        academicCalendars: raw.academicCalendars,
+        admissionPolicies,
+        gradingSystems: raw.gradingSystems,
+        gradingSchemes: raw.gradingSchemes,
+        users: this.mapTenantPeopleToUsersOverview(raw.people),
+        peopleCounts: raw.peopleCounts,
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Failed to read tenant details for school ${school.id}: ${error}`,
+      );
+      return this.emptyTenantDetails();
+    }
+  }
+
+  private async fetchTenantDetailsInScope(
+    manager: EntityManager,
+    schoolId: string,
+  ): Promise<{
+    feeStructures: SuperAdminTenantDetails['feeStructures'];
+    classLevels: SuperAdminTenantDetails['classLevels'];
+    academicCalendars: AcademicCalendar[];
+    admissionPolicies: AdmissionPolicy[];
+    gradingSystems: SuperAdminTenantDetails['gradingSystems'];
+    gradingSchemes: SuperAdminTenantDetails['gradingSchemes'];
+    people: TenantPersonEntity[];
+    peopleCounts: SuperAdminPeopleCounts;
+  }> {
+    const studentRepo = manager.getRepository(Student);
+    const teacherRepo = manager.getRepository(Teacher);
+    const adminRepo = manager.getRepository(SchoolAdmin);
+    const activeWhere = { isArchived: false };
+    const peopleOrder = { lastName: 'ASC' as const, firstName: 'ASC' as const };
+    const peopleRelations = ['role', 'profile'] as const;
+
+    const [
+      feeRows,
+      classLevelRows,
+      academicCalendars,
+      admissionPolicies,
+      gradingSystems,
+      gradingSchemeRows,
+      studentCount,
+      teacherCount,
+      adminCount,
+      students,
+      teachers,
+      admins,
+    ] = await Promise.all([
+      manager
+        .getRepository(FeeStructure)
+        .createQueryBuilder('fee')
+        .leftJoinAndSelect('fee.classLevels', 'classLevel')
+        .where('fee.schoolId = :schoolId', { schoolId })
+        .getMany(),
+      manager.getRepository(ClassLevel).find({
+        select: ['id', 'name', 'description'],
+        order: { name: 'ASC' },
+      }),
+      manager.getRepository(AcademicCalendar).find({
+        relations: ['terms', 'terms.holidays'],
+        order: { name: 'ASC' },
+      }),
+      manager.getRepository(AdmissionPolicy).find({
+        where: { school: { id: schoolId } },
+        order: { name: 'ASC' },
+      }),
+      this.loadGradingSystemsForSuperAdmin(manager, schoolId),
+      manager.getRepository(GradingScheme).find({
+        where: { school: { id: schoolId } },
+        relations: ['bands', 'classLevels'],
+        order: { updatedAt: 'DESC' },
+      }),
+      studentRepo.count({ where: activeWhere }),
+      teacherRepo.count({ where: activeWhere }),
+      adminRepo.count({ where: activeWhere }),
+      studentRepo.find({
+        where: activeWhere,
+        relations: [...peopleRelations],
+        order: peopleOrder,
+        take: SUPER_ADMIN_PEOPLE_LIMIT,
+      }),
+      teacherRepo.find({
+        where: activeWhere,
+        relations: [...peopleRelations],
+        order: peopleOrder,
+        take: SUPER_ADMIN_PEOPLE_LIMIT,
+      }),
+      adminRepo.find({
+        where: activeWhere,
+        relations: [...peopleRelations],
+        order: peopleOrder,
+        take: SUPER_ADMIN_PEOPLE_LIMIT,
+      }),
+    ]);
+
+    const feeStructures = feeRows.map((fee) => ({
+      id: fee.id,
+      feeTitle: fee.feeTitle,
+      feeType: fee.feeType,
+      amount: fee.amount,
+      allowUssdPayment: fee.allowUssdPayment !== false,
+      dueDate: fee.dueDate,
+      classLevels: (fee.classLevels ?? []).map((cl) => ({
+        id: cl.id,
+        name: cl.name,
+      })),
+    }));
+
+    const classLevels = classLevelRows.map((cl) => ({
+      id: cl.id,
+      name: cl.name,
+      description: cl.description ?? null,
+    }));
+
+    const people: TenantPersonEntity[] = [
+      ...students,
+      ...teachers,
+      ...admins,
+    ];
+    const peopleCounts: SuperAdminPeopleCounts = {
+      students: studentCount,
+      teachers: teacherCount,
+      admins: adminCount,
+      total: studentCount + teacherCount + adminCount,
+      truncated:
+        studentCount > SUPER_ADMIN_PEOPLE_LIMIT ||
+        teacherCount > SUPER_ADMIN_PEOPLE_LIMIT ||
+        adminCount > SUPER_ADMIN_PEOPLE_LIMIT,
+    };
+
+    const gradingSchemes = gradingSchemeRows.map((scheme) => {
+      scheme.bands = (scheme.bands ?? []).sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+      );
+      return mapGradingSchemeToResponse(scheme);
+    });
+
+    return {
+      feeStructures,
+      classLevels,
+      academicCalendars,
+      admissionPolicies,
+      gradingSystems,
+      gradingSchemes,
+      people,
+      peopleCounts,
+    };
+  }
+
+  private async loadGradingSystemsForSuperAdmin(
+    manager: EntityManager,
+    schoolId: string,
+  ): Promise<SuperAdminTenantDetails['gradingSystems']> {
+    const schemes = await manager.getRepository(GradingScheme).find({
+      where: { school: { id: schoolId }, status: 'active' },
+      relations: ['bands'],
+      order: { updatedAt: 'DESC' },
+    });
+
+    const preferred =
+      schemes.find((scheme) => scheme.scopeType === 'school') ?? schemes[0];
+
+    if (preferred?.bands?.length) {
+      return [...preferred.bands]
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((band) => ({
+          id: band.id,
+          grade: band.label || band.code,
+          minRange: band.minScore,
+          maxRange: band.maxScore,
+        }));
+    }
+
+    const legacy = await manager.getRepository(GradingSystem).find({
+      order: { minRange: 'DESC' },
+    });
+
+    return legacy.map((row) => ({
+      id: row.id,
+      grade: row.grade,
+      minRange: row.minRange,
+      maxRange: row.maxRange,
+    }));
+  }
+
+  private async signAdmissionPolicies(
+    policies: AdmissionPolicy[],
+  ): Promise<Array<AdmissionPolicy & { documentUrl?: string }>> {
+    return Promise.all(
+      policies.map(async (policy) => {
+        const result = { ...policy } as AdmissionPolicy & {
           documentUrl?: string;
         };
-        if (policy.documentPath) {
-          try {
-            result.documentUrl = await this.objectStorageService.getSignedUrl(
-              policy.documentPath,
-              86400,
-            );
-          } catch {
-            // skip silently
-          }
+        if (!policy.documentPath) {
+          return result;
+        }
+        try {
+          result.documentUrl = await this.objectStorageService.getSignedUrl(
+            policy.documentPath,
+          );
+        } catch {
+          this.logger.warn(
+            `Failed to sign admission policy document for policy ${policy.id}`,
+          );
         }
         return result;
       }),
     );
+  }
 
-    // Sign school profile avatar
-    const signedSchoolProfile = school.profile
-      ? {
-          ...school.profile,
-          avatarUrl: school.profile.avatarPath
-            ? await this.objectStorageService.getSignedUrl(
-                school.profile.avatarPath,
-                86400,
-              )
-            : undefined,
-        }
-      : undefined;
+  private mapTenantPeopleToUsersOverview(
+    people: TenantPersonEntity[],
+  ): SuperAdminTenantDetails['users'] {
+    return [...people]
+      .map((person) => ({
+        id: person.id,
+        firstName: person.firstName,
+        lastName: person.lastName,
+        email: person.email,
+        status: person.isArchived ? 'archived' : person.status,
+        role: person.role,
+        profile: person.profile ?? undefined,
+      }))
+      .sort((a, b) => {
+        const aName = `${a.lastName ?? ''} ${a.firstName ?? ''}`.trim();
+        const bName = `${b.lastName ?? ''} ${b.firstName ?? ''}`.trim();
+        return aName.localeCompare(bName);
+      });
+  }
 
-    // Combine students and teachers
-    const users = [...(school.students || []), ...(school.teachers || [])];
+  private async mapTenantPeopleToUsers(
+    people: TenantPersonEntity[],
+  ): Promise<SuperAdminTenantDetails['users']> {
+    const mapped = await Promise.all(
+      people.map(async (person) => {
+        const profile = person.profile?.id
+          ? await this.signProfileAvatar(person.profile)
+          : undefined;
 
-    // Sign avatarUrls for users (if they have profile with avatarPath)
-    const signedUsers = await Promise.all(
-      users.map(async (user) => {
-        if (user.profile?.avatarPath) {
-          try {
-            const avatarUrl = await this.objectStorageService.getSignedUrl(
-              user.profile.avatarPath,
-              86400,
-            );
-            return {
-              ...user,
-              profile: {
-                ...user.profile,
-                avatarUrl,
-              },
-            };
-          } catch {
-            return user;
-          }
-        }
-        return user;
+        return {
+          id: person.id,
+          firstName: person.firstName,
+          lastName: person.lastName,
+          email: person.email,
+          status: person.isArchived ? 'archived' : person.status,
+          role: person.role,
+          profile,
+        };
       }),
     );
 
-    const { students, teachers, ...rest } = school;
+    return mapped.sort((a, b) => {
+      const aName = `${a.lastName ?? ''} ${a.firstName ?? ''}`.trim();
+      const bName = `${b.lastName ?? ''} ${b.firstName ?? ''}`.trim();
+      return aName.localeCompare(bName);
+    });
+  }
 
-    return {
-      ...rest,
-      admissionPolicies: signedAdmissionPolicies,
-      profile: signedSchoolProfile,
-      users: signedUsers,
-    };
+  private async signProfileAvatar(
+    profile: Profile,
+  ): Promise<Profile & { avatarUrl?: string }> {
+    const result = { ...profile } as Profile & { avatarUrl?: string };
+    if (!profile.avatarPath) {
+      return result;
+    }
+    try {
+      result.avatarUrl = await this.objectStorageService.getSignedUrl(
+        profile.avatarPath,
+      );
+    } catch {
+      this.logger.warn(`Failed to sign profile avatar for profile ${profile.id}`);
+    }
+    return result;
   }
 
   // ... existing code ...
@@ -359,21 +576,13 @@ export class SchoolService {
 
     const school = await this.schoolRepository.findOne({
       where: { id: user.school.id },
-      relations: [
-        'admissionPolicies',
-        'gradingSystems',
-        'feeStructures',
-        'profile',
-        'academicCalendars',
-        'classLevels',
-      ],
     });
 
     if (!school) {
       throw new NotFoundException(`School with ID ${user.school.id} not found`);
     }
 
-    return school;
+    return omitSchoolMerchantSecret(school);
   }
 
   async remove(id: string): Promise<void> {
@@ -491,10 +700,40 @@ export class SchoolService {
     return this.schoolRepository.save(school);
   }
 
+  /**
+   * Students and teachers live in the school's own schema, so counts can only be
+   * read inside that tenant. Schools that are not provisioned (or are disabled)
+   * have no schema yet and count as empty.
+   */
+  private async countTenantMembers(
+    school: School,
+  ): Promise<{ students: number; teachers: number }> {
+    if (
+      !school.schemaName ||
+      school.isDisabled ||
+      school.provisioningStatus !== SchoolProvisioningStatus.Active
+    ) {
+      return { students: 0, teachers: 0 };
+    }
+
+    try {
+      return await this.tenantConnection.runForSchoolId(
+        school.id,
+        async (manager) => ({
+          students: await manager.getRepository(Student).count(),
+          teachers: await manager.getRepository(Teacher).count(),
+        }),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to read tenant counts for school ${school.id}: ${error}`,
+      );
+      return { students: 0, teachers: 0 };
+    }
+  }
+
   async getSuperAdminDashboardStats() {
-    const schools = await this.schoolRepository.find({
-      relations: ['academicCalendars.terms', 'classLevels.students'],
-    });
+    const schools = await this.schoolRepository.find();
 
     const performanceData: Array<{
       schoolName: string;
@@ -504,91 +743,23 @@ export class SchoolService {
       totalTeachers: number;
     }> = [];
 
-    let totalOverallAttendance = 0;
-    let schoolsWithAttendanceData = 0;
     let totalOverallTeachers = 0;
     let totalOverallStudents = 0;
 
     for (const school of schools) {
-      let schoolTotalGrades = 0;
-      let numGrades = 0;
-      let schoolAttendanceRate = 0;
-      let numClassesWithAttendance = 0;
+      const { students, teachers } = await this.countTenantMembers(school);
 
-      const latestTerm = school.academicCalendars
-        .flatMap((calendar) => calendar.terms)
-        .sort(
-          (a, b) =>
-            new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-        )[0];
+      totalOverallStudents += students;
+      totalOverallTeachers += teachers;
 
-      if (latestTerm) {
-        // Calculate average grade
-        const grades = await this.studentGradeRepository.find({
-          where: { academicTerm: { id: latestTerm.id } },
-          relations: ['student.classLevels'],
-        });
-
-        grades.forEach((grade) => {
-          if (grade.totalScore == null) return;
-          schoolTotalGrades += grade.totalScore;
-          numGrades++;
-        });
-
-        // Calculate attendance rate per school
-        const classLevelsInSchool = await this.schoolRepository.manager
-          .getRepository('ClassLevel')
-          .find({
-            where: { school: { id: school.id } },
-            relations: ['students'],
-          });
-
-        for (const classLevel of classLevelsInSchool) {
-          if (classLevel.students.length > 0) {
-            const attendanceSummary =
-              await this.attendanceService.getClassAttendance({
-                classLevelId: classLevel.id,
-                filterType: 'month',
-              });
-            if (
-              attendanceSummary?.summary?.averageAttendanceRate !== undefined
-            ) {
-              schoolAttendanceRate +=
-                attendanceSummary.summary.averageAttendanceRate;
-              numClassesWithAttendance++;
-            }
-          }
-        }
-      }
-
-      const averageGrade = numGrades > 0 ? schoolTotalGrades / numGrades : 0;
-      const finalSchoolAttendanceRate =
-        numClassesWithAttendance > 0
-          ? schoolAttendanceRate / numClassesWithAttendance
-          : 0;
-
-      const totalStudentsInSchool = await this.schoolRepository.manager
-        .getRepository('Student')
-        .count({ where: { school: { id: school.id } } });
-      const totalTeachersInSchool = await this.schoolRepository.manager
-        .getRepository('Teacher')
-        .count({ where: { school: { id: school.id } } });
-
-      totalOverallStudents += totalStudentsInSchool;
-      totalOverallTeachers += totalTeachersInSchool;
-
+      // Grade and attendance aggregation across tenants is not implemented yet.
       performanceData.push({
         schoolName: school.name,
-        averageGrade,
-        averageAttendanceRate: finalSchoolAttendanceRate,
-        totalStudents: totalStudentsInSchool,
-        totalTeachers: totalTeachersInSchool,
+        averageGrade: 0,
+        averageAttendanceRate: 0,
+        totalStudents: students,
+        totalTeachers: teachers,
       });
-
-      if (finalSchoolAttendanceRate > 0) {
-        totalOverallAttendance += finalSchoolAttendanceRate;
-        schoolsWithAttendanceData++;
-      }
     }
 
     performanceData.sort((a, b) => b.averageGrade - a.averageGrade);
@@ -596,16 +767,11 @@ export class SchoolService {
     const bestPerformingSchools = performanceData.slice(0, 3);
     const worstPerformingSchools = performanceData.slice(-3).reverse();
 
-    const overallAverageAttendanceRate =
-      schoolsWithAttendanceData > 0
-        ? totalOverallAttendance / schoolsWithAttendanceData
-        : 0;
-
     return {
       totalSchools: schools.length,
       totalTeachers: totalOverallTeachers,
       totalStudents: totalOverallStudents,
-      averageAttendanceRate: overallAverageAttendanceRate,
+      averageAttendanceRate: 0,
       bestPerformingSchools: bestPerformingSchools.map((s) => ({
         schoolName: s.schoolName,
         averageGrade: s.averageGrade,

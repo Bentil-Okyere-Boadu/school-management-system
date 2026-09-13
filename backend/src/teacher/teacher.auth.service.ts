@@ -1,18 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Teacher } from './teacher.entity';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { AuthService } from 'src/auth/auth.service';
 import * as bcrypt from 'bcryptjs';
+import { TenantUserLookupService } from 'src/tenant/tenant-user-lookup.service';
+import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
 
 @Injectable()
 export class TeacherAuthService {
   constructor(
-    @InjectRepository(Teacher)
-    private readonly teacherRepository: Repository<Teacher>,
-    @InjectRepository(SchoolAdmin)
-    private readonly schoolAdminRepository: Repository<SchoolAdmin>,
+    private readonly tenantUserLookup: TenantUserLookupService,
+    private readonly tenantConnection: TenantConnectionService,
     private readonly authService: AuthService,
   ) {}
 
@@ -30,31 +28,31 @@ export class TeacherAuthService {
       return null;
     }
 
-    // Check if any school admin for this school is suspended
-    // If yes, prevent login
     if (teacher.school?.id) {
-      const hasSuspendedAdmin = await this.schoolAdminRepository.findOne({
-        where: { school: { id: teacher.school.id }, isSuspended: true },
-      });
+      const hasSuspendedAdmin = await this.tenantConnection.runForSchoolId(
+        teacher.school.id,
+        (manager) =>
+          manager.findOne(SchoolAdmin, { where: { isSuspended: true } }),
+      );
       if (hasSuspendedAdmin) {
-        return null; // Prevent login
+        return null;
       }
     }
 
     if (teacher.status === 'pending') {
       teacher.status = 'active';
       teacher.isInvitationAccepted = true;
-      await this.teacherRepository.save(teacher);
+      await this.tenantConnection.runForSchoolId(
+        teacher.school.id,
+        (manager) => manager.save(Teacher, teacher),
+      );
     }
 
     return teacher;
   }
 
   async findByEmailOrTeacherId(identifier: string): Promise<Teacher | null> {
-    return this.teacherRepository.findOne({
-      where: [{ email: identifier }, { teacherId: identifier }],
-      relations: ['role', 'school'],
-    });
+    return this.tenantUserLookup.findTeacher(identifier);
   }
 
   login(teacher: Teacher) {

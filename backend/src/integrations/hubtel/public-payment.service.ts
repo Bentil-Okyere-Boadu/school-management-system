@@ -215,7 +215,12 @@ export class PublicPaymentService {
     } catch (error) {
       const reason =
         error instanceof Error ? error.message : 'Hubtel call failed';
-      await this.paymentsService.markTransactionFailed(transaction.id, reason);
+      await this.paymentsService.markTransactionFailed(
+        transaction.id,
+        reason,
+        undefined,
+        student.school.id,
+      );
       throw new BadRequestException(
         'Failed to initiate payment with Hubtel. Please try again.',
       );
@@ -226,6 +231,7 @@ export class PublicPaymentService {
     const updated =
       await this.paymentsService.updateTransactionStatusFromHubtel({
         sessionId: clientReference,
+        schoolId: student.school.id,
         status: outcome.status,
         providerStatus:
           outcome.kind === 'failed' ? outcome.reason : rawResponse.Message,
@@ -237,7 +243,10 @@ export class PublicPaymentService {
       });
 
     if (outcome.kind === 'paid') {
-      await this.paymentsService.allocatePaidTransaction(updated.id);
+      await this.paymentsService.allocatePaidTransaction(
+        updated.id,
+        student.school.id,
+      );
     }
 
     return {
@@ -262,9 +271,13 @@ export class PublicPaymentService {
     amount: number;
     paymentDate: Date | null;
   }> {
+    const student = await this.paymentsService.getStudentById(
+      authenticatedStudentId,
+    );
     const transaction =
       await this.paymentsService.findTransactionByClientReference(
         clientReference,
+        student.school.id,
       );
     if (!transaction || transaction.student.id !== authenticatedStudentId) {
       throw new NotFoundException('Transaction not found');
