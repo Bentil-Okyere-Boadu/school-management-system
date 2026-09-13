@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
-import { EntityManager, LessThan, Repository } from 'typeorm';
+import { EntityManager, IsNull, LessThan, Repository } from 'typeorm';
 import { Parent } from './parent.entity';
 import { ParentStudent } from './parent-student.entity';
 import {
@@ -19,7 +19,6 @@ import { normalizeEmail, parentHasUsableAccount } from './parent.helpers';
 import { LinkGuardianInput } from './dto/link-guardian.dto';
 import { Student } from 'src/student/student.entity';
 import { Role } from 'src/role/role.entity';
-import { EmailRetryService } from 'src/common/services/email-retry.service';
 import { EmailService } from 'src/common/services/email.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
@@ -45,7 +44,6 @@ export class ParentLinkService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly emailService: EmailService,
-    private readonly emailRetry: EmailRetryService,
     private readonly notificationService: NotificationService,
     private readonly tenantDirectory: TenantDirectoryService,
     private readonly tenantConnection: TenantConnectionService,
@@ -329,6 +327,15 @@ export class ParentLinkService {
       return null;
     }
 
+    if (
+      !parent.invitationExpires ||
+      parent.invitationExpires.getTime() <= Date.now()
+    ) {
+      throw new BadRequestException(
+        'Invitation has expired - please request a new invitation',
+      );
+    }
+
     if (parent.invitationToken && parent.invitationToken !== token) {
       this.logger.warn(
         `Parent invitation token mismatch for parent ${parent.id} in school ${resolved.schoolId}; using platform token`,
@@ -477,6 +484,7 @@ export class ParentLinkService {
     }
     parent.invitationToken = this.generateToken();
     parent.invitationExpires = this.tokenExpiry();
+    parent.invitationExpiredNotifiedAt = null;
     const savedParent = await this.parentRepository.save(parent);
     await this.registerParentInvitationToken(savedParent);
     const originating = await this.parentStudentRepository.findOne({
@@ -620,6 +628,7 @@ export class ParentLinkService {
     ) {
       parent.invitationToken = this.generateToken();
       parent.invitationExpires = this.tokenExpiry();
+      parent.invitationExpiredNotifiedAt = null;
       relationship.invitedAt = new Date();
       const savedParent = await this.parentRepository.save(parent);
       await this.registerParentInvitationToken(savedParent);
@@ -760,6 +769,7 @@ export class ParentLinkService {
       where: {
         status: ParentAccountStatus.Pending,
         invitationExpires: LessThan(now),
+        invitationExpiredNotifiedAt: IsNull(),
       },
     });
 
@@ -788,7 +798,7 @@ export class ParentLinkService {
         `The portal invitation for ${parent.firstName} ${parent.lastName} (${parent.email}) linked to ${studentName} has expired. Resend the invitation from the student profile.`,
       );
 
-      parent.invitationExpires = null;
+      parent.invitationExpiredNotifiedAt = now;
       await parentRepo.save(parent);
       notified += 1;
     }
@@ -802,7 +812,7 @@ export class ParentLinkService {
     schoolId: string | undefined,
   ): Promise<boolean> {
     try {
-      await this.emailRetry.retrySendParentInvitation(parent, student);
+      await this.emailService.sendParentInvitationEmail(parent, student);
       return true;
     } catch (error) {
       this.logger.error(

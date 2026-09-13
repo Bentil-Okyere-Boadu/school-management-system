@@ -30,6 +30,23 @@ function toResolvedPreloginToken(
   };
 }
 
+type ClaimedTokenRow = {
+  schoolId: string;
+  userType: PreloginUserType;
+  subjectId: string;
+  expiresAt: Date | string;
+};
+
+function mapClaimedTokenRow(row: ClaimedTokenRow): ResolvedPreloginToken {
+  return {
+    schoolId: row.schoolId,
+    userType: row.userType,
+    subjectId: row.subjectId,
+    expiresAt:
+      row.expiresAt instanceof Date ? row.expiresAt : new Date(row.expiresAt),
+  };
+}
+
 @Injectable()
 export class PlatformPreloginTokenService {
   constructor(
@@ -88,37 +105,34 @@ export class PlatformPreloginTokenService {
     token: string,
     purpose: PreloginTokenPurpose,
   ): Promise<ResolvedPreloginToken> {
-    const result = await this.tokenRepository
-      .createQueryBuilder()
-      .update(PlatformPreloginToken)
-      .set({ consumedAt: new Date() })
-      .where('token = :token', { token })
-      .andWhere('purpose = :purpose', { purpose })
-      .andWhere('"consumedAt" IS NULL')
-      .andWhere('"expiresAt" > NOW()')
-      .execute();
-    if (!result.affected) {
-      const existing = await this.tokenRepository.findOne({
-        where: { token, purpose },
-      });
-      if (existing?.consumedAt) {
-        throw new BadRequestException('Token has already been used');
-      }
-      if (existing && existing.expiresAt.getTime() <= Date.now()) {
-        throw new UnauthorizedException(
-          'Expired token - please request a new link',
-        );
-      }
-      throw new NotFoundException('Invalid or expired token');
+    const rows: ClaimedTokenRow[] = await this.tokenRepository.query(
+      `UPDATE platform_prelogin_token
+       SET "consumedAt" = NOW()
+       WHERE token = $1
+         AND purpose = $2
+         AND "consumedAt" IS NULL
+         AND "expiresAt" > NOW()
+       RETURNING "schoolId", "userType", "subjectId", "expiresAt"`,
+      [token, purpose],
+    );
+
+    const claimed = rows[0];
+    if (claimed?.schoolId && claimed.userType && claimed.subjectId) {
+      return mapClaimedTokenRow(claimed);
     }
 
-    const row = await this.tokenRepository.findOne({
+    const existing = await this.tokenRepository.findOne({
       where: { token, purpose },
     });
-    if (!row?.consumedAt) {
-      throw new NotFoundException('Invalid or expired token');
+    if (existing?.consumedAt) {
+      throw new BadRequestException('Token has already been used');
     }
-    return toResolvedPreloginToken(row);
+    if (existing && existing.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException(
+        'Expired token - please request a new link',
+      );
+    }
+    throw new NotFoundException('Invalid or expired token');
   }
 
   async resolve(

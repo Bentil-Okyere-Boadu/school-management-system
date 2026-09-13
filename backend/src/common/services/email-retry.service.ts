@@ -3,8 +3,6 @@ import { EmailService } from './email.service';
 import { SchoolAdmin } from 'src/school-admin/school-admin.entity';
 import { Student } from 'src/student/student.entity';
 import { Teacher } from 'src/teacher/teacher.entity';
-import { Parent } from 'src/parent/parent.entity';
-
 /**
  * Service for retrying failed email operations
  */
@@ -117,32 +115,6 @@ export class EmailRetryService {
         );
         throw error;
       }
-    }
-  }
-
-  async retrySendParentInvitation(
-    parent: Parent,
-    student: Student | null,
-    retryCount: number = 0,
-  ): Promise<void> {
-    try {
-      await this.emailService.sendParentInvitationEmail(parent, student);
-      this.logger.log(
-        `Successfully sent parent invitation email to ${parent.email} after ${retryCount} retries`,
-      );
-    } catch (error) {
-      if (retryCount < this.maxRetries) {
-        this.logger.warn(
-          `Failed to send parent invitation email to ${parent.email}, retrying in ${this.retryDelay}ms (attempt ${retryCount + 1}/${this.maxRetries})`,
-        );
-        await this.delay(this.retryDelay * Math.pow(2, retryCount));
-        return this.retrySendParentInvitation(parent, student, retryCount + 1);
-      }
-      this.logger.error(
-        `Failed to send parent invitation email to ${parent.email} after ${this.maxRetries} retries`,
-        error,
-      );
-      throw error;
     }
   }
 
