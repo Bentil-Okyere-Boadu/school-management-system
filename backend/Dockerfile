@@ -14,4 +14,5 @@ COPY --from=builder /dist ./dist
 COPY --from=builder /package*.json ./
 
 EXPOSE 5000
+CMD ["npm", "run", "tenant:migrate"]
 CMD ["npm", "run", "start:prod"]
