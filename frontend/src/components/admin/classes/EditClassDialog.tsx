@@ -51,6 +51,7 @@ export const EditClassDialog: React.FC<EditClassDialogProps> = ({
           className="!py-0"
           placeholder=""
           label="Name"
+          required
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           isTransulent={false}

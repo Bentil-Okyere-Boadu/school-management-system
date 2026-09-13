@@ -1,9 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateClassLevelDto {
   @ApiProperty()
-  @IsString({ message: 'Class name is required and must be text.' })
+  @IsNotEmpty({ message: 'Class name is required.' })
+  @IsString({ message: 'Class name must be text.' })
   name: string;
 
   @ApiPropertyOptional()
@@ -12,8 +20,8 @@ export class CreateClassLevelDto {
   description?: string;
 
   @ApiPropertyOptional({ description: 'Class teacher UUID' })
-  @IsOptional()
-  @IsUUID('4')
+  @ValidateIf((o) => o.classTeacherId != null)
+  @IsUUID('4', { message: 'classTeacherId must be a valid UUID.' })
   classTeacherId?: string;
 
   @ApiPropertyOptional({ type: [String], format: 'uuid' })

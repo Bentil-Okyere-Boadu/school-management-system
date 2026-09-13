@@ -79,11 +79,15 @@ const ClassDetailPage = () => {
   };
 
   const handleEditClass = () => {
+    if (!classLevelName.trim()) {
+      toast.error('Class name is required.');
+      return;
+    }
     editMutation(
       {
-        name: classLevelName,
+        name: classLevelName.trim(),
         description: classLevelDescription,
-        classTeacherId: selectedTeacher,
+        classTeacherId: selectedTeacher || null,
       },
       {
         onSuccess: () => {

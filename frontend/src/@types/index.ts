@@ -296,7 +296,7 @@ export interface ClassLevel {
   teachers: User[];
   studentCount?: number;
   classTeacher: User;
-  classTeacherId: string;
+  classTeacherId: string | null;
 }
 
 export interface AdmissionPolicy {

@@ -219,10 +219,9 @@ export const PendingAssignmentsTab: React.FC = () => {
                           </span>
                         ) : (
                           <CustomButton
-                            text="Submit"
+                            text="View"
                             onClick={() => handleSubmitClick(assignment)}
                             className="bg-purple-500 hover:bg-purple-600 text-white"
-                            icon={<IconUpload size={16} />}
                           />
                         )}
                       </td>
