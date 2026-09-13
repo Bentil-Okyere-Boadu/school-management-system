@@ -47,6 +47,26 @@ function mapClaimedTokenRow(row: ClaimedTokenRow): ResolvedPreloginToken {
   };
 }
 
+function normalizeClaimedTokenRow(
+  row: ClaimedTokenRow & Record<string, unknown>,
+): ClaimedTokenRow | null {
+  const schoolId = (row.schoolId ?? row.schoolid) as string | undefined;
+  const userType = (row.userType ?? row.usertype) as
+    | PreloginUserType
+    | undefined;
+  const subjectId = (row.subjectId ?? row.subjectid) as string | undefined;
+  const expiresAt = (row.expiresAt ?? row.expiresat) as
+    | Date
+    | string
+    | undefined;
+
+  if (!schoolId || !userType || !subjectId || !expiresAt) {
+    return null;
+  }
+
+  return { schoolId, userType, subjectId, expiresAt };
+}
+
 @Injectable()
 export class PlatformPreloginTokenService {
   constructor(
@@ -117,8 +137,18 @@ export class PlatformPreloginTokenService {
     );
 
     const claimed = rows[0];
-    if (claimed?.schoolId && claimed.userType && claimed.subjectId) {
-      return mapClaimedTokenRow(claimed);
+    if (claimed) {
+      const normalized = normalizeClaimedTokenRow(claimed);
+      if (normalized) {
+        return mapClaimedTokenRow(normalized);
+      }
+
+      const reloaded = await this.tokenRepository.findOne({
+        where: { token, purpose },
+      });
+      if (reloaded?.consumedAt) {
+        return toResolvedPreloginToken(reloaded);
+      }
     }
 
     const existing = await this.tokenRepository.findOne({

@@ -611,4 +611,76 @@ describe('Parent & School Admin pre-login hardening (two schools)', () => {
       expect.arrayContaining([flowA.school.id, flowB.school.id]),
     );
   });
+
+  it('returns error when child confirmation emails fail after parent activation', async () => {
+    const parentEmail = `phase46-parent-confirm-fail-${runId}@example.com`;
+    const password = `Parent-Fail-${runId}!`;
+
+    const flow = await createSchoolWithAdmin(
+      'a',
+      `phase46-admin-confirm-fail-${runId}@example.com`,
+      `Admin-Fail-${runId}!`,
+    );
+
+    const secondStudent = await request(app.getHttpServer())
+      .post('/api/v1/invitations/student')
+      .set(bearer(flow.admin.access_token))
+      .send({
+        firstName: 'Second',
+        lastName: 'ConfirmFail',
+        email: `phase46-student-a2-fail-${runId}@example.com`,
+      })
+      .expect(201);
+
+    const parent = await linkParent(flow, parentEmail);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/school-admin/students/${secondStudent.body.id}/parents`)
+      .set(bearer(flow.admin.access_token))
+      .send({
+        firstName: 'ParentA',
+        lastName: 'Shared',
+        email: parentEmail,
+        relationship: 'Parent',
+      })
+      .expect(201);
+
+    const tokenRows = await dataSource.query(
+      `SELECT token FROM public.platform_prelogin_token
+       WHERE "schoolId" = $1
+         AND purpose = 'parent_invitation'
+         AND "subjectId" = $2
+         AND "consumedAt" IS NULL`,
+      [flow.school.id, parent.parentId],
+    );
+    expect(tokenRows).toHaveLength(1);
+    const invitationToken = tokenRows[0].token as string;
+
+    emailServiceMock.sendParentChildConfirmationEmail.mockRejectedValueOnce(
+      new Error('SMTP unavailable'),
+    );
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/invitations/complete-registration')
+      .send({ token: invitationToken, password });
+
+    if (response.status !== 503) {
+      throw new Error(
+        `Expected 503, got ${response.status}: ${JSON.stringify(response.body)}`,
+      );
+    }
+    expect(String(response.body.message)).toContain('activated');
+
+    const parentRow = await dataSource.query(
+      `SELECT status FROM "${flow.schema}".parent WHERE id = $1`,
+      [parent.parentId],
+    );
+    expect(parentRow[0].status).toBe('active');
+
+    const notifications = await dataSource.query(
+      `SELECT type, title FROM "${flow.schema}".notification
+       WHERE type = 'parentInvitationFailed'`,
+    );
+    expect(notifications.length).toBeGreaterThanOrEqual(1);
+  });
 });

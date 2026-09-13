@@ -1,4 +1,5 @@
 import { DataSource, QueryRunner, Table } from 'typeorm';
+import { assertTenantSchemaName } from './tenant-schema.util';
 import {
   collectPlatformMetadatas,
   collectTenantMetadatas,
@@ -38,9 +39,7 @@ export async function applyPlatformTables(queryRunner: QueryRunner): Promise<voi
     table.foreignKeys = foreignKeys;
   }
   for (const table of tables) {
-    if (table.foreignKeys?.length) {
-      await queryRunner.createForeignKeys(table, table.foreignKeys);
-    }
+    await createForeignKeysIdempotent(queryRunner, table);
   }
 }
 
@@ -65,8 +64,54 @@ export async function applyTenantSchemaTables(
   }
 
   for (const table of tables) {
-    if (table.foreignKeys?.length) {
-      await queryRunner.createForeignKeys(table, table.foreignKeys);
+    await createForeignKeysIdempotent(queryRunner, table);
+  }
+}
+
+function resolveConstraintSchema(schemaName: string): string {
+  if (schemaName === 'public') {
+    return 'public';
+  }
+  return assertTenantSchemaName(schemaName);
+}
+
+export async function foreignKeyExists(
+  queryRunner: QueryRunner,
+  schemaName: string,
+  constraintName: string,
+): Promise<boolean> {
+  const schema = resolveConstraintSchema(schemaName);
+  const rows: Array<{ exists: boolean }> = await queryRunner.query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM pg_constraint c
+       INNER JOIN pg_namespace n ON n.oid = c.connamespace
+       WHERE n.nspname = $1
+         AND c.conname = $2
+         AND c.contype = 'f'
+     ) AS exists`,
+    [schema, constraintName],
+  );
+  return rows[0]?.exists === true;
+}
+
+export async function createForeignKeysIdempotent(
+  queryRunner: QueryRunner,
+  table: Table,
+): Promise<void> {
+  const schemaName = table.schema;
+  if (!schemaName || !table.foreignKeys?.length) {
+    return;
+  }
+
+  for (const fk of table.foreignKeys) {
+    const name = fk.name;
+    if (!name) {
+      await queryRunner.createForeignKeys(table, [fk]);
+      continue;
+    }
+    if (!(await foreignKeyExists(queryRunner, schemaName, name))) {
+      await queryRunner.createForeignKeys(table, [fk]);
     }
   }
 }

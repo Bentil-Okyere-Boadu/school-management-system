@@ -9,6 +9,7 @@ import { SchoolProvisioningStatus } from '../src/tenant/school-provisioning-stat
 import { TenantMigrationStatus } from '../src/tenant/tenant-migration-status';
 import { TENANT_SCHEMA_HEAD } from '../src/tenant/tenant-schema-version';
 import { tenantSchemaName } from '../src/tenant/tenant-schema.util';
+import { applyTenantSchemaTables } from '../src/tenant/tenant-ddl';
 import { loadProductionRegistry } from '../src/tenant/tenant-migration-registry';
 import { PLATFORM_PUBLIC_TABLES } from '../src/tenant/legacy-public-tenant-tables';
 import { bootstrapTenantE2eDataSource } from './helpers/tenant-e2e-bootstrap';
@@ -241,6 +242,41 @@ describe('Tenant schema lifecycle (Phase 6)', () => {
         [`public.${table}`],
       );
       expect(rows[0]?.reg).toBeNull();
+    }
+  });
+
+  it('heals missing table on live tenant without FK collision', async () => {
+    const { school, schema } = await provision('table-drift-heal');
+    expect(await tableExists(schema, 'student')).toBe(true);
+
+    await ds.query(`DROP TABLE "${schema}"."student" CASCADE`);
+    expect(await tableExists(schema, 'student')).toBe(false);
+
+    const healed = await migrator.migrateSchool(school.id, {
+      head: TENANT_SCHEMA_HEAD,
+      skipAdvisoryLock: true,
+    });
+    expect(healed.tenantMigrationStatus).toBe(TenantMigrationStatus.Ok);
+    expect(await tableExists(schema, 'student')).toBe(true);
+
+    const qr = ds.createQueryRunner();
+    await qr.connect();
+    try {
+      await qr.query(`SET LOCAL search_path TO "${schema}", public`);
+      await inspector.assertSchemaMatchesHead(qr, schema);
+    } finally {
+      await qr.release();
+    }
+
+    const reapplyQr = ds.createQueryRunner();
+    await reapplyQr.connect();
+    await reapplyQr.startTransaction();
+    try {
+      await reapplyQr.query(`SET LOCAL search_path TO "${schema}", public`);
+      await applyTenantSchemaTables(reapplyQr, ds, schema);
+      await reapplyQr.commitTransaction();
+    } finally {
+      await reapplyQr.release();
     }
   });
 

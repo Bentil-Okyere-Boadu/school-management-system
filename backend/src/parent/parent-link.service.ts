@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
@@ -292,6 +293,15 @@ export class ParentLinkService {
         `Parent invitation post-activation side effects failed for parent ${parent.id}: ${
           error instanceof Error ? error.message : String(error)
         }`,
+      );
+      await this.notifyAdmin(
+        resolved.schoolId,
+        NotificationType.ParentInvitationFailed,
+        'Parent child confirmation email failed',
+        `${parent.firstName} ${parent.lastName} activated their account, but confirmation emails for linked children could not be sent. Resend confirmations from the student profile.`,
+      );
+      throw new ServiceUnavailableException(
+        'Your parent account was activated, but we could not send child confirmation emails. Please contact your school office to resend confirmations.',
       );
     }
 
