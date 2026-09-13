@@ -4,7 +4,9 @@ import { School } from 'src/school/school.entity';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
 import { TenantMigrationStatus } from './tenant-migration-status';
 import { TenantSchemaMigrator } from './tenant-schema-migrator.service';
+import { TenantSchemaInspector } from './tenant-schema-inspector.service';
 import { TenantMigrationStep } from './tenant-migration.types';
+import { TENANT_SCHEMA_HEAD } from './tenant-schema-version';
 
 function mockSchool(overrides: Partial<School> = {}): School {
   return {
@@ -20,7 +22,8 @@ function mockSchool(overrides: Partial<School> = {}): School {
 
 describe('TenantSchemaMigrator', () => {
   let migrator: TenantSchemaMigrator;
-  let schemaNeedsProductionHeal: jest.SpyInstance;
+  let classifySchemaDrift: jest.SpyInstance;
+  let assertSchemaMatchesHead: jest.SpyInstance;
   let schoolRepo: {
     find: jest.Mock;
     findOne: jest.Mock;
@@ -64,18 +67,24 @@ describe('TenantSchemaMigrator', () => {
         .mockReturnValue(tenantRunner),
     };
     migrator = new TenantSchemaMigrator(dataSource as DataSource);
-    schemaNeedsProductionHeal = jest
+    classifySchemaDrift = jest
       .spyOn(
         migrator as unknown as {
-          schemaNeedsProductionHeal: (schemaName: string) => Promise<boolean>;
+          classifySchemaDrift: (
+            schemaName: string,
+          ) => Promise<'none' | 'columns' | 'tables'>;
         },
-        'schemaNeedsProductionHeal',
+        'classifySchemaDrift',
       )
-      .mockResolvedValue(false);
+      .mockResolvedValue('none');
+    assertSchemaMatchesHead = jest
+      .spyOn(TenantSchemaInspector.prototype, 'assertSchemaMatchesHead')
+      .mockResolvedValue(undefined);
   });
 
   afterEach(() => {
-    schemaNeedsProductionHeal.mockRestore();
+    classifySchemaDrift.mockRestore();
+    assertSchemaMatchesHead.mockRestore();
   });
 
   it('skips schools already at HEAD', async () => {
@@ -182,6 +191,83 @@ describe('TenantSchemaMigrator', () => {
         head: 0,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('replays incrementals on column drift and verifies schema before marking ok', async () => {
+    const driftedSchool = mockSchool({
+      tenantSchemaVersion: TENANT_SCHEMA_HEAD,
+    });
+    schoolRepo.findOne
+      .mockResolvedValueOnce(driftedSchool)
+      .mockResolvedValueOnce({
+        ...driftedSchool,
+        tenantMigrationStatus: TenantMigrationStatus.Ok,
+      });
+    classifySchemaDrift.mockResolvedValue('columns');
+
+    const steps: TenantMigrationStep[] = [
+      {
+        version: 1,
+        name: 'add-column',
+        up: jest.fn().mockResolvedValue(undefined),
+      },
+    ];
+
+    dataSource.createQueryRunner = jest.fn().mockReturnValue({ ...tenantRunner });
+
+    await migrator.migrateSchool(driftedSchool.id, {
+      head: TENANT_SCHEMA_HEAD,
+      steps,
+      skipAdvisoryLock: true,
+    });
+
+    expect(steps[0].up).toHaveBeenCalled();
+    expect(assertSchemaMatchesHead).toHaveBeenCalled();
+    expect(tenantRunner.manager!.update).toHaveBeenCalledWith(
+      School,
+      driftedSchool.id,
+      expect.objectContaining({
+        tenantMigrationStatus: TenantMigrationStatus.Ok,
+        tenantSchemaVersion: TENANT_SCHEMA_HEAD,
+      }),
+    );
+  });
+
+  it('marks failed when schema still does not match HEAD after replay', async () => {
+    const driftedSchool = mockSchool({
+      tenantSchemaVersion: TENANT_SCHEMA_HEAD,
+    });
+    schoolRepo.findOne.mockResolvedValue(driftedSchool);
+    classifySchemaDrift.mockResolvedValue('columns');
+    assertSchemaMatchesHead.mockRejectedValue(
+      new Error('Tenant schema does not match HEAD 1'),
+    );
+
+    const steps: TenantMigrationStep[] = [
+      {
+        version: 1,
+        name: 'add-column',
+        up: jest.fn().mockResolvedValue(undefined),
+      },
+    ];
+
+    dataSource.createQueryRunner = jest.fn().mockReturnValue({ ...tenantRunner });
+
+    await expect(
+      migrator.migrateSchool(driftedSchool.id, {
+        head: TENANT_SCHEMA_HEAD,
+        steps,
+        skipAdvisoryLock: true,
+      }),
+    ).rejects.toThrow(/does not match HEAD/);
+
+    expect(tenantRunner.rollbackTransaction).toHaveBeenCalled();
+    expect(schoolRepo.update).toHaveBeenCalledWith(
+      driftedSchool.id,
+      expect.objectContaining({
+        tenantMigrationStatus: TenantMigrationStatus.Failed,
+      }),
+    );
   });
 
   it('migrateSchool heals failed status when schema version is already at HEAD', async () => {

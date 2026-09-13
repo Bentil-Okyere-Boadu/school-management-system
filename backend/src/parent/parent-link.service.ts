@@ -507,10 +507,10 @@ export class ParentLinkService {
 
   async notifyExpiredParentInvitations(): Promise<number> {
     let notified = 0;
-    await this.tenantIteration.forEachActiveSchool(async (schoolId) => {
-      notified += await this.tenantConnection.runForSchoolId(
+    await this.tenantIteration.forEachActiveSchool(async (schoolId, manager) => {
+      notified += await this.notifyExpiredParentInvitationsInTenant(
+        manager,
         schoolId,
-        (manager) => this.notifyExpiredParentInvitationsInTenant(manager, schoolId),
       );
     });
     return notified;

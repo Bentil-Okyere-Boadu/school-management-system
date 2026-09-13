@@ -25,6 +25,9 @@ import {
   quotePgIdent,
 } from './tenant-schema.util';
 import { TenantSchemaInspector } from './tenant-schema-inspector.service';
+import { applyTenantSchemaTables } from './tenant-ddl';
+
+type SchemaDriftKind = 'none' | 'columns' | 'tables';
 
 @Injectable()
 export class TenantSchemaMigrator {
@@ -190,10 +193,11 @@ export class TenantSchemaMigrator {
 
     const currentVersion = school.tenantSchemaVersion ?? 0;
     let pending = stepsForRange(steps, currentVersion, head);
+    let useBaselineReapply = false;
 
     if (currentVersion >= head && pending.length === 0) {
-      const needsHeal = await this.schemaNeedsProductionHeal(schemaName);
-      if (!needsHeal) {
+      const driftKind = await this.classifySchemaDrift(schemaName);
+      if (driftKind === 'none') {
         if (
           school.tenantMigrationStatus === TenantMigrationStatus.Failed ||
           school.tenantMigrationStatus === TenantMigrationStatus.Pending
@@ -212,10 +216,17 @@ export class TenantSchemaMigrator {
         return school;
       }
 
-      pending = steps.filter((step) => step.version <= head);
-      this.logger.warn(
-        `Schema drift detected for school ${school.id} (catalog version ${currentVersion}, HEAD ${head}); replaying ${pending.length} production step(s)`,
-      );
+      if (driftKind === 'tables') {
+        useBaselineReapply = true;
+        this.logger.warn(
+          `Schema drift detected for school ${school.id} (catalog version ${currentVersion}, HEAD ${head}); reapplying tenant baseline DDL`,
+        );
+      } else {
+        pending = steps.filter((step) => step.version <= head);
+        this.logger.warn(
+          `Schema drift detected for school ${school.id} (catalog version ${currentVersion}, HEAD ${head}); replaying ${pending.length} production step(s)`,
+        );
+      }
     }
 
     if (pending.length === 0 && currentVersion < head) {
@@ -224,7 +235,7 @@ export class TenantSchemaMigrator {
       throw new Error(message);
     }
 
-    if (pending.length === 0) {
+    if (pending.length === 0 && !useBaselineReapply) {
       return school;
     }
 
@@ -237,11 +248,22 @@ export class TenantSchemaMigrator {
       );
       await this.markPending(school.id);
 
-      for (const step of pending) {
-        this.logger.log(
-          `Migrating school ${school.id} schema ${schemaName}: step ${step.version} ${step.name}`,
+      if (useBaselineReapply) {
+        await qr.query(
+          `CREATE SCHEMA IF NOT EXISTS ${quotePgIdent(schemaName)}`,
         );
-        await step.up(qr, schemaName);
+        await applyTenantSchemaTables(qr, this.dataSource, schemaName);
+      } else {
+        for (const step of pending) {
+          this.logger.log(
+            `Migrating school ${school.id} schema ${schemaName}: step ${step.version} ${step.name}`,
+          );
+          await step.up(qr, schemaName);
+        }
+      }
+
+      if (head === TENANT_SCHEMA_HEAD) {
+        await this.schemaInspector.assertSchemaMatchesHead(qr, schemaName, head);
       }
 
       await qr.manager.update(School, school.id, {
@@ -294,6 +316,28 @@ export class TenantSchemaMigrator {
 
   /** True when live schema is missing expected production columns/tables. */
   private async schemaNeedsProductionHeal(schemaName: string): Promise<boolean> {
+    return (await this.classifySchemaDrift(schemaName)) !== 'none';
+  }
+
+  private async classifySchemaDrift(schemaName: string): Promise<SchemaDriftKind> {
+    const diffs = await this.collectProductionDriftDiffs(schemaName);
+    if (diffs.some((diff) => diff.includes('missing table'))) {
+      return 'tables';
+    }
+    if (
+      diffs.some(
+        (diff) =>
+          diff.includes('missing column') || diff.includes('type mismatch'),
+      )
+    ) {
+      return 'columns';
+    }
+    return 'none';
+  }
+
+  private async collectProductionDriftDiffs(
+    schemaName: string,
+  ): Promise<string[]> {
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     try {
@@ -307,7 +351,7 @@ export class TenantSchemaMigrator {
       );
       return this.schemaInspector
         .compareFingerprints(expected, actual)
-        .some(
+        .filter(
           (diff) =>
             diff.includes('missing column') ||
             diff.includes('missing table') ||

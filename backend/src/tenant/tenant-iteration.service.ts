@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { School } from 'src/school/school.entity';
 import { SchoolProvisioningStatus } from './school-provisioning-status';
 import { TenantConnectionService } from './tenant-connection.service';
@@ -14,7 +14,7 @@ export class TenantIterationService {
   ) {}
 
   async forEachActiveSchool(
-    fn: (schoolId: string) => Promise<void>,
+    fn: (schoolId: string, manager: EntityManager) => Promise<void>,
   ): Promise<void> {
     const schools = await this.schoolRepository.find({
       where: {
@@ -23,8 +23,8 @@ export class TenantIterationService {
       },
     });
     for (const school of schools) {
-      await this.tenantConnection.runForSchoolId(school.id, async () => {
-        await fn(school.id);
+      await this.tenantConnection.runForSchoolId(school.id, async (manager) => {
+        await fn(school.id, manager);
       });
     }
   }
