@@ -57,6 +57,8 @@ const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = {
   [NotificationType.Results]: "results",
   [NotificationType.ClassTeacherResultSubmission]: "results",
   [NotificationType.ParentInvitation]: "parents",
+  [NotificationType.ParentInvitationFailed]: "parents",
+  [NotificationType.ParentInvitationExpired]: "parents",
   [NotificationType.ParentAccepted]: "parents",
   [NotificationType.ParentChildConfirmation]: "parents",
   [NotificationType.ParentChildConfirmed]: "parents",

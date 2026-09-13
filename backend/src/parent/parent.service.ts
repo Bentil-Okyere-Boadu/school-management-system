@@ -56,6 +56,10 @@ export class ParentService {
         relationship: link.relationship,
         relationshipStatus: link.status,
         relationshipId: link.id,
+        invitationExpired:
+          link.parent?.status === 'pending' &&
+          !!link.parent?.invitationExpires &&
+          link.parent.invitationExpires.getTime() <= Date.now(),
       }));
   }
 

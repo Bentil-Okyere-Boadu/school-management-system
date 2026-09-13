@@ -268,6 +268,22 @@ export const useResendAdminInvitation = ({
   });
 };
 
+export const useResendParentInvitation = (parentId: string) => {
+  return useMutation({
+    mutationFn: () =>
+      customAPI.post(`/school-admin/parents/${parentId}/resend-invitation`),
+  });
+};
+
+export const useResendParentChildConfirmation = (relationshipId: string) => {
+  return useMutation({
+    mutationFn: () =>
+      customAPI.post(
+        `/school-admin/parents/relationships/${relationshipId}/resend-confirmation`,
+      ),
+  });
+};
+
 export const useInvitation = (role: string) => {
   return useMutation({
     mutationFn: (inviteDetails: {

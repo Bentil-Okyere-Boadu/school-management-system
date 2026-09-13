@@ -15,6 +15,8 @@ export enum NotificationType {
   General = 'general',
   ClassTeacherResultSubmission = 'classTeacherResultSubmission',
   ParentInvitation = 'parentInvitation',
+  ParentInvitationFailed = 'parentInvitationFailed',
+  ParentInvitationExpired = 'parentInvitationExpired',
   ParentAccepted = 'parentAccepted',
   ParentChildConfirmation = 'parentChildConfirmation',
   ParentChildConfirmed = 'parentChildConfirmed',

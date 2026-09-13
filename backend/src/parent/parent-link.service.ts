@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
-import { Repository } from 'typeorm';
+import { EntityManager, LessThan, Repository } from 'typeorm';
 import { Parent } from './parent.entity';
 import { ParentStudent } from './parent-student.entity';
 import {
@@ -19,12 +19,17 @@ import { normalizeEmail, parentHasUsableAccount } from './parent.helpers';
 import { LinkGuardianInput } from './dto/link-guardian.dto';
 import { Student } from 'src/student/student.entity';
 import { Role } from 'src/role/role.entity';
+import { EmailRetryService } from 'src/common/services/email-retry.service';
 import { EmailService } from 'src/common/services/email.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { TenantDirectoryService } from 'src/tenant/tenant-directory.service';
 import { NotificationType } from 'src/notification/notification.entity';
 import { TenantConnectionService } from 'src/tenant/tenant-connection.service';
-import { PlatformPreloginTokenService } from 'src/tenant/platform-prelogin-token.service';
+import { TenantIterationService } from 'src/tenant/tenant-iteration.service';
+import {
+  PlatformPreloginTokenService,
+  ResolvedPreloginToken,
+} from 'src/tenant/platform-prelogin-token.service';
 
 @Injectable()
 export class ParentLinkService {
@@ -40,9 +45,11 @@ export class ParentLinkService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly emailService: EmailService,
+    private readonly emailRetry: EmailRetryService,
     private readonly notificationService: NotificationService,
     private readonly tenantDirectory: TenantDirectoryService,
     private readonly tenantConnection: TenantConnectionService,
+    private readonly tenantIteration: TenantIterationService,
     private readonly preloginTokens: PlatformPreloginTokenService,
   ) {}
 
@@ -236,45 +243,95 @@ export class ParentLinkService {
       token,
       'parent_invitation',
     );
+    if (resolved.userType !== 'parent') {
+      await this.preloginTokens
+        .releaseClaim(token, 'parent_invitation')
+        .catch(() => undefined);
+      throw new BadRequestException('Invalid or expired invitation');
+    }
+
+    let parent: Parent | null;
     try {
-      const parent = await this.tenantConnection.runForSchoolId(
+      parent = await this.tenantConnection.runForSchoolId(
         resolved.schoolId,
-        () => this.completeParentInvitationInTenant(token, password),
+        (manager) =>
+          this.completeParentInvitationInTenant(
+            manager,
+            resolved,
+            token,
+            password,
+          ),
       );
-      if (!parent) {
-        throw new BadRequestException('Invalid or expired invitation');
-      }
-      return parent;
     } catch (error) {
       await this.preloginTokens
         .releaseClaim(token, 'parent_invitation')
         .catch(() => undefined);
       throw error;
     }
+
+    if (!parent) {
+      await this.preloginTokens
+        .releaseClaim(token, 'parent_invitation')
+        .catch(() => undefined);
+      throw new BadRequestException('Invalid or expired invitation');
+    }
+
+    try {
+      await this.tenantConnection.runForSchoolId(
+        resolved.schoolId,
+        async (manager) => {
+          await this.sendQueuedConfirmations(parent!, manager);
+          await this.notifyAdmin(
+            resolved.schoolId,
+            NotificationType.ParentAccepted,
+            'Parent invitation accepted',
+            `${parent!.firstName} ${parent!.lastName} accepted the parent portal invitation.`,
+          );
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Parent invitation post-activation side effects failed for parent ${parent.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+
+    return parent;
   }
 
   private async completeParentInvitationInTenant(
+    manager: EntityManager,
+    resolved: ResolvedPreloginToken,
     token: string,
     password: string,
   ): Promise<Parent | null> {
-    const parent = await this.parentRepository.findOne({
-      where: {
-        invitationToken: token,
-        status: ParentAccountStatus.Pending,
-      },
-      relations: ['role', 'school'],
+    const parentRepo = manager.getRepository(Parent);
+    const parentStudentRepo = manager.getRepository(ParentStudent);
+    const parent = await parentRepo.findOne({
+      where: { id: resolved.subjectId },
     });
 
     if (!parent) {
       return null;
     }
 
-    if (
-      !parent.invitationExpires ||
-      parent.invitationExpires.getTime() <= Date.now()
-    ) {
+    if (parent.status === ParentAccountStatus.Active) {
+      if (parent.password && (await bcrypt.compare(password, parent.password))) {
+        return parent;
+      }
       throw new BadRequestException(
-        'Invitation token has expired - please request a new invitation',
+        'Parent account is already active. Please log in or use forgot password.',
+      );
+    }
+
+    if (parent.status !== ParentAccountStatus.Pending) {
+      return null;
+    }
+
+    if (parent.invitationToken && parent.invitationToken !== token) {
+      this.logger.warn(
+        `Parent invitation token mismatch for parent ${parent.id} in school ${resolved.schoolId}; using platform token`,
       );
     }
 
@@ -283,9 +340,9 @@ export class ParentLinkService {
     parent.isInvitationAccepted = true;
     parent.invitationToken = '';
     parent.invitationExpires = new Date(0);
-    await this.parentRepository.save(parent);
+    await parentRepo.save(parent);
 
-    const originating = await this.parentStudentRepository.find({
+    const originating = await parentStudentRepo.find({
       where: {
         parent: { id: parent.id },
         status: ParentStudentStatus.Pending,
@@ -300,22 +357,14 @@ export class ParentLinkService {
       first.acceptedAt = new Date();
       first.confirmationToken = null;
       first.confirmationExpires = null;
-      await this.parentStudentRepository.save(first);
+      await parentStudentRepo.save(first);
     }
 
     const extras = originating.slice(1);
     for (const extra of extras) {
       extra.status = ParentStudentStatus.PendingConfirmation;
-      await this.parentStudentRepository.save(extra);
+      await parentStudentRepo.save(extra);
     }
-
-    await this.sendQueuedConfirmations(parent);
-    await this.notifyAdmin(
-      parent.school.id,
-      NotificationType.ParentAccepted,
-      'Parent invitation accepted',
-      `${parent.firstName} ${parent.lastName} accepted the parent portal invitation.`,
-    );
 
     return parent;
   }
@@ -428,20 +477,35 @@ export class ParentLinkService {
     }
     parent.invitationToken = this.generateToken();
     parent.invitationExpires = this.tokenExpiry();
-    await this.parentRepository.save(parent);
-    if (parent.school?.id) {
-      await this.registerParentInvitationToken(parent);
-    }
+    const savedParent = await this.parentRepository.save(parent);
+    await this.registerParentInvitationToken(savedParent);
     const originating = await this.parentStudentRepository.findOne({
       where: { parent: { id: parent.id }, status: ParentStudentStatus.Pending },
       relations: ['student'],
       order: { createdAt: 'ASC' },
     });
-    await this.emailService.sendParentInvitationEmail(
-      parent,
+    const delivered = await this.deliverParentInvitationEmail(
+      savedParent,
       originating?.student ?? null,
+      savedParent.school?.id,
     );
-    return parent;
+    if (!delivered) {
+      throw new BadRequestException(
+        'Could not send invitation email. Check mail settings and try again.',
+      );
+    }
+    return savedParent;
+  }
+
+  async notifyExpiredParentInvitations(): Promise<number> {
+    let notified = 0;
+    await this.tenantIteration.forEachActiveSchool(async (schoolId) => {
+      notified += await this.tenantConnection.runForSchoolId(
+        schoolId,
+        (manager) => this.notifyExpiredParentInvitationsInTenant(manager, schoolId),
+      );
+    });
+    return notified;
   }
 
   async resendChildConfirmation(link: ParentStudent) {
@@ -557,16 +621,22 @@ export class ParentLinkService {
       parent.invitationToken = this.generateToken();
       parent.invitationExpires = this.tokenExpiry();
       relationship.invitedAt = new Date();
-      await this.parentRepository.save(parent);
-      await this.registerParentInvitationToken(parent);
+      const savedParent = await this.parentRepository.save(parent);
+      await this.registerParentInvitationToken(savedParent);
       await this.parentStudentRepository.save(relationship);
-      await this.emailService.sendParentInvitationEmail(parent, student);
-      await this.notifyAdmin(
+      const delivered = await this.deliverParentInvitationEmail(
+        savedParent,
+        student,
         student.school.id,
-        NotificationType.ParentInvitation,
-        'Parent invitation sent',
-        `Parent invitation sent — ${parent.firstName} ${parent.lastName} has been invited to access the parent portal for ${student.firstName} ${student.lastName}.`,
       );
+      if (delivered) {
+        await this.notifyAdmin(
+          student.school.id,
+          NotificationType.ParentInvitation,
+          'Parent invitation sent',
+          `Parent invitation sent — ${parent.firstName} ${parent.lastName} has been invited to access the parent portal for ${student.firstName} ${student.lastName}.`,
+        );
+      }
       return;
     }
 
@@ -583,8 +653,14 @@ export class ParentLinkService {
     }
   }
 
-  private async sendQueuedConfirmations(parent: Parent) {
-    const queued = await this.parentStudentRepository.find({
+  private async sendQueuedConfirmations(
+    parent: Parent,
+    manager?: EntityManager,
+  ) {
+    const parentStudentRepo = manager
+      ? manager.getRepository(ParentStudent)
+      : this.parentStudentRepository;
+    const queued = await parentStudentRepo.find({
       where: {
         parent: { id: parent.id },
         status: ParentStudentStatus.PendingConfirmation,
@@ -592,17 +668,24 @@ export class ParentLinkService {
       relations: ['student', 'school', 'parent'],
     });
     for (const link of queued) {
-      await this.sendChildConfirmation(parent, link);
+      await this.sendChildConfirmation(parent, link, manager);
     }
   }
 
-  private async sendChildConfirmation(parent: Parent, link: ParentStudent) {
+  private async sendChildConfirmation(
+    parent: Parent,
+    link: ParentStudent,
+    manager?: EntityManager,
+  ) {
     if (!parent.email) {
       return;
     }
+    const parentStudentRepo = manager
+      ? manager.getRepository(ParentStudent)
+      : this.parentStudentRepository;
     link.confirmationToken = this.generateToken();
     link.confirmationExpires = this.tokenExpiry();
-    await this.parentStudentRepository.save(link);
+    await parentStudentRepo.save(link);
     const schoolId = link.school?.id ?? link.parent?.school?.id;
     if (schoolId) {
       await this.preloginTokens.register({
@@ -637,21 +720,107 @@ export class ParentLinkService {
   }
 
   private async registerParentInvitationToken(parent: Parent): Promise<void> {
-    if (
-      !parent.invitationToken ||
-      !parent.invitationExpires ||
-      !parent.school?.id
-    ) {
+    if (!parent.invitationToken || !parent.invitationExpires) {
       return;
     }
+
+    let schoolId: string | undefined = parent.school?.id;
+    if (!schoolId) {
+      const reloaded = await this.parentRepository.findOne({
+        where: { id: parent.id },
+        relations: ['school'],
+      });
+      schoolId = reloaded?.school?.id;
+    }
+    if (!schoolId) {
+      this.logger.warn(
+        `Cannot register parent prelogin token: missing school for parent ${parent.id}`,
+      );
+      return;
+    }
+
     await this.preloginTokens.register({
       token: parent.invitationToken,
-      schoolId: parent.school.id,
+      schoolId,
       userType: 'parent',
       purpose: 'parent_invitation',
       subjectId: parent.id,
       expiresAt: parent.invitationExpires,
     });
+  }
+
+  private async notifyExpiredParentInvitationsInTenant(
+    manager: EntityManager,
+    schoolId: string,
+  ): Promise<number> {
+    const parentRepo = manager.getRepository(Parent);
+    const linkRepo = manager.getRepository(ParentStudent);
+    const now = new Date();
+    const expiredParents = await parentRepo.find({
+      where: {
+        status: ParentAccountStatus.Pending,
+        invitationExpires: LessThan(now),
+      },
+    });
+
+    let notified = 0;
+    for (const parent of expiredParents) {
+      if (!parent.email || !parent.invitationExpires) {
+        continue;
+      }
+
+      const link = await linkRepo.findOne({
+        where: {
+          parent: { id: parent.id },
+          status: ParentStudentStatus.Pending,
+        },
+        relations: ['student'],
+        order: { createdAt: 'ASC' },
+      });
+      const studentName = link?.student
+        ? `${link.student.firstName} ${link.student.lastName}`
+        : 'a student';
+
+      await this.notifyAdmin(
+        schoolId,
+        NotificationType.ParentInvitationExpired,
+        'Parent invitation expired',
+        `The portal invitation for ${parent.firstName} ${parent.lastName} (${parent.email}) linked to ${studentName} has expired. Resend the invitation from the student profile.`,
+      );
+
+      parent.invitationExpires = null;
+      await parentRepo.save(parent);
+      notified += 1;
+    }
+
+    return notified;
+  }
+
+  private async deliverParentInvitationEmail(
+    parent: Parent,
+    student: Student | null,
+    schoolId: string | undefined,
+  ): Promise<boolean> {
+    try {
+      await this.emailRetry.retrySendParentInvitation(parent, student);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Parent invitation email failed for ${parent.email}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      const studentName = student
+        ? `${student.firstName} ${student.lastName}`
+        : 'a student';
+      await this.notifyAdmin(
+        schoolId,
+        NotificationType.ParentInvitationFailed,
+        'Parent invitation email failed',
+        `Could not deliver the portal invitation to ${parent.firstName} ${parent.lastName} (${parent.email}) for ${studentName}. Resend the invitation from the student profile after checking the email address.`,
+      );
+      return false;
+    }
   }
 
   private async notifyAdmin(

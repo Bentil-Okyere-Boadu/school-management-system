@@ -163,11 +163,16 @@ export class StudentService {
           (link) =>
             link.status !== ParentStudentStatus.Revoked && !!link.parent,
         )
-        .map((link) => {
-          const parent = link.parent;
-          parent.relationship = link.relationship;
-          return parent;
-        });
+        .map((link) => ({
+          ...link.parent,
+          relationship: link.relationship,
+          relationshipStatus: link.status,
+          relationshipId: link.id,
+          invitationExpired:
+            link.parent?.status === 'pending' &&
+            !!link.parent?.invitationExpires &&
+            link.parent.invitationExpires.getTime() <= Date.now(),
+        }));
     }
     if (studentInfo?.profile?.id) {
       const profileWithUrl = await this.profileService.getProfileWithImageUrl(

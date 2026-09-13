@@ -85,8 +85,12 @@ export const ParentAttendanceSheet: React.FC<ParentAttendanceSheetProps> = ({
                 const present = status === "present";
                 const isWeekend = status === "weekend";
                 const isHoliday = status === "holiday";
+                const isOutOfTerm = status === "out_of_term";
                 const icon =
-                  status == null || status === "none" || isWeekend
+                  status == null ||
+                  status === "none" ||
+                  isWeekend ||
+                  isOutOfTerm
                     ? null
                     : present
                       ? Mark
@@ -98,7 +102,7 @@ export const ParentAttendanceSheet: React.FC<ParentAttendanceSheetProps> = ({
                   <div
                     key={day.date}
                     className={`px-2 py-5 border-b border-gray-200 flex items-center justify-center ${
-                      isCalendarWeekend
+                      isCalendarWeekend || isOutOfTerm
                         ? "bg-white pointer-events-none"
                         : "bg-[#F9F5FF]"
                     } ${isHoliday ? "bg-[#FCEBCF] pointer-events-none" : ""}`}
@@ -126,8 +130,8 @@ export const ParentAttendanceSheet: React.FC<ParentAttendanceSheetProps> = ({
         </div>
       </div>
       <p className="mt-3 text-xs text-zinc-500">
-        Green check = present · Red X = absent · Dash = weekend or upcoming day ·
-        Holiday = school holiday
+        Green check = present · Red X = absent · Dash = weekend, before term
+        starts, or upcoming day · Holiday = school holiday
       </p>
     </div>
   );

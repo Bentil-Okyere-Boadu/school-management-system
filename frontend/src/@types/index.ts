@@ -65,6 +65,13 @@ export interface Teacher extends User {
   optionalPhoneContact: string;
 }
 
+export type ParentRelationshipStatus =
+  | "pending"
+  | "pending_confirmation"
+  | "pending_review"
+  | "active"
+  | "revoked";
+
 export interface Parent {
   id?: string;
   firstName: string;
@@ -74,6 +81,11 @@ export interface Parent {
   address: string;
   phone: string;
   relationship: string;
+  status?: "pending" | "active" | "suspended" | "archived";
+  relationshipStatus?: ParentRelationshipStatus;
+  relationshipId?: string;
+  isInvitationAccepted?: boolean;
+  invitationExpired?: boolean;
 }
 
 export type AuthCredentials = Pick<User, "email" | "password">;
@@ -1220,6 +1232,8 @@ export enum NotificationType {
   General = "general",
   ClassTeacherResultSubmission = "classTeacherResultSubmission",
   ParentInvitation = "parentInvitation",
+  ParentInvitationFailed = "parentInvitationFailed",
+  ParentInvitationExpired = "parentInvitationExpired",
   ParentAccepted = "parentAccepted",
   ParentChildConfirmation = "parentChildConfirmation",
   ParentChildConfirmed = "parentChildConfirmed",
