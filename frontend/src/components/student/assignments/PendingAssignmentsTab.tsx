@@ -9,7 +9,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { HashLoader } from "react-spinners";
 import { AttachmentIcon } from "@/utils/icons";
-import { IconUpload } from "@tabler/icons-react";
 
 export const PendingAssignmentsTab: React.FC = () => {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
@@ -219,10 +218,9 @@ export const PendingAssignmentsTab: React.FC = () => {
                           </span>
                         ) : (
                           <CustomButton
-                            text="Submit"
+                            text="View"
                             onClick={() => handleSubmitClick(assignment)}
                             className="bg-purple-500 hover:bg-purple-600 text-white"
-                            icon={<IconUpload size={16} />}
                           />
                         )}
                       </td>
@@ -238,7 +236,7 @@ export const PendingAssignmentsTab: React.FC = () => {
       <Dialog
         isOpen={isSubmitDialogOpen}
         busy={submitting}
-        dialogTitle="Submit Assignment"
+        dialogTitle="View Assignment"
         onClose={() => {
           setIsSubmitDialogOpen(false);
           setSelectedFile([]);

@@ -1,10 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateClassLevelDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsNotEmpty({ message: 'Class name cannot be empty.' })
+  @IsString({ message: 'Class name must be text.' })
   name?: string;
 
   @ApiPropertyOptional()
@@ -12,10 +15,10 @@ export class UpdateClassLevelDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Class teacher UUID' })
-  @IsOptional()
-  @IsUUID('4')
-  classTeacherId?: string;
+  @ApiPropertyOptional({ description: 'Class teacher UUID. Send null to remove the assigned teacher.' })
+  @ValidateIf(o => o.classTeacherId != null && o.classTeacherId !== '')
+  @IsUUID('4', { message: 'classTeacherId must be a valid UUID.' })
+  classTeacherId?: string | null;
 
   @ApiPropertyOptional({ type: [String], format: 'uuid' })
   @IsOptional()

@@ -51,6 +51,7 @@ export const EditClassDialog: React.FC<EditClassDialogProps> = ({
           className="!py-0"
           placeholder=""
           label="Name"
+          required
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           isTransulent={false}
@@ -70,6 +71,7 @@ export const EditClassDialog: React.FC<EditClassDialogProps> = ({
           value={classTeacherId || null}
           onChange={(value) => onTeacherChange(value ?? "")}
           searchable
+          clearable
         />
         <p className="text-xs text-gray-500">
           Manage enrolled students from the Students tab using &apos;Add
