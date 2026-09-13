@@ -119,19 +119,23 @@ export class ClassLevelService {
       classLevel.description = updateClassLevelDto.description;
     }
 
-    // Update class teacher if provided
-    if (updateClassLevelDto.classTeacherId) {
-      const classTeacher = await this.teacherRepository.findOne({
-        where: {
-          id: updateClassLevelDto.classTeacherId,
-        },
-      });
-      if (!classTeacher) {
-        throw new NotFoundException(
-          `Teacher with ID ${updateClassLevelDto.classTeacherId} not found in this school`,
-        );
+    // Update class teacher if provided (null clears the assignment)
+    if (updateClassLevelDto.classTeacherId !== undefined) {
+      if (updateClassLevelDto.classTeacherId) {
+        const classTeacher = await this.teacherRepository.findOne({
+          where: {
+            id: updateClassLevelDto.classTeacherId,
+          },
+        });
+        if (!classTeacher) {
+          throw new NotFoundException(
+            `Teacher with ID ${updateClassLevelDto.classTeacherId} not found in this school`,
+          );
+        }
+        classLevel.classTeacher = classTeacher;
+      } else {
+        classLevel.classTeacher = null;
       }
-      classLevel.classTeacher = classTeacher;
     }
 
     // Update teacher associations

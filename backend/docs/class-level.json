@@ -158,7 +158,8 @@
           },
           "classTeacherId": {
             "type": "string",
-            "description": "Class teacher UUID"
+            "nullable": true,
+            "description": "Class teacher UUID. Send null to remove the assigned teacher."
           },
           "teacherIds": {
             "type": "array",

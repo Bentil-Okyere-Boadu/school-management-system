@@ -129,11 +129,15 @@ const ClassesPage = () => {
   };
 
   const createClassLevel = () => {
+    if (!classLevelName.trim()) {
+      toast.error('Class name is required.');
+      return;
+    }
     createMutation(
       { 
-        name: classLevelName, 
+        name: classLevelName.trim(), 
         description: classLevelDescription, 
-        classTeacherId: selectedTeacher,
+        ...(selectedTeacher ? { classTeacherId: selectedTeacher } : {}),
       }, {
       onSuccess: (response) => {
         toast.success('Successfully created class.')
@@ -451,6 +455,7 @@ const ClassesPage = () => {
             className="!py-0"
             placeholder=""
             label="Name"
+            required
             value={classLevelName}
             onChange={(e) => { setClassLevelName(e.target.value)}}
             isTransulent={false}
@@ -467,9 +472,10 @@ const ClassesPage = () => {
             label="Class Teacher"
             placeholder="Pick teacher"
             data={allTeacherOptions || []}
-            value={selectedTeacher}
-            onChange={(e) => handleTeacherChange(e as string)}
+            value={selectedTeacher || null}
+            onChange={(e) => handleTeacherChange(e ?? "")}
             searchable
+            clearable
           />
         </div>
       </Dialog>

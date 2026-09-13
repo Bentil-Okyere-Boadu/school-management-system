@@ -30,7 +30,7 @@ Assignments let teachers create work for their classes, students submit files an
 
 | Action | Result |
 |--------|--------|
-| Open **My Scores**, go to the **Pending** tab, attach a file and/or add notes, and submit. | A confirmation dialog appears. After confirming, a success message appears and the assignment moves to **Submitted**. |
+| Open **My Scores**, go to the **Pending** tab, and click **View** on an assignment. Attach a file and/or add notes in the dialog, then click **Submit Assignment**. | A confirmation dialog appears. After confirming, a success message appears and the assignment moves to **Submitted**. |
 | View the **Submitted** tab. | You see assignments awaiting grading. |
 | On the **Graded** tab, click **View Feedback** on an assignment. | A dialog shows your score, teacher feedback, and any attachment. |
 
